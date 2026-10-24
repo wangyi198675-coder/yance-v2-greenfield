@@ -1,0 +1,1 @@
+Synthetic-only scenario data. No contact in the source data is real. The fixtures cannot call any provider, use real tokens, or send messages. Initial placeholder contacts cover 120 made-up IDs and four frozen channel labels for later P3 nonproduction UX comparison.

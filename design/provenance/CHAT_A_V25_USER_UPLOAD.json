@@ -1,0 +1,17 @@
+{
+  "source": "user_uploaded_original_html",
+  "filename": "YANCE_V2_交互原型_平台图标菜单修正版(1).html",
+  "bytes": 89033,
+  "sha256": "7365b4bdf4011007b3fb6b6736ad3d47ede9a0604b1d8c24b17074d7c653aceb",
+  "w30_derived_bytes": 89033,
+  "w30_derived_sha256": "7365b4bdf4011007b3fb6b6736ad3d47ede9a0604b1d8c24b17074d7c653aceb",
+  "byte_equivalence": "VERIFIED_BY_SIZE_AND_SHA256",
+  "source_risks": [
+    "setContact clears S.draft",
+    "setContact sets unread=0",
+    "fixed online green dot",
+    "seeded mock suggestions always 3"
+  ],
+  "no_real_api_or_user_test": true,
+  "baseline_is_not_final_design": true
+}

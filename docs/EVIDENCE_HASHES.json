@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-24",
+  "copied_from_p2_authoritative_files": [
+    {
+      "rel": "contracts/source/09_legacy252.csv",
+      "sha256": "b1f554df580a6d68f95b9b4a5a82c2dec6f803ac6c568f4696501026d5db2a4b",
+      "bytes": 188229
+    },
+    {
+      "rel": "contracts/source/10_authority252.csv",
+      "sha256": "7b6d437892b60f97fb84c1fecc72f55813c6b15c6df2c8d6468f3f5bb416d372",
+      "bytes": 654561
+    },
+    {
+      "rel": "contracts/audit/W04_feature252.csv",
+      "sha256": "70067b3abf3e640b3805782db2d123ba998329cd9154028a6f7d39fbf008e1e6",
+      "bytes": 514484
+    },
+    {
+      "rel": "contracts/audit/W04_UIE100.csv",
+      "sha256": "e67dc28e32440ea966e4c7f6f859d8d919460f91ee0e15a6f2ff48f42c47b000",
+      "bytes": 148206
+    },
+    {
+      "rel": "contracts/pending/252_arbitration.csv",
+      "sha256": "7406a4e9d864d1453c268e48d176e7a9889094bb4b6be54995d8e45035692847",
+      "bytes": 216193
+    },
+    {
+      "rel": "contracts/pending/12_UNSIGNED_amendments.md",
+      "sha256": "6569c42eac17828074466d63a6941791596d3970ef01f73cc959dcf2f7c51a1e",
+      "bytes": 5190
+    },
+    {
+      "rel": "contracts/pending/16_CROSS_OWNER_blockers.csv",
+      "sha256": "90ce6eefe70d568f43d956caa10517c688a012bf7380bcaf0b73b61fa8ff2c66",
+      "bytes": 7019
+    },
+    {
+      "rel": "contracts/pending/20_RESEARCH_decisions.csv",
+      "sha256": "017efad70687341e6f30dfdb98151d7b756004c7718b7ce38cfb1fe0f060ae0b",
+      "bytes": 6566
+    }
+  ]
+}

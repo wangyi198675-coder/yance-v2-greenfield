@@ -1,0 +1,35 @@
+{
+  "status": "SPEC_ONLY_NOT_RUN",
+  "required": [
+    "variant",
+    "component_manifest_sha",
+    "fixture_hash",
+    "task_id",
+    "test_participant_pseudonym",
+    "viewport",
+    "theme",
+    "start_ms",
+    "end_ms",
+    "success",
+    "steps",
+    "recipient_correct",
+    "draft_preserved",
+    "candidate_discovery",
+    "translation_correct",
+    "read_state_not_faked",
+    "presence_not_faked",
+    "takeover_scope_correct",
+    "exception_ack_correct",
+    "feedback",
+    "screenshot_ref"
+  ],
+  "hard_failure": [
+    "wrong_recipient",
+    "unauthorized_send",
+    "faked_delivered_or_read",
+    "focus_caused_takeover",
+    "nonapproved_component_source",
+    "client_side_grant_authority"
+  ],
+  "results": []
+}

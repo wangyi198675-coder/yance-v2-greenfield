@@ -1,0 +1,3 @@
+# Required OSS lock before any clickable UI implementation
+Button, Bubble, Composer/PromptInput, ContextMenu, SubMenu, Popover, Dialog, Accessibility/Focus, VirtualScroller and Animations must come from audited exact OSS source with repo/tag/full SHA/actual file SHA/SPDX/LICENSE/NOTICE/SBOM/package integrity/Windows compatibility.
+Candidate foundation: Reka + shadcn-vue; AI Elements = UI patterns, not separate Agent runtime. No custom base control or second agent engine. No imports, installation, vendored code, or real app source created in P3-0 bootstrap. Current status SOURCE_PIN_HOLD.

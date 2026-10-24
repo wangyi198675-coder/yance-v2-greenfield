@@ -1,0 +1,8 @@
+{
+  "name": "yance-v2-p3-0-contract-only",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "verify:evidence": "node scripts/verify-evidence.cjs"
+  }
+}

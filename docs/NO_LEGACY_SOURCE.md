@@ -1,0 +1,1 @@
+This commit copies requirements/contracts and audit evidence only. It does NOT import legacy app/business source, prototype runtime Javascript, credentials, sessions, social accounts, chat histories or user data. Empty modules are directory placeholders, not functional services.
