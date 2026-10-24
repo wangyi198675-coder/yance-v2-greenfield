@@ -7,3 +7,7 @@ Evidence in `evidence/W39_RED_44_AND_COLLISION_7_RUNTIME.json`, `RUNTIME_44_TASK
 Independent Chrome owner visual capture: 4 arms×9 exact CSS widths =36 screenshots, 4 arms×10 light/dark themes=40 screenshots, TOTAL **76/76 PASS** for Composer geometry, channel filter access, B+C narrow drawer visibility/closing size and icon names. `evidence/W39_RED_76_VISUAL_CDP.json` + SHA256 76 `evidence/red-chrome/*.png`. Original W40 before screenshots at `Phase3_OSS_Worktrees_20261024/INDEPENDENT_REVIEW_RECEIPTS/P3-W40-CLICKABLE-QA/screenshots/` remain comparison originals.
 CSP owner Chrome negative: four arms, 4/4 script blocked, external HTTP 0, WS 0, inert HTML; restrictive localhost header; `evidence/W39_RED_CSP_NETWORK_CDP.json`.
 18/18 owner parity checks in `evidence/W39_SELF_INTEGRATION_CHECKS.json`; TypeScript PASS; Vite build PASS. W40, W41, W42 independent new SHA signs **NOT_RUN/HOLD**. Windows WebView2, real DPI and system IME NOT_RUN.
+
+---
+## 【2026-10-25｜安全固定版本下重新真实运行｜最新结果】
+修复版已有功能保持完整，不重做原任务：新Vite7.3.7/esbuild0.28.1编译成品已在隔离Windows本地127.0.0.1:4186真实Chrome运行 **四方案44/44 PASS** 与 W37同peer不同K 7/7 PASS。CSP四方案注入/零外部请求自测 **4/4 PASS**；全九宽度/五主题明暗十态的截图测量由 `W39_RED_CDP_76.cjs` 重新针对新build执行，结果与截图SHA见 `evidence/W39_RED_76_VISUAL_CDP.json`。旧红点UX01账户1/2实际隔离、原Composer输入、BC <1180px可点击可关闭且支持Esc/focus、页面滚动与模拟不外发均直接测。只代表W39开发者Chrome自测，不冒充Windows WebView2或W40独立UAT。

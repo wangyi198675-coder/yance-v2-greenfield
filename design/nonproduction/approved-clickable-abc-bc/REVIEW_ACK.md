@@ -19,3 +19,9 @@ AUTHORIZED_PATH: design/nonproduction/approved-clickable-abc-bc/ ONLY; main must
 - `npm test` 18/18 owner checks PASS, `tsc --noEmit` PASS and local Vite build PASS. Actual compiled bundle SHA256 in `evidence/W39_RED_FINAL_MANIFEST.json`.
 - **Dependency safety not PASS**: W42 formally allows Vite7.3.7 and esbuild0.28.1 exact, but regeneration of lock introduced six unsigned optional WASM nested package rows. W39 stopped before installing new lock, reverted `package.json`+`package-lock.json` to approved preexisting 14 direct pins. Current actual Vite7.3.1/esbuild0.27.7, full npm audit HIGH1 LOW1, runtime omit=dev0, all still security HOLD. See `W39_TO_W42_SIX_UNEXPECTED_LOCK_ROWS_HOLD.md` + `evidence/W39_W42_NPM_LOCK_EXACT_DELTA.json`. W42 additional six-row signed permission required before upgrade; do NOT silently imply security risk cleared.
 - Independent W40 QA and W41 SEC and W42 POSTBUILD on NEW candidate: **NOT_RUN**. W42 historical a96b4d source/notice approval cannot be inherited. Standalone dist distribution, company LEGAL, Windows WebView2/DPI/real IME and P4 all HOLD.
+
+---
+## 【2026-10-25｜W42六条增量补签后安全版本真实安装｜本节为当前最新状态】
+W42 原28条签署CSV SHA256 `8287614bdf28e28fd51eb994037f351adbd9e74110fa0f9ec48409c1dc4c9e60`，新增6条元数据-only签署CSV SHA256 `5e15e6ab12652c5e0e5f662bc322e443e6ad68596f900e1f5a5009c7fef94b60`，W39机器验证双文件；合法npm生成lock 35/35差异、0超范围，SHA256 `852f14da6e4918b0c56dfb0e5a140a226e1e01a465c36ca80996bf3d84afffd8`。
+实装 vite@7.3.7/esbuild@0.28.1，14个原直接依赖无漂移；本机 `npm ci --ignore-scripts` 74包；独立按lock下载真实74个tarball SHA512 **74/74 MATCH**；6个新增WASM bundle只有lock元数据，不等同已安装。新CycloneDX1.5/真实THIRD_PARTY_NOTICES已生成且无已安装包缺许可证文本。两种真实npm audit **各0告警**；TypeScript及Vite 7.3.7构建PASS。
+W39仍只签 **OWNER_SELF_TEST**。本轮新安全提交的准确40字符SHA将在提交后写到视窗9唯一联合状态报告。W40/41/42增量独立复签在新SHA形成前尚未执行，不据旧结果冒充；P4仍HOLD。

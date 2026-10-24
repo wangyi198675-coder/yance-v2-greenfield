@@ -4,7 +4,7 @@
   "serialNumber": "urn:uuid:6d6b0ceb-738c-4f5d-86a9-d6e7d52b88dd",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-24T12:52:19.897Z",
+    "timestamp": "2026-10-24T23:52:55.347Z",
     "component": {
       "type": "application",
       "name": "yance-v2-p3-1-clickable-offline",
@@ -17,7 +17,7 @@
       },
       {
         "name": "YANCE:lockSHA256",
-        "value": "1d91cd197a4bc429fb0d6bd8808746b4b3537951f1f1806d277aed67afc143c6"
+        "value": "852f14da6e4918b0c56dfb0e5a140a226e1e01a465c36ca80996bf3d84afffd8"
       }
     ]
   },
@@ -165,9 +165,9 @@
     {
       "type": "library",
       "name": "@esbuild/win32-x64",
-      "version": "0.27.7",
-      "bom-ref": "pkg:npm/%40esbuild/win32-x64@0.27.7",
-      "purl": "pkg:npm/%40esbuild/win32-x64@0.27.7",
+      "version": "0.28.1",
+      "bom-ref": "pkg:npm/%40esbuild/win32-x64@0.28.1",
+      "purl": "pkg:npm/%40esbuild/win32-x64@0.28.1",
       "scope": "optional",
       "licenses": [
         {
@@ -183,7 +183,7 @@
         },
         {
           "name": "YANCE:installedPackageJsonSHA256",
-          "value": "095bf1c95a8a9179990600dd94b2ee1857f63fb747674d7dd8a06460a09d4fc8"
+          "value": "4a63b84fa1059fef348e29e3a39c26168213bb7f0aa1ac0174e439cc1e62a9f8"
         },
         {
           "name": "YANCE:integrityProvenance",
@@ -193,7 +193,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "e7a8620093e1c10d51e22fb6d45545ed5f24483e73653747715b9114c5b4867ef9def55f40df31971e2e38f4f8c68187d19fe85404ee47cd808aa4930c8a5a1e"
+          "content": "6e6e0ca30aeff865cc969597fbe11c5f0fe22f2775a37f9b2640b60e4597615be0642a83fdb4a3f5cb59780302ddc2318234554760ee7da8aee183f1af9816d4"
         }
       ]
     },
@@ -1775,9 +1775,9 @@
     {
       "type": "library",
       "name": "esbuild",
-      "version": "0.27.7",
-      "bom-ref": "pkg:npm/esbuild@0.27.7",
-      "purl": "pkg:npm/esbuild@0.27.7",
+      "version": "0.28.1",
+      "bom-ref": "pkg:npm/esbuild@0.28.1",
+      "purl": "pkg:npm/esbuild@0.28.1",
       "scope": "optional",
       "licenses": [
         {
@@ -1793,7 +1793,7 @@
         },
         {
           "name": "YANCE:installedPackageJsonSHA256",
-          "value": "9ce21c976ffbbb95001f460e9e8af7c6d719f748eb70441e617a14dd0b68a5b8"
+          "value": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a"
         },
         {
           "name": "YANCE:integrityProvenance",
@@ -1803,7 +1803,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "231a626d38f25679ab210a396aa3690a0a00080fdd4ca2d39613078a154785d9312b23ced6e041b61ba64f4add1e672c93db8ca272164b49b81658d6cc82e1df"
+          "content": "1eb26bbd9bf96b2c41ccf7f0a613a837393338822589fce4d0a26b18ad9cf11e3e2caa4cb6960b41e51d8e7c235affcb665907da569993ee30efca62f7d0f857"
         }
       ]
     },
@@ -2545,9 +2545,9 @@
     {
       "type": "library",
       "name": "vite",
-      "version": "7.3.1",
-      "bom-ref": "pkg:npm/vite@7.3.1",
-      "purl": "pkg:npm/vite@7.3.1",
+      "version": "7.3.7",
+      "bom-ref": "pkg:npm/vite@7.3.7",
+      "purl": "pkg:npm/vite@7.3.7",
       "scope": "excluded",
       "licenses": [
         {
@@ -2563,7 +2563,7 @@
         },
         {
           "name": "YANCE:installedPackageJsonSHA256",
-          "value": "116af0821317eea464b9e69afda7c68b70b1caf51abe3218001b0e2175d3bed6"
+          "value": "aae1f593c0e6f320989b60af6e90f8ed4ea5137e5a0b9db663f9b0088333eb3c"
         },
         {
           "name": "YANCE:integrityProvenance",
@@ -2573,7 +2573,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "c3e37b1e27e97378118d9eb7bd8057039e9dbef46535645ccd376608105af82a2d53300f7f96fb60c74c47ff024287981392d7dd6e308fa4584e0a279b56fd0c"
+          "content": "0071334ce44c6e2effeda5e9ef0eca679f8309475278bb09cf482b63cc47a5cf431dd61bd2f42ee83a897e6dad3b0de00c4c4d80f8272535f133ab326051da08"
         }
       ]
     },
@@ -2636,7 +2636,7 @@
       ]
     },
     {
-      "ref": "pkg:npm/%40esbuild/win32-x64@0.27.7",
+      "ref": "pkg:npm/%40esbuild/win32-x64@0.28.1",
       "dependsOn": []
     },
     {
@@ -2908,9 +2908,9 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:npm/esbuild@0.27.7",
+      "ref": "pkg:npm/esbuild@0.28.1",
       "dependsOn": [
-        "pkg:npm/%40esbuild/win32-x64@0.27.7"
+        "pkg:npm/%40esbuild/win32-x64@0.28.1"
       ]
     },
     {
@@ -3024,9 +3024,9 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:npm/vite@7.3.1",
+      "ref": "pkg:npm/vite@7.3.7",
       "dependsOn": [
-        "pkg:npm/esbuild@0.27.7",
+        "pkg:npm/esbuild@0.28.1",
         "pkg:npm/fdir@6.5.0",
         "pkg:npm/picomatch@4.0.7",
         "pkg:npm/postcss@8.5.31",

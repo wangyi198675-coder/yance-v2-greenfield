@@ -126,7 +126,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-=== @esbuild/win32-x64@0.27.7 | declared MIT ===
+=== @esbuild/win32-x64@0.28.1 | declared MIT ===
 ---- INHERITED_UPSTREAM_PARENT_LICENSE:esbuild/LICENSE.md ----
 MIT License
 
@@ -3463,7 +3463,7 @@ THIS IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRE
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-=== esbuild@0.27.7 | declared MIT ===
+=== esbuild@0.28.1 | declared MIT ===
 ---- LICENSE.md ----
 MIT License
 
@@ -5349,7 +5349,7 @@ If the Work includes a "NOTICE" text file as part of its distribution, then any 
 END OF TERMS AND CONDITIONS
 
 
-=== vite@7.3.1 | declared MIT ===
+=== vite@7.3.7 | declared MIT ===
 ---- LICENSE.md ----
 # Vite core license
 Vite is released under the MIT license:
@@ -6438,7 +6438,7 @@ Repository: https://github.com/lydell/js-tokens
 ## launch-editor, launch-editor-middleware
 License: MIT
 By: Evan You
-Repositories: https://github.com/yyx990803/launch-editor, https://github.com/yyx990803/launch-editor
+Repositories: https://github.com/vitejs/launch-editor, https://github.com/vitejs/launch-editor
 
 > The MIT License (MIT)
 > 

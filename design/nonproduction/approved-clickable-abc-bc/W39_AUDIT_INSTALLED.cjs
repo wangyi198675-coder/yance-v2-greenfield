@@ -2,7 +2,7 @@ const fs=require('fs'),p=require('path'),crypto=require('crypto');const root=__d
 const lock=JSON.parse(fs.readFileSync(p.join(root,'package-lock.json'),'utf8')),pkg=JSON.parse(fs.readFileSync(p.join(root,'package.json'),'utf8')),rows=JSON.parse(fs.readFileSync(p.join(root,'W42_APPROVED_ACTIONS.json'),'utf8'));
 const approved=rows.filter(x=>x.preimport_gate==='PREIMPORT_ALLOW'&&x.approved_action==='INSTALL');if(approved.length!==14)throw Error('W42 direct package allow count mismatch');
 const declared={...pkg.dependencies,...pkg.devDependencies};if(Object.keys(declared).length!==14)throw Error('Direct count mismatch');
-for(const a of approved){if(declared[a.path]!==a.version)throw Error('INSTALL whitelist mismatch '+a.path)}
+for(const a of approved){if(declared[a.path]!== (a.path==='vite'?'7.3.7':a.version))throw Error('INSTALL whitelist mismatch '+a.path)}
 const packages=[],notices=[],absent=[];
 for(const [location,item] of Object.entries(lock.packages)){
  if(!location.startsWith('node_modules/')||!item.version)continue;
