@@ -1,0 +1,1816 @@
+{
+  "created": "2026-10-24",
+  "approvedDirectCount": 14,
+  "installedPackageCount": 74,
+  "lockPackageEntries": 145,
+  "absent": [
+    {
+      "name": "@esbuild/aix-ppc64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/android-arm",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/android-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/android-x64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/darwin-x64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/freebsd-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/freebsd-x64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-arm",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-ia32",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-loong64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-mips64el",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-ppc64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-riscv64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-s390x",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/linux-x64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/netbsd-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/netbsd-x64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/openbsd-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/openbsd-x64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/openharmony-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/sunos-x64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/win32-arm64",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@esbuild/win32-ia32",
+      "version": "0.27.7",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@napi-rs/lzma-linux-x64-gnu",
+      "version": "1.5.1",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-android-arm-eabi",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-android-arm64",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-darwin-arm64",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-darwin-x64",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-freebsd-arm64",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-freebsd-x64",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm-gnueabihf",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm-musleabihf",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm64-gnu",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm64-musl",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-loong64-gnu",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-loong64-musl",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-ppc64-gnu",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-ppc64-musl",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-riscv64-gnu",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-riscv64-musl",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-s390x-gnu",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-x64-gnu",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-linux-x64-musl",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-openbsd-x64",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-openharmony-arm64",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-win32-arm64-msvc",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@rollup/rollup-win32-ia32-msvc",
+      "version": "4.65.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-android-arm64",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-darwin-arm64",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-darwin-x64",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-freebsd-x64",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-arm-gnueabihf",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-arm64-gnu",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-arm64-musl",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-x64-gnu",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-x64-musl",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-wasm32-wasi",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "@tailwindcss/oxide-win32-arm64-msvc",
+      "version": "4.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "fsevents",
+      "version": "2.3.3",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-android-arm64",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-darwin-arm64",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-darwin-x64",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-freebsd-x64",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-linux-arm-gnueabihf",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-linux-arm64-gnu",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-linux-arm64-musl",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-linux-x64-gnu",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-linux-x64-musl",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    },
+    {
+      "name": "lightningcss-win32-arm64-msvc",
+      "version": "1.32.0",
+      "reason": "not materialized; optional platform or subdependency"
+    }
+  ],
+  "missingLicenseTexts": [],
+  "lockSHA256": "1d91cd197a4bc429fb0d6bd8808746b4b3537951f1f1806d277aed67afc143c6",
+  "bomSHA256": "099e392930b7030abbdf8bf9f9c08f1f458c96303bfc7e28d720a5b70640bf36",
+  "noticeSHA256": "d07f4e60e02a50c9b9bae6aade8a5c98a5d8e9ae9e8cb38457911f7d59d99a37",
+  "licenses": [
+    {
+      "name": "@babel/helper-string-parser",
+      "version": "7.29.11",
+      "installed": true,
+      "lock_integrity": "sha512-snZbO7MEDOof+hvNa97EjEY7qD7h2kwvQr5AJC3ZhQudKW5dnej6k3kP9NQV88hJwaS8vDqRLFo9rivLEhle2g==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@babel/helper-string-parser"
+    },
+    {
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "installed": true,
+      "lock_integrity": "sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@babel/helper-validator-identifier"
+    },
+    {
+      "name": "@babel/parser",
+      "version": "7.29.11",
+      "installed": true,
+      "lock_integrity": "sha512-OZ6+oaK7GMyg3IfCpj8JOmn8n+w2rJbDT0LLfVDTLb1ZFeKDh3AiNELgCMUw175IJHSkLl74hG0M0VLsvx+gag==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@babel/parser"
+    },
+    {
+      "name": "@babel/types",
+      "version": "7.29.11",
+      "installed": true,
+      "lock_integrity": "sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@babel/types"
+    },
+    {
+      "name": "@esbuild/aix-ppc64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/aix-ppc64"
+    },
+    {
+      "name": "@esbuild/android-arm",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-jbPXvB4Yj2yBV7HUfE2KHe4GJX51QplCN1pGbYjvsyCZbQmies29EoJbkEc+vYuU5o45AfQn37vZlyXy4YJ8RQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/android-arm"
+    },
+    {
+      "name": "@esbuild/android-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-62dPZHpIXzvChfvfLJow3q5dDtiNMkwiRzPylSCfriLvZeq0a1bWChrGx/BbUbPwOrsWKMn8idSllklzBy+dgQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/android-arm64"
+    },
+    {
+      "name": "@esbuild/android-x64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-x5VpMODneVDb70PYV2VQOmIUUiBtY3D3mPBG8NxVk5CogneYhkR7MmM3yR/uMdITLrC1ml/NV1rj4bMJuy9MCg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/android-x64"
+    },
+    {
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-5lckdqeuBPlKUwvoCXIgI2D9/ABmPq3Rdp7IfL70393YgaASt7tbju3Ac+ePVi3KDH6N2RqePfHnXkaDtY9fkw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/darwin-arm64"
+    },
+    {
+      "name": "@esbuild/darwin-x64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-rYnXrKcXuT7Z+WL5K980jVFdvVKhCHhUwid+dDYQpH+qu+TefcomiMAJpIiC2EM3Rjtq0sO3StMV/+3w3MyyqQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/darwin-x64"
+    },
+    {
+      "name": "@esbuild/freebsd-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-B48PqeCsEgOtzME2GbNM2roU29AMTuOIN91dsMO30t+Ydis3z/3Ngoj5hhnsOSSwNzS+6JppqWsuhTp6E82l2w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/freebsd-arm64"
+    },
+    {
+      "name": "@esbuild/freebsd-x64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-jOBDK5XEjA4m5IJK3bpAQF9/Lelu/Z9ZcdhTRLf4cajlB+8VEhFFRjWgfy3M1O4rO2GQ/b2dLwCUGpiF/eATNQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/freebsd-x64"
+    },
+    {
+      "name": "@esbuild/linux-arm",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-RkT/YXYBTSULo3+af8Ib0ykH8u2MBh57o7q/DAs3lTJlyVQkgQvlrPTnjIzzRPQyavxtPtfg0EopvDyIt0j1rA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-arm"
+    },
+    {
+      "name": "@esbuild/linux-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-RZPHBoxXuNnPQO9rvjh5jdkRmVizktkT7TCDkDmQ0W2SwHInKCAV95GRuvdSvA7w4VMwfCjUiPwDi0ZO6Nfe9A==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-arm64"
+    },
+    {
+      "name": "@esbuild/linux-ia32",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-GA48aKNkyQDbd3KtkplYWT102C5sn/EZTY4XROkxONgruHPU72l+gW+FfF8tf2cFjeHaRbWpOYa/uRBz/Xq1Pg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-ia32"
+    },
+    {
+      "name": "@esbuild/linux-loong64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-a4POruNM2oWsD4WKvBSEKGIiWQF8fZOAsycHOt6JBpZ+JN2n2JH9WAv56SOyu9X5IqAjqSIPTaJkqN8F7XOQ5Q==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-loong64"
+    },
+    {
+      "name": "@esbuild/linux-mips64el",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-KabT5I6StirGfIz0FMgl1I+R1H73Gp0ofL9A3nG3i/cYFJzKHhouBV5VWK1CSgKvVaG4q1RNpCTR2LuTVB3fIw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-mips64el"
+    },
+    {
+      "name": "@esbuild/linux-ppc64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-gRsL4x6wsGHGRqhtI+ifpN/vpOFTQtnbsupUF5R5YTAg+y/lKelYR1hXbnBdzDjGbMYjVJLJTd2OFmMewAgwlQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-ppc64"
+    },
+    {
+      "name": "@esbuild/linux-riscv64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-hL25LbxO1QOngGzu2U5xeXtxXcW+/GvMN3ejANqXkxZ/opySAZMrc+9LY/WyjAan41unrR3YrmtTsUpwT66InQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-riscv64"
+    },
+    {
+      "name": "@esbuild/linux-s390x",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-2k8go8Ycu1Kb46vEelhu1vqEP+UeRVj2zY1pSuPdgvbd5ykAw82Lrro28vXUrRmzEsUV0NzCf54yARIK8r0fdw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-s390x"
+    },
+    {
+      "name": "@esbuild/linux-x64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-hzznmADPt+OmsYzw1EE33ccA+HPdIqiCRq7cQeL1Jlq2gb1+OyWBkMCrYGBJ+sxVzve2ZJEVeePbLM2iEIZSxA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/linux-x64"
+    },
+    {
+      "name": "@esbuild/netbsd-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-b6pqtrQdigZBwZxAn1UpazEisvwaIDvdbMbmrly7cDTMFnw/+3lVxxCTGOrkPVnsYIosJJXAsILG9XcQS+Yu6w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/netbsd-arm64"
+    },
+    {
+      "name": "@esbuild/netbsd-x64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-OfatkLojr6U+WN5EDYuoQhtM+1xco+/6FSzJJnuWiUw5eVcicbyK3dq5EeV/QHT1uy6GoDhGbFpprUiHUYggrw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/netbsd-x64"
+    },
+    {
+      "name": "@esbuild/openbsd-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-AFuojMQTxAz75Fo8idVcqoQWEHIXFRbOc1TrVcFSgCZtQfSdc1RXgB3tjOn/krRHENUB4j00bfGjyl2mJrU37A==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/openbsd-arm64"
+    },
+    {
+      "name": "@esbuild/openbsd-x64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-+A1NJmfM8WNDv5CLVQYJ5PshuRm/4cI6WMZRg1by1GwPIQPCTs1GLEUHwiiQGT5zDdyLiRM/l1G0Pv54gvtKIg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/openbsd-x64"
+    },
+    {
+      "name": "@esbuild/openharmony-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-+KrvYb/C8zA9CU/g0sR6w2RBw7IGc5J2BPnc3dYc5VJxHCSF1yNMxTV5LQ7GuKteQXZtspjFbiuW5/dOj7H4Yw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/openharmony-arm64"
+    },
+    {
+      "name": "@esbuild/sunos-x64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-ikktIhFBzQNt/QDyOL580ti9+5mL/YZeUPKU2ivGtGjdTYoqz6jObj6nOMfhASpS4GU4Q/Clh1QtxWAvcYKamA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/sunos-x64"
+    },
+    {
+      "name": "@esbuild/win32-arm64",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-7yRhbHvPqSpRUV7Q20VuDwbjW5kIMwTHpptuUzV+AA46kiPze5Z7qgt6CLCK3pWFrHeNfDd1VKgyP4O+ng17CA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/win32-arm64"
+    },
+    {
+      "name": "@esbuild/win32-ia32",
+      "version": "0.27.7",
+      "installed": false,
+      "lock_integrity": "sha512-SmwKXe6VHIyZYbBLJrhOoCJRB/Z1tckzmgTLfFYOfpMAx63BJEaL9ExI8x7v0oAO3Zh6D/Oi1gVxEYr5oUCFhw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/win32-ia32"
+    },
+    {
+      "name": "@esbuild/win32-x64",
+      "version": "0.27.7",
+      "installed": true,
+      "lock_integrity": "sha512-56hiAJPhwQ1R4i+21FVF7V8kSD5zZTdHcVuRFMW0hn753vVfQN8xlx4uOPT4xoGH0Z/oVATuR82AiqSTDIpaHg==",
+      "license": "MIT",
+      "licenseFiles": [],
+      "location": "node_modules/@esbuild/win32-x64"
+    },
+    {
+      "name": "@floating-ui/core",
+      "version": "1.8.0",
+      "installed": true,
+      "lock_integrity": "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@floating-ui/core"
+    },
+    {
+      "name": "@floating-ui/dom",
+      "version": "1.8.0",
+      "installed": true,
+      "lock_integrity": "sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@floating-ui/dom"
+    },
+    {
+      "name": "@floating-ui/utils",
+      "version": "0.2.12",
+      "installed": true,
+      "lock_integrity": "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@floating-ui/utils"
+    },
+    {
+      "name": "@floating-ui/vue",
+      "version": "2.0.1",
+      "installed": true,
+      "lock_integrity": "sha512-043dyEKD9TDSfz080YH2vobubgg+NIo/9Fw4RAl7sEMpD8Am1DNrrSTl/GpMBjyGHoD/FbJY2QLawY+HSQsEIA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@floating-ui/vue"
+    },
+    {
+      "name": "@internationalized/date",
+      "version": "3.12.4",
+      "installed": true,
+      "lock_integrity": "sha512-M1dEn4c1U1HsSlaVR8upZtSqvXrTkHDfv18H01uCSJyjVLDxnBR38v/fMxecmlwXKR4i9HeZcmgQAPE6A+aGJQ==",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@internationalized/date"
+    },
+    {
+      "name": "@internationalized/number",
+      "version": "3.6.9",
+      "installed": true,
+      "lock_integrity": "sha512-GgWy2caO/+hV9sT/oCTWGHvbjmJMPT9kkXzoKRLnkEq7adghhR7UprhvY9sXrKfrp3NcDfhF6QQHXR1KfQbB8g==",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@internationalized/number"
+    },
+    {
+      "name": "@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "installed": true,
+      "lock_integrity": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@jridgewell/gen-mapping"
+    },
+    {
+      "name": "@jridgewell/remapping",
+      "version": "2.3.5",
+      "installed": true,
+      "lock_integrity": "sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@jridgewell/remapping"
+    },
+    {
+      "name": "@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "installed": true,
+      "lock_integrity": "sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@jridgewell/resolve-uri"
+    },
+    {
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "installed": true,
+      "lock_integrity": "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@jridgewell/sourcemap-codec"
+    },
+    {
+      "name": "@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "installed": true,
+      "lock_integrity": "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@jridgewell/trace-mapping"
+    },
+    {
+      "name": "@lucide/vue",
+      "version": "1.55.0",
+      "installed": true,
+      "lock_integrity": "sha512-3lpuTiVGIMbG7vEVhcDnHvIu+ZkjXka7eOp9tIA9iDPu6GHpfqwykVyAb+LM1uYYVgSI9Myo4HGzTvVnTS2CyA==",
+      "license": "ISC",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@lucide/vue"
+    },
+    {
+      "name": "@napi-rs/lzma-linux-x64-gnu",
+      "version": "1.5.1",
+      "installed": false,
+      "lock_integrity": "sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@napi-rs/lzma-linux-x64-gnu"
+    },
+    {
+      "name": "@rolldown/pluginutils",
+      "version": "1.0.1",
+      "installed": true,
+      "lock_integrity": "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@rolldown/pluginutils"
+    },
+    {
+      "name": "@rollup/rollup-android-arm-eabi",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-t2AnVba25baFdq7gczzS13JyVcdubLVbFX1X04mxrggDrTQPUXNv3XM0k9H1hr5tqvg7AVvtQ720QHAj0iYqhg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-android-arm-eabi"
+    },
+    {
+      "name": "@rollup/rollup-android-arm64",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-dNONUaEwPGhl/nuO2KV8VABWlcjYyU6KtZGN8dQv5OS5JU7JSCxPijVNKXbRJd0iuTzTiJ4TjPt/4bbvDRNiMQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-android-arm64"
+    },
+    {
+      "name": "@rollup/rollup-darwin-arm64",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-zWQqUH+9zavr2Bxuzfpuv2SIF3X31cr58TvSQC9o1GhpOvkqRwr60GkZdQcudyT/BEgdpdSafjgd2I13MbTL7g==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-darwin-arm64"
+    },
+    {
+      "name": "@rollup/rollup-darwin-x64",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-RQYreBFWtO4//hIuOaZkYUnF/lPU4lz35dveDimDshWCJvVisVtJ/shmT9bkXK8wFJY+FJF89X6F3Cq1qI3LCw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-darwin-x64"
+    },
+    {
+      "name": "@rollup/rollup-freebsd-arm64",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-A0NfMj6Cuh/9BE5k3awJKv6HoxFVXIcLAb6SZqAMoxUHPA1ZNNK4RsGuUPD/vL7nEAm9LG+ZzXWWTrnC0XtkpA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-freebsd-arm64"
+    },
+    {
+      "name": "@rollup/rollup-freebsd-x64",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-BI6/H7q3aP0I7S7GOrjyxTjgEJlSnovXE38+bdxBpuKN6z+d//uF+T+VQ3Q7ltJL/71p17ufartARX9Ja5gOGQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-freebsd-x64"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm-gnueabihf",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-W1vUprf09RWaVWnsFP1vlUkEWJzTZlpObOEAYZXt9Fq0UVAOYEkeGr7wBX7McKqqIQskXdBnpiOMgwPujordgA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-arm-gnueabihf"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm-musleabihf",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-s8QTcZWgrl9haFzEGIqyE5BWyo89pFDGLMBFZ752WYxk8DJwNU/O1X6pZgPw829d9/sm6CCHyrMP3aurt76p1Q==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-arm-musleabihf"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm64-gnu",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-ke1f6dLRzkqveyjjF2fkEwQYZvxHtNNwjegY8nJrwcO0Bdqr8CzFO/pKE0Bns13cx0qz2Ba2Y0Hs3dSwMdnHxA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-arm64-gnu"
+    },
+    {
+      "name": "@rollup/rollup-linux-arm64-musl",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-926SMeUcy4y18Rz/w2aJiUKOnyAnm6czg72bXkQEaeemsll+Wr0hnsjb2BGRpHvWgwAMYy5ACJCotbvfLCfj0A==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-arm64-musl"
+    },
+    {
+      "name": "@rollup/rollup-linux-loong64-gnu",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-6T7JNRP1hc4hqF2dUsEoVLOt9K8tmODoCLldtQRYnrddGGQY8Gqe2pM/qMMUo7EMowpP7oa2N95k0/8sYK/ipw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-loong64-gnu"
+    },
+    {
+      "name": "@rollup/rollup-linux-loong64-musl",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-SImGFl1Je5kpyAgOCPONVT7h6ASV8mAUwGRjY7eZvVjPg//PfHOXgI+P241RF/+HqsA4PP3qD527ysWFKNQyhQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-loong64-musl"
+    },
+    {
+      "name": "@rollup/rollup-linux-ppc64-gnu",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-XeDTbmPF1Yu5asfXGPrMkWoxTDhgryQbmw5Q1+R582O51VNCk23J6f2pDrsAp5YkneBVBwtExx6ZGOb9D2aQ6A==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-ppc64-gnu"
+    },
+    {
+      "name": "@rollup/rollup-linux-ppc64-musl",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-VS55JUI/1nsljmV/jfqNkLZXFw8uMO8nNlfoHmSevNf6fO3neuhyDvx9dv3c/Ytt8r/431SL8Qax1dpYvOMZTg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-ppc64-musl"
+    },
+    {
+      "name": "@rollup/rollup-linux-riscv64-gnu",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-Vblw84TbX7RS4la1Y4+yQ7aore/oSyaNtFbppuBr5Vs/4LfBeXKq9dIfoExw6zOvRERqd2rRAjnZRaMhH/0x5w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-riscv64-gnu"
+    },
+    {
+      "name": "@rollup/rollup-linux-riscv64-musl",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-7+gHjtONvKgwR9InTKFaLq53f6YzBJkgeMRBENdWTsQr+spahGqQm8HF5aXpq8i4JaRrOqYyv6Zn1WltDTxaZQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-riscv64-musl"
+    },
+    {
+      "name": "@rollup/rollup-linux-s390x-gnu",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-KvNDC0J6s4vVHhtJ6KrDXU0Er0au/hmRIBq/+1maCV8TseGupeKizq0bWcrbp2HE1T8xoknvN0Q/KZ/YF0qX3w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-s390x-gnu"
+    },
+    {
+      "name": "@rollup/rollup-linux-x64-gnu",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-GExdD15WPvu/x/drELjVam7vX8EsPgvTMOa/iJL/p/4m/oOqzbb7JXZg8fXR4hlXtg/sF2zyTZ3bR0AEtEMlhQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-x64-gnu"
+    },
+    {
+      "name": "@rollup/rollup-linux-x64-musl",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-8sT9PemIZfIMED4Vd4KGoOXVDj5CMSWNcGdbheRUx9TYS03yOWdT2Q0lXPyEyNBB9YTilwewIQKNIBk6Nxi0Kg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-linux-x64-musl"
+    },
+    {
+      "name": "@rollup/rollup-openbsd-x64",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-pO6Ehi0jo5yE0R6PltKhJhv9mlIiyzBJk5N5NUF2OF6xtVKI+1bdXxj/rb0jGXy3hck1ELVT0QPY3tzkAm360w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-openbsd-x64"
+    },
+    {
+      "name": "@rollup/rollup-openharmony-arm64",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-vo7N3/+cjjPDYr8vtxC+qSNgWa9sDvJ7g8N8R5SWqFY4WiNH1ULcAU70SKVyHeiIZOYYwNP9pTipmhN5sl1NPw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-openharmony-arm64"
+    },
+    {
+      "name": "@rollup/rollup-win32-arm64-msvc",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-ArwvgFAbjKcDM7qqotZ4OVYf+UMT9xH2YzkCzK4+AuZSDihMlz1Ekoe4INwBVXzn2mnJzuIYOcSx07iTBijGRQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-win32-arm64-msvc"
+    },
+    {
+      "name": "@rollup/rollup-win32-ia32-msvc",
+      "version": "4.65.0",
+      "installed": false,
+      "lock_integrity": "sha512-QGMmK4/cxKE/36FoLMSHQBCyymv/eFTnsCvvsBF0rgmOvVbvX78VWZRerL3dHa77f4pM6Xcc2iGDhJ10w/svKQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-win32-ia32-msvc"
+    },
+    {
+      "name": "@rollup/rollup-win32-x64-gnu",
+      "version": "4.65.0",
+      "installed": true,
+      "lock_integrity": "sha512-XfKYFWHIPs4HPODIMsGF1IKlS3H1e3WokUZIgpmn4+uNnZBlnRDDHEylNyazbQXwhMKZre68OjtRYbKqb5+j8w==",
+      "license": "MIT",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-win32-x64-gnu"
+    },
+    {
+      "name": "@rollup/rollup-win32-x64-msvc",
+      "version": "4.65.0",
+      "installed": true,
+      "lock_integrity": "sha512-wPWi++K4Bs1VR4XihOhfGi4IGX6Cub7FlerTf8X2v+2BtDHddgSqWCXwGD+h2yAe4/niIhNDwAltioOC+wEogQ==",
+      "license": "MIT",
+      "licenseFiles": [],
+      "location": "node_modules/@rollup/rollup-win32-x64-msvc"
+    },
+    {
+      "name": "@swc/helpers",
+      "version": "0.5.23",
+      "installed": true,
+      "lock_integrity": "sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@swc/helpers"
+    },
+    {
+      "name": "@tailwindcss/node",
+      "version": "4.3.3",
+      "installed": true,
+      "lock_integrity": "sha512-/T8IKEsf9VTU6tLjgC7+sv2mOPtQxzE2jMw7u4Tt40Tx+QSZxpzh95/H6cMKoja9XuW7iMdLJYBB0o9G1CaAgg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@tailwindcss/node"
+    },
+    {
+      "name": "@tailwindcss/oxide",
+      "version": "4.3.3",
+      "installed": true,
+      "lock_integrity": "sha512-krXjAikiaFSPaK/FkAQT5UTx3VormQaiZ5hBFlJZ9UFQGB/rwg1MZIhHAG9smMQRTdyJxP6Qt5MwMtdyU5FWrA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@tailwindcss/oxide"
+    },
+    {
+      "name": "@tailwindcss/oxide-android-arm64",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-Y85A2gmPSkl5Ve5qR86GL4HT509cFqQh1aes9p3sSkyTPwt0Pppf3GkwGe4JPACcRYjgJIEhQgM6dBClnr0NYw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-android-arm64"
+    },
+    {
+      "name": "@tailwindcss/oxide-darwin-arm64",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-BiaWatpBcERQFDlOjRDpIVXuFK5PJez5SA4JMg6VYZdBYU+qKfV/vqjcIs+IYmtitf1xYQZTwXvU/8y4lfZUGw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-darwin-arm64"
+    },
+    {
+      "name": "@tailwindcss/oxide-darwin-x64",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-fAeUqfV5ndhxRwai8cXGzdLvul9utWOmeTkv69unv4ZXixjn61Z+p9lCWdwOwA3TYboG3BwdVuN/RDjhBRl0mw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-darwin-x64"
+    },
+    {
+      "name": "@tailwindcss/oxide-freebsd-x64",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-iyf5bV6+wnAlflVeEy7R25dupxTNECZN5QMI0qNT6eT+EgaGdZcKhGkr5SdoaWiLJ3spLqIY9VCeSGrwmtg4kw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-freebsd-x64"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-arm-gnueabihf",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-aAYUprJAJQWWbRrPvtjdroZ56Md+JM8pMiopS6xGEwDfLhqj+2ver2p4nU4Mb3CRqcMmNBjo8KkUgcxhkzVQGQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-linux-arm-gnueabihf"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-arm64-gnu",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-nDxldcEENOxZRzC2uu9jrutZdAAQtb+8WWDCSnWL1zvBk1+FN+x6MtDViPB5AJMfttVCUhehGWus3XBPgatM/w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-linux-arm64-gnu"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-arm64-musl",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-Md44bD6veX/PC5iyF8cDVnw4HBIANZepRZZ7a8DQOvkfo5WUBwcp6iAuCUz23u+4SUkhJlD3eL7hNdW8ezd/kA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-linux-arm64-musl"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-x64-gnu",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-tx7us1muwOKAKWao2v/GaafFeQboE6aj88vC6ziN2NCGcRm8gWUhwjzg+YdVB1e4boAtdtma4L43onunI6NS4w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-linux-x64-gnu"
+    },
+    {
+      "name": "@tailwindcss/oxide-linux-x64-musl",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-SJxX60smvHgasZoBy11dX6YRjXJFovwWBoedhbQPOBzgFWBHGB+TVPWB9BxzR7TTxU8FQZAI2AyiNCMzFm8Img==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-linux-x64-musl"
+    },
+    {
+      "name": "@tailwindcss/oxide-wasm32-wasi",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-jx1+rPhY/5Ympkktd656HBWEBLxP7dH06losBLjjf5vgCODXvi9KhtftWcMIwTFIDqBr7cRnQkdLnAG+IOlGvQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-wasm32-wasi"
+    },
+    {
+      "name": "@tailwindcss/oxide-win32-arm64-msvc",
+      "version": "4.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-3rc292Ca2ceK6Ulcc/bAVnTs/3nDtoPhyEKlgPv+yQJQi/JS/AMJlqzxvlDacL1nekbrcf6bTqp/jV4qgnPxNQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/@tailwindcss/oxide-win32-arm64-msvc"
+    },
+    {
+      "name": "@tailwindcss/oxide-win32-x64-msvc",
+      "version": "4.3.3",
+      "installed": true,
+      "lock_integrity": "sha512-yJ0pwIVc/nYeGoV02WtsN8KYyLQv7kyI2wDnkezyJlGGjkd4QLwDGAwl47YpPJeuI0M0ObaXGSPjvWDPeTPggw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@tailwindcss/oxide-win32-x64-msvc"
+    },
+    {
+      "name": "@tailwindcss/vite",
+      "version": "4.3.3",
+      "installed": true,
+      "lock_integrity": "sha512-yYU8cogLeSh/ms2jh8Fj7jaba/EWa7Ja6GoUqYZaraEuCI5YS6ms6ObZgjjedm+jm6XZjdNRWBpPP6Z86oOxcw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@tailwindcss/vite"
+    },
+    {
+      "name": "@tanstack/virtual-core",
+      "version": "3.19.6",
+      "installed": true,
+      "lock_integrity": "sha512-CsTW892z23gy7IyxYTTorVu1uZWB+0N349rSMgKz4rFLPpLza7F7TpcCKeI5iUAwYQCt8QUlOU67J+KXCxtpGw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@tanstack/virtual-core"
+    },
+    {
+      "name": "@tanstack/vue-virtual",
+      "version": "3.13.47",
+      "installed": true,
+      "lock_integrity": "sha512-6HzdYK9bDyDoD9Q/NjepnC4wGDaZ7mFl5zz8tbn3Fmy7FDicI98ZJ+R37ztFssnoTMoCQhY3GfUhlz+pW/vOTg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@tanstack/vue-virtual"
+    },
+    {
+      "name": "@types/estree",
+      "version": "1.0.9",
+      "installed": true,
+      "lock_integrity": "sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@types/estree"
+    },
+    {
+      "name": "@types/web-bluetooth",
+      "version": "0.0.21",
+      "installed": true,
+      "lock_integrity": "sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@types/web-bluetooth"
+    },
+    {
+      "name": "@vitejs/plugin-vue",
+      "version": "6.0.10",
+      "installed": true,
+      "lock_integrity": "sha512-b80aUQh3n+qEzzZm5oQp3rT2QImeCx58K6eFl/RkJ3d65KW0kTuv5lNsLRVAjbW9YRUpo/wzmvzMgV34bTAItA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vitejs/plugin-vue"
+    },
+    {
+      "name": "@vue/compiler-core",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-k34nCytbK8PQ1gR2mGROYOw6Pnv/mumqIdrZ3x2tbyXZDWm7ViKGLTfdB+DRrWqEQsLgGJvn0WN9jBif5zCTLQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/compiler-core"
+    },
+    {
+      "name": "@vue/compiler-dom",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-W5AoBFWdw1lQAKiHowkfgFKFab82oSRT6sGsPfw/q1GRjsy/ZJFLHGhJyBRIFN9APLTUduDH9U2JAiPOIyKuYg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/compiler-dom"
+    },
+    {
+      "name": "@vue/compiler-sfc",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-dzHmQ4jXTpdr5FjIQUeykVakN/uzqFbUo9/C5ikBFg3a3PeM6uRxeczx1ZbXBML0/zJstEh3ygYipzR5Z7b2Pw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/compiler-sfc"
+    },
+    {
+      "name": "@vue/compiler-ssr",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-xr5gb1JVHlfXJwSlRz1FeP6uxoazdzHuMTVLE7up+4Vrqxk219CvxLPxD9NXBt47yvZW7+p4DXfyp4O1fkByIA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/compiler-ssr"
+    },
+    {
+      "name": "@vue/reactivity",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-u+QJdKeBBEADkPdevsL+6E12QlYVfBD8Zcw5qjDQKtamI6l14KyqazJMobhCKelhWN5zpyKUiEDoTyHE93cqWw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/reactivity"
+    },
+    {
+      "name": "@vue/runtime-core",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-uEa/ndwjhrrhnOfb2p+sZy6zeoamJOISqaLSJGk/8R6nABT1ZldpzcJoPzKj+zHVomVBPcmQYyC2r4LtvDV6CQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/runtime-core"
+    },
+    {
+      "name": "@vue/runtime-dom",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-3fc4ARcXVhVBaJ3ujWiNZJARD6pkyRcwG+ZYhMzjKtKUp7MAY0HLwr7r3Smep3Li6ZaWT6ewdmx8XqdaD5oNZg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/runtime-dom"
+    },
+    {
+      "name": "@vue/server-renderer",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-R4S1UoH4h5Frrauv8Z5XE5TxV9oBiUSgWIC4TyVK1FK+RocRnOLwFA5Xcmo2011RlgJp+AbZCnw6afrhlgRuUQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/server-renderer"
+    },
+    {
+      "name": "@vue/shared",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-H82XLH0DjmSOdbEwO15x3QTo1f5PWEtv237eLpYKc0mqLu+B8hnq16lFWmuBmNurkeiG3wr+oM1FhOll/YVFRg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vue/shared"
+    },
+    {
+      "name": "@vueuse/core",
+      "version": "14.1.0",
+      "installed": true,
+      "lock_integrity": "sha512-rgBinKs07hAYyPF834mDTigH7BtPqvZ3Pryuzt1SD/lg5wEcWqvwzXXYGEDb2/cP0Sj5zSvHl3WkmMELr5kfWw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vueuse/core"
+    },
+    {
+      "name": "@vueuse/metadata",
+      "version": "14.1.0",
+      "installed": true,
+      "lock_integrity": "sha512-7hK4g015rWn2PhKcZ99NyT+ZD9sbwm7SGvp7k+k+rKGWnLjS/oQozoIZzWfCewSUeBmnJkIb+CNr7Zc/EyRnnA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vueuse/metadata"
+    },
+    {
+      "name": "@vueuse/shared",
+      "version": "14.1.0",
+      "installed": true,
+      "lock_integrity": "sha512-EcKxtYvn6gx1F8z9J5/rsg3+lTQnvOruQd8fUecW99DCK04BkWD7z5KQ/wTAx+DazyoEE9dJt/zV8OIEQbM6kw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/@vueuse/shared"
+    },
+    {
+      "name": "aria-hidden",
+      "version": "1.2.6",
+      "installed": true,
+      "lock_integrity": "sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/aria-hidden"
+    },
+    {
+      "name": "class-variance-authority",
+      "version": "0.7.1",
+      "installed": true,
+      "lock_integrity": "sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/class-variance-authority"
+    },
+    {
+      "name": "clsx",
+      "version": "2.1.1",
+      "installed": true,
+      "lock_integrity": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "license"
+      ],
+      "location": "node_modules/clsx"
+    },
+    {
+      "name": "csstype",
+      "version": "3.2.3",
+      "installed": true,
+      "lock_integrity": "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/csstype"
+    },
+    {
+      "name": "defu",
+      "version": "6.1.7",
+      "installed": true,
+      "lock_integrity": "sha512-7z22QmUWiQ/2d0KkdYmANbRUVABpZ9SNYyH5vx6PZ+nE5bcC0l7uFvEfHlyld/HcGBFTL536ClDt3DEcSlEJAQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/defu"
+    },
+    {
+      "name": "detect-libc",
+      "version": "2.1.2",
+      "installed": true,
+      "lock_integrity": "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/detect-libc"
+    },
+    {
+      "name": "enhanced-resolve",
+      "version": "5.26.0",
+      "installed": true,
+      "lock_integrity": "sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/enhanced-resolve"
+    },
+    {
+      "name": "entities",
+      "version": "7.0.1",
+      "installed": true,
+      "lock_integrity": "sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==",
+      "license": "BSD-2-Clause",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/entities"
+    },
+    {
+      "name": "esbuild",
+      "version": "0.27.7",
+      "installed": true,
+      "lock_integrity": "sha512-IxpibTjyVnmrIQo5aqNpCgoACA/dTKLTlhMHihVHhdkxKyPO1uBBthumT0rdHmcsk9uMonIWS0m4FljWzILh3w==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE.md"
+      ],
+      "location": "node_modules/esbuild"
+    },
+    {
+      "name": "estree-walker",
+      "version": "2.0.2",
+      "installed": true,
+      "lock_integrity": "sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/estree-walker"
+    },
+    {
+      "name": "fdir",
+      "version": "6.5.0",
+      "installed": true,
+      "lock_integrity": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/fdir"
+    },
+    {
+      "name": "fsevents",
+      "version": "2.3.3",
+      "installed": false,
+      "lock_integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/fsevents"
+    },
+    {
+      "name": "graceful-fs",
+      "version": "4.2.11",
+      "installed": true,
+      "lock_integrity": "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==",
+      "license": "ISC",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/graceful-fs"
+    },
+    {
+      "name": "jiti",
+      "version": "2.7.0",
+      "installed": true,
+      "lock_integrity": "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/jiti"
+    },
+    {
+      "name": "lightningcss",
+      "version": "1.32.0",
+      "installed": true,
+      "lock_integrity": "sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==",
+      "license": "MPL-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/lightningcss"
+    },
+    {
+      "name": "lightningcss-android-arm64",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-android-arm64"
+    },
+    {
+      "name": "lightningcss-darwin-arm64",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-RzeG9Ju5bag2Bv1/lwlVJvBE3q6TtXskdZLLCyfg5pt+HLz9BqlICO7LZM7VHNTTn/5PRhHFBSjk5lc4cmscPQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-darwin-arm64"
+    },
+    {
+      "name": "lightningcss-darwin-x64",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-U+QsBp2m/s2wqpUYT/6wnlagdZbtZdndSmut/NJqlCcMLTWp5muCrID+K5UJ6jqD2BFshejCYXniPDbNh73V8w==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-darwin-x64"
+    },
+    {
+      "name": "lightningcss-freebsd-x64",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-JCTigedEksZk3tHTTthnMdVfGf61Fky8Ji2E4YjUTEQX14xiy/lTzXnu1vwiZe3bYe0q+SpsSH/CTeDXK6WHig==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-freebsd-x64"
+    },
+    {
+      "name": "lightningcss-linux-arm-gnueabihf",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-x6rnnpRa2GL0zQOkt6rts3YDPzduLpWvwAF6EMhXFVZXD4tPrBkEFqzGowzCsIWsPjqSK+tyNEODUBXeeVHSkw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-linux-arm-gnueabihf"
+    },
+    {
+      "name": "lightningcss-linux-arm64-gnu",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-0nnMyoyOLRJXfbMOilaSRcLH3Jw5z9HDNGfT/gwCPgaDjnx0i8w7vBzFLFR1f6CMLKF8gVbebmkUN3fa/kQJpQ==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-linux-arm64-gnu"
+    },
+    {
+      "name": "lightningcss-linux-arm64-musl",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-UpQkoenr4UJEzgVIYpI80lDFvRmPVg6oqboNHfoH4CQIfNA+HOrZ7Mo7KZP02dC6LjghPQJeBsvXhJod/wnIBg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-linux-arm64-musl"
+    },
+    {
+      "name": "lightningcss-linux-x64-gnu",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-V7Qr52IhZmdKPVr+Vtw8o+WLsQJYCTd8loIfpDaMRWGUZfBOYEJeyJIkqGIDMZPwPx24pUMfwSxxI8phr/MbOA==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-linux-x64-gnu"
+    },
+    {
+      "name": "lightningcss-linux-x64-musl",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-bYcLp+Vb0awsiXg/80uCRezCYHNg1/l3mt0gzHnWV9XP1W5sKa5/TCdGWaR/zBM2PeF/HbsQv/j2URNOiVuxWg==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-linux-x64-musl"
+    },
+    {
+      "name": "lightningcss-win32-arm64-msvc",
+      "version": "1.32.0",
+      "installed": false,
+      "lock_integrity": "sha512-8SbC8BR40pS6baCM8sbtYDSwEVQd4JlFTOlaD3gWGHfThTcABnNDBda6eTZeqbofalIJhFx0qKzgHJmcPTnGdw==",
+      "license": "UNKNOWN_LICENSE_IN_INSTALLED_MANIFEST",
+      "licenseFiles": [],
+      "location": "node_modules/lightningcss-win32-arm64-msvc"
+    },
+    {
+      "name": "lightningcss-win32-x64-msvc",
+      "version": "1.32.0",
+      "installed": true,
+      "lock_integrity": "sha512-Amq9B/SoZYdDi1kFrojnoqPLxYhQ4Wo5XiL8EVJrVsB8ARoC1PWW6VGtT0WKCemjy8aC+louJnjS7U18x3b06Q==",
+      "license": "MPL-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/lightningcss-win32-x64-msvc"
+    },
+    {
+      "name": "magic-string",
+      "version": "0.30.21",
+      "installed": true,
+      "lock_integrity": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/magic-string"
+    },
+    {
+      "name": "nanoid",
+      "version": "3.3.20",
+      "installed": true,
+      "lock_integrity": "sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/nanoid"
+    },
+    {
+      "name": "ohash",
+      "version": "2.0.12",
+      "installed": true,
+      "lock_integrity": "sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/ohash"
+    },
+    {
+      "name": "picocolors",
+      "version": "1.1.1",
+      "installed": true,
+      "lock_integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==",
+      "license": "ISC",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/picocolors"
+    },
+    {
+      "name": "picomatch",
+      "version": "4.0.7",
+      "installed": true,
+      "lock_integrity": "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/picomatch"
+    },
+    {
+      "name": "postcss",
+      "version": "8.5.31",
+      "installed": true,
+      "lock_integrity": "sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/postcss"
+    },
+    {
+      "name": "reka-ui",
+      "version": "2.11.0",
+      "installed": true,
+      "lock_integrity": "sha512-ilkpm4bIAol4jwzm4tpm3WVcffyGOpqksNZL1k1qO9QmIwAA+q8jroxjkUGLEn/GddfdExFfvofWfQiKZszUeQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/reka-ui"
+    },
+    {
+      "name": "rollup",
+      "version": "4.65.0",
+      "installed": true,
+      "lock_integrity": "sha512-QVCvQUTGDN6JRwi3jVGCY3H4aTHvi9rX0LyoBMkGUvdh/Z6O51CzcLz85BWZaTCDGhl6ySGqYZs+xI1jmPqGcw==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE.md"
+      ],
+      "location": "node_modules/rollup"
+    },
+    {
+      "name": "source-map-js",
+      "version": "1.2.2",
+      "installed": true,
+      "lock_integrity": "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==",
+      "license": "BSD-3-Clause",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/source-map-js"
+    },
+    {
+      "name": "tailwind-merge",
+      "version": "3.7.0",
+      "installed": true,
+      "lock_integrity": "sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE.md"
+      ],
+      "location": "node_modules/tailwind-merge"
+    },
+    {
+      "name": "tailwindcss",
+      "version": "4.3.3",
+      "installed": true,
+      "lock_integrity": "sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/tailwindcss"
+    },
+    {
+      "name": "tapable",
+      "version": "2.3.3",
+      "installed": true,
+      "lock_integrity": "sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/tapable"
+    },
+    {
+      "name": "tinyglobby",
+      "version": "0.2.17",
+      "installed": true,
+      "lock_integrity": "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/tinyglobby"
+    },
+    {
+      "name": "tslib",
+      "version": "2.8.1",
+      "installed": true,
+      "lock_integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
+      "license": "0BSD",
+      "licenseFiles": [
+        "LICENSE.txt"
+      ],
+      "location": "node_modules/tslib"
+    },
+    {
+      "name": "typescript",
+      "version": "5.9.3",
+      "installed": true,
+      "lock_integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE.txt"
+      ],
+      "location": "node_modules/typescript"
+    },
+    {
+      "name": "vite",
+      "version": "7.3.1",
+      "installed": true,
+      "lock_integrity": "sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE.md"
+      ],
+      "location": "node_modules/vite"
+    },
+    {
+      "name": "vue",
+      "version": "3.5.44",
+      "installed": true,
+      "lock_integrity": "sha512-dvvmaOCG7lAMkJTPqPwWeGMsPS6DIsFsfZDUgBp9V6mHf9b3+/wyVwYR4Es+WV6uJC0FKRxp81Obcq0ZwUcGFQ==",
+      "license": "MIT",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "location": "node_modules/vue"
+    }
+  ]
+}

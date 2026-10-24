@@ -1,0 +1,601 @@
+{
+  "scope": "74_WINDOWS_MATERIALIZED_PACKAGE_TARBALLS_FROM_LOCK_ONLY",
+  "notAllOptionalPlatforms": true,
+  "checked": 74,
+  "failures": 0,
+  "receipts": [
+    {
+      "where": "node_modules/@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "resolved": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.29.7.tgz",
+      "bytes": 14245,
+      "sha512": "sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@babel/helper-string-parser",
+      "version": "7.29.11",
+      "resolved": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.11.tgz",
+      "bytes": 8410,
+      "sha512": "sha512-snZbO7MEDOof+hvNa97EjEY7qD7h2kwvQr5AJC3ZhQudKW5dnej6k3kP9NQV88hJwaS8vDqRLFo9rivLEhle2g==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@floating-ui/core",
+      "version": "1.8.0",
+      "resolved": "https://registry.npmjs.org/@floating-ui/core/-/core-1.8.0.tgz",
+      "bytes": 45136,
+      "sha512": "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@floating-ui/dom",
+      "version": "1.8.0",
+      "resolved": "https://registry.npmjs.org/@floating-ui/dom/-/dom-1.8.0.tgz",
+      "bytes": 35146,
+      "sha512": "sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@floating-ui/utils",
+      "version": "0.2.12",
+      "resolved": "https://registry.npmjs.org/@floating-ui/utils/-/utils-0.2.12.tgz",
+      "bytes": 9863,
+      "sha512": "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@internationalized/number",
+      "version": "3.6.9",
+      "resolved": "https://registry.npmjs.org/@internationalized/number/-/number-3.6.9.tgz",
+      "bytes": 28956,
+      "sha512": "sha512-GgWy2caO/+hV9sT/oCTWGHvbjmJMPT9kkXzoKRLnkEq7adghhR7UprhvY9sXrKfrp3NcDfhF6QQHXR1KfQbB8g==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@babel/parser",
+      "version": "7.29.11",
+      "resolved": "https://registry.npmjs.org/@babel/parser/-/parser-7.29.11.tgz",
+      "bytes": 440984,
+      "sha512": "sha512-OZ6+oaK7GMyg3IfCpj8JOmn8n+w2rJbDT0LLfVDTLb1ZFeKDh3AiNELgCMUw175IJHSkLl74hG0M0VLsvx+gag==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@babel/types",
+      "version": "7.29.11",
+      "resolved": "https://registry.npmjs.org/@babel/types/-/types-7.29.11.tgz",
+      "bytes": 301906,
+      "sha512": "sha512-WCsemW40Cpc6gouC1SrY6PBaZ+oLRlEVY9XBvZBI7il/HyUrb2nJ505wE1MHEFyDZNnrWDEuy4jL50WVHfTTSQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "resolved": "https://registry.npmjs.org/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz",
+      "bytes": 17972,
+      "sha512": "sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@floating-ui/vue",
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/@floating-ui/vue/-/vue-2.0.1.tgz",
+      "bytes": 7057,
+      "sha512": "sha512-043dyEKD9TDSfz080YH2vobubgg+NIo/9Fw4RAl7sEMpD8Am1DNrrSTl/GpMBjyGHoD/FbJY2QLawY+HSQsEIA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@internationalized/date",
+      "version": "3.12.4",
+      "resolved": "https://registry.npmjs.org/@internationalized/date/-/date-3.12.4.tgz",
+      "bytes": 171899,
+      "sha512": "sha512-M1dEn4c1U1HsSlaVR8upZtSqvXrTkHDfv18H01uCSJyjVLDxnBR38v/fMxecmlwXKR4i9HeZcmgQAPE6A+aGJQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "resolved": "https://registry.npmjs.org/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz",
+      "bytes": 9622,
+      "sha512": "sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@jridgewell/remapping",
+      "version": "2.3.5",
+      "resolved": "https://registry.npmjs.org/@jridgewell/remapping/-/remapping-2.3.5.tgz",
+      "bytes": 14624,
+      "sha512": "sha512-LI9u/+laYG4Ds1TDKSJW2YPrIlcVYOwi2fUC6xB43lueCjgxV4lffOCZCtYFiH6TNOX+tQKXx97T4IKHbhyHEQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "resolved": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.6.0.tgz",
+      "bytes": 18401,
+      "sha512": "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "resolved": "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz",
+      "bytes": 30747,
+      "sha512": "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@rolldown/pluginutils",
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/@rolldown/pluginutils/-/pluginutils-1.0.1.tgz",
+      "bytes": 6681,
+      "sha512": "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@swc/helpers",
+      "version": "0.5.23",
+      "resolved": "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.23.tgz",
+      "bytes": 64793,
+      "sha512": "sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@tailwindcss/oxide",
+      "version": "4.3.3",
+      "resolved": "https://registry.npmjs.org/@tailwindcss/oxide/-/oxide-4.3.3.tgz",
+      "bytes": 4340,
+      "sha512": "sha512-krXjAikiaFSPaK/FkAQT5UTx3VormQaiZ5hBFlJZ9UFQGB/rwg1MZIhHAG9smMQRTdyJxP6Qt5MwMtdyU5FWrA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@rollup/rollup-win32-x64-gnu",
+      "version": "4.65.0",
+      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.65.0.tgz",
+      "bytes": 926666,
+      "sha512": "sha512-XfKYFWHIPs4HPODIMsGF1IKlS3H1e3WokUZIgpmn4+uNnZBlnRDDHEylNyazbQXwhMKZre68OjtRYbKqb5+j8w==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@tailwindcss/node",
+      "version": "4.3.3",
+      "resolved": "https://registry.npmjs.org/@tailwindcss/node/-/node-4.3.3.tgz",
+      "bytes": 41528,
+      "sha512": "sha512-/T8IKEsf9VTU6tLjgC7+sv2mOPtQxzE2jMw7u4Tt40Tx+QSZxpzh95/H6cMKoja9XuW7iMdLJYBB0o9G1CaAgg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@tailwindcss/vite",
+      "version": "4.3.3",
+      "resolved": "https://registry.npmjs.org/@tailwindcss/vite/-/vite-4.3.3.tgz",
+      "bytes": 5641,
+      "sha512": "sha512-yYU8cogLeSh/ms2jh8Fj7jaba/EWa7Ja6GoUqYZaraEuCI5YS6ms6ObZgjjedm+jm6XZjdNRWBpPP6Z86oOxcw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@tanstack/vue-virtual",
+      "version": "3.13.47",
+      "resolved": "https://registry.npmjs.org/@tanstack/vue-virtual/-/vue-virtual-3.13.47.tgz",
+      "bytes": 4005,
+      "sha512": "sha512-6HzdYK9bDyDoD9Q/NjepnC4wGDaZ7mFl5zz8tbn3Fmy7FDicI98ZJ+R37ztFssnoTMoCQhY3GfUhlz+pW/vOTg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@rollup/rollup-win32-x64-msvc",
+      "version": "4.65.0",
+      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.65.0.tgz",
+      "bytes": 1020868,
+      "sha512": "sha512-wPWi++K4Bs1VR4XihOhfGi4IGX6Cub7FlerTf8X2v+2BtDHddgSqWCXwGD+h2yAe4/niIhNDwAltioOC+wEogQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@types/estree",
+      "version": "1.0.9",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.9.tgz",
+      "bytes": 5930,
+      "sha512": "sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@types/web-bluetooth",
+      "version": "0.0.21",
+      "resolved": "https://registry.npmjs.org/@types/web-bluetooth/-/web-bluetooth-0.0.21.tgz",
+      "bytes": 3088,
+      "sha512": "sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vitejs/plugin-vue",
+      "version": "6.0.10",
+      "resolved": "https://registry.npmjs.org/@vitejs/plugin-vue/-/plugin-vue-6.0.10.tgz",
+      "bytes": 23416,
+      "sha512": "sha512-b80aUQh3n+qEzzZm5oQp3rT2QImeCx58K6eFl/RkJ3d65KW0kTuv5lNsLRVAjbW9YRUpo/wzmvzMgV34bTAItA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/compiler-core",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/compiler-core/-/compiler-core-3.5.44.tgz",
+      "bytes": 145903,
+      "sha512": "sha512-k34nCytbK8PQ1gR2mGROYOw6Pnv/mumqIdrZ3x2tbyXZDWm7ViKGLTfdB+DRrWqEQsLgGJvn0WN9jBif5zCTLQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/compiler-dom",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/compiler-dom/-/compiler-dom-3.5.44.tgz",
+      "bytes": 168604,
+      "sha512": "sha512-W5AoBFWdw1lQAKiHowkfgFKFab82oSRT6sGsPfw/q1GRjsy/ZJFLHGhJyBRIFN9APLTUduDH9U2JAiPOIyKuYg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@tanstack/virtual-core",
+      "version": "3.19.6",
+      "resolved": "https://registry.npmjs.org/@tanstack/virtual-core/-/virtual-core-3.19.6.tgz",
+      "bytes": 163602,
+      "sha512": "sha512-CsTW892z23gy7IyxYTTorVu1uZWB+0N349rSMgKz4rFLPpLza7F7TpcCKeI5iUAwYQCt8QUlOU67J+KXCxtpGw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/compiler-ssr",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/compiler-ssr/-/compiler-ssr-3.5.44.tgz",
+      "bytes": 11221,
+      "sha512": "sha512-xr5gb1JVHlfXJwSlRz1FeP6uxoazdzHuMTVLE7up+4Vrqxk219CvxLPxD9NXBt47yvZW7+p4DXfyp4O1fkByIA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@tailwindcss/oxide-win32-x64-msvc",
+      "version": "4.3.3",
+      "resolved": "https://registry.npmjs.org/@tailwindcss/oxide-win32-x64-msvc/-/oxide-win32-x64-msvc-4.3.3.tgz",
+      "bytes": 1287789,
+      "sha512": "sha512-yJ0pwIVc/nYeGoV02WtsN8KYyLQv7kyI2wDnkezyJlGGjkd4QLwDGAwl47YpPJeuI0M0ObaXGSPjvWDPeTPggw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@lucide/vue",
+      "version": "1.55.0",
+      "resolved": "https://registry.npmjs.org/@lucide/vue/-/vue-1.55.0.tgz",
+      "bytes": 2104376,
+      "sha512": "sha512-3lpuTiVGIMbG7vEVhcDnHvIu+ZkjXka7eOp9tIA9iDPu6GHpfqwykVyAb+LM1uYYVgSI9Myo4HGzTvVnTS2CyA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/runtime-core",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/runtime-core/-/runtime-core-3.5.44.tgz",
+      "bytes": 196068,
+      "sha512": "sha512-uEa/ndwjhrrhnOfb2p+sZy6zeoamJOISqaLSJGk/8R6nABT1ZldpzcJoPzKj+zHVomVBPcmQYyC2r4LtvDV6CQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/shared",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/shared/-/shared-3.5.44.tgz",
+      "bytes": 16103,
+      "sha512": "sha512-H82XLH0DjmSOdbEwO15x3QTo1f5PWEtv237eLpYKc0mqLu+B8hnq16lFWmuBmNurkeiG3wr+oM1FhOll/YVFRg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/server-renderer",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/server-renderer/-/server-renderer-3.5.44.tgz",
+      "bytes": 108052,
+      "sha512": "sha512-R4S1UoH4h5Frrauv8Z5XE5TxV9oBiUSgWIC4TyVK1FK+RocRnOLwFA5Xcmo2011RlgJp+AbZCnw6afrhlgRuUQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/reactivity",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/reactivity/-/reactivity-3.5.44.tgz",
+      "bytes": 84243,
+      "sha512": "sha512-u+QJdKeBBEADkPdevsL+6E12QlYVfBD8Zcw5qjDQKtamI6l14KyqazJMobhCKelhWN5zpyKUiEDoTyHE93cqWw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vueuse/metadata",
+      "version": "14.1.0",
+      "resolved": "https://registry.npmjs.org/@vueuse/metadata/-/metadata-14.1.0.tgz",
+      "bytes": 24707,
+      "sha512": "sha512-7hK4g015rWn2PhKcZ99NyT+ZD9sbwm7SGvp7k+k+rKGWnLjS/oQozoIZzWfCewSUeBmnJkIb+CNr7Zc/EyRnnA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/aria-hidden",
+      "version": "1.2.6",
+      "resolved": "https://registry.npmjs.org/aria-hidden/-/aria-hidden-1.2.6.tgz",
+      "bytes": 5360,
+      "sha512": "sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/class-variance-authority",
+      "version": "0.7.1",
+      "resolved": "https://registry.npmjs.org/class-variance-authority/-/class-variance-authority-0.7.1.tgz",
+      "bytes": 6219,
+      "sha512": "sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/runtime-dom",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/runtime-dom/-/runtime-dom-3.5.44.tgz",
+      "bytes": 337464,
+      "sha512": "sha512-3fc4ARcXVhVBaJ3ujWiNZJARD6pkyRcwG+ZYhMzjKtKUp7MAY0HLwr7r3Smep3Li6ZaWT6ewdmx8XqdaD5oNZg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/clsx",
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/clsx/-/clsx-2.1.1.tgz",
+      "bytes": 3936,
+      "sha512": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vue/compiler-sfc",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/@vue/compiler-sfc/-/compiler-sfc-3.5.44.tgz",
+      "bytes": 592780,
+      "sha512": "sha512-dzHmQ4jXTpdr5FjIQUeykVakN/uzqFbUo9/C5ikBFg3a3PeM6uRxeczx1ZbXBML0/zJstEh3ygYipzR5Z7b2Pw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/defu",
+      "version": "6.1.7",
+      "resolved": "https://registry.npmjs.org/defu/-/defu-6.1.7.tgz",
+      "bytes": 4897,
+      "sha512": "sha512-7z22QmUWiQ/2d0KkdYmANbRUVABpZ9SNYyH5vx6PZ+nE5bcC0l7uFvEfHlyld/HcGBFTL536ClDt3DEcSlEJAQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/detect-libc",
+      "version": "2.1.2",
+      "resolved": "https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.2.tgz",
+      "bytes": 7776,
+      "sha512": "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vueuse/core",
+      "version": "14.1.0",
+      "resolved": "https://registry.npmjs.org/@vueuse/core/-/core-14.1.0.tgz",
+      "bytes": 212030,
+      "sha512": "sha512-rgBinKs07hAYyPF834mDTigH7BtPqvZ3Pryuzt1SD/lg5wEcWqvwzXXYGEDb2/cP0Sj5zSvHl3WkmMELr5kfWw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/csstype",
+      "version": "3.2.3",
+      "resolved": "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz",
+      "bytes": 138324,
+      "sha512": "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/enhanced-resolve",
+      "version": "5.26.0",
+      "resolved": "https://registry.npmjs.org/enhanced-resolve/-/enhanced-resolve-5.26.0.tgz",
+      "bytes": 124037,
+      "sha512": "sha512-9vhedylFonb2YGogzUKX6+Ja72gOJbN1QHAqdrvqLwhdl/QWbKopzoUC9EbQNVsAns/bx/4uyqalrQAoy1IByw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/entities",
+      "version": "7.0.1",
+      "resolved": "https://registry.npmjs.org/entities/-/entities-7.0.1.tgz",
+      "bytes": 113587,
+      "sha512": "sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/estree-walker",
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/estree-walker/-/estree-walker-2.0.2.tgz",
+      "bytes": 8353,
+      "sha512": "sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/esbuild",
+      "version": "0.27.7",
+      "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.27.7.tgz",
+      "bytes": 32601,
+      "sha512": "sha512-IxpibTjyVnmrIQo5aqNpCgoACA/dTKLTlhMHihVHhdkxKyPO1uBBthumT0rdHmcsk9uMonIWS0m4FljWzILh3w==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/fdir",
+      "version": "6.5.0",
+      "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
+      "bytes": 9742,
+      "sha512": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/graceful-fs",
+      "version": "4.2.11",
+      "resolved": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz",
+      "bytes": 9804,
+      "sha512": "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@vueuse/shared",
+      "version": "14.1.0",
+      "resolved": "https://registry.npmjs.org/@vueuse/shared/-/shared-14.1.0.tgz",
+      "bytes": 52202,
+      "sha512": "sha512-EcKxtYvn6gx1F8z9J5/rsg3+lTQnvOruQd8fUecW99DCK04BkWD7z5KQ/wTAx+DazyoEE9dJt/zV8OIEQbM6kw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/lightningcss",
+      "version": "1.32.0",
+      "resolved": "https://registry.npmjs.org/lightningcss/-/lightningcss-1.32.0.tgz",
+      "bytes": 86978,
+      "sha512": "sha512-NXYBzinNrblfraPGyrbPoD19C1h9lfI/1mzgWYvXUTe414Gz/X1FD2XBZSZM7rRTrMA8JL3OtAaGifrIKhQ5yQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/magic-string",
+      "version": "0.30.21",
+      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz",
+      "bytes": 89981,
+      "sha512": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/nanoid",
+      "version": "3.3.20",
+      "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.20.tgz",
+      "bytes": 5721,
+      "sha512": "sha512-uKdg2G3GNCKQn9byYOpxbGqrT2fGO5KRt5J/8b3pok8rT6qxGWF6hxMyJiEYtAf+FVyYuD9hRaDqX5uPFYJ4ZQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/ohash",
+      "version": "2.0.12",
+      "resolved": "https://registry.npmjs.org/ohash/-/ohash-2.0.12.tgz",
+      "bytes": 8973,
+      "sha512": "sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/picocolors",
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz",
+      "bytes": 2625,
+      "sha512": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/postcss",
+      "version": "8.5.31",
+      "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.31.tgz",
+      "bytes": 52955,
+      "sha512": "sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/picomatch",
+      "version": "4.0.7",
+      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.7.tgz",
+      "bytes": 24326,
+      "sha512": "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/jiti",
+      "version": "2.7.0",
+      "resolved": "https://registry.npmjs.org/jiti/-/jiti-2.7.0.tgz",
+      "bytes": 427320,
+      "sha512": "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/source-map-js",
+      "version": "1.2.2",
+      "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz",
+      "bytes": 36349,
+      "sha512": "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/tailwind-merge",
+      "version": "3.7.0",
+      "resolved": "https://registry.npmjs.org/tailwind-merge/-/tailwind-merge-3.7.0.tgz",
+      "bytes": 167565,
+      "sha512": "sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/tapable",
+      "version": "2.3.3",
+      "resolved": "https://registry.npmjs.org/tapable/-/tapable-2.3.3.tgz",
+      "bytes": 18600,
+      "sha512": "sha512-uxc/zpqFg6x7C8vOE7lh6Lbda8eEL9zmVm/PLeTPBRhh1xCgdWaQ+J1CUieGpIfm2HdtsUpRv+HshiasBMcc6A==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/tinyglobby",
+      "version": "0.2.17",
+      "resolved": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
+      "bytes": 7873,
+      "sha512": "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/tslib",
+      "version": "2.8.1",
+      "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+      "bytes": 18477,
+      "sha512": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/rollup",
+      "version": "4.65.0",
+      "resolved": "https://registry.npmjs.org/rollup/-/rollup-4.65.0.tgz",
+      "bytes": 594176,
+      "sha512": "sha512-QVCvQUTGDN6JRwi3jVGCY3H4aTHvi9rX0LyoBMkGUvdh/Z6O51CzcLz85BWZaTCDGhl6ySGqYZs+xI1jmPqGcw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/tailwindcss",
+      "version": "4.3.3",
+      "resolved": "https://registry.npmjs.org/tailwindcss/-/tailwindcss-4.3.3.tgz",
+      "bytes": 185262,
+      "sha512": "sha512-gOhV3P7ufE62QDGg1zVaTgCR+EtPv92k2nIhVcVKcLmxT1sUBsQGhnZj175j+MqRt4zLF7ic+sCYjfhxMxj7YQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/vite",
+      "version": "7.3.1",
+      "resolved": "https://registry.npmjs.org/vite/-/vite-7.3.1.tgz",
+      "bytes": 542287,
+      "sha512": "sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/@esbuild/win32-x64",
+      "version": "0.27.7",
+      "resolved": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.27.7.tgz",
+      "bytes": 4746453,
+      "sha512": "sha512-56hiAJPhwQ1R4i+21FVF7V8kSD5zZTdHcVuRFMW0hn753vVfQN8xlx4uOPT4xoGH0Z/oVATuR82AiqSTDIpaHg==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/reka-ui",
+      "version": "2.11.0",
+      "resolved": "https://registry.npmjs.org/reka-ui/-/reka-ui-2.11.0.tgz",
+      "bytes": 1646652,
+      "sha512": "sha512-ilkpm4bIAol4jwzm4tpm3WVcffyGOpqksNZL1k1qO9QmIwAA+q8jroxjkUGLEn/GddfdExFfvofWfQiKZszUeQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/vue",
+      "version": "3.5.44",
+      "resolved": "https://registry.npmjs.org/vue/-/vue-3.5.44.tgz",
+      "bytes": 681347,
+      "sha512": "sha512-dvvmaOCG7lAMkJTPqPwWeGMsPS6DIsFsfZDUgBp9V6mHf9b3+/wyVwYR4Es+WV6uJC0FKRxp81Obcq0ZwUcGFQ==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/lightningcss-win32-x64-msvc",
+      "version": "1.32.0",
+      "resolved": "https://registry.npmjs.org/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.32.0.tgz",
+      "bytes": 3699964,
+      "sha512": "sha512-Amq9B/SoZYdDi1kFrojnoqPLxYhQ4Wo5XiL8EVJrVsB8ARoC1PWW6VGtT0WKCemjy8aC+louJnjS7U18x3b06Q==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    },
+    {
+      "where": "node_modules/typescript",
+      "version": "5.9.3",
+      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+      "bytes": 4377468,
+      "sha512": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+      "status": "DOWNLOADED_AND_BYTE_VERIFIED"
+    }
+  ],
+  "errors": []
+}

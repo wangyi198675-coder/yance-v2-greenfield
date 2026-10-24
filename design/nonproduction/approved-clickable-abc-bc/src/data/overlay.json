@@ -1,0 +1,231 @@
+{
+  "status": "SCENARIO_SPEC_ONLY_NOT_RUNTIME",
+  "source_fixture": "design/fixtures/synthetic_120_contacts.json",
+  "source_fixture_sha256": "5b9a05df788fe5fab41b6b2033fb895cd3650fb573345856650cfeb24ef9c99c",
+  "invariant": {
+    "variants": [
+      "CHAT-A-V25_BASELINE",
+      "CHAT-B-ADAPTIVE_INBOX",
+      "CHAT-C-PULSE_MAIN",
+      "CHAT-BC-FUSION"
+    ],
+    "contact_count": 120,
+    "contact_dataset_mutable": false,
+    "source_account_count": 2,
+    "channels": [
+      "FB_PERSONAL",
+      "FB_PAGE",
+      "WHATSAPP_PERSONAL",
+      "TELEGRAM_PERSONAL"
+    ],
+    "seed": "W34-ABC-BC-20261024",
+    "network_allowed": false,
+    "real_accounts_allowed": false,
+    "provider_send_allowed": false
+  },
+  "note": "This overlay is synthetic scenario SPEC for later gated click prototype only, not production data, not real Agno reply and not imported as application code.",
+  "keys": {
+    "A": {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-001",
+      "binding_revision": 1
+    },
+    "B": {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-004",
+      "binding_revision": 1
+    },
+    "C": {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-007",
+      "binding_revision": 1
+    },
+    "same_name_one": "fake-peer-003",
+    "same_name_two": "fake-peer-117"
+  },
+  "reply_cases": [
+    {
+      "peer_id": "fake-peer-003",
+      "candidate_count": 0,
+      "candidates": [],
+      "empty_state": "NO_CANDIDATE_AVAILABLE"
+    },
+    {
+      "peer_id": "fake-peer-001",
+      "candidate_count": 1,
+      "candidates": [
+        {
+          "id": "offline-001-01",
+          "text": "收到，我确认后回复你。",
+          "origin": "SYNTHETIC_OFFLINE_REPLY_FIXTURE",
+          "mode": "ASSIST_SUGGESTION_ONLY"
+        }
+      ]
+    },
+    {
+      "peer_id": "fake-peer-004",
+      "candidate_count": 2,
+      "candidates": [
+        {
+          "id": "offline-004-01",
+          "text": "我看到了，晚一点联系你。",
+          "origin": "SYNTHETIC_OFFLINE_REPLY_FIXTURE",
+          "mode": "ASSIST_SUGGESTION_ONLY"
+        },
+        {
+          "id": "offline-004-02",
+          "text": "谢谢提醒，我会确认时间。",
+          "origin": "SYNTHETIC_OFFLINE_REPLY_FIXTURE",
+          "mode": "ASSIST_SUGGESTION_ONLY"
+        }
+      ]
+    },
+    {
+      "peer_id": "fake-peer-007",
+      "candidate_count": 3,
+      "candidates": [
+        {
+          "id": "offline-007-01",
+          "text": "好的，稍后给你答复。",
+          "origin": "SYNTHETIC_OFFLINE_REPLY_FIXTURE",
+          "mode": "ASSIST_SUGGESTION_ONLY"
+        },
+        {
+          "id": "offline-007-02",
+          "text": "我现在有点忙，晚些再聊。",
+          "origin": "SYNTHETIC_OFFLINE_REPLY_FIXTURE",
+          "mode": "ASSIST_SUGGESTION_ONLY"
+        },
+        {
+          "id": "offline-007-03",
+          "text": "可以呀，你说说具体情况。",
+          "origin": "SYNTHETIC_OFFLINE_REPLY_FIXTURE",
+          "mode": "ASSIST_SUGGESTION_ONLY"
+        }
+      ]
+    }
+  ],
+  "editor_cases": [
+    {
+      "id": "EDIT_A",
+      "peer_id": "fake-peer-001",
+      "trigger": "IME_COMMIT_OR_PASTE",
+      "expected_mode": "HUMAN",
+      "expected_unchanged_modes": {
+        "fake-peer-004": "AUTO",
+        "fake-peer-007": "AUTO"
+      }
+    },
+    {
+      "id": "FOCUS_A",
+      "peer_id": "fake-peer-001",
+      "trigger": "FOCUS_VIEW_SCROLL",
+      "expected_mode": "AUTO",
+      "side_effects": []
+    },
+    {
+      "id": "ISOLATE_DRAFT_A",
+      "peer_id": "fake-peer-001",
+      "local_draft": "A 私有草稿，仅本联系人可见",
+      "quote_mid": "fake-mid-1",
+      "attachments": [
+        {
+          "id": "synthetic-local-attachment-a",
+          "filename": "fixture-A.txt",
+          "upload_allowed": false
+        }
+      ],
+      "ime_case": "中日韩 IME COMPOSITION"
+    },
+    {
+      "id": "ISOLATE_DRAFT_B",
+      "peer_id": "fake-peer-004",
+      "local_draft": "B 私有草稿，与 A 独立",
+      "quote_mid": "fake-mid-4",
+      "attachments": [],
+      "ime_case": "INSERT TEXT"
+    },
+    {
+      "id": "REBIND_STALE_A",
+      "peer_id": "fake-peer-001",
+      "pretend_binding_revision": 2,
+      "expected": "BLOCK_OLD_REVISION_UNTIL_EXPLICIT_CONFIRMATION"
+    }
+  ],
+  "identity_and_translation_cases": [
+    {
+      "id": "DUPLICATE_NAME",
+      "peer_ids": [
+        "fake-peer-003",
+        "fake-peer-117"
+      ],
+      "display_name": "同名演示联系人",
+      "expected": "MUST_DISTINGUISH_CHANNEL_ACCOUNT_PEER"
+    },
+    {
+      "id": "PAGINATED_25",
+      "peer_id": "fake-peer-025",
+      "expected_original": "Test message #25",
+      "expected_zh": "模拟译文 #25",
+      "translation_state": "SYNTHETIC"
+    },
+    {
+      "id": "PAGINATED_30",
+      "peer_id": "fake-peer-030",
+      "expected_original": "Test message #30",
+      "expected_zh": "模拟译文 #30",
+      "translation_state": "SYNTHETIC"
+    },
+    {
+      "id": "PAGINATED_40",
+      "peer_id": "fake-peer-040",
+      "expected_original": "Test message #40",
+      "expected_zh": "模拟译文 #40",
+      "translation_state": "SYNTHETIC"
+    },
+    {
+      "id": "PAGINATED_120",
+      "peer_id": "fake-peer-120",
+      "expected_original": "Test message #120",
+      "expected_zh": "模拟译文 #120",
+      "translation_state": "SYNTHETIC"
+    }
+  ],
+  "inherited_source_events": [
+    {
+      "id": "test-revoke-a",
+      "peer_id": "fake-peer-003",
+      "expected": "NO_SEND"
+    },
+    {
+      "id": "test-unknown-b",
+      "peer_id": "fake-peer-117",
+      "expected": "NO_RETRY_NO_DELIVERED"
+    },
+    {
+      "id": "test-takeover",
+      "peer_id": "fake-peer-001",
+      "expected": "ONLY_A_HUMAN_OTHERS_AUTO_UNCHANGED"
+    }
+  ],
+  "test_tasks": [
+    "T01_IDENTITY",
+    "T02_PAGINATION_TRANSLATION",
+    "T03_QUOTE_MULTIMODAL",
+    "T04_ZERO_TO_THREE_REPLIES",
+    "T05_ADOPT_TO_CONTACT_DRAFT",
+    "T06_DRAFT_REVISION_ISOLATION",
+    "T07_MODE_VIEW_NO_TAKEOVER",
+    "T08_REAL_EDIT_TAKEOVER_ONLY_A",
+    "T09_GRANT_BUDGET_UNKNOWN",
+    "T10_PRIVATE_VS_CONTACT_DELIVERY",
+    "T11_THEMES_RESPONSIVE_WINDOWS_DPI"
+  ],
+  "result_status": "NOT_RUN"
+}

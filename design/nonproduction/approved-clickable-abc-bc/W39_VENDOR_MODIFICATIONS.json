@@ -1,0 +1,836 @@
+{
+  "modifications": [
+    {
+      "target": "src/components/oss/context-menu/ContextMenuCheckboxItem.vue",
+      "upstreamSha": "a99bf507204a9cdda0f9312157c199efe4b5ca35a143aba6e6d7868db39c75f4",
+      "vendorSha": "409d56e3a0a63d8ee665ee64444701d3ea14c3c37aec98db321e3d3eada45031",
+      "modifications": [
+        {
+          "old": [
+            "import IconPlaceholder from \"@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue\"",
+            "          <IconPlaceholder",
+            "            lucide=\"CheckIcon\"",
+            "            tabler=\"IconCheck\"",
+            "            hugeicons=\"Tick02Icon\"",
+            "            phosphor=\"CheckIcon\"",
+            "            remixicon=\"RiCheckLine\""
+          ],
+          "new": [
+            "import { CheckIcon } from \"@lucide/vue\"",
+            "          <CheckIcon class=\"size-4\" aria-hidden=\"true\" />"
+          ]
+        }
+      ],
+      "comment": "W42 approved single @lucide/vue@1.55.0 replacement of blocked IconPlaceholder"
+    },
+    {
+      "target": "src/components/oss/context-menu/ContextMenuRadioItem.vue",
+      "upstreamSha": "caf2218f17ed607455626fbc4c2c40bb03fdce3ee9c1832b31d9756e96458ee2",
+      "vendorSha": "1b70eb52384dfcb0d6fc2513f4ef402e407a02050259c3f3cfe78c38a92b8991",
+      "modifications": [
+        {
+          "old": [
+            "import IconPlaceholder from \"@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue\"",
+            "          <IconPlaceholder",
+            "            lucide=\"CheckIcon\"",
+            "            tabler=\"IconCheck\"",
+            "            hugeicons=\"Tick02Icon\"",
+            "            phosphor=\"CheckIcon\"",
+            "            remixicon=\"RiCheckLine\""
+          ],
+          "new": [
+            "import { CheckIcon } from \"@lucide/vue\"",
+            "          <CheckIcon class=\"size-4\" aria-hidden=\"true\" />"
+          ]
+        }
+      ],
+      "comment": "W42 approved single @lucide/vue@1.55.0 replacement of blocked IconPlaceholder"
+    },
+    {
+      "target": "src/components/oss/context-menu/ContextMenuSubTrigger.vue",
+      "upstreamSha": "7713e97e2b8030921f3dec18d31f90dc58e5e720c5998169a73f54c670af2915",
+      "vendorSha": "5e7ef2b099333e8c86282e3a9f846ea94a5c10fc3efc6db9620dd56beeabe88f",
+      "modifications": [
+        {
+          "old": [
+            "import IconPlaceholder from \"@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue\"",
+            "    <IconPlaceholder",
+            "      lucide=\"ChevronRightIcon\"",
+            "      tabler=\"IconChevronRight\"",
+            "      hugeicons=\"ArrowRight01Icon\"",
+            "      phosphor=\"CaretRightIcon\"",
+            "      remixicon=\"RiArrowRightSLine\""
+          ],
+          "new": [
+            "import { ChevronRightIcon } from \"@lucide/vue\"",
+            "    <ChevronRightIcon class=\"size-4\" aria-hidden=\"true\" />"
+          ]
+        }
+      ],
+      "comment": "W42 approved single @lucide/vue@1.55.0 replacement of blocked IconPlaceholder"
+    },
+    {
+      "target": "src/components/oss/dialog/DialogContent.vue",
+      "upstreamSha": "68c640223611cfbbbce7b4ae72cf7a6d210a2b5d530c48430405e0a3c53b74dc",
+      "vendorSha": "f24f925adde1b738ea29bd7fe77be90bb52ad2d9f3a95021cfdd52db33197a98",
+      "modifications": [
+        {
+          "old": [
+            "import IconPlaceholder from \"@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue\"",
+            "          <IconPlaceholder",
+            "            lucide=\"XIcon\"",
+            "            tabler=\"IconX\"",
+            "            hugeicons=\"Cancel01Icon\"",
+            "            phosphor=\"XIcon\"",
+            "            remixicon=\"RiCloseLine\""
+          ],
+          "new": [
+            "import { XIcon } from \"@lucide/vue\"",
+            "          <XIcon class=\"size-4\" aria-hidden=\"true\" />"
+          ]
+        }
+      ],
+      "comment": "W42 approved single @lucide/vue@1.55.0 replacement of blocked IconPlaceholder"
+    },
+    {
+      "target": "src/components/oss/dialog/DialogScrollContent.vue",
+      "upstreamSha": "89938d10175437074c68307fb6260c0c8e7dd4e5648896811fd382112fe2ac78",
+      "vendorSha": "f4dcd115c37acb47b2cdf142abc89f273f442231751bef9cb66937b5cd831fc9",
+      "modifications": [
+        {
+          "old": [
+            "import { IconPlaceholder } from \"@/registry/bases/reka/components/icon-placeholder\"",
+            "          <IconPlaceholder lucide=\"XIcon\" tabler=\"IconX\" hugeicons=\"Cancel01Icon\" phosphor=\"XIcon\" remixicon=\"RiCloseLine\" class=\"w-4 h-4\" />"
+          ],
+          "new": [
+            "import { XIcon } from \"@lucide/vue\"",
+            "          <XIcon class=\"size-4\" aria-hidden=\"true\" />"
+          ]
+        }
+      ],
+      "comment": "W42 approved single @lucide/vue@1.55.0 replacement of blocked IconPlaceholder"
+    }
+  ],
+  "files": [
+    {
+      "path": "apps/v4/registry/bases/reka/ui/bubble/Bubble.vue",
+      "upstreamSha": "7fb13aa18664eebfe6504ae2abb7c38c2ed8f08ebfda0c1bd5fce80dfce218c2",
+      "vendorPath": "src/components/oss/bubble/Bubble.vue",
+      "originalVendorSha": "7fb13aa18664eebfe6504ae2abb7c38c2ed8f08ebfda0c1bd5fce80dfce218c2",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/bubble/Bubble.vue",
+      "finalVendorSha": "7fb13aa18664eebfe6504ae2abb7c38c2ed8f08ebfda0c1bd5fce80dfce218c2"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/bubble/BubbleGroup.vue",
+      "upstreamSha": "516520ef901129f597494253c1c8e5c2f60f6ee41a77700aac4bed41ede0cedd",
+      "vendorPath": "src/components/oss/bubble/BubbleGroup.vue",
+      "originalVendorSha": "516520ef901129f597494253c1c8e5c2f60f6ee41a77700aac4bed41ede0cedd",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/bubble/BubbleGroup.vue",
+      "finalVendorSha": "516520ef901129f597494253c1c8e5c2f60f6ee41a77700aac4bed41ede0cedd"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/button/Button.vue",
+      "upstreamSha": "7e4d659bcbdf16b9b3c2bf95d60d4fcf16318352696570c77aab19d45dadb3da",
+      "vendorPath": "src/components/oss/button/Button.vue",
+      "originalVendorSha": "7e4d659bcbdf16b9b3c2bf95d60d4fcf16318352696570c77aab19d45dadb3da",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/button/Button.vue",
+      "finalVendorSha": "7e4d659bcbdf16b9b3c2bf95d60d4fcf16318352696570c77aab19d45dadb3da"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/bubble/BubbleContent.vue",
+      "upstreamSha": "8dc0a465675ccb2fc42f3444bb9e582750e3ff2ccbc631aded7cdf037319ce2e",
+      "vendorPath": "src/components/oss/bubble/BubbleContent.vue",
+      "originalVendorSha": "8dc0a465675ccb2fc42f3444bb9e582750e3ff2ccbc631aded7cdf037319ce2e",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/bubble/BubbleContent.vue",
+      "finalVendorSha": "8dc0a465675ccb2fc42f3444bb9e582750e3ff2ccbc631aded7cdf037319ce2e"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/bubble/BubbleReactions.vue",
+      "upstreamSha": "744885d656052e0b6269465ebd1097d0ce37ef127ae331ac2b61c48feee5095f",
+      "vendorPath": "src/components/oss/bubble/BubbleReactions.vue",
+      "originalVendorSha": "744885d656052e0b6269465ebd1097d0ce37ef127ae331ac2b61c48feee5095f",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/bubble/BubbleReactions.vue",
+      "finalVendorSha": "744885d656052e0b6269465ebd1097d0ce37ef127ae331ac2b61c48feee5095f"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/button/index.ts",
+      "upstreamSha": "f6b5d87de2c8d1e24f7631fe49e59f93e6fe30921d8c4b53ab754cdf20b00f2b",
+      "vendorPath": "src/components/oss/button/index.ts",
+      "originalVendorSha": "f6b5d87de2c8d1e24f7631fe49e59f93e6fe30921d8c4b53ab754cdf20b00f2b",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/button/index.ts",
+      "finalVendorSha": "f6b5d87de2c8d1e24f7631fe49e59f93e6fe30921d8c4b53ab754cdf20b00f2b"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/bubble/index.ts",
+      "upstreamSha": "c1d8753f59e26370db5ec216786cfc5ea27ac80723cce241471ce464dcab53f1",
+      "vendorPath": "src/components/oss/bubble/index.ts",
+      "originalVendorSha": "c1d8753f59e26370db5ec216786cfc5ea27ac80723cce241471ce464dcab53f1",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/bubble/index.ts",
+      "finalVendorSha": "c1d8753f59e26370db5ec216786cfc5ea27ac80723cce241471ce464dcab53f1"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message/MessageContent.vue",
+      "upstreamSha": "81fb98011ce0a7fbaad770da4b3382a72d8f6099d84da3dffd1de8b4add4a554",
+      "vendorPath": "src/components/oss/message/MessageContent.vue",
+      "originalVendorSha": "81fb98011ce0a7fbaad770da4b3382a72d8f6099d84da3dffd1de8b4add4a554",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message/MessageContent.vue",
+      "finalVendorSha": "81fb98011ce0a7fbaad770da4b3382a72d8f6099d84da3dffd1de8b4add4a554"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message/Message.vue",
+      "upstreamSha": "a37dafc3cadb027918c9f0b4889d0e9ccfc666bd0274efb94fd44ad737f55b20",
+      "vendorPath": "src/components/oss/message/Message.vue",
+      "originalVendorSha": "a37dafc3cadb027918c9f0b4889d0e9ccfc666bd0274efb94fd44ad737f55b20",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message/Message.vue",
+      "finalVendorSha": "a37dafc3cadb027918c9f0b4889d0e9ccfc666bd0274efb94fd44ad737f55b20"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message/MessageGroup.vue",
+      "upstreamSha": "e74787c22ac04575dd5d26af2c3a7e04ad9e6f3c77a4992777126dc5aaae3ae1",
+      "vendorPath": "src/components/oss/message/MessageGroup.vue",
+      "originalVendorSha": "e74787c22ac04575dd5d26af2c3a7e04ad9e6f3c77a4992777126dc5aaae3ae1",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message/MessageGroup.vue",
+      "finalVendorSha": "e74787c22ac04575dd5d26af2c3a7e04ad9e6f3c77a4992777126dc5aaae3ae1"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message/MessageFooter.vue",
+      "upstreamSha": "a24e1135d97dc73d6abc611526b424063144d1814b06ba6eeefa18a6471b31bf",
+      "vendorPath": "src/components/oss/message/MessageFooter.vue",
+      "originalVendorSha": "a24e1135d97dc73d6abc611526b424063144d1814b06ba6eeefa18a6471b31bf",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message/MessageFooter.vue",
+      "finalVendorSha": "a24e1135d97dc73d6abc611526b424063144d1814b06ba6eeefa18a6471b31bf"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message/MessageAvatar.vue",
+      "upstreamSha": "650755f1a585ee24010c1e89b4f4a6415f9b0ab87222214afb017d150bbf7060",
+      "vendorPath": "src/components/oss/message/MessageAvatar.vue",
+      "originalVendorSha": "650755f1a585ee24010c1e89b4f4a6415f9b0ab87222214afb017d150bbf7060",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message/MessageAvatar.vue",
+      "finalVendorSha": "650755f1a585ee24010c1e89b4f4a6415f9b0ab87222214afb017d150bbf7060"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message/MessageHeader.vue",
+      "upstreamSha": "01f856aa9ed776f031668d457cce8df19fe08286c90a152a10fe210643eccdb3",
+      "vendorPath": "src/components/oss/message/MessageHeader.vue",
+      "originalVendorSha": "01f856aa9ed776f031668d457cce8df19fe08286c90a152a10fe210643eccdb3",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message/MessageHeader.vue",
+      "finalVendorSha": "01f856aa9ed776f031668d457cce8df19fe08286c90a152a10fe210643eccdb3"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerButton.vue",
+      "upstreamSha": "fa4023bc0b2be27f1c38ebf2cc766e8934b663ca6a70349526d323426a2aa19e",
+      "vendorPath": "src/components/oss/message-scroller/MessageScrollerButton.vue",
+      "originalVendorSha": "fa4023bc0b2be27f1c38ebf2cc766e8934b663ca6a70349526d323426a2aa19e",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerButton.vue",
+      "finalVendorSha": "fa4023bc0b2be27f1c38ebf2cc766e8934b663ca6a70349526d323426a2aa19e"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message/index.ts",
+      "upstreamSha": "e092c2b1b85a300589c534f17dbe07eeec4018c0b382125613454e02d1f85ca3",
+      "vendorPath": "src/components/oss/message/index.ts",
+      "originalVendorSha": "e092c2b1b85a300589c534f17dbe07eeec4018c0b382125613454e02d1f85ca3",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message/index.ts",
+      "finalVendorSha": "e092c2b1b85a300589c534f17dbe07eeec4018c0b382125613454e02d1f85ca3"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/MessageScroller.vue",
+      "upstreamSha": "fe66e8a6b8f6bb353e40ffc562e05f9c33403ded4ec634827aeecab84af49c5c",
+      "vendorPath": "src/components/oss/message-scroller/MessageScroller.vue",
+      "originalVendorSha": "fe66e8a6b8f6bb353e40ffc562e05f9c33403ded4ec634827aeecab84af49c5c",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/MessageScroller.vue",
+      "finalVendorSha": "fe66e8a6b8f6bb353e40ffc562e05f9c33403ded4ec634827aeecab84af49c5c"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerItem.vue",
+      "upstreamSha": "d91059cef9593d4b9db0e1691f65d6f325089f83297b2492d5b00f5ae7637698",
+      "vendorPath": "src/components/oss/message-scroller/MessageScrollerItem.vue",
+      "originalVendorSha": "d91059cef9593d4b9db0e1691f65d6f325089f83297b2492d5b00f5ae7637698",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerItem.vue",
+      "finalVendorSha": "d91059cef9593d4b9db0e1691f65d6f325089f83297b2492d5b00f5ae7637698"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerContent.vue",
+      "upstreamSha": "aa2b2d54989a07b4b685d5307a9a911f32abf31fa488201731ae9754b2a6c5cd",
+      "vendorPath": "src/components/oss/message-scroller/MessageScrollerContent.vue",
+      "originalVendorSha": "aa2b2d54989a07b4b685d5307a9a911f32abf31fa488201731ae9754b2a6c5cd",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerContent.vue",
+      "finalVendorSha": "aa2b2d54989a07b4b685d5307a9a911f32abf31fa488201731ae9754b2a6c5cd"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerProvider.vue",
+      "upstreamSha": "a9cf5be30a4ba0ab6ead7df6bba0beaae6ded5dc5e7921baf0cc245c768fe9ac",
+      "vendorPath": "src/components/oss/message-scroller/MessageScrollerProvider.vue",
+      "originalVendorSha": "a9cf5be30a4ba0ab6ead7df6bba0beaae6ded5dc5e7921baf0cc245c768fe9ac",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerProvider.vue",
+      "finalVendorSha": "a9cf5be30a4ba0ab6ead7df6bba0beaae6ded5dc5e7921baf0cc245c768fe9ac"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/index.ts",
+      "upstreamSha": "f12dea33871c7ce632a9b9c864ed3cc651b14d496a8924ab9e15496aa787d5a1",
+      "vendorPath": "src/components/oss/message-scroller/index.ts",
+      "originalVendorSha": "f12dea33871c7ce632a9b9c864ed3cc651b14d496a8924ab9e15496aa787d5a1",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/index.ts",
+      "finalVendorSha": "f12dea33871c7ce632a9b9c864ed3cc651b14d496a8924ab9e15496aa787d5a1"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerViewport.vue",
+      "upstreamSha": "2eee0d249f22e7207a57180d39b6e4e9570ad29329e2886bf37a825e5bfc0718",
+      "vendorPath": "src/components/oss/message-scroller/MessageScrollerViewport.vue",
+      "originalVendorSha": "2eee0d249f22e7207a57180d39b6e4e9570ad29329e2886bf37a825e5bfc0718",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/MessageScrollerViewport.vue",
+      "finalVendorSha": "2eee0d249f22e7207a57180d39b6e4e9570ad29329e2886bf37a825e5bfc0718"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuCheckboxItem.vue",
+      "upstreamSha": "a99bf507204a9cdda0f9312157c199efe4b5ca35a143aba6e6d7868db39c75f4",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuCheckboxItem.vue",
+      "originalVendorSha": "a99bf507204a9cdda0f9312157c199efe4b5ca35a143aba6e6d7868db39c75f4",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuCheckboxItem.vue",
+      "finalVendorSha": "409d56e3a0a63d8ee665ee64444701d3ea14c3c37aec98db321e3d3eada45031"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/message-scroller/useMessageScroller.ts",
+      "upstreamSha": "639cc602f52492f853562eeac71045549c069afc76199aea47b8a694d8fdd996",
+      "vendorPath": "src/components/oss/message-scroller/useMessageScroller.ts",
+      "originalVendorSha": "639cc602f52492f853562eeac71045549c069afc76199aea47b8a694d8fdd996",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/message-scroller/useMessageScroller.ts",
+      "finalVendorSha": "639cc602f52492f853562eeac71045549c069afc76199aea47b8a694d8fdd996"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenu.vue",
+      "upstreamSha": "5c5275d2f3f0de0d182f357ccf94d8980c6dd2ca4fc2c4ee8d5ea5d3163a4cde",
+      "vendorPath": "src/components/oss/context-menu/ContextMenu.vue",
+      "originalVendorSha": "5c5275d2f3f0de0d182f357ccf94d8980c6dd2ca4fc2c4ee8d5ea5d3163a4cde",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenu.vue",
+      "finalVendorSha": "5c5275d2f3f0de0d182f357ccf94d8980c6dd2ca4fc2c4ee8d5ea5d3163a4cde"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuContent.vue",
+      "upstreamSha": "1ff0b46d56cb2ae7d6a7948a0de5763e1d3a37a7bd25ff92170a3e071f87de3c",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuContent.vue",
+      "originalVendorSha": "1ff0b46d56cb2ae7d6a7948a0de5763e1d3a37a7bd25ff92170a3e071f87de3c",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuContent.vue",
+      "finalVendorSha": "1ff0b46d56cb2ae7d6a7948a0de5763e1d3a37a7bd25ff92170a3e071f87de3c"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuItem.vue",
+      "upstreamSha": "b68ff7b1a9b84798524c65617b5c6ff38b4b27a96538ac0faeec47fddbf878a6",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuItem.vue",
+      "originalVendorSha": "b68ff7b1a9b84798524c65617b5c6ff38b4b27a96538ac0faeec47fddbf878a6",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuItem.vue",
+      "finalVendorSha": "b68ff7b1a9b84798524c65617b5c6ff38b4b27a96538ac0faeec47fddbf878a6"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuGroup.vue",
+      "upstreamSha": "21a6b382e8e2527a1f4ba56f63e216b802a25d7bfa8b39eb555588352fe95560",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuGroup.vue",
+      "originalVendorSha": "21a6b382e8e2527a1f4ba56f63e216b802a25d7bfa8b39eb555588352fe95560",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuGroup.vue",
+      "finalVendorSha": "21a6b382e8e2527a1f4ba56f63e216b802a25d7bfa8b39eb555588352fe95560"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuLabel.vue",
+      "upstreamSha": "88a0ee474c15253571abd05c84261733705e63846cfb5a31ca6bb72a87ef604a",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuLabel.vue",
+      "originalVendorSha": "88a0ee474c15253571abd05c84261733705e63846cfb5a31ca6bb72a87ef604a",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuLabel.vue",
+      "finalVendorSha": "88a0ee474c15253571abd05c84261733705e63846cfb5a31ca6bb72a87ef604a"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuRadioGroup.vue",
+      "upstreamSha": "19c739a303d455fc1efd75ff5ba7eb5d2a2a7b8ff59b871a67afdb8642faff54",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuRadioGroup.vue",
+      "originalVendorSha": "19c739a303d455fc1efd75ff5ba7eb5d2a2a7b8ff59b871a67afdb8642faff54",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuRadioGroup.vue",
+      "finalVendorSha": "19c739a303d455fc1efd75ff5ba7eb5d2a2a7b8ff59b871a67afdb8642faff54"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuPortal.vue",
+      "upstreamSha": "a38f8f3a3239a284b9640647aa3c7876870ec2bf16b5275e108c516498afb85e",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuPortal.vue",
+      "originalVendorSha": "a38f8f3a3239a284b9640647aa3c7876870ec2bf16b5275e108c516498afb85e",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuPortal.vue",
+      "finalVendorSha": "a38f8f3a3239a284b9640647aa3c7876870ec2bf16b5275e108c516498afb85e"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuRadioItem.vue",
+      "upstreamSha": "caf2218f17ed607455626fbc4c2c40bb03fdce3ee9c1832b31d9756e96458ee2",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuRadioItem.vue",
+      "originalVendorSha": "caf2218f17ed607455626fbc4c2c40bb03fdce3ee9c1832b31d9756e96458ee2",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuRadioItem.vue",
+      "finalVendorSha": "1b70eb52384dfcb0d6fc2513f4ef402e407a02050259c3f3cfe78c38a92b8991"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuShortcut.vue",
+      "upstreamSha": "f320831ec1866234b50fccff14165c34ba6fe0fa13d3217b8518602d88104f6c",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuShortcut.vue",
+      "originalVendorSha": "f320831ec1866234b50fccff14165c34ba6fe0fa13d3217b8518602d88104f6c",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuShortcut.vue",
+      "finalVendorSha": "f320831ec1866234b50fccff14165c34ba6fe0fa13d3217b8518602d88104f6c"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSeparator.vue",
+      "upstreamSha": "aa738b206b45e077029ac17b1fdae341992ffb3030b93c39e8b73928a44789dd",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuSeparator.vue",
+      "originalVendorSha": "aa738b206b45e077029ac17b1fdae341992ffb3030b93c39e8b73928a44789dd",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSeparator.vue",
+      "finalVendorSha": "aa738b206b45e077029ac17b1fdae341992ffb3030b93c39e8b73928a44789dd"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSubTrigger.vue",
+      "upstreamSha": "7713e97e2b8030921f3dec18d31f90dc58e5e720c5998169a73f54c670af2915",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuSubTrigger.vue",
+      "originalVendorSha": "7713e97e2b8030921f3dec18d31f90dc58e5e720c5998169a73f54c670af2915",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSubTrigger.vue",
+      "finalVendorSha": "5e7ef2b099333e8c86282e3a9f846ea94a5c10fc3efc6db9620dd56beeabe88f"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSub.vue",
+      "upstreamSha": "4a39a09b25a478ab9a6c079787216da7cf821d3290e323f584815de1982b4e9c",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuSub.vue",
+      "originalVendorSha": "4a39a09b25a478ab9a6c079787216da7cf821d3290e323f584815de1982b4e9c",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSub.vue",
+      "finalVendorSha": "4a39a09b25a478ab9a6c079787216da7cf821d3290e323f584815de1982b4e9c"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/index.ts",
+      "upstreamSha": "2be14e622cdf8164053082a943d68063583ec8e94ae3815578a51b9cc38c885a",
+      "vendorPath": "src/components/oss/context-menu/index.ts",
+      "originalVendorSha": "2be14e622cdf8164053082a943d68063583ec8e94ae3815578a51b9cc38c885a",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/index.ts",
+      "finalVendorSha": "2be14e622cdf8164053082a943d68063583ec8e94ae3815578a51b9cc38c885a"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogContent.vue",
+      "upstreamSha": "68c640223611cfbbbce7b4ae72cf7a6d210a2b5d530c48430405e0a3c53b74dc",
+      "vendorPath": "src/components/oss/dialog/DialogContent.vue",
+      "originalVendorSha": "68c640223611cfbbbce7b4ae72cf7a6d210a2b5d530c48430405e0a3c53b74dc",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogContent.vue",
+      "finalVendorSha": "f24f925adde1b738ea29bd7fe77be90bb52ad2d9f3a95021cfdd52db33197a98"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/Dialog.vue",
+      "upstreamSha": "e42a0978a57dd1891ed40778e9c77f8b2feec3dd35ba1dd8acbb44c4f229f050",
+      "vendorPath": "src/components/oss/dialog/Dialog.vue",
+      "originalVendorSha": "e42a0978a57dd1891ed40778e9c77f8b2feec3dd35ba1dd8acbb44c4f229f050",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/Dialog.vue",
+      "finalVendorSha": "e42a0978a57dd1891ed40778e9c77f8b2feec3dd35ba1dd8acbb44c4f229f050"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuTrigger.vue",
+      "upstreamSha": "31c34a63014280b13b7a430ba9876e412c39794dbffb0a382cfb35e13309e754",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuTrigger.vue",
+      "originalVendorSha": "31c34a63014280b13b7a430ba9876e412c39794dbffb0a382cfb35e13309e754",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuTrigger.vue",
+      "finalVendorSha": "31c34a63014280b13b7a430ba9876e412c39794dbffb0a382cfb35e13309e754"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSubContent.vue",
+      "upstreamSha": "4042c67eaf1d21f0077d8400c838c63da3f858ba9abd99d6b06a0da9dd246b15",
+      "vendorPath": "src/components/oss/context-menu/ContextMenuSubContent.vue",
+      "originalVendorSha": "4042c67eaf1d21f0077d8400c838c63da3f858ba9abd99d6b06a0da9dd246b15",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSubContent.vue",
+      "finalVendorSha": "4042c67eaf1d21f0077d8400c838c63da3f858ba9abd99d6b06a0da9dd246b15"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogClose.vue",
+      "upstreamSha": "bd8526926a98c67f0efd358693eca331252271bf6ad78cd99abacf51184025c4",
+      "vendorPath": "src/components/oss/dialog/DialogClose.vue",
+      "originalVendorSha": "bd8526926a98c67f0efd358693eca331252271bf6ad78cd99abacf51184025c4",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogClose.vue",
+      "finalVendorSha": "bd8526926a98c67f0efd358693eca331252271bf6ad78cd99abacf51184025c4"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogDescription.vue",
+      "upstreamSha": "978f81a1c3464166af2d573d2d4a2e4b23bb99680aa0e6ffca95b2af0925ec41",
+      "vendorPath": "src/components/oss/dialog/DialogDescription.vue",
+      "originalVendorSha": "978f81a1c3464166af2d573d2d4a2e4b23bb99680aa0e6ffca95b2af0925ec41",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogDescription.vue",
+      "finalVendorSha": "978f81a1c3464166af2d573d2d4a2e4b23bb99680aa0e6ffca95b2af0925ec41"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogHeader.vue",
+      "upstreamSha": "1007dc575376a4076e53c76a0702d8511627e0ad61db2a7b88c76d18517186e2",
+      "vendorPath": "src/components/oss/dialog/DialogHeader.vue",
+      "originalVendorSha": "1007dc575376a4076e53c76a0702d8511627e0ad61db2a7b88c76d18517186e2",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogHeader.vue",
+      "finalVendorSha": "1007dc575376a4076e53c76a0702d8511627e0ad61db2a7b88c76d18517186e2"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogScrollContent.vue",
+      "upstreamSha": "89938d10175437074c68307fb6260c0c8e7dd4e5648896811fd382112fe2ac78",
+      "vendorPath": "src/components/oss/dialog/DialogScrollContent.vue",
+      "originalVendorSha": "89938d10175437074c68307fb6260c0c8e7dd4e5648896811fd382112fe2ac78",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogScrollContent.vue",
+      "finalVendorSha": "f4dcd115c37acb47b2cdf142abc89f273f442231751bef9cb66937b5cd831fc9"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogFooter.vue",
+      "upstreamSha": "1f05c910e6396fc1e5331024ea722656c09ac1869c31abebc57f0c4e957f0dcf",
+      "vendorPath": "src/components/oss/dialog/DialogFooter.vue",
+      "originalVendorSha": "1f05c910e6396fc1e5331024ea722656c09ac1869c31abebc57f0c4e957f0dcf",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogFooter.vue",
+      "finalVendorSha": "1f05c910e6396fc1e5331024ea722656c09ac1869c31abebc57f0c4e957f0dcf"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogOverlay.vue",
+      "upstreamSha": "525e3c43227ea18f0d5c39f5c14b0e6c3a6fbb4ddb7f2fefe7f8bc6ea5d51b11",
+      "vendorPath": "src/components/oss/dialog/DialogOverlay.vue",
+      "originalVendorSha": "525e3c43227ea18f0d5c39f5c14b0e6c3a6fbb4ddb7f2fefe7f8bc6ea5d51b11",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogOverlay.vue",
+      "finalVendorSha": "525e3c43227ea18f0d5c39f5c14b0e6c3a6fbb4ddb7f2fefe7f8bc6ea5d51b11"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogTitle.vue",
+      "upstreamSha": "c72c024871de133896f9b9e14653034dd30ccae9ac06e7afeb24ccc6d99590c8",
+      "vendorPath": "src/components/oss/dialog/DialogTitle.vue",
+      "originalVendorSha": "c72c024871de133896f9b9e14653034dd30ccae9ac06e7afeb24ccc6d99590c8",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogTitle.vue",
+      "finalVendorSha": "c72c024871de133896f9b9e14653034dd30ccae9ac06e7afeb24ccc6d99590c8"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/DialogTrigger.vue",
+      "upstreamSha": "6458b0ad97b9f9345942869d84a3b8a6ed22bc545760f5bd95d4949dadc0fae6",
+      "vendorPath": "src/components/oss/dialog/DialogTrigger.vue",
+      "originalVendorSha": "6458b0ad97b9f9345942869d84a3b8a6ed22bc545760f5bd95d4949dadc0fae6",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/DialogTrigger.vue",
+      "finalVendorSha": "6458b0ad97b9f9345942869d84a3b8a6ed22bc545760f5bd95d4949dadc0fae6"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/PopoverAnchor.vue",
+      "upstreamSha": "8e6f46b87044cee29c0f1eb1299510f28b683eea4934ee0f715f764d3422b650",
+      "vendorPath": "src/components/oss/popover/PopoverAnchor.vue",
+      "originalVendorSha": "8e6f46b87044cee29c0f1eb1299510f28b683eea4934ee0f715f764d3422b650",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/PopoverAnchor.vue",
+      "finalVendorSha": "8e6f46b87044cee29c0f1eb1299510f28b683eea4934ee0f715f764d3422b650"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/dialog/index.ts",
+      "upstreamSha": "0eb610cf650df70f213447e4d86f818c22f3785f72dccbaf0d88b411c210b9bc",
+      "vendorPath": "src/components/oss/dialog/index.ts",
+      "originalVendorSha": "0eb610cf650df70f213447e4d86f818c22f3785f72dccbaf0d88b411c210b9bc",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/dialog/index.ts",
+      "finalVendorSha": "0eb610cf650df70f213447e4d86f818c22f3785f72dccbaf0d88b411c210b9bc"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/Popover.vue",
+      "upstreamSha": "2acd4ebc20f75b11155573f6af9badca316606c5cc2695efbff75923883caa60",
+      "vendorPath": "src/components/oss/popover/Popover.vue",
+      "originalVendorSha": "2acd4ebc20f75b11155573f6af9badca316606c5cc2695efbff75923883caa60",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/Popover.vue",
+      "finalVendorSha": "2acd4ebc20f75b11155573f6af9badca316606c5cc2695efbff75923883caa60"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/PopoverContent.vue",
+      "upstreamSha": "aa8f5ffa27d6b03f95f89b2078aada2094ecaf33b6ab29a256e4d0a528cbe6e9",
+      "vendorPath": "src/components/oss/popover/PopoverContent.vue",
+      "originalVendorSha": "aa8f5ffa27d6b03f95f89b2078aada2094ecaf33b6ab29a256e4d0a528cbe6e9",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/PopoverContent.vue",
+      "finalVendorSha": "aa8f5ffa27d6b03f95f89b2078aada2094ecaf33b6ab29a256e4d0a528cbe6e9"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/PopoverDescription.vue",
+      "upstreamSha": "3799cd1ddb80057b48ff4c844bbde66d036a3f62f19e30537bd04a7c9939b3f0",
+      "vendorPath": "src/components/oss/popover/PopoverDescription.vue",
+      "originalVendorSha": "3799cd1ddb80057b48ff4c844bbde66d036a3f62f19e30537bd04a7c9939b3f0",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/PopoverDescription.vue",
+      "finalVendorSha": "3799cd1ddb80057b48ff4c844bbde66d036a3f62f19e30537bd04a7c9939b3f0"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/PopoverHeader.vue",
+      "upstreamSha": "99f0c1ac029dfcc853f9e9cea021f8e9132832a0db83b04dc6eab3173fe8d9ec",
+      "vendorPath": "src/components/oss/popover/PopoverHeader.vue",
+      "originalVendorSha": "99f0c1ac029dfcc853f9e9cea021f8e9132832a0db83b04dc6eab3173fe8d9ec",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/PopoverHeader.vue",
+      "finalVendorSha": "99f0c1ac029dfcc853f9e9cea021f8e9132832a0db83b04dc6eab3173fe8d9ec"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/PopoverTitle.vue",
+      "upstreamSha": "ab4e8e532913b3840f7963885af20df1c03f55f58db56bb3f4218ed86a5b05dc",
+      "vendorPath": "src/components/oss/popover/PopoverTitle.vue",
+      "originalVendorSha": "ab4e8e532913b3840f7963885af20df1c03f55f58db56bb3f4218ed86a5b05dc",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/PopoverTitle.vue",
+      "finalVendorSha": "ab4e8e532913b3840f7963885af20df1c03f55f58db56bb3f4218ed86a5b05dc"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/PopoverTrigger.vue",
+      "upstreamSha": "3ce37a26b38d46d97c624a5952c9159e931cb4166ecf9d094441fbc06edc49fd",
+      "vendorPath": "src/components/oss/popover/PopoverTrigger.vue",
+      "originalVendorSha": "3ce37a26b38d46d97c624a5952c9159e931cb4166ecf9d094441fbc06edc49fd",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/PopoverTrigger.vue",
+      "finalVendorSha": "3ce37a26b38d46d97c624a5952c9159e931cb4166ecf9d094441fbc06edc49fd"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/scroll-area/ScrollArea.vue",
+      "upstreamSha": "d197a1dfee38e4c4d09f91b4196a1e51e39c9c3f799006a4f293f5af0070399d",
+      "vendorPath": "src/components/oss/scroll-area/ScrollArea.vue",
+      "originalVendorSha": "d197a1dfee38e4c4d09f91b4196a1e51e39c9c3f799006a4f293f5af0070399d",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/scroll-area/ScrollArea.vue",
+      "finalVendorSha": "d197a1dfee38e4c4d09f91b4196a1e51e39c9c3f799006a4f293f5af0070399d"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/popover/index.ts",
+      "upstreamSha": "5352a07e526979f58b898c169e8e3182bab2ed7ad0638dbd47a718d41f7edd8d",
+      "vendorPath": "src/components/oss/popover/index.ts",
+      "originalVendorSha": "5352a07e526979f58b898c169e8e3182bab2ed7ad0638dbd47a718d41f7edd8d",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/popover/index.ts",
+      "finalVendorSha": "5352a07e526979f58b898c169e8e3182bab2ed7ad0638dbd47a718d41f7edd8d"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/scroll-area/ScrollBar.vue",
+      "upstreamSha": "0fbdb791127549d8ad7c4fa6fc1c2cb9324b2fcfe6451eac16aeef2cbf48ed02",
+      "vendorPath": "src/components/oss/scroll-area/ScrollBar.vue",
+      "originalVendorSha": "0fbdb791127549d8ad7c4fa6fc1c2cb9324b2fcfe6451eac16aeef2cbf48ed02",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/scroll-area/ScrollBar.vue",
+      "finalVendorSha": "0fbdb791127549d8ad7c4fa6fc1c2cb9324b2fcfe6451eac16aeef2cbf48ed02"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/scroll-area/index.ts",
+      "upstreamSha": "e158441de429600452d1c25182daee6fd2a43e27e1d900c5c9844090e894fc7c",
+      "vendorPath": "src/components/oss/scroll-area/index.ts",
+      "originalVendorSha": "e158441de429600452d1c25182daee6fd2a43e27e1d900c5c9844090e894fc7c",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/scroll-area/index.ts",
+      "finalVendorSha": "e158441de429600452d1c25182daee6fd2a43e27e1d900c5c9844090e894fc7c"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input-group/InputGroup.vue",
+      "upstreamSha": "a083d520a1f5b6dd90474efba280a8e1bc5ffe5bcbf05b76a3f856497cda1066",
+      "vendorPath": "src/components/oss/input-group/InputGroup.vue",
+      "originalVendorSha": "a083d520a1f5b6dd90474efba280a8e1bc5ffe5bcbf05b76a3f856497cda1066",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input-group/InputGroup.vue",
+      "finalVendorSha": "a083d520a1f5b6dd90474efba280a8e1bc5ffe5bcbf05b76a3f856497cda1066"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input-group/InputGroupAddon.vue",
+      "upstreamSha": "794a67130a5504c951c022bdb918f59f158f638ee877f80fe1ca4d3a0bc1c557",
+      "vendorPath": "src/components/oss/input-group/InputGroupAddon.vue",
+      "originalVendorSha": "794a67130a5504c951c022bdb918f59f158f638ee877f80fe1ca4d3a0bc1c557",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input-group/InputGroupAddon.vue",
+      "finalVendorSha": "794a67130a5504c951c022bdb918f59f158f638ee877f80fe1ca4d3a0bc1c557"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input-group/InputGroupInput.vue",
+      "upstreamSha": "77ae41f5e796ea4075aa26aedcb863f62364532911e379eaae612456872f10b7",
+      "vendorPath": "src/components/oss/input-group/InputGroupInput.vue",
+      "originalVendorSha": "77ae41f5e796ea4075aa26aedcb863f62364532911e379eaae612456872f10b7",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input-group/InputGroupInput.vue",
+      "finalVendorSha": "77ae41f5e796ea4075aa26aedcb863f62364532911e379eaae612456872f10b7"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input-group/InputGroupButton.vue",
+      "upstreamSha": "c2dd5a5841d73283d7cf501c9e48a18f2cc7036d04158e87e0cf741268368f10",
+      "vendorPath": "src/components/oss/input-group/InputGroupButton.vue",
+      "originalVendorSha": "c2dd5a5841d73283d7cf501c9e48a18f2cc7036d04158e87e0cf741268368f10",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input-group/InputGroupButton.vue",
+      "finalVendorSha": "c2dd5a5841d73283d7cf501c9e48a18f2cc7036d04158e87e0cf741268368f10"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input-group/InputGroupText.vue",
+      "upstreamSha": "99275992a68cc1d810acbf531c0479116407d457ef273d434f807b69d9348de3",
+      "vendorPath": "src/components/oss/input-group/InputGroupText.vue",
+      "originalVendorSha": "99275992a68cc1d810acbf531c0479116407d457ef273d434f807b69d9348de3",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input-group/InputGroupText.vue",
+      "finalVendorSha": "99275992a68cc1d810acbf531c0479116407d457ef273d434f807b69d9348de3"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input-group/InputGroupTextarea.vue",
+      "upstreamSha": "dc96b8c530f6095afd57a7f8afeab16879740d95fedc8da7d08fccaca5cfa6ff",
+      "vendorPath": "src/components/oss/input-group/InputGroupTextarea.vue",
+      "originalVendorSha": "dc96b8c530f6095afd57a7f8afeab16879740d95fedc8da7d08fccaca5cfa6ff",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input-group/InputGroupTextarea.vue",
+      "finalVendorSha": "dc96b8c530f6095afd57a7f8afeab16879740d95fedc8da7d08fccaca5cfa6ff"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input/index.ts",
+      "upstreamSha": "ba728db29f97b894318836d094705b34c0f792352548189703224c694d29ed5b",
+      "vendorPath": "src/components/oss/input/index.ts",
+      "originalVendorSha": "ba728db29f97b894318836d094705b34c0f792352548189703224c694d29ed5b",
+      "license": "MIT_ROOT_W32",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input/index.ts",
+      "finalVendorSha": "ba728db29f97b894318836d094705b34c0f792352548189703224c694d29ed5b"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/textarea/index.ts",
+      "upstreamSha": "9212587988979849b3bbcddebdf46d9b1f80a513c0cf92391d83c9d50b648007",
+      "vendorPath": "src/components/oss/textarea/index.ts",
+      "originalVendorSha": "9212587988979849b3bbcddebdf46d9b1f80a513c0cf92391d83c9d50b648007",
+      "license": "MIT_ROOT_W32",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/textarea/index.ts",
+      "finalVendorSha": "9212587988979849b3bbcddebdf46d9b1f80a513c0cf92391d83c9d50b648007"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input-group/index.ts",
+      "upstreamSha": "6cb57291d076deac8d1f7aa9561a68e3a8fef4e012c3d1ed1e5b1e0fb5c265bf",
+      "vendorPath": "src/components/oss/input-group/index.ts",
+      "originalVendorSha": "6cb57291d076deac8d1f7aa9561a68e3a8fef4e012c3d1ed1e5b1e0fb5c265bf",
+      "license": "MIT",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input-group/index.ts",
+      "finalVendorSha": "6cb57291d076deac8d1f7aa9561a68e3a8fef4e012c3d1ed1e5b1e0fb5c265bf"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/lib/utils.ts",
+      "upstreamSha": "ce4d9a828c0312cf66d0196934e9efd50491887f601dcb12ccda8683118520e9",
+      "vendorPath": "src/lib/utils.ts",
+      "originalVendorSha": "ce4d9a828c0312cf66d0196934e9efd50491887f601dcb12ccda8683118520e9",
+      "license": "MIT_ROOT_W32",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/lib/utils.ts",
+      "finalVendorSha": "ce4d9a828c0312cf66d0196934e9efd50491887f601dcb12ccda8683118520e9"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/input/Input.vue",
+      "upstreamSha": "4bb16d0b52fb1db150128dee703c2dbe5eeda8e8f6856c539165c2de8950b1d1",
+      "vendorPath": "src/components/oss/input/Input.vue",
+      "originalVendorSha": "4bb16d0b52fb1db150128dee703c2dbe5eeda8e8f6856c539165c2de8950b1d1",
+      "license": "MIT_ROOT_W32",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/input/Input.vue",
+      "finalVendorSha": "4bb16d0b52fb1db150128dee703c2dbe5eeda8e8f6856c539165c2de8950b1d1"
+    },
+    {
+      "path": "apps/v4/registry/bases/reka/ui/textarea/Textarea.vue",
+      "upstreamSha": "c1a110e8cfade7d4b4db72c7d0f7cc702b383b8dde9de916c44b1c431ddc4d2a",
+      "vendorPath": "src/components/oss/textarea/Textarea.vue",
+      "originalVendorSha": "c1a110e8cfade7d4b4db72c7d0f7cc702b383b8dde9de916c44b1c431ddc4d2a",
+      "license": "MIT_ROOT_W32",
+      "commit": "3f048dfb495703f39e191b25a69307fba72822eb",
+      "upstreamURL": "https://raw.githubusercontent.com/unovue/shadcn-vue/3f048dfb495703f39e191b25a69307fba72822eb/apps/v4/registry/bases/reka/ui/textarea/Textarea.vue",
+      "finalVendorSha": "c1a110e8cfade7d4b4db72c7d0f7cc702b383b8dde9de916c44b1c431ddc4d2a"
+    }
+  ]
+}
