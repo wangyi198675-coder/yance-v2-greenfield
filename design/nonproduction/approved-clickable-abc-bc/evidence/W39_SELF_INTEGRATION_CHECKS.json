@@ -57,8 +57,24 @@
     {
       "name": "generated SBOM and license notice",
       "status": "PASS"
+    },
+    {
+      "name": "W37 effective 120 cross-account hash exact, raw immutable",
+      "status": "PASS"
+    },
+    {
+      "name": "W37 isolated collision 7 browser negatives",
+      "status": "PASS"
+    },
+    {
+      "name": "W40 P1/P2 all 76 Chrome CSS viewport/theme checks pass",
+      "status": "PASS"
+    },
+    {
+      "name": "W41 CSP Chrome injection 4/4, zero external requests",
+      "status": "PASS"
     }
   ],
-  "results": 14,
-  "pass": 14
+  "results": 18,
+  "pass": 18
 }

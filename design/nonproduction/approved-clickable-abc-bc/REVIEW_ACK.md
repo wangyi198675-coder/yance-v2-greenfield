@@ -1,14 +1,21 @@
-# W39 | P3-1 四套隔离可点击原型实施Owner签收
-DATE: 2026-10-24
-DEVICE: DESKTOP-029FH47
-BRANCH: `p3-1/clickable-abc-bc`
-PREIMPORT_BASE: `f0b008875a15340a39325549dba3a9c099442405`
-STATUS: **W39_IMPLEMENTED_CLICKABLE_FOUR_ARM / REAL_LOCAL_CHROME_44_OF_44_SELF_PASS / W40_W41_W42_INDEPENDENT_POSTBUILD_HOLD**
-FINAL_COMMIT: 以本目录所在分支 `git rev-parse HEAD` 实际提交读取；不把前置f0b008冒充成品SHA。视窗9另取仓外精确SHA回执。
+# 【W39｜P3-1 W40/W41 RED定点修复｜实际Owner回执】
+DATE: 2026-10-24 | DEVICE: DESKTOP-029FH47
+BRANCH: p3-1/clickable-abc-bc
+REJECTED_PARENT: a96b4ded8c74bd66ff175682a0da375e5924dc7d
+NEW_CANDIDATE_HEAD: refer to `git rev-parse HEAD` AFTER immutable commit and W39's external SHA handoff. No self-referential invented SHA.
+STATE: **W39_FULL_K_DATA_LAYOUT_A11Y_CSP_OWNER_SELF_TEST_PASS / VITE_ESBUILD_SECURITY_RED_HOLD / INDEPENDENT_POSTBUILD_REVIEWS_HOLD**.
+REPO: C:\Users\1\Documents\YanceV2\YANCE_V2_GREENFIELD_P3_0_20261024
+AUTHORIZED_PATH: design/nonproduction/approved-clickable-abc-bc/ ONLY; main must remain d05f46c83e34e0c2599254a4aac9dc77461f6026.
 
-已在唯一批准目录内真实完成四版Vue/Vite可运行源代码及构建，APP的Button/Bubble/Message/Input/Composer/ContextMenu/Popover/Dialog基于W42批准的shadcn-vue Reka OSS而非复制旧业务实现。全量72个批准源文件逐项验证冻结上游SHA，67不改、5个IconPlaceholder只改用唯一@lucide/vue并有完整差分。未导入W42 HOLD文件。
-通过冻结W37: 120合成联系人（各K/MID唯一）、W34 overlay、W37 sidecar（8新增+3继承事件）、44任务，共同Reset/四臂数据等价，真实Chrome输入、点击、DOM变化的W39自测 **44 PASS / 0 FAIL**。历史首轮38/44保留；最终Chrome结果位于 `evidence/W39_CHROME_UAT_FINAL_44PASS.json`。注意这不是独立W40/41/42签署。
-五主题×明暗10态，四主臂+9个Chrome DevTools Emulation **精确CSS viewport** 生成23张PNG及SHA清单 `evidence/CHROME_SCREENSHOT_MATRIX.json`。通过校验每个实际CSS宽度与对应PNG像素宽度相等、四个方案入口未横向裁剪、body无横向滚动。DPR=1，Windows桌面实机WebView2与其它DPI仍NOT_RUN。
-锁14个W42核准精确直接npm包，真实已安装Windows包74；源码COPY72；实际已下载tarball的SHA512 74/74 PASS（包括锁文件另有71个平台特定或可选项未在Windows落盘，不冒充已验证）；LICENSE/NOTICE文本已汇总并记录缺失=0（平台二进制复用上游父项目许可文本），SBOM覆盖本机74安装包，仓外法律独立签署尚未完成。
-实时状态：W39本地编译和自测PASS；**W40独立QA、W41独立安全、W42真正后审、真实Windows WebView2、原始旧A像素对比、公司正式法律、P4全部HOLD。**
-安全边界：真实用户0，社交渠道连接0，真实Agno 0，收费模型0，外发0，生产部署0；模拟发送只有本地状态并明确NO_SEND/UNKNOWN。main保持`d05f46c83e34e0c2599254a4aac9dc77461f6026`，无合并。
+## Actual narrowly scoped fixes
+- Full canonical K = tenant|account|channel|peer_id|binding_revision. Selected identity, active lookup, drafts/quote/MID/state, URL peer resolution, scenario qualification and account/channel filters fail closed for ambiguous or out-of-scope selection. Viewing/switching filters never marks read/takes over/sends. No fallback to another account's prior Composer.
+- W37 exact signed derived effective 120 fixture has only peer117.account=fixture-account-2; SHA256 `6198539f936ac636cd24ec812456557e5d9c6509cdf9c6c63856f4f061699af9`. Historical original fixture unchanged SHA `5b9a05df788fe5fab41b6b2033fb895cd3650fb573345856650cfeb24ef9c99c`. Separate 5 contact same-peer-ID collision records are **negative-only**, not merged into default120.
+- Bounded viewport/flex contact scrolling and chat Composer; B+C <=1180 drawer visible/close/Escape/focus return, 40px close target; channel filters fully keyboard/pointer-accessible; icon-only accessible names supplied. Source only existing W42-approved OSS components.
+- Actual localhost preview security enforced through `vite.config.ts` HTTP CSP Header plus index meta, prohibits third-party connections and inline JS; exact single observed style hash whitelisted, not unsafe-inline scripting. No real Provider/send/Agno/paid API.
+## W39 self tests — NOT independent
+- Real Chrome common W37 44/44 PASS (4 arms×11), including same-name **different-account** UX01 and actual account filter change; 7/7 isolated full-K collision negatives.
+- Chrome exact CSS width×4 plus 5 themes×dark/light×4 = 76/76 visual PASS, all Composer visible, channel filters accessible, B+C drawer present and close target sized; 76 actual after screenshots/hashes in `evidence/red-chrome/`, proof `evidence/W39_RED_76_VISUAL_CDP.json`.
+- Chrome CSP injection/Network 4/4 PASS: inline script blocked, crafted HTML inert, external HTTP(S)0, WebSocket0. `evidence/W39_RED_CSP_NETWORK_CDP.json`.
+- `npm test` 18/18 owner checks PASS, `tsc --noEmit` PASS and local Vite build PASS. Actual compiled bundle SHA256 in `evidence/W39_RED_FINAL_MANIFEST.json`.
+- **Dependency safety not PASS**: W42 formally allows Vite7.3.7 and esbuild0.28.1 exact, but regeneration of lock introduced six unsigned optional WASM nested package rows. W39 stopped before installing new lock, reverted `package.json`+`package-lock.json` to approved preexisting 14 direct pins. Current actual Vite7.3.1/esbuild0.27.7, full npm audit HIGH1 LOW1, runtime omit=dev0, all still security HOLD. See `W39_TO_W42_SIX_UNEXPECTED_LOCK_ROWS_HOLD.md` + `evidence/W39_W42_NPM_LOCK_EXACT_DELTA.json`. W42 additional six-row signed permission required before upgrade; do NOT silently imply security risk cleared.
+- Independent W40 QA and W41 SEC and W42 POSTBUILD on NEW candidate: **NOT_RUN**. W42 historical a96b4d source/notice approval cannot be inherited. Standalone dist distribution, company LEGAL, Windows WebView2/DPI/real IME and P4 all HOLD.

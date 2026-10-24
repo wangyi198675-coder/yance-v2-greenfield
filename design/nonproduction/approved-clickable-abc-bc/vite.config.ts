@@ -11,6 +11,6 @@ export default defineConfig({
     {find: /^@\//, replacement: fileURLToPath(new URL('./src/',import.meta.url)).replace(/\\/g,'/') + '/'}
   ]},
   server:{host:'127.0.0.1',strictPort:true,port:4173},
-  preview:{host:'127.0.0.1',strictPort:true,port:4174},
+  preview:{host:'127.0.0.1',strictPort:true,port:4174,headers:{'Content-Security-Policy':"default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; frame-src 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'sha256-6kJHBrMeYPjuL963zk84BmND3Z4cszEoZMFiRK2nkPY='; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'none'; worker-src 'none'",'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}},
   build:{outDir:'dist',emptyOutDir:true,sourcemap:false}
 })

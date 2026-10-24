@@ -1,5 +1,5 @@
 import { nextTick } from 'vue'
-import { ARMS, allContacts, state, reset, key, byPeer, currentMode, getDraft, candidates, setException, snapshot, THEMES, HASHES } from './store'
+import { ARMS, allContacts, state, reset, key, byPeer, currentMode, getDraft, candidates, setException, quote, uniqueByPeerIn, getByK, COLLISION_ROWS, snapshot, THEMES, HASHES } from './store'
 type Result={case_id:string;task_id:string;arm:string;result:'PASS'|'FAIL';proof:string;error:string}
 const out:Result[]=[]
 const flush=async()=>{await nextTick();await Promise.resolve();await nextTick()}
@@ -42,8 +42,17 @@ export async function runBrowserUAT(){
    const cards=[...document.querySelectorAll('.contact-action')] as HTMLElement[];
    ensure(cards.length===2,'duplicate names must render 2');
    ensure(cards.some(c=>c.textContent?.includes('fake-peer-003'))&&cards.some(c=>c.textContent?.includes('fake-peer-117')),'full identity missing');
-   await click(cards[1]);ensure(state.selected==='fake-peer-117','click identity mismatch');
-   return 'Search input and OSS Button selected both same-name contacts with distinct full K/channel'
+   const first=byPeer('fake-peer-003'),second=byPeer('fake-peer-117');
+   ensure(first.account==='fixture-account-1'&&second.account==='fixture-account-2','W37 derived effective dataset NOT applied');
+   await click(cards[1]);ensure(state.selected===key(second),'click identity mismatch');
+   const account1=[...document.querySelectorAll('.account-pills button')].find(x=>x.textContent?.includes('账号1')) as HTMLElement;
+   await click(account1);ensure(state.selected===key(first),'account1 must select eligible K');
+   ensure(qs('.chat-person').textContent?.includes('fixture-account-1')??false,'old account2 chat retained');
+   const account2=[...document.querySelectorAll('.account-pills button')].find(x=>x.textContent?.includes('账号2')) as HTMLElement;
+   await click(account2);ensure(state.selected===key(second),'account2 must select eligible K');
+   ensure(qs('.chat-person').textContent?.includes('fixture-account-2')??false,'old account1 chat leaked');
+   ensure(!qs('.chat-person').textContent?.includes('fixture-account-1'),'account1 chat not isolated');
+   return 'W37 effective peers003/117 same name different accounts; actual OSS filter clicks verify current full K and CONTACT isolation'
   })
   await task('UX-02',arm,async()=>{
    const btn=[...document.querySelectorAll('.page-bottom button')].find(x=>x.textContent?.includes('查看全部')) as HTMLElement;await click(btn);
@@ -104,10 +113,23 @@ export async function runBrowserUAT(){
    const opt=[...document.querySelectorAll('.theme-menu button')].find(b=>b.textContent?.includes('Ocean Electric')) as HTMLElement;ensure(!!opt,'theme popover did not open');await click(opt);
    ensure(root.getAttribute('data-theme')==='2','theme OSS Popover click failed');
    const toggle=qs('.top-actions button[aria-label="切换浅色"]');await click(toggle);ensure(root.getAttribute('data-mode')==='light','light state not updated');
-   return 'OSS Popover theme selection changed Ocean Electric; OSS Button toggled LIGHT; responsive widths separately screenshot'
+   if(arm==='CHAT-BC-FUSION'){
+     const trigger=qs('.chat-actions button[aria-label="打开独立托管中心"]');
+     await click(trigger);
+     const drawer=qs('.autopilot-pane');
+     ensure(!!drawer&&getComputedStyle(drawer).display!=='none','BC autopilot drawer is invisible');
+     const close=qs('.autopilot-pane button[aria-label="关闭托管中心"]');
+     ensure(document.activeElement===close,'BC drawer does not focus close button');
+     document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+     await flush();
+     ensure(!document.querySelector('.autopilot-pane'),'BC Escape did not close drawer');
+     ensure(document.activeElement===trigger,'BC Escape did not restore keyboard focus');
+   }
+   return 'OSS theme and light; BC drawer real click/Escape/focus restored where applicable'
   })
  }
- const report={classification:'P3_1_NONPRODUCTION_CHROME_DOM_AUTO_UAT_ONLY',independentQA:false,source:HASHES,chromeActual:true,arms:ARMS.map(x=>x.id),rows:out,pass:out.filter(x=>x.result==='PASS').length,fail:out.filter(x=>x.result==='FAIL').length,viewportMatrix:'SEPARATE_SCREENSHOT_TEST',webview2:'NOT_RUN'}
+ const {runCollisionNegatives}=await import('./collision-runtime-tests');const collision=runCollisionNegatives();
+ const report={collision,classification:'P3_1_NONPRODUCTION_CHROME_DOM_AUTO_UAT_ONLY',independentQA:false,source:HASHES,chromeActual:true,arms:ARMS.map(x=>x.id),rows:out,pass:out.filter(x=>x.result==='PASS').length,fail:out.filter(x=>x.result==='FAIL').length,viewportMatrix:'SEPARATE_SCREENSHOT_TEST',webview2:'NOT_RUN'}
  const pre=document.createElement('pre');pre.id='W39_BROWSER_UAT_RESULTS';pre.textContent=JSON.stringify(report);pre.style.cssText='white-space:pre-wrap;color:black;background:white;padding:8px';document.body.append(pre);document.documentElement.setAttribute('data-uat-complete','true');
  console.log('W39_BROWSER_UAT_RESULTS '+report.pass+'/'+out.length+' '+report.fail+' FAIL')
 }

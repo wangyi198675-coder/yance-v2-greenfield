@@ -56,3 +56,39 @@
 
 /* 360/430 correction from actual headless Chrome screenshot: all four arm launchers discoverable without horizontal clipping. */
 @media(max-width:550px){.topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;height:auto;min-height:108px;gap:7px;padding:8px 9px}.brand{min-width:0}.brandmark{width:31px;height:31px}.top-actions{min-width:0;gap:3px;justify-self:end}.top-actions .cn-button{padding:0 6px}.arm-switch{order:unset;grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;width:100%;overflow:visible}.arm-switch .cn-button{min-width:0;font-size:10px;height:28px;white-space:nowrap;padding:0 3px;justify-content:center}}
+
+/* W40/W41 targeted P1/P2 only: bounded scroll, accessible channel filter and B+C drawer */
+html,body,#app{height:100%;max-height:100%;overflow:hidden}
+.shell{height:100dvh;min-height:0;max-height:100dvh;overflow:hidden}
+.workspace{flex:1 1 0!important;height:0;min-height:0!important;overflow:hidden!important}
+.contact-pane,.chat-pane{height:100%;max-height:100%;min-height:0!important;overflow:hidden}
+.contact-pane>.contacts-scroll{flex:1 1 0;min-height:0!important;overflow-y:auto;overflow-x:hidden}
+.timeline{flex:1 1 0;min-height:0!important;overflow:auto}
+.suggestions{flex:0 0 auto;min-height:0;max-height:min(34%,210px);overflow:auto}
+.composer-wrap{flex:0 0 auto;max-height:min(45%,240px);min-height:0;overflow-y:auto}
+.page-bottom{position:sticky;bottom:0;z-index:1;background:var(--bg2)}
+.contact-pane .channel-pills{flex-wrap:wrap!important;overflow:visible!important;gap:5px;white-space:normal}
+.channel-pills .cn-button{flex-shrink:0}
+.cn-button-size-icon-xs{min-width:36px;min-height:36px}
+.no-active-pane{min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;padding:24px;color:var(--muted);text-align:center;background:var(--bg)}
+.no-active-pane h2{font-size:16px;color:var(--ink);margin:0}.no-active-pane p{font-size:12px;max-width:360px}
+@media(max-width:1180px){
+ .workspace{grid-template-columns:minmax(190px,260px) minmax(0,1fr)!important}
+ .autopilot-pane{display:block!important;position:fixed;right:0;top:98px;bottom:28px;width:min(370px,100vw);max-width:100vw;height:auto;z-index:26;background:var(--bg2);box-shadow:0 14px 40px #0008;border:1px solid var(--border)}
+}
+@media(max-width:850px){.workspace{grid-template-columns:minmax(160px,230px) minmax(0,1fr)!important}}
+@media(max-width:550px){
+ .workspace{display:flex!important;flex-direction:column!important;overflow:hidden!important;height:0}
+ .contact-pane{flex:0 0 clamp(120px,24dvh,190px)!important;min-height:0!important;height:auto!important;max-height:clamp(120px,24dvh,190px)!important}
+ .contact-pane .contacts-scroll{height:0!important;flex:1 1 0!important;overflow:auto!important}
+ .chat-pane{height:0!important;flex:1 1 0!important;min-height:0!important;overflow:hidden!important}
+ .timeline{min-height:0!important;flex:1 1 0!important;padding:7px}
+ .chat-header{min-height:62px}
+ .suggestions{max-height:25%;padding:5px 8px}
+ .composer-wrap{flex:0 0 auto;max-height:40%;padding:5px 8px}
+ .composer-input .cn-textarea{min-height:46px;max-height:80px}
+ .autopilot-pane{top:120px;bottom:20px;width:min(100vw,380px);padding:12px}
+}
+
+/* P2: B+C close target usable by keyboard, pointer and touch. */
+.autopilot-pane .cn-button-size-icon-sm{min-width:40px;min-height:40px}

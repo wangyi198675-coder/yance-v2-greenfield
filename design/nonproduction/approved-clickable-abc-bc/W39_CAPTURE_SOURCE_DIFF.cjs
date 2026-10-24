@@ -1,0 +1,7 @@
+const fs=require('node:fs'),p=require('node:path'),crypto=require('node:crypto'),zlib=require('node:zlib'),{execFileSync}=require('node:child_process');
+const root=__dirname,repo=p.resolve(root,'../../..'),base='design/nonproduction/approved-clickable-abc-bc/';
+const changes=['src/store.ts','src/App.vue','src/style.css','src/browser-tests.ts','src/collision-runtime-tests.ts','tests/parity.cjs','vite.config.ts','index.html','src/data/effective-fixture.json'];
+const buf=execFileSync('git',['-C',repo,'-c','core.quotepath=false','diff','--cached','--no-ext-diff','--',...changes.map(x=>base+x)],{maxBuffer:20*1024*1024});if(buf.length<5000)throw Error('FULL_SOURCE_DIFF_NOT_STAGED');
+const packed=zlib.gzipSync(buf,{level:9,mtime:0});const out=p.join(root,'evidence/W39_RED_MINIMAL_SOURCE_DIFF.patch.gz');fs.writeFileSync(out,packed);
+const hex=crypto.createHash('sha256').update(buf).digest('hex'),ziphash=crypto.createHash('sha256').update(packed).digest('hex');fs.writeFileSync(p.join(root,'evidence/W39_RED_SOURCE_DIFF_SHA.json'),JSON.stringify({baseline:'a96b4ded8c74bd66ff175682a0da375e5924dc7d',scope:'W39 changed source only, including new derived fixture; OSS 72 remain untouched',paths:changes,bytes:buf.length,sha256:hex,compressedFile:'evidence/W39_RED_MINIMAL_SOURCE_DIFF.patch.gz',compressedBytes:packed.length,compressedSha256:ziphash},null,2));
+console.log('RED_DIFF_SOURCE_BYTES='+buf.length+' SHA256='+hex+' GZIP_BYTES='+packed.length+' GZIP_SHA='+ziphash+' SOURCE_PATHS='+changes.length);

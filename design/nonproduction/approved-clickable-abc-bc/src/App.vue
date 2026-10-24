@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
 import { ArrowLeft, ArrowRight, Bot, ChevronDown, ChevronRight, CircleAlert, ClipboardCopy, FilePlus2, Filter, GitBranch, Globe2, LayoutGrid, LockKeyhole, MessageCircle, MoreHorizontal, PanelRight, RefreshCcw, Search, Send, ShieldAlert, ShieldCheck, Sparkles, Sun, Moon, X, Zap } from '@lucide/vue'
 import { Button } from './components/oss/button'
 import { Bubble, BubbleContent } from './components/oss/bubble'
@@ -9,13 +9,15 @@ import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, C
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './components/oss/dialog'
 import { ScrollArea } from './components/oss/scroll-area'
 import { Popover, PopoverTrigger, PopoverContent } from './components/oss/popover'
-import { allContacts, active, activeKey, ARMS, THEMES, state, key, displayName, currentMode, getDraft, currentDraft, candidates, filtered, paged, select, setArm, reset, editPublic, adoptCandidate, quote, attach, clearQuote, clearFile, simulateSend, handleScenario, askPrivate, note, MOCK_EVENTS, byPeer, snapshot, HASHES } from './store'
+import { allContacts, active, activeKey, ARMS, THEMES, state, key, displayName, currentMode, getDraft, currentDraft, candidates, filtered, paged, select, applyScope, resolveIdentity, setArm, reset, editPublic, adoptCandidate, quote, attach, clearQuote, clearFile, simulateSend, handleScenario, askPrivate, note, MOCK_EVENTS, byPeer, snapshot, HASHES } from './store'
 
 const filePicker=ref<HTMLInputElement|null>(null)
+const autopilotClose=ref<HTMLElement|null>(null)
+const autopilotTrigger=ref<HTMLElement|null>(null)
 const isPulse=computed(()=>state.arm==='CHAT-C-PULSE_MAIN'&&state.pulseOpen)
 const isBC=computed(()=>state.arm==='CHAT-BC-FUSION')
 const isA=computed(()=>state.arm==='CHAT-A-V25_VISUAL_NORMALIZED')
-const candidateList=computed(()=>candidates(active.value))
+const candidateList=computed(()=>active.value?candidates(active.value):[])
 const shownCandidates=computed(()=>!isA.value&&!state.suggestExpanded&&candidateList.value.length>1?candidateList.value.slice(0,1):candidateList.value)
 const channelLabels:Record<string,string>={ALL:'全部渠道',FB_PERSONAL:'FB个人',FB_PAGE:'FB主页',WHATSAPP_PERSONAL:'WhatsApp',TELEGRAM_PERSONAL:'Telegram'}
 const channelOrder=['ALL','FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL']
@@ -34,15 +36,18 @@ const currentException=computed(()=>state.exceptions[activeKey.value]||'无异�
 const publicLocalRecords=computed(()=>state.localTimeline[activeKey.value]||[])
 const currentArm=computed(()=>ARMS.find(a=>a.id===state.arm)!)
 const selectFirst=()=>{if(filtered.value.length)select(filtered.value[0])}
-function changeChannel(ch:string){state.channel=ch;state.pageSize=30}
-function changeAccount(acc:string){state.account=acc;state.pageSize=30}
+function changeChannel(ch:string){applyScope(state.account,ch)}
+function changeAccount(acc:string){applyScope(acc,state.channel)}
+function toggleAutopilot(){state.pulseOpen=!state.pulseOpen}
+function onAutopilotEscape(e:KeyboardEvent){if(e.key==='Escape'&&isBC.value&&state.pulseOpen){state.pulseOpen=false;e.preventDefault()}}
+watch(()=>state.pulseOpen,async(open,wasOpen)=>{if(!isBC.value)return;await nextTick();if(open)(document.querySelector('.autopilot-pane button[aria-label="关闭托管中心"]') as HTMLButtonElement|null)?.focus();else if(wasOpen)(document.querySelector('.chat-actions button[aria-label="打开独立托管中心"]') as HTMLButtonElement|null)?.focus()})
 function onPublicUpdate(v:string|number){if(!state.composerComposing)editPublic(String(v),'COMPOSER_INPUT')}
 function onCompositionEnd(e:CompositionEvent){state.composerComposing=false;editPublic((e.target as HTMLTextAreaElement).value,'IME_COMMIT')}
 function addAttachments(e:Event){attach((e.target as HTMLInputElement).files);(e.target as HTMLInputElement).value=''}
 function onFileDrop(e:DragEvent){e.preventDefault();attach(e.dataTransfer?.files||null)}
 function onPaste(e:ClipboardEvent){const names=Array.from(e.clipboardData?.files||[]);if(names.length)attach(e.clipboardData?.files||null);else note('PASTE into current CONTACT composer');}
-function seekPeer(peer:string){const c=byPeer(peer);if(c)select(c)}
-function triggerQuote(){quote(active.value)}
+function seekPeer(peer:string){const c=resolveIdentity(peer);if(c)select(c)}
+function triggerQuote(){if(active.value)quote(active.value)}
 function captureQuoteHotkey(e:KeyboardEvent){if(e.key==='F10'&&e.shiftKey&&(e.target as HTMLElement)?.closest?.('.message-context')){e.preventDefault();triggerQuote()}}
 function toggleTheme(){state.appearance=state.appearance==='dark'?'light':'dark'}
 function chooseScenario(e:{code:string;peer:string}){handleScenario(e.code,e.peer); if(state.arm==='CHAT-C-PULSE_MAIN')state.pulseOpen=false}
@@ -50,7 +55,8 @@ function selectTaskContact(n:number){seekPeer('fake-peer-'+String(n).padStart(3,
 function onPrivateInput(v:string|number){state.privateDraft=String(v)}
 function keyDownPublic(e:KeyboardEvent){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();simulateSend()}}
 function keyDownPrivate(e:KeyboardEvent){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();askPrivate()}}
-onMounted(async()=>{document.addEventListener('keydown',captureQuoteHotkey,true);note('REAL CLICKABLE OFFLINE HARNESS / W37 SYNTHETIC DATA LOADED');const q=new URLSearchParams(window.location.search);const arm=ARMS.find(a=>a.id===q.get('arm'));if(arm)setArm(arm.id);const peer=q.get('peer');if(peer&&byPeer(peer))seekPeer(peer);const theme=THEMES.find(t=>t===q.get('theme'));if(theme)state.theme=theme;if(q.get('mode')==='light'||q.get('mode')==='dark')state.appearance=q.get('mode')!;if(q.get('private')==='1')state.privateOpen=true;if(q.get('pulse')==='1')state.pulseOpen=true;if(q.get('uat')==='1'){const u=await import('./browser-tests');await u.runBrowserUAT()}})
+onMounted(async()=>{document.addEventListener('keydown',captureQuoteHotkey,true);document.addEventListener('keydown',onAutopilotEscape,true);note('REAL CLICKABLE OFFLINE HARNESS / W37 SYNTHETIC DATA LOADED');const q=new URLSearchParams(window.location.search);const arm=ARMS.find(a=>a.id===q.get('arm'));if(arm)setArm(arm.id);const peer=q.get('peer');if(peer&&resolveIdentity(peer))seekPeer(peer);const theme=THEMES.find(t=>t===q.get('theme'));if(theme)state.theme=theme;if(q.get('mode')==='light'||q.get('mode')==='dark')state.appearance=q.get('mode')!;if(q.get('private')==='1')state.privateOpen=true;if(q.get('pulse')==='1')state.pulseOpen=true;if(q.get('uat')==='1'){const u=await import('./browser-tests');await u.runBrowserUAT()}})
+onUnmounted(()=>{document.removeEventListener('keydown',captureQuoteHotkey,true);document.removeEventListener('keydown',onAutopilotEscape,true)})
 </script>
 
 <template>
@@ -83,13 +89,13 @@ onMounted(async()=>{document.addEventListener('keydown',captureQuoteHotkey,true)
 
   <main v-else class="workspace" :class="{'workspace-a':isA,'workspace-bc':isBC,'workspace-c':state.arm==='CHAT-C-PULSE_MAIN'}">
     <aside class="contact-pane" data-test="contact-list">
-      <div class="pane-head"><div><p class="eyebrow">{{isA?'CLASSIC CONTACTS':'SMART INBOX'}}</p><h2>联系人 <span class="counter">{{filtered.length}}</span></h2></div><Button variant="ghost" size="icon-sm" title="四平台和虚构账号" @click="state.dialog='所有账号均为fixture-account-1/2；四个渠道均为模拟数据。'"><Filter :size="16"/></Button></div>
+      <div class="pane-head"><div><p class="eyebrow">{{isA?'CLASSIC CONTACTS':'SMART INBOX'}}</p><h2>联系人 <span class="counter">{{filtered.length}}</span></h2></div><Button variant="ghost" size="icon-sm" aria-label="查看四平台与虚构账号说明" title="四平台和虚构账号" @click="state.dialog='所有账号均为fixture-account-1/2；四个渠道均为模拟数据。'"><Filter :size="16"/></Button></div>
       <InputGroup class="search-box"><Search :size="17"/><InputGroupInput aria-label="搜索联系人姓名、ID、消息原文或译文" :model-value="state.search" placeholder="搜索联系人 / 消息 / 身份…" @update:model-value="v=>state.search=String(v)"/></InputGroup>
       <div class="account-pills"><Button v-for="a in accounts" :key="a" size="xs" :variant="state.account===a?'secondary':'ghost'" @click="changeAccount(a)">{{a==='ALL'?'所有账号':a.replace('fixture-','').replace('account-','账号')}}</Button></div>
-      <div class="channel-pills"><Button v-for="ch in channelOrder" :key="ch" size="xs" :variant="state.channel===ch?'secondary':'ghost'" @click="changeChannel(ch)">{{channelLabels[ch]}}</Button></div>
+      <div class="channel-pills" role="group" aria-label="联系人渠道筛选"><Button v-for="ch in channelOrder" :key="ch" size="xs" :variant="state.channel===ch?'secondary':'ghost'" @click="changeChannel(ch)">{{channelLabels[ch]}}</Button></div>
       <ScrollArea class="contacts-scroll">
         <div class="contact-row" v-for="c in paged" :key="key(c)">
-          <Button variant="ghost" class="contact-action" :class="{selected:activeKey===key(c)}" @click="select(c)" :aria-label="'打开'+displayName(c)+','+c.account+','+c.channel+','+c.peer_id">
+          <Button variant="ghost" class="contact-action" :class="{selected:activeKey===key(c)}" @click="select(c)" :aria-label="'打开'+displayName(c)+','+c.account+','+c.channel+','+c.peer_id+',revision'+c.binding_revision">
             <span class="avatar">{{c.peer_id.slice(-2)}}</span>
             <span class="contact-meta"><span class="contact-first"><strong>{{displayName(c)}}</strong><small>{{c.channel.replace('_PERSONAL','')}}</small></span>
               <span class="preview">{{c.last_message.zh}}</span><span class="original-preview">{{c.last_message.original}} · {{c.last_message.provider_mid}}</span><span class="key-row">{{c.account}} · {{c.peer_id}} · r{{c.binding_revision}}</span>
@@ -101,13 +107,13 @@ onMounted(async()=>{document.addEventListener('keydown',captureQuoteHotkey,true)
       </ScrollArea>
     </aside>
 
-    <section class="chat-pane" data-test="chat">
+    <section v-if="active" class="chat-pane" data-test="chat">
       <div class="chat-header">
         <div class="header-avatar">{{active.peer_id.slice(-2)}}</div>
         <div class="chat-person"><h2>{{displayName(active)}} <span class="verified">SYNTHETIC</span></h2><p>{{active.account}} · {{active.channel}} · {{active.peer_id}} · rev{{active.binding_revision}}</p><small><span class="neutral-dot"/> 在线状态 UNKNOWN · 未读 {{active.unread}}（查看不清零）· {{currentMode(active)}}</small></div>
         <div class="chat-actions">
-          <Button size="sm" variant="outline" @click="state.privateOpen=!state.privateOpen"><Bot :size="16"/><span class="responsive-hide">私人Agno</span></Button>
-          <Button size="icon-sm" variant="ghost" :title="isBC?'打开独立托管中心':'查看模拟异常'" @click="isBC?state.pulseOpen=!state.pulseOpen:state.dialog='模拟授权资格：'+currentMode(active)+'；无真实账号授权'"><ShieldAlert :size="17"/></Button>
+          <Button size="sm" variant="outline" aria-label="打开或关闭私人Agno模拟工作区" @click="state.privateOpen=!state.privateOpen"><Bot :size="16"/><span class="responsive-hide">私人Agno</span></Button>
+          <Button ref="autopilotTrigger" size="icon-sm" variant="ghost" :aria-label="isBC?(state.pulseOpen?'关闭独立托管中心':'打开独立托管中心'):'查看模拟异常'" :aria-expanded="isBC?state.pulseOpen:undefined" :title="isBC?'切换独立托管中心':'查看模拟异常'" @click="isBC?toggleAutopilot():state.dialog='模拟授权资格：'+currentMode(active)+'；无真实账号授权'"><ShieldAlert :size="17"/></Button>
           <Button v-if="state.arm==='CHAT-C-PULSE_MAIN'" size="sm" variant="ghost" @click="state.pulseOpen=true"><ArrowLeft :size="14"/> Pulse</Button>
         </div>
       </div>
@@ -133,19 +139,20 @@ onMounted(async()=>{document.addEventListener('keydown',captureQuoteHotkey,true)
       </div>
       <div class="composer-wrap" data-test="composer" @dragover.prevent @drop="onFileDrop">
         <div v-if="currentDraft.quote" class="quote-chip"><div><small>引用 · {{currentDraft.quote.mid}}</small><p>{{currentDraft.quote.zh}}</p></div><Button variant="ghost" size="icon-xs" aria-label="移除引用" @click="clearQuote"><X :size="13"/></Button></div>
-        <div v-if="currentDraft.files.length" class="file-chips"><span v-for="(f,i) in currentDraft.files" :key="f.name+i" class="file-chip"><FilePlus2 :size="12"/> {{f.name}} <Button variant="ghost" size="icon-xs" @click="clearFile(i)"><X :size="11"/></Button></span></div>
+        <div v-if="currentDraft.files.length" class="file-chips"><span v-for="(f,i) in currentDraft.files" :key="f.name+i" class="file-chip"><FilePlus2 :size="12"/> {{f.name}} <Button variant="ghost" size="icon-xs" :aria-label="'删除附件 '+f.name" @click="clearFile(i)"><X :size="11"/></Button></span></div>
         <div class="composer-box"><InputGroup class="composer-input"><InputGroupTextarea :model-value="currentDraft.text" placeholder="在当前联系人写草稿，输入才模拟人工接管…" aria-label="当前联系人私有草稿" @update:model-value="onPublicUpdate" @compositionstart="state.composerComposing=true" @compositionend="onCompositionEnd" @keydown="keyDownPublic" @paste="onPaste"/></InputGroup>
         <div class="composer-bar"><div><input ref="filePicker" type="file" multiple hidden @change="addAttachments"/><Button variant="ghost" size="sm" @click="filePicker?.click()"><FilePlus2 :size="16"/> 附件</Button><Button variant="ghost" size="sm" @click="triggerQuote"><ClipboardCopy :size="14"/> 引用</Button></div><div class="composer-status"><small>{{currentDraft.text.length}} 字 · {{currentMode(active)}}</small><Button size="sm" @click="simulateSend" :disabled="!currentDraft.text.trim()&&!currentDraft.files.length"><Send :size="14"/> 本地模拟 / 不发送</Button></div></div></div>
         <small class="composer-foot">唯一 CONTACT 草稿界面 · K = {{activeKey}} · 无Provider出站</small>
       </div>
     </section>
 
-    <aside v-if="isBC&&state.pulseOpen" class="autopilot-pane" data-test="autopilot-center"><div class="right-head"><p class="eyebrow">AUTOPILOT CENTER</p><h2>独立托管中心 <Button variant="ghost" size="icon-xs" @click="state.pulseOpen=false"><X :size="16"/></Button></h2><p>不会暂停其他AUTO联系人。</p></div><div class="exception-list"><article v-for="q in queue" :key="q.code"><div class="row-title"><CircleAlert :size="14"/><strong>{{q.title}}</strong></div><small>{{q.peer}} · {{q.level}}</small><p>{{q.body}}</p><Button variant="outline" size="sm" @click="chooseScenario(q)">查看</Button></article></div></aside>
-    <aside v-else-if="!state.privateOpen&&!isBC" class="insights-pane" data-test="insights"><div class="right-head"><p class="eyebrow">YANCE EXPERIMENT</p><h2>会话概览</h2><p>私人Agno工具回执与普通联系人文本必须隔离。</p></div><div class="insight-card"><div class="row-title"><ShieldCheck :size="15"/> 安全状态</div><p>读取回执：<b>UNVERIFIED</b></p><p>在线状态：<b>UNKNOWN</b></p><p>发送模式：<b>{{currentMode(active)}}</b></p><p>当前异常：<b>{{currentException}}</b></p></div><div class="insight-card"><p class="eyebrow">QUICK SCENARIO</p><Button v-for="q in queue.slice(0,4)" :key="q.code" variant="ghost" class="insight-option" @click="chooseScenario(q)">{{q.title}} <ChevronRight :size="14"/></Button></div><Button variant="secondary" class="wide" @click="state.privateOpen=true"><Bot :size="16"/> 私人Agno模拟工作区</Button></aside>
+    <section v-else class="no-active-pane" data-test="no-active"><LockKeyhole :size="26"/><h2>当前筛选没有已选择联系人</h2><p>已保护聊天及Composer。请选择当前账号和渠道中的有效联系人，查看不会标已读、接管或发送。</p></section>
+    <aside v-if="isBC&&state.pulseOpen" class="autopilot-pane" data-test="autopilot-center" role="dialog" aria-modal="false" aria-label="独立托管中心" tabindex="-1"><div class="right-head"><p class="eyebrow">AUTOPILOT CENTER</p><h2>独立托管中心 <Button ref="autopilotClose" variant="ghost" size="icon-sm" aria-label="关闭托管中心" @click="state.pulseOpen=false"><X :size="16"/></Button></h2><p>不会暂停其他AUTO联系人。</p></div><div class="exception-list"><article v-for="q in queue" :key="q.code"><div class="row-title"><CircleAlert :size="14"/><strong>{{q.title}}</strong></div><small>{{q.peer}} · {{q.level}}</small><p>{{q.body}}</p><Button variant="outline" size="sm" @click="chooseScenario(q)">查看</Button></article></div></aside>
+    <aside v-else-if="active&&!state.privateOpen&&!isBC" class="insights-pane" data-test="insights"><div class="right-head"><p class="eyebrow">YANCE EXPERIMENT</p><h2>会话概览</h2><p>私人Agno工具回执与普通联系人文本必须隔离。</p></div><div class="insight-card"><div class="row-title"><ShieldCheck :size="15"/> 安全状态</div><p>读取回执：<b>UNVERIFIED</b></p><p>在线状态：<b>UNKNOWN</b></p><p>发送模式：<b>{{currentMode(active)}}</b></p><p>当前异常：<b>{{currentException}}</b></p></div><div class="insight-card"><p class="eyebrow">QUICK SCENARIO</p><Button v-for="q in queue.slice(0,4)" :key="q.code" variant="ghost" class="insight-option" @click="chooseScenario(q)">{{q.title}} <ChevronRight :size="14"/></Button></div><Button variant="secondary" class="wide" @click="state.privateOpen=true"><Bot :size="16"/> 私人Agno模拟工作区</Button></aside>
   </main>
-  <section v-if="state.privateOpen" class="private-drawer" data-test="private-agno"><div class="private-head"><div class="row-title"><Bot :size="21"/><div><p class="eyebrow">SELF_PRIVATE / AGNO MOCK</p><h3>你的私人闺蜜大脑</h3></div></div><Button variant="ghost" size="icon-sm" @click="state.privateOpen=false"><X :size="17"/></Button></div><div class="private-status"><LockKeyhole :size="14"/> 独立私有输入域 · 不进入任何联系人Composer</div><div class="private-tabs"><span>Runs <b>模拟</b></span><span>Trace <b>模拟</b></span><span>Tools <b>模拟</b></span><span>Budget <b>0真实费用</b></span></div><div class="private-history"><div class="private-mock">欢迎进入独立Agno工作区。本面板展示离线假Run/Trace/Skills/MCP、模拟费用和回执，不与真实AgentOS通信。</div><div v-for="(m,i) in state.privateMessages" :key="i" class="private-message" :class="{you:m.role==='YOU'}"><small>{{m.role}}</small><p>{{m.content}}</p></div></div><div class="private-bottom"><InputGroup class="private-input"><InputGroupTextarea :model-value="state.privateDraft" @update:model-value="onPrivateInput" aria-label="私人Agno模拟提问" placeholder="向私人Agno模拟体提问，不会发给任何联系人…" @keydown="keyDownPrivate"/></InputGroup><Button size="sm" @click="askPrivate" :disabled="!state.privateDraft.trim()"><Send :size="14"/> 本地提问</Button></div></section>
+  <section v-if="state.privateOpen" class="private-drawer" data-test="private-agno"><div class="private-head"><div class="row-title"><Bot :size="21"/><div><p class="eyebrow">SELF_PRIVATE / AGNO MOCK</p><h3>你的私人闺蜜大脑</h3></div></div><Button variant="ghost" size="icon-sm" aria-label="关闭私人Agno模拟工作区" @click="state.privateOpen=false"><X :size="17"/></Button></div><div class="private-status"><LockKeyhole :size="14"/> 独立私有输入域 · 不进入任何联系人Composer</div><div class="private-tabs"><span>Runs <b>模拟</b></span><span>Trace <b>模拟</b></span><span>Tools <b>模拟</b></span><span>Budget <b>0真实费用</b></span></div><div class="private-history"><div class="private-mock">欢迎进入独立Agno工作区。本面板展示离线假Run/Trace/Skills/MCP、模拟费用和回执，不与真实AgentOS通信。</div><div v-for="(m,i) in state.privateMessages" :key="i" class="private-message" :class="{you:m.role==='YOU'}"><small>{{m.role}}</small><p>{{m.content}}</p></div></div><div class="private-bottom"><InputGroup class="private-input"><InputGroupTextarea :model-value="state.privateDraft" @update:model-value="onPrivateInput" aria-label="私人Agno模拟提问" placeholder="向私人Agno模拟体提问，不会发给任何联系人…" @keydown="keyDownPrivate"/></InputGroup><Button size="sm" @click="askPrivate" :disabled="!state.privateDraft.trim()"><Send :size="14"/> 本地提问</Button></div></section>
 
   <Dialog :open="!!state.dialog" @update:open="v=>{if(!v)state.dialog=''}"><DialogContent class="status-dialog"><DialogHeader><DialogTitle>本地模拟状态</DialogTitle><DialogDescription>以下仅为离线测试反馈，不代表真实授权、发送或工具运行。</DialogDescription></DialogHeader><p class="status-body">{{state.dialog}}</p><Button @click="state.dialog=''">确认</Button></DialogContent></Dialog>
-  <footer class="statusbar"><span><span class="status-dot"/> 仅127.0.0.1 · 离线合成数据</span><span>{{currentArm.sub}} · {{state.theme}} / {{state.appearance}} · reset {{state.resetCount}}</span><span>VIEW {{active.peer_id}} · 真实发送 0 · P4 HOLD</span></footer>
+  <footer class="statusbar"><span><span class="status-dot"/> 仅127.0.0.1 · 离线合成数据</span><span>{{currentArm.sub}} · {{state.theme}} / {{state.appearance}} · reset {{state.resetCount}}</span><span>VIEW {{active?.peer_id||'NO_SELECTION'}} · 真实发送 0 · P4 HOLD</span></footer>
 </div>
 </template>
