@@ -92,7 +92,7 @@ jobs:
           python -m pytest -q -m 'not local_model' services/agentos/tests
           echo 'NOT_RUN: 3 Windows protected local_model tests; no model secrets in hosted CI'
       - id: agno_missing_test
-        if: ${{ hashFiles('services/agentos/requirements-test.txt') == '' && hashFiles('services/agentos/**') != '' }}
+        if: ${{ hashFiles('services/agentos/requirements-test.txt') == '' && hashFiles('services/agentos/**/*.py') != '' }}
         continue-on-error: true
         run: |
           echo "::error::Agno files exist with no declared trusted dependency/test suite"
