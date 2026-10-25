@@ -108,6 +108,10 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
         expectedConsentEpoch,expectedCustodyEpoch].every(nonnegative))
      throw Error('EXPLICIT_MUTATION_CAS_AND_ID_REQUIRED');
    if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('INVALID_TYPED_PAYLOAD');
+   // Stop scope and fence scope MUST match: CONTACT must never silently
+   // revoke GLOBAL while other contacts still have active W25 leases.
+   if(kind==='REVOKE_GRANT'&&payload.grantScope!==scope)
+     return refuse('STOP_SCOPE_MISMATCH');
    checkActor(actor,k,kind);
    const full=canonicalK(k),scopeId=sj(k,scope,canonicalK);
    const exp={expectedBindingRevision,expectedAccountEpoch,expectedConsentEpoch,
