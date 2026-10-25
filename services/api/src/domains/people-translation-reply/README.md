@@ -1,20 +1,41 @@
-# W45 — People / Translation / Reply (nonproduction)
+# W45 People / Translation / Reply — nonproduction native DTO
 
-Owner scope: services/api/src/domains/people-translation-reply/** (Issue #6). No other code or provider credentials.
+Issue #6. W45 source scope: only services/api/src/domains/people-translation-reply/**. Node 24 currently tested; runtime never handles live accounts, paid API calls or real provider sends.
 
-Run locally with Node 20+:
+Run all contract tests in an independent W45 worktree:
 
-    node --test services/api/src/domains/people-translation-reply/index.test.mjs
+    node --test services/api/src/domains/people-translation-reply/*.test.mjs
 
-Exports in index.mjs:
-- assertFullK / fullKKey: full tenant/account/channel/peer/binding DTO; only SYNTHETIC_TEST_ONLY data. Structural validation is NOT W24 binding authorization.
-- createPeopleTranslationReplyService({translator,attestAgnoRun}): ingestInbound, getMessage, retryTranslation, acceptAgnoRun, draftCandidate. All results include MID/K, exact original, source hash, translation provenance, 0–3 genuine Run-supplied candidates, and delivery=NOT_REQUESTED.
-- createLoopbackLibreTranslateAdapter({endpoint,fetchImpl}): REST /translate using loopback-only HTTP with no network/cloud fallback. Integration tests use a fake HTTP response to validate protocol; actual LibreTranslate model execution on the machine has NOT been verified.
+## Actual interfaces delivered
 
-Required W43 Run adapter contract to consume, never synthesize: {engine:'OFFICIAL_AGNO_SDK',status:'COMPLETED',identity:<full K>,sourceMid:<fake MID>,originalSha256:<hash of original>,translationRequestId:<translation provenance request_id>,runId,sessionId,agentId,candidates:[{id,text,sources:[{mid,part:'ORIGINAL'|'TRANSLATION'}]}]}. The trusted verifier function attestAgnoRun MUST be wired by W43 to genuine SDK execution; without it, the service rejects all Runs and returns zero candidates. Fixture attestors in tests do NOT prove the SDK is installed.
+- index.mjs: assertFullK / fullKKey, createPeopleTranslationReplyService({translator,attestAgnoRun}), ingestInbound / getMessage / retryTranslation / acceptAgnoRun / clearCandidates / draftCandidate, and createLoopbackLibreTranslateAdapter({endpoint,fetchImpl}).
+- w43-contact-bridge.mjs: w43ScopedIds, w43ReplyPrompt, parseW43Candidates, createW43ContactBridge({service,runW43,attestNativeReceipt,thread}).
+- Four explicitly supported requested translation languages: zh-CN, en, de, pl. Source auto-detection is metadata supplied by the running translator, not proof of quality.
+- Original full K/MID/text and original SHA-256 remain unchanged. Translation must include source language, selected target language, provider, request ID, source MID and input SHA. Unavailable/failed returns null translation with retryable error. No fixed sample text in production output.
+- Fixture translation has kind=SYNTHETIC_FIXTURE, status=FIXTURE_ONLY; local LibreTranslate response kind=LOCAL_ENGINE, status=TRANSLATED. Local HTTP adapter is loopback-only, blocks redirects and external cloud fallback.
+- W43 is the sole native Agno/AgentOS owner. W45 only consumes a W43 native Run receipt after a trusted attestation port provided by W43. Requires SDK pin, provider/model, full-K-derived unique scoped user/session, actual run ID, original hash, current translation attempt ID and sourced 0–3 candidates. Invalid JSON, model failure, missing attestor, mismatched scope or paid provider fails closed.
+- Zero, one, two or three genuine model-supplied candidates are allowed. No formulaic templates, auto-padding or language-independent fabricated cards. Each suggestion source is ORIGINAL and/or TRANSLATION from the exact same MID. Displaying a source ID means referenced input, NOT a third-party factual citation or model quality verification.
+- Only existing B+C Composer INSERT_DRAFT_ONLY, delivery=NOT_REQUESTED; W25 alone implements SendIntent/Outbox. Old reply candidates are cleared before a subsequent Run to avoid stale drafts.
 
-Translation with provenance.kind=LOCAL_ENGINE (live local LibreTranslate transport) is TRANSLATED; an input supplied by a synthetic fixture MUST be provenance.kind=SYNTHETIC_FIXTURE and status FIXTURE_ONLY. Missing/failed engine remains UNAVAILABLE/FAILED and is retryable; no fake zh, fake suggestions, or auto send.
+## W43 native adapter constraints (observed from source SHA 9d09121b8ba41ae73de82ec4d01add2b23e70df7)
 
-All interfaces are API-domain functions, not an HTTP server. W24 must own authoritative K/revocation, W43 SDK execution/trace, W46 Composer call, and W25 sole MessageDelivery. Do not wire live credentials, account login, production DB, paid AI or real sends. Do not mistake M0 mock fixture / local HTTP transport tests for end-to-end native M1.
+- W43 NativeAgnoRuntime.run is real Agno 3.1.10; result fields include sdk_pin, provider, model_id, run_id, scoped user/session IDs, original_response and outbound=DISABLED.
+- W43 returns no suggestions. W45 parses ONLY a complete JSON object shaped {"suggestions":[{"text":"...","sources":["ORIGINAL"]}]} from the real model run. Unstructured outputs yield zero, not a fabricated suggestion.
+- W43 currently restricts 200-character inputs; short bilingual synthetic messages can pass, longer messages explicitly fail W43_PROMPT_200_CHAR_CAP (no silent truncation). W43 should expand safely before realistic M1 long messages.
+- W43 currently pins qwen2.5:1.5b on existing localhost llama.cpp. This model is HEALTH CHECK ONLY under the current product decision; no final reply-quality PASS. Qwen3 8B download/runtime/SDK adaptation, real multi-language quality measurement and true model-selected tools are W43/W45 next gates.
+- W45's attestation and Run fixtures in tests do not count as proof of real W43 SDK inference. Genuine SDK proof is independently in W43 draft PR #26; a joint real Run -> W45 candidate -> W46 Composer has NOT occurred yet.
 
-HOLD: official W43 SDK attest+Run integration, real local LibreTranslate engine process/execution proof, W24 canonical K issue/revocation, W46 actual UI bridge, W25/44 authorization/delivery, production/runtime tests. No releases.
+## Cloud eligibility and no-extra-charge rule
+
+Old SIWC legacy DA424 actually produced three candidates and 166 prior tests, as recorded in W512_20261019_CHATGPT_PLAN_NATIVE_SIWC_DA424_REAL_THREE_FORMAL_GO.md. This is NOT permission to reuse old tokens, paste secrets or mark V2 ChatGPT subscription sharing eligible. V2 has no independently verified SIWC subscription-sharing grant/scope/quota. Identity sign-in is not usage delegation; ChatGPT membership does not imply free API access. W43/authorization owner must verify user consent + participation + budget before any new cloud route. No automatic paid OpenRouter or alternate-provider fallback. No W45 provider router implemented.
+
+## Quality and release evidence (2026-10-25)
+
+| Locale | Synthetic DTO/loopback transport tests | Qwen3 8B actual translation | Qwen3 8B natural 0-3 reply rating |
+| --- | --- | --- | --- |
+| zh-CN | PASS, fixture/stub only | NOT_RUN | NOT_RUN |
+| en | PASS, fixture/stub only | NOT_RUN | NOT_RUN |
+| de | PASS, fixture/stub only | NOT_RUN | NOT_RUN |
+| pl | PASS, fixture/stub only | NOT_RUN | NOT_RUN |
+
+A model downloaded ≠ model installed ≠ a verified actual Agno inference ≠ a linguistically acceptable reply. No invented scores. W24 signed identity/grants, W43 actual Qwen3 8B SDK and model provider eligibility, W46 actual Composer integration, W44/W25 durable authorization and sole sender, and real translation model execution remain HOLD. No production deployment.
