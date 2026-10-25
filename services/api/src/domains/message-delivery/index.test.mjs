@@ -146,7 +146,7 @@ test('both admission and pre-network revalidation; revoke refuses attempt', asyn
     assert.equal(r.denialCode,'AUTO_GRANT_INVALID');
     assert.equal(s.getAttempt(i.id),null);
     assert.equal(f.sink.calls.length,0);
-    assert.deepEqual(f.phases,['ADMISSION','PRE_NETWORK']);
+    assert.deepEqual(f.phases,['ADMISSION','PRE_NETWORK']); // first fence denies, so no attempt or second fence
   });
 });
 

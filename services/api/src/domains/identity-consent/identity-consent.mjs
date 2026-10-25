@@ -75,6 +75,7 @@ function checkTime(now) {
 export class IdentityConsentService {
   #accounts = new Map();
   #peers = new Set();
+  #consentEpochs = new Map();
   #consents = new Map();
   #privacyEvents = [];
   #revocationRequests = new Map();
@@ -129,6 +130,18 @@ export class IdentityConsentService {
     return this.currentK(ctx, k);
   }
 
+  /** Peer-scoped synthetic revision for W44 reservation/dispatch fencing.
+   * No hardcoded consent epoch: every create/revoke changes this authority. */
+  readConsentEpoch(ctx, k) {
+    this.assertCurrent(ctx, k);
+    return this.#consentEpochs.get(peerKey(k)) ?? 1;
+  }
+
+  #bumpConsentEpoch(k) {
+    const key = peerKey(k);
+    this.#consentEpochs.set(key, (this.#consentEpochs.get(key) ?? 1) + 1);
+  }
+
   invalidateAccount(ctx, {tenant, account, channel, expected_revision}) {
     context(ctx);
     const record = this.#ownedAccount(ctx, {tenant, account, channel});
@@ -136,6 +149,12 @@ export class IdentityConsentService {
     record.binding_revision += 1;
     record.revocation_epoch += 1;
     record.active = false;
+    // Provider re-binding must not silently resurrect old peer membership.
+    // Explicit bindPeer after relink is required for each newly verified peer.
+    for (const p of this.#peers) {
+      const [t, a, c] = JSON.parse(p);
+      if (t === tenant && a === account && c === channel) this.#peers.delete(p);
+    }
     this.#privacyEvents.push(snapshot({
       event_id: 'fake-identity-event-' + this.#privacyEvents.length,
       type: 'ACCOUNT_BINDING_INVALIDATED', tenant, account, channel,
@@ -175,6 +194,10 @@ export class IdentityConsentService {
       ctx: snapshot(ctx), proof_ref, purpose, operation, subject_id
     });
     if (proof && typeof proof.then === 'function') deny('ASYNC_PROOF_NOT_SUPPORTED');
+    // A proof adapter can be re-entrant. Fail closed if it revoked/rebound K.
+    const afterProof = this.assertCurrent(ctx, input.k);
+    if (afterProof.account_revocation_epoch !== k.account_revocation_epoch)
+      deny('AUTHORITY_EPOCH_CHANGED');
     const rec = {
       consent_id, subject_id, purpose, operation, proof_ref,
       tenant: k.tenant, account: k.account, channel: k.channel, peer_id: k.peer_id,
@@ -184,7 +207,8 @@ export class IdentityConsentService {
       expires_at
     };
     this.#consents.set(consent_id, rec);
-    return snapshot(rec);
+    this.#bumpConsentEpoch(k);
+    return snapshot({...rec, consent_epoch: this.readConsentEpoch(ctx, k)});
   }
 
   revokeConsent(ctx, {consent_id, expected_revision, idempotency_key}) {
@@ -201,17 +225,21 @@ export class IdentityConsentService {
     rec.consent_revision += 1;
     rec.revocation_epoch += 1;
     rec.status = 'REVOKED';
+    this.#bumpConsentEpoch(rec);
+    const consentEpoch = this.#consentEpochs.get(peerKey(rec));
     const event = snapshot({
       event_id: 'fake-privacy-event-' + this.#privacyEvents.length,
       type: 'CONSENT_REVOKED', tenant: rec.tenant, account: rec.account,
       channel: rec.channel, peer_id: rec.peer_id, consent_id,
       owner_principal_id: rec.owner_principal_id,
-      consent_revision: rec.consent_revision, revocation_epoch: rec.revocation_epoch
+      consent_revision: rec.consent_revision, revocation_epoch: rec.revocation_epoch,
+      consent_epoch: consentEpoch
     });
     this.#privacyEvents.push(event);
     const receipt = snapshot({
       consent_id, status: rec.status, consent_revision: rec.consent_revision,
-      revocation_epoch: rec.revocation_epoch, event_id: event.event_id
+      revocation_epoch: rec.revocation_epoch, consent_epoch: consentEpoch,
+      event_id: event.event_id
     });
     this.#revocationRequests.set(idemp, receipt);
     return receipt;
@@ -230,6 +258,7 @@ export class IdentityConsentService {
   evaluate(ctx, {k, operation, purpose = null, consent_id = null, now = Date.now()}) {
     const current = this.assertCurrent(ctx, k);
     checkTime(now);
+    const startingConsentEpoch = this.readConsentEpoch(ctx, k);
     if (!ALLOWED_OPERATIONS.has(operation)) deny('UNSUPPORTED_OPERATION');
     if (ctx.input_domain !== 'CONTACT') deny('INPUT_DOMAIN_MISMATCH');
     if (CONSENT_OPERATIONS.has(operation)) {
@@ -253,10 +282,17 @@ export class IdentityConsentService {
           grant.agent_active !== true || !Number.isSafeInteger(grant.grant_revision) ||
           grant.grant_revision < 1 || !Number.isSafeInteger(grant.expires_at) ||
           grant.expires_at <= now || grant.revoked === true) deny('GRANT_NOT_EFFECTIVE');
+      // W44 may read/mutate bindings or consent during grant evaluation.
+      // A previously valid proof cannot survive a re-entrant revocation/rebind.
+      const afterGrant = this.assertCurrent(ctx, k);
+      if (afterGrant.account_revocation_epoch !== current.account_revocation_epoch ||
+          this.readConsentEpoch(ctx, k) !== startingConsentEpoch)
+        deny('AUTHORITY_EPOCH_CHANGED');
     }
     return snapshot({
       allowed: true, identity_key: current.identity_key,
       binding_revision: current.binding_revision, account_revocation_epoch: current.account_revocation_epoch,
+      consent_epoch: startingConsentEpoch,
       operation, purpose, checked_at: now, reversible_snapshot_only: true
     });
   }

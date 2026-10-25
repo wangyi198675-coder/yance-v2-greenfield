@@ -52,3 +52,15 @@ W46: B+C Composer should carry the exact current K and GET-fenced state across d
 - **P1**: no HTTP/OpenAPI endpoint and no independently authenticated request context yet. This is the domain-service contract, not a public REST release.
 
 No production deployment, real user data, paid model, human sending, real account session or old YANCE migration is authorized.
+
+## W24 targeted delta after PR #32 / existing 205 tests (2026-10-25)
+
+This is **incremental** to original W24 #17 SHA `30b188346729d858826b491daaca40cbc6ef5279`, not a rewrite of W44's durable grant/budget DB or W25's unique Outbox.
+
+- `readConsentEpoch(trustedContext,k)` is the **W24 authoritative peer-scoped monotonic version**. W44's existing `createW24IdentityPorts({readConsentEpoch})` must receive `({k})=>identityService.readConsentEpoch(trustedContext,k)`, **not** the fixed `()=>1` mock used by PR #32. Epoch starts at 1 for a known K and advances on create/revoke Consent, including EVIDENCE_PENDING. Existing W44 `reserve/checkForSend` invalidates a reserved intent on mismatch.
+- `invalidateAccount` clears all bound peers in that exact `tenant/account/channel`. `relinkAccount` intentionally **does not restore peer membership**; explicit platform-verified `bindPeer` for each new binding is required from a channel Owner. Stale K and any existing Consent cannot be promoted by relink.
+- Consent proof and W44 Grant ports can be re-entrant. `createConsent` and `evaluate` now reject if the binding/epoch changes mid-decision; no previously approved snapshot is treated as a durable send permission.
+- Tests: `node --test services/api/src/domains/identity-consent/identity-consent.test.mjs` (28 PASS, including 5 new negative regressions). Existing PR #32 whole Node suite separately run 205 PASS on original composition source; *these results do not imply it already includes this delta*.
+- Cross-owner regression without modifying the other Owners: `node services/api/src/domains/identity-consent/cross-owner-fence.mjs "C:\Users\1\Documents\YanceV2\Worktrees\W09_NATIVE_SYNTHETIC_INTEGRATION_20261025"` imports **existing PR #32 W44 SQLite and W25 SQLite/synthetic sink modules** and verifies 3 W44 fences plus W25 PRE_NETWORK revoke `DENIED` with 0 sink sends.
+
+**Unclosed P0/P1:** This version exists in the W24 Owner PR only until independently integrated. W44/W25 owners must replace fixed consent epoch with W24's live `readConsentEpoch`, run recovery/restart/parallel-worker tests on the actual joined SHA, and harden multi-DB atomicity/leases. Existing W44 adapter propagates `IdentityDenied` directly after account invalidation (instead of returning `{ok:false}`); W44 decides canonical error DTO. No production DB, authenticated HTTP service, provider send, or independent SEC/legal signoff. Real Agno, translation and Composer M1 remain owned by W43/W45/W46.

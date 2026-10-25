@@ -5,8 +5,8 @@ Non-production integration branch only. No real accounts, paid cloud models, soc
 | Owner | Actual source commit |
 |---|---|
 | W23 FileAttachment | `a4ae20d32db9a5d43d3bf56d38287957e1fdf8a9` |
-| W24 IdentityConsent | `30b188346729d858826b491daaca40cbc6ef5279` |
-| W25 MessageDelivery | `499b79a59485902964a2e875628bb01d1ce6e7ce` |
+| W24 IdentityConsent | `a8912962004f9c324157234356268acb7fc41e82` (updated in W09 incremental integration; prior `30b188346729d858826b491daaca40cbc6ef5279`) |
+| W25 MessageDelivery | `58987b5ec2dbf803983bdea9ec280247599e3e0c` (updated in W09 incremental integration; prior `499b79a59485902964a2e875628bb01d1ce6e7ce`) |
 | W44 Grant/Custody/Budget | `8703781536564b476f4ebce452a7d6780595046e` |
 | W45 Translation/Reply | `f16b4c466dbf245abdbf25ded89367cee0204237` |
 | W43 official Agno/AgentOS local-only Python | `ff0887438982a6d2f7919b461498d31b693aa202` |
@@ -41,3 +41,11 @@ node --test <all 15 committed test.mjs files>
 ```
 
 Next: attach hosted Actions job and produce exact SHA plus negative tests; request owner-level changes only for failing interfaces; no duplicate docs.
+
+## 2026-10-25 W09 successor incremental rebase-free owner-source synchronization
+
+- Existing PR #32 original 205/205 tests and six CI successes apply **only** to historical SHA `1590952a4ff2d118820576a0815f5f9e8fdbb495`, not automatically to this new working tree.
+- Without touching Owner worktrees or main, `git restore --source=<owner SHA> -- <owner directory>` synchronized unchanged W24 IdentityConsent `a8912962004f9c324157234356268acb7fc41e82` and unchanged W25 MessageDelivery `58987b5ec2dbf803983bdea9ec280247599e3e0c` into the existing W09 integration worktree. W44 remains source `8703781536564b476f4ebce452a7d6780595046e`. W45 remains `f16b4c466dbf245abdbf25ded89367cee0204237`; its later owner update `643e90c2eb97fb44b522423878e544e5e3ee7eff` is **not** integrated or quality-qualified here.
+- Only W09-authored runtime test seam changed: `integration/synthetic-first-flow/native-vertical.test.mjs` now passes `({k})=>ids.readConsentEpoch(ctx,k)` instead of `()=>1`, and proves a queued W25 outbox attempt is DENIED when W24 consent epoch changes. Synthetic sink additional calls = 0; original synthetic ACK still works.
+- On remote Windows Node 24, targeted W24+W25+W09 test files: **55/55 PASS**; W24 cross-owner-fence: **4/4 scenarios PASS**, zero sends on revoked; W25 native-authority-regression: PASS, attempt NOT_SENT_AUTHORITY_DENIED, sink calls 0. Actual previous 205-case all-domain tests were **not re-run at this stage**; GitHub Actions must qualify this new exact SHA separately.
+- Still P0: W24 ephemeral in-memory authority, W44 and W25 separate SQLite DBs, revocation after final check TOCTOU, no cross-DB atomic irreversible send, no real Provider MID/ACK. P1: W44 budget UNKNOWN finish/release/commit and real translation/candidate quality, W46 current B+C Composer. No production deployment, private accounts, real sends or paid model.

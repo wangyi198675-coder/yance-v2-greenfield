@@ -49,3 +49,24 @@ Actor/Session/request ID idempotency, two independent OS processes, account/tena
 ## PR #3 M0 send Port compatibility (native ledger replacing the mock Send function)
 
 M0 uses snake_case tenant/account/channel/peer_id/binding_revision; W25 uses structured tenantId/accountId/channel/peerId/bindingRevision. The pure bridge in m0-port.mjs exports canonicalKFromM0SyntheticContact(contact) and createM0SyntheticSendPort({delivery,contacts}). It only accepts the 120 fictional-contact fixture tenant SYNTHETIC_TEST_ONLY and fake-* business IDs. Repeated M0 sends call one durable native intent (not W09's local mock attempts Map) and return only synthetic ACK/UNKNOWN to the existing M0 harness. Real contact IDs, login and send remain rejected. W09 can wire the returned send callback into PR #3 harness without changing W25's sole sender; native W24/W44 service eligibility must replace fixture checks before authentic M1/M2 can claim integration.
+
+## W09 PR #32 205-case native synthetic baseline: W25 narrow P0 delta (2026-10-25)
+
+This branch inherits W09's already verified native-source integration commit 1590952a4ff2d118820576a0815f5f9e8fdbb495, rather than duplicating W24 or W44. Its shared-native baseline uses W24 IdentityConsentService, W44 openEligibilityStore and createW25EligibilityPort; all real user/provider operations remain prohibited.
+
+Two targeted fixes in W25 only:
+
+- **Post-ARM current grant check:** After persisting an Outbox attempt and before handing work to the synthetic sink, dispatchOne calls the SAME W44 eligibility.check PRE_NETWORK contract again. If W24 identity, W44 grant/budget/custody or route epochs change, it durably marks the attempt NOT_SENT_AUTHORITY_DENIED and the intent DENIED, drops the recipient lease, and never calls the sink. The extra state is evidence of definite non-send, not a Provider UNKNOWN; it does not provide atomic cross-SQLite transaction safety.
+- **Receipt replay conflict:** one signed synthetic sourceEventId may only replay with the same original intent, attempt, kind, provider MID and verified source; attempted ACK-to-READ mutation under the same event ID is rejected.
+
+Targeted runnable tests:
+
+    node --test services/api/src/domains/message-delivery/*.test.mjs
+
+Native external-domain regression with the ALREADY existing owner worktrees (no code copies) on DESKTOP-029FH47:
+
+    node services/api/src/domains/message-delivery/native-authority-regression.mjs ABSOLUTE_W24_IDENTITY_CONSENT_MJS ABSOLUTE_W44_NATIVE_BRIDGES_MJS
+
+That script imports native W24 and W44 own code, uses W44's real SQLite reservation and GET/CAS send qualification, withdraws W44 authorization precisely between first PRE_NETWORK check and the final post-ARM check and asserts synthetic sink calls remain 0. It never sends a real message or spends actual model fees.
+
+**Remaining P0:** two cross-service eligibility checks narrow, but do NOT eliminate the unavoidable TOCTOU window across W24 in-memory identity, W44 SQLite budget and W25 SQLite outbox. True atomic/fenced irreversible side-effect execution requires W24/W44/W25 coordinated transactional protocol and SEC owner review. **Remaining P1:** W44 reservation finalization/release for every definitive W25 outcome, UNKNOWN budget hold/reconcile, crash-aware recovery coordination and a production-grade Postgres storage/security architecture are not established. Current test sinks and ACKs are SYNTHETIC, never actual Provider ACK or Meta Delivered.

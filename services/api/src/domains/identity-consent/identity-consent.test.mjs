@@ -107,7 +107,9 @@ test('explicit relink does not resurrect old K or attached consents', () => {
   service.invalidateAccount(owned, {...a, expected_revision: 1});
   const linked = service.relinkAccount(owned, {...a, expected_revision: 2});
   assert.equal(linked.binding_revision, 3);
-  rejects(() => service.assertCurrent(owned, k), 'STALE_BINDING_REVISION');
+  rejects(() => service.assertCurrent(owned, k), 'ACCOUNT_OR_PEER_UNBOUND');
+  rejects(() => service.currentK(owned, a), 'ACCOUNT_OR_PEER_UNBOUND');
+  service.bindPeer(owned, a); // Requires explicit peer verification after rebind.
   const newK = service.currentK(owned, a);
   rejects(() => allowedConsent(service, owned, newK), 'STALE_CONSENT_BINDING');
   rejects(() => service.relinkAccount(owned, {...a, expected_revision: 3}), 'ACCOUNT_ALREADY_ACTIVE');
@@ -250,4 +252,81 @@ test('stale late event cannot restore same account before explicit relink', () =
   rejects(() => service.currentK(owned,a),'ACCOUNT_OR_PEER_UNBOUND');
   rejects(() => service.bindPeer(owned,a),'ACCOUNT_UNBOUND');
   rejects(() => service.evaluate(owned,{k,operation:'READ_INBOUND',now:100}),'ACCOUNT_OR_PEER_UNBOUND');
+});
+
+test('W44 reservation consent epoch advances on creation and revocation, never fixed 1', () => {
+  const {service, owned, k} = fixture();
+  assert.equal(service.readConsentEpoch(owned, k), 1);
+  const created = service.createConsent(owned, consentInput(k));
+  assert.equal(created.consent_epoch, 2);
+  assert.equal(service.readConsentEpoch(owned, k), 2);
+  const revoked = service.revokeConsent(owned, {
+    consent_id: 'fake-consent-1', expected_revision: 1, idempotency_key: 'fake-revoke-1'
+  });
+  assert.equal(revoked.consent_epoch, 3);
+  assert.equal(service.readConsentEpoch(owned, k), 3);
+  service.revokeConsent(owned, {consent_id:'fake-consent-1',expected_revision:1,idempotency_key:'fake-revoke-1'});
+  assert.equal(service.readConsentEpoch(owned, k), 3, 'idempotent retry cannot advance epoch');
+});
+
+test('consent epoch scoped to precise account/channel/peer, B/C unaffected by A revoke', () => {
+  const {service, owned, k} = fixture();
+  const other = base('fixture-account-2', 'fake-peer-002', 'TELEGRAM_PERSONAL');
+  service.registerAccount(owned, {...other, principal_id:owned.principal_id, binding_revision:1});
+  service.bindPeer(owned, other);
+  const kB = service.currentK(owned, other);
+  service.createConsent(owned, consentInput(k));
+  assert.equal(service.readConsentEpoch(owned, k), 2);
+  assert.equal(service.readConsentEpoch(owned, kB), 1);
+  service.revokeConsent(owned,{consent_id:'fake-consent-1',expected_revision:1,idempotency_key:'fake-a-revoke'});
+  assert.equal(service.readConsentEpoch(owned,kB), 1);
+});
+
+test('proof authority rebinding K during approval cannot persist active consent', () => {
+  let service;
+  const proofAuthority = {evaluate: () => {
+    service.invalidateAccount(ctx(), {...base(), expected_revision:1});
+    return {approved:true};
+  }};
+  const f = fixture({proofAuthority});
+  service = f.service;
+  rejects(()=>service.createConsent(f.owned,consentInput(f.k)),
+    'ACCOUNT_OR_PEER_UNBOUND');
+  assert.equal(service.privacyEvents(f.owned).length,1);
+});
+
+test('binding mutation during grantAuthority evaluation is caught before any allow receipt', () => {
+  let service;
+  let invoked = 0;
+  const grantAuthority = {evaluate: ({k}) => {
+    invoked++;
+    if (invoked === 1) service.invalidateAccount(ctx(), {...k, expected_revision:1});
+    return approvedGrant(k.identity_key);
+  }};
+  const f = fixture({grantAuthority});
+  service = f.service;
+  rejects(()=>service.evaluate(f.owned,{k:f.k,operation:'SEND_MESSAGE',now:100}),
+    'ACCOUNT_OR_PEER_UNBOUND');
+  assert.equal(invoked,1);
+});
+
+test('Consent revoked reentrantly by grant port invalidates earlier media-send proof', () => {
+  let service;
+  let revoked = false;
+  const grantAuthority = {evaluate: ({k}) => {
+    if (!revoked) {
+      revoked = true;
+      service.revokeConsent(ctx(), {consent_id:'fake-consent-1',expected_revision:1,
+        idempotency_key:'fake-during-grant'});
+    }
+    return approvedGrant(k.identity_key);
+  }};
+  const f = fixture({grantAuthority});
+  service = f.service;
+  service.createConsent(f.owned,consentInput(f.k,'SEND_MEDIA','SEND_TO_CONTACT'));
+  rejects(()=>service.evaluate(f.owned,{
+      k:f.k,operation:'SEND_MEDIA',purpose:'SEND_TO_CONTACT',
+      consent_id:'fake-consent-1',now:100
+    }), 'AUTHORITY_EPOCH_CHANGED');
+  assert.equal(revoked,true);
 });

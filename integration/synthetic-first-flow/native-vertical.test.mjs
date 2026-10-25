@@ -61,7 +61,8 @@ test('W26 inbound -> W24 K -> W45 translated fixture -> W44 durable grant -> W25
    assert.equal(seen.length,1,'Provider MID duplicate must not retranslate');
 
    const ports=createW24IdentityPorts({identityService:ids,trustedContext:ctx,
-     readConsentEpoch:()=>1,authorizeOperator:({actor})=>actor==='fake-owner-1'});
+     readConsentEpoch:({k})=>ids.readConsentEpoch(ctx,k),
+     authorizeOperator:({actor})=>actor==='fake-owner-1'});
    store=openEligibilityStore({path:join(dir,'grant.sqlite'),...ports});
    store.grant({identity,scope:'GLOBAL',actor:'fake-owner-1',budgetUnits:3,
      expiresAt:Date.now()+300000});
@@ -79,6 +80,19 @@ test('W26 inbound -> W24 K -> W45 translated fixture -> W44 durable grant -> W25
    assert.equal(ack.state,'ACKED_SYNTHETIC');
    assert.equal(sink.calls.length,1);
    assert.equal(store.finish({identity,intentId:'fake-business-w09-1',action:'COMMIT',actualUnits:1}).state,'COMMITTED');
+   // W24's actual peer-scoped consent epoch must fence a queued W25 attempt.
+   // This regression must fail if the W44 integration silently restores epoch=1.
+   const queued=await delivery.submitIntent({k:k25,businessMessageId:'fake-business-w09-consent',
+     payload:{text:'synthetic queued before consent revision'},mode:'AUTO',
+     actorId:'fake-owner-1',sessionId:'fake-session-1'});
+   assert.equal(queued.state,'QUEUED');
+   ids.createConsent(ctx,{k:identity,consent_id:'fake-w09-consent-1',subject_id:'fake-user',
+     proof_ref:'fake-proof',operation:'VOICE_SYNTHESIS',purpose:'SYNTHETIC_BOUNDARY',
+     expires_at:Date.now()+300000});
+   assert.equal(ids.readConsentEpoch(ctx,identity),2);
+   const blocked=await delivery.dispatchOne(queued.id);
+   assert.equal(blocked.state,'DENIED','Queued old-epoch attempt must not reach send sink');
+   assert.equal(sink.calls.length,1,'Consent epoch change must cause zero additional sends');
    const revoked=store.revoke({identity,scope:'GLOBAL',expectedEpoch:1,actor:'fake-owner-1'});
    assert.equal(revoked.enabled,false);
    await assert.rejects(delivery.submitIntent({k:k25,businessMessageId:'fake-business-w09-2',
