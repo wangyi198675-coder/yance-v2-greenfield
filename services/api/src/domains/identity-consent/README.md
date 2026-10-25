@@ -64,3 +64,29 @@ This is **incremental** to original W24 #17 SHA `30b188346729d858826b491daaca40c
 - Cross-owner regression without modifying the other Owners: `node services/api/src/domains/identity-consent/cross-owner-fence.mjs "C:\Users\1\Documents\YanceV2\Worktrees\W09_NATIVE_SYNTHETIC_INTEGRATION_20261025"` imports **existing PR #32 W44 SQLite and W25 SQLite/synthetic sink modules** and verifies 3 W44 fences plus W25 PRE_NETWORK revoke `DENIED` with 0 sink sends.
 
 **Unclosed P0/P1:** This version exists in the W24 Owner PR only until independently integrated. W44/W25 owners must replace fixed consent epoch with W24's live `readConsentEpoch`, run recovery/restart/parallel-worker tests on the actual joined SHA, and harden multi-DB atomicity/leases. Existing W44 adapter propagates `IdentityDenied` directly after account invalidation (instead of returning `{ok:false}`); W44 decides canonical error DTO. No production DB, authenticated HTTP service, provider send, or independent SEC/legal signoff. Real Agno, translation and Composer M1 remain owned by W43/W45/W46.
+
+## 2026-10-25 P0 persisted identity / W44 fence: RED
+
+See [P0_DB_OWNER_MINIMAL_INTERFACE_REQUEST.md](./P0_DB_OWNER_MINIMAL_INTERFACE_REQUEST.md).
+Real W44 SQLite remains the sole grant/custody/budget/fence authority. W24 has
+no authorized W44 Owner-provided atomic durable identity repository, generation
+read, or complete mutation-kind API; consequently W24's current in-memory
+identity/Peer/Consent mutations **must not** be promoted as production-safe.
+`authority-persistence-audit.test.mjs` intentionally reproduces W24 restart
+state loss and a direct-mutation bypass while running actual W44 SQLite.
+PASS in this diagnostic test suite means **bug reproduced**, not security PASS.
+Release remains **P0 RED/HOLD**. No second database, Outbox or W44/W25 edits.
+
+## 2026-10-25 W44 native strict durable identity source landed (synthetic)
+
+Original W24 `IdentityConsentService` now supports
+`requireDurableIdentity:true` with the existing W44 native authority store.
+All six identity/consent mutators, authoritative reads/epochs and HUMAN takeover
+are routed to W44's real SQLite transaction/fence and NEVER use original W24
+RAM identity/consent for authorization in strict mode. See
+[W24_W44_STRICT_DURABLE_HANDOFF.md](./W24_W44_STRICT_DURABLE_HANDOFF.md)
+for exact injection, tests, proof limitations and remaining release HOLD.
+The earlier P0 audit remains intentionally runnable against **legacy**
+synthetic compatibility and demonstrates that legacy mode is unsafe.
+Never use legacy compatibility in a deployed authorization path. W09-2
+still owns actual strict-mode composition and independent SEC/release gate.
