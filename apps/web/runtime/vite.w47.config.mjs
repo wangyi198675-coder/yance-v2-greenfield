@@ -3,7 +3,8 @@
 import {resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
-const original=resolve(root,'../W46_BC_NATIVE_20261025/apps/web/vite.w46.config.mjs');
+// W09 composition references the tracked W46 source in THIS checkout, not a sibling Owner worktree.
+const original=resolve(root,'apps/web/vite.w46.config.mjs');
 const owner=(await import(pathToFileURL(original).href)).default;
 function failUnless(code,text){if(!code.includes(text))throw Error('W47_BC_CONTRACT_DRIFT: '+text)}
 function gate(){
