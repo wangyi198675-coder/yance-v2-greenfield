@@ -13,7 +13,7 @@ def test_qwen3_uses_existing_official_agno_model_adapter_only(tmp_path, monkeypa
     key = tmp_path / "synthetic-key"
     key.write_text("f" * 44, encoding="utf-8")
     run = NativeAgnoRuntime(
-        tmp_path / "qwen3.sdk.sqlite", backend="qwen3_llamacpp",
+        tmp_path / "qwen3.sdk.sqlite", backend="llamacpp",
         purpose="QUALITY_EVAL", local_key_file=key
     )
     assert run.model_id == "qwen3:8b"
@@ -45,7 +45,8 @@ def test_qwen3_only_for_explicit_quality_purpose(tmp_path):
     key.write_text("f" * 44)
     with pytest.raises(LocalOnlyError):
         NativeAgnoRuntime(tmp_path / "x.db", backend="qwen3_llamacpp",
-                          purpose="HEALTHCHECK", local_key_file=key)
+                          purpose="QUALITY_EVAL", local_key_file=key)
     with pytest.raises(LocalOnlyError):
         NativeAgnoRuntime(tmp_path / "x.db", backend="llamacpp",
+                          model_id="qwen2.5:1.5b",
                           purpose="QUALITY_EVAL", local_key_file=key)

@@ -73,7 +73,7 @@ def run_all() -> int:
     }
     with tempfile.TemporaryDirectory(prefix="w43-qwen3-sdk-", ignore_cleanup_errors=True) as folder:
         runtime = NativeAgnoRuntime(
-            Path(folder) / "w43-qwen3.sqlite", backend="qwen3_llamacpp",
+            Path(folder) / "w43-qwen3.sqlite", backend="llamacpp",
             purpose="QUALITY_EVAL",
             local_key_file=os.environ["YANCE_W43_LOCAL_KEY_FILE"],
         )

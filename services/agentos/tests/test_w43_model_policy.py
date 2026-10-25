@@ -11,6 +11,12 @@ from model_policy import classify_provider, choose_preferred_nonprod, v2_chatgpt
 from yance_agentos import NativeAgnoRuntime, LocalOnlyError, Scope
 
 
+def _offline_key(path):
+    p = path / "synthetic-secret-local-only"
+    p.write_text("synthetic-w43-testing-key-not-a-real-credential")
+    return p
+
+
 def _c():
     return Scope("SYNTHETIC_TEST_ONLY", "fixture-account-1",
                  "CONTACT", "FB_PERSONAL", "fake-peer-001", 1)
@@ -67,7 +73,7 @@ def test_no_automatic_paid_fallback(selected, approved):
 
 def test_explicit_legacy_qwen3_model_policy_remains_isolated(tmp_path, monkeypatch):
     _clean_cloud_env(monkeypatch)
-    runtime = NativeAgnoRuntime(tmp_path / "qwen3.sqlite", backend="qwen3", purpose="QUALITY_EVAL")
+    runtime = NativeAgnoRuntime(tmp_path / "qwen3.sqlite", backend="llamacpp", purpose="QUALITY_EVAL", local_key_file=_offline_key(tmp_path))
     assert runtime.model_id == "qwen3:8b"
     assert runtime.purpose == "QUALITY_EVAL"
     assert runtime.policy_provider == "LOCAL_QWEN3_8B"
@@ -80,6 +86,7 @@ def test_explicit_health_only_is_enforced(tmp_path, monkeypatch):
     key.write_text("a" * 44, encoding="utf-8")
     with pytest.raises(LocalOnlyError):
         NativeAgnoRuntime(tmp_path / "bad.sqlite", backend="llamacpp",
+                          model_id="qwen2.5:1.5b",
                           local_key_file=key, purpose="QUALITY_EVAL")
     with pytest.raises(LocalOnlyError):
         NativeAgnoRuntime(tmp_path / "bad.sqlite", backend="ollama", purpose="QUALITY_EVAL")
@@ -91,7 +98,7 @@ def test_explicit_health_only_is_enforced(tmp_path, monkeypatch):
 
 def test_w45_contract_only_from_attested_sdk_receipt(tmp_path, monkeypatch):
     _clean_cloud_env(monkeypatch)
-    runtime = NativeAgnoRuntime(tmp_path / "w45.sqlite", backend="qwen3", purpose="QUALITY_EVAL")  # legacy contract-only, NO model call
+    runtime = NativeAgnoRuntime(tmp_path / "w45.sqlite", backend="llamacpp", purpose="QUALITY_EVAL", local_key_file=_offline_key(tmp_path))  # legacy contract-only, NO model call
     # Isolated contract test injects a FAKE SDK result. This is not a real-run test.
     fake_agno_result = {
         "status": "AGNO_RUN_COMPLETED",
@@ -118,7 +125,7 @@ def test_w45_contract_only_from_attested_sdk_receipt(tmp_path, monkeypatch):
 
 def test_w45_holds_when_real_sdk_run_fails(tmp_path, monkeypatch):
     _clean_cloud_env(monkeypatch)
-    runtime = NativeAgnoRuntime(tmp_path / "failed.sqlite", backend="qwen3", purpose="QUALITY_EVAL")
+    runtime = NativeAgnoRuntime(tmp_path / "failed.sqlite", backend="llamacpp", purpose="QUALITY_EVAL", local_key_file=_offline_key(tmp_path))
     monkeypatch.setattr(runtime, "run", lambda *a, **k: {
         "status": "LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED",
         "sdk_run_status": "ERROR",
@@ -132,7 +139,9 @@ def test_w45_holds_when_real_sdk_run_fails(tmp_path, monkeypatch):
 
 def test_w45_forbids_healthcheck_model(tmp_path, monkeypatch):
     _clean_cloud_env(monkeypatch)
-    runtime = NativeAgnoRuntime(tmp_path / "old.sqlite", backend="ollama",
+    runtime = NativeAgnoRuntime(tmp_path / "old.sqlite", backend="llamacpp",
+                                model_id="qwen2.5:1.5b",
+                                local_key_file=_offline_key(tmp_path),
                                 purpose="HEALTHCHECK")
     with pytest.raises(LocalOnlyError):
         runtime.run_for_w45(_c(), "fake-mid", "fake-original",
@@ -141,15 +150,14 @@ def test_w45_forbids_healthcheck_model(tmp_path, monkeypatch):
 
 def test_missing_qwen3_blocks_inference_instead_of_falling_back(tmp_path, monkeypatch):
     _clean_cloud_env(monkeypatch)
-    import ollama
-    runtime = NativeAgnoRuntime(tmp_path / "missing-quality.db", backend="qwen3", purpose="QUALITY_EVAL")
-    monkeypatch.setattr(ollama.Client, "list",
-                        lambda self: SimpleNamespace(models=[SimpleNamespace(model="qwen2.5:1.5b")]))
+    runtime = NativeAgnoRuntime(tmp_path / "missing-quality.db", backend="llamacpp",
+                                purpose="QUALITY_EVAL", local_key_file=_offline_key(tmp_path))
+    monkeypatch.setattr(runtime, "_authorized_llamacpp_model_matches", lambda: False)
     def forbidden(*_args, **_kwargs):
         raise AssertionError("SHOULD_NOT_INVOKE_ANY_MODEL")
     monkeypatch.setattr(runtime.agents["CONTACT"], "run", forbidden)
     resp = runtime.run(_c(), "fake-Hello, only if Qwen3 installed.")
-    assert resp["status"] == "HOLD_QWEN3_8B_NOT_INSTALLED_OR_MODEL_SERVER_UNAVAILABLE"
+    assert resp["status"] == "HOLD_LOCAL_MODEL_ID_AUTH_OR_SERVER_MISMATCH"
     assert resp["suggestions"] == []
     assert resp["outbound"] == "DISABLED"
     assert runtime.capability_report()["model_policy"]["allow_call"] is False

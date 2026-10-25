@@ -42,7 +42,7 @@ def run_all():
     report = {
         "sdk": importlib.metadata.version("agno"),
         "model_backend": "EXISTING_LLAMACPP_127.0.0.1_11605",
-        "model_id": "qwen2.5:1.5b",
+        "model_id": "qwen3:8b",
         "no_paid_provider": True,
         "not_a_quality_certification": True,
         "cases": {},
@@ -62,7 +62,7 @@ def run_all():
             "anonymous_http_status": unauth.status_code,
             "authorized_http_status": authorized.status_code,
             "model_advertised": authorized.status_code == 200 and
-                any(row.get("id") == "qwen2.5:1.5b" for row in authorized.json().get("data", [])),
+                any(row.get("id") == "qwen3:8b" for row in authorized.json().get("data", [])),
         }
         del key
     if report["api"] != {"anonymous_http_status": 401, "authorized_http_status": 200, "model_advertised": True}:
@@ -171,8 +171,8 @@ def run_all():
         try:
             from agno.models.openai import OpenAIChat
             unavailable = Agent(model=OpenAIChat(
-                id="qwen2.5:1.5b", api_key="synthetic-test-only",
-                base_url="http://127.0.0.1:11606/v1", timeout=0.5,
+                id="qwen3:8b", api_key="synthetic-test-only",
+                base_url="http://127.0.0.1:11619/v1", timeout=0.5,
                 max_retries=0), telemetry=False)
             start=time.perf_counter()
             failed=unavailable.run("fake-Synthetic transport negative test.")
@@ -185,7 +185,7 @@ def run_all():
         # SDK explicit tiny timeout against the authorized ORIGINAL server (no server modification).
         try:
             fast_model=_local_llamacpp_model("http://127.0.0.1:11605",
-                                             "qwen2.5:1.5b", key_file)
+                                             "qwen3:8b", key_file)
             fast_model.timeout=0.001
             timed=Agent(model=fast_model, telemetry=False)
             start=time.perf_counter()
@@ -213,16 +213,20 @@ def run_all():
             report["cases"]["concurrent_two"]={"status":"FAILED","error_type":type(exc).__name__}
         report["cases"]["no_key_fail_closed"] = False
         try:
-            _local_llamacpp_model("http://127.0.0.1:11605","qwen2.5:1.5b", None)
+            _local_llamacpp_model("http://127.0.0.1:11605","qwen3:8b", None)
         except Exception:
             report["cases"]["no_key_fail_closed"] = True
         report["cases"]["agentos_inprocess"] = hasattr(runtime.get_unserved_app(), "routes")
         report["cases"]["outbound"] = "DISABLED"
-    report["status"] = "RUN_EVIDENCE_CAPTURED_NOT_QUALITY_PASS"
+    concurrent_ok = report["cases"].get("concurrent_two", {}).get("statuses") == [
+        "AGNO_RUN_COMPLETED", "AGNO_RUN_COMPLETED"
+    ]
+    report["status"] = ("RUN_EVIDENCE_CAPTURED_NOT_QUALITY_PASS" if concurrent_ok
+                        else "HOLD_CONCURRENT_AGNO_SESSIONS_FAILED")
     print("W43_EVIDENCE_JSON_BEGIN")
     print(json.dumps(report, ensure_ascii=True, indent=2))
     print("W43_EVIDENCE_JSON_END")
-    return 0
+    return 0 if concurrent_ok else 1
 
 if __name__ == "__main__":
     try:
