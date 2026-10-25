@@ -29,8 +29,10 @@ const ids=['CHAT','BRAIN','AUTOPILOT','ACCOUNTS','PEOPLE','PERSONA','TASKS','MED
   assert.equal(snapshot.health.trustedSession,false);
   assert.equal(snapshot.contacts.authoritative,true);
   assert.equal(snapshot.contacts.contacts.length,0);
-  assert.equal(await page.$$eval('section.bc-native-composer',items=>items.length),1,'retain ONE Composer in original B+C');
-  assert.equal(await page.$eval('main.workspace',el=>getComputedStyle(el).display),'none','never show 120 fake W37 rows');
+  assert.equal(await page.$$eval('section.bc-native-composer',items=>items.length),0,'no authorized K means no mounted Composer; original B+C Composer source remains unique');
+  assert.notEqual(await page.$eval('main.workspace',el=>getComputedStyle(el).display),'none','CHAT must expose original B+C workspace');
+  assert.equal(await page.$eval('[data-test="no-active"]',el=>el.textContent.includes('尚未连接聊天平台')),true);
+  assert.equal(await page.$$eval('.contact-action',els=>els.length),0,'no W37 synthetic contacts');
   for(const id of ids){
    await page.click('[data-test="workspace-'+id+'"]');
    await page.waitForFunction(id=>document.querySelector('[data-test="workspace-'+id+'"]')?.getAttribute('aria-pressed')==='true',{},id);
@@ -122,7 +124,8 @@ const ids=['CHAT','BRAIN','AUTOPILOT','ACCOUNTS','PEOPLE','PERSONA','TASKS','MED
     underlyingAPIOriginalW47Sha:snapshot.health.runtimeSha,
     r4ExactHtmlAccessible:true,r4OriginalVerifiedSha256:'4d95254bf39281173b0756f723a512111471187f201c40479599b6a6b46878e4',readiness:'NONPRODUCTION_CANDIDATE_NOT_OWNER_SIGNED',
     trustedSession:false,realAccounts:0,realContacts:0,canSend:false,
-    oneOriginalContactComposerRetained:true,frozenDemoHidden:true,
+    oneOriginalContactComposerRetained:true,oneMountedComposerWithZeroRealContacts:0,
+    originalChatReachable:true,frozenDemoHidden:true,
     navWorkspaces:ids,widths:measures,themeStates:10,settingsCategories:9,failClosedStatusExamples:3,brandSvgPathsVerified:4,apiMutationRequests:mutations,
     pageErrors:errors,
     screenshots:['W46_R4_CANDIDATE_CHROME_1360_ACCOUNTS.png',
