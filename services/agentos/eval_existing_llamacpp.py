@@ -25,7 +25,9 @@ def safe_run(runtime, s, prompt, *, team=False):
     start = time.perf_counter()
     out = runtime.run(s, "fake-" + prompt, team=team)
     text = out.get("original_response", "")
+    attested = runtime.attest_contact_run(s, "fake-" + prompt, out)
     return {
+        "native_same_runtime_attested": attested,
         "status": out.get("status"), "sdk_run_id": out.get("run_id"),
         "session_id": out.get("session_id"), "provider": out.get("provider"),
         "model_id": out.get("model_id"),
