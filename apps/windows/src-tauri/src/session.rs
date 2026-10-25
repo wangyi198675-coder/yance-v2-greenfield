@@ -14,7 +14,6 @@ fn secure_bytes() -> Result<[u8; TOKEN_BYTES], &'static str> {
     getrandom::fill(&mut out).map_err(|_| "SECURE_OS_RNG_UNAVAILABLE")?;
     Ok(out)
 }
-#[derive(Debug)]
 struct Inner {
     session_id: [u8; TOKEN_BYTES],
     revision: u64,
@@ -25,7 +24,7 @@ struct Inner {
     pending: Option<[u8; TOKEN_BYTES]>,
 }
 /// Never Serialize, never return to JS, HTTP or a log.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct NativeOnlyProof {
     boot: [u8; TOKEN_BYTES],
     session_id: [u8; TOKEN_BYTES],
@@ -33,11 +32,20 @@ pub(crate) struct NativeOnlyProof {
     sequence: u64,
     challenge: [u8; TOKEN_BYTES],
 }
-#[derive(Debug)]
+impl std::fmt::Debug for NativeOnlyProof {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("NativeOnlyProof(REDACTED)")
+    }
+}
 pub(crate) struct SessionAuthority {
     os_principal: Option<WindowsPrincipal>,
     boot: [u8; TOKEN_BYTES],
     inner: Mutex<Inner>,
+}
+impl std::fmt::Debug for SessionAuthority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SessionAuthority(REDACTED)")
+    }
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
