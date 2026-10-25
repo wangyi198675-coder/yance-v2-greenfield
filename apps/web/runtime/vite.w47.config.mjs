@@ -8,12 +8,19 @@ const owner=(await import(pathToFileURL(original).href)).default;
 function failUnless(code,text){if(!code.includes(text))throw Error('W47_BC_CONTRACT_DRIFT: '+text)}
 function gate(){
   return {name:'w47-runtime-truth-gate',enforce:'pre',
+    transformIndexHtml(html){
+      return html.replace('言策 V2 · 四方案离线交互实验','言策 V2 · 本地运行')
+        .replace('</head>','<link rel="icon" href="data:,">\n</head>');
+    },
     transform(code,id){
       const file=id.replaceAll('\\','/');
       if(file.endsWith('/approved-clickable-abc-bc/src/store.ts')){
         const exact='const originalContacts=Object.freeze(effectiveFixture.contacts.map(c=>Object.freeze(c)))';
         failUnless(code,exact);
         code=code.replace(exact,'const originalContacts=reactive([] as Contact[])');
+        // B+C is the accepted product view; hide the obsolete A/B/C experiment switch.
+        code=code.replace(/export const ARMS:[\s\S]*?\n]\nexport const THEMES/,
+          "export const ARMS: {id:Arm;label:string;sub:string}[] = [{id:'CHAT-BC-FUSION',label:'B+C · 融合版',sub:'Inbox + Autopilot'}]\nexport const THEMES");
         code=code.replace('selected:key(originalContacts[0])', "selected:originalContacts[0]?key(originalContacts[0]):''");
         code=code.replace('export const allContacts=originalContacts as Contact[]',`export const allContacts=originalContacts as Contact[]
 // Server supplied list only; no fixture hydration or fake success on failed reads.
@@ -41,6 +48,11 @@ void fetch('/api/v2/contacts',{credentials:'omit',redirect:'error'}).then(async 
         code=code.replace(/const accounts=\[[^\n]*\]/,"const accounts=['ALL']");
         code=code.replace(/const queue=\[[\s\S]*?\n\]\nconst currentException/,
           'const queue=[]\nconst currentException');
+        code=code.replace('查看全部120','查看全部')
+          .replace('没有匹配的虚构联系人。可清除筛选','尚未连接社交平台，当前没有真实联系人')
+          .replace('V2 LAB','V2 本机');
+        code=code.replace('function openPrivateWorkspace(){state.privateOpen=true;state.variantMenuOpen=false}',
+          "function openPrivateWorkspace(){state.dialog='闺蜜大脑尚未连接可信运行授权，未执行模型调用'}");
         code=code.replace(/<div class="lab-strip">[\s\S]*?<\/div>/,
           `<div class="lab-strip" data-test="w47-api-state">
 <ShieldCheck :size="13"/> V2 本机运行 · API：{{w47ApiStatus}} · Web: {{w47WebSha}} · 无平台连接 · 自动发送禁用
