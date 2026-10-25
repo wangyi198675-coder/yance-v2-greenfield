@@ -8,6 +8,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createW45DraftPort} from '../src/native-owner-bindings.mjs';
+import {setupNativeStopLab} from './w46-w44-stop-lab.mjs';
 const self=resolve(fileURLToPath(new URL('.',import.meta.url)),'../../..');
 const native=process.env.YANCE_W24_NATIVE_DIR, budget=process.env.YANCE_W44_NATIVE_DIR;
 const w45=process.env.YANCE_W45_MODULE;
@@ -39,6 +40,10 @@ const ports=createW24IdentityPorts({identityService:identity,trustedContext:ctx,
   authorizeOperator:({actor})=>actor===ctx.principal_id});
 const temp=mkdtempSync(join(tmpdir(),'w46-original-bc-http-'));
 const store=openEligibilityStore({path:join(temp,'w44.sqlite'),...ports});
+// Test-only source composition: same W44 SQLite fixture file, NOT a new DB/system.
+const stopLab=process.env.W46_STOP_TEST_LAB==='SYNTHETIC_ONLY'
+ ?setupNativeStopLab({openEligibilityStore,path:join(temp,'w44.sqlite'),contacts})
+ :null;
 for(const c of contacts.slice(1,4)){
  store.grant({identity:c,scope:'CONTACT',actor:ctx.principal_id,
     expiresAt:Date.now()+300000,budgetUnits:3});
@@ -80,6 +85,32 @@ const server=createServer(async(req,res)=>{
     if(req.socket.remoteAddress!=='127.0.0.1'&&req.socket.remoteAddress!=='::1')return respond(res,403,{error:'LOOPBACK_ONLY'});
     if(req.headers['x-yance-environment']!=='synthetic-only')return respond(res,403,{error:'TEST_ENV_REQUIRED'});
     const url=new URL(req.url||'/', 'http://127.0.0.1');
+    if(url.pathname==='/w46-native-test/managed-stop'){
+      if(!stopLab)return respond(res,503,{error:'TRUSTED_STOP_SERVICE_NOT_CONNECTED'});
+      if(req.method==='GET'){
+        if(url.searchParams.size!==2||!url.searchParams.has('k')||!url.searchParams.has('scope'))
+          return respond(res,422,{error:'STOP_FULL_K_AND_SCOPE_REQUIRED'});
+        const k=parseIdentityKey(url.searchParams.get('k'));
+        return respond(res,200,stopLab.read(k,url.searchParams.get('scope')));
+      }
+      if(req.method==='POST'){
+        let data='';for await(const chunk of req){data+=chunk;if(data.length>2048)throw Error('STOP_BODY_TOO_LARGE')}
+        const parsed=JSON.parse(data);
+        if(!parsed||Object.keys(parsed).sort().join(',')!=='identity,scope')
+          return respond(res,422,{error:'SERVER_DERIVES_ACTOR_AND_AUTHORITY_CAS'});
+        const out=stopLab.stop(parsed.identity,parsed.scope);
+        return respond(res,200,out); // PENDING is data, never success.
+      }
+      return respond(res,405,{error:'METHOD_NOT_ALLOWED'});
+    }
+    if(url.pathname==='/w46-native-test/managed-stop-arm'&&req.method==='POST'){
+      if(!stopLab)return respond(res,503,{error:'STOP_LAB_DISABLED'});
+      let data='';for await(const chunk of req){data+=chunk;if(data.length>2048)throw Error('INVALID_ARM_BODY')}
+      const {identity:k,intentId}=JSON.parse(data);
+      if(typeof intentId!=='string'||!intentId.startsWith('fake-'))return respond(res,422,{error:'ONLY_FAKE_TEST_INTENT'});
+      stopLab.armPending(k,intentId);
+      return respond(res,200,{armed:true,syntheticOnly:true,delivery:'DISABLED'});
+    }
     if(url.pathname==='/w46-native-test/negative-once'&&req.method==='POST'){
       let data='';for await(const chunk of req){data+=chunk;if(data.length>2048)throw Error('NEGATIVE_SCENARIO_TOO_LARGE')}
       const {identity:k,scenario}=JSON.parse(data);
@@ -102,7 +133,7 @@ const server=createServer(async(req,res)=>{
     return respond(res,404,{error:'NOT_FOUND'});
   }catch(e){return respond(res,409,{error:String(e.code||e.message||'INVALID_REQUEST')})}
 });
-const close=()=>{server.close(()=>{store.close();rmSync(temp,{recursive:true,force:true})})};
+const close=()=>{server.close(()=>{try{stopLab?.close()}finally{store.close();rmSync(temp,{recursive:true,force:true})}})};
 process.on('SIGINT',close);process.on('SIGTERM',close);
 server.listen(47181,'127.0.0.1',()=>{
   console.log('W46_TEST_ONLY_HTTP_READY 127.0.0.1:47181 contacts='+contacts.length);

@@ -26,6 +26,8 @@ function replaceOnlyOriginalComposer(){
    if(!code.includes(intro)||start<0||finish<0||start>=finish)throw Error('B_C_ORIGINAL_APP_CONTRACT_CHANGED');
    const extra=String.raw`
 import BCNativeComposer from '../../../../apps/web/src/BCNativeComposer.vue'
+import BCManagedStop from '../../../../apps/web/src/BCManagedStop.vue'
+import {createLoopbackManagedStopPort} from '../../../../apps/web/src/managed-stop.mjs'
 import {createLoopbackTakeoverPort} from '../../../../apps/web/src/native-takeover-port.mjs'
 const w46Port=createLoopbackTakeoverPort({baseUrl:window.location.origin,enabled:true,
   endpoints:{get:'/api/v2/identity-consent/takeover-state',post:'/api/v2/identity-consent/takeover'}})
@@ -33,6 +35,23 @@ const w46Identity=computed(()=>active.value?{
   tenant:active.value.tenant,account:active.value.account,channel:active.value.channel,
   peer_id:active.value.peer_id,binding_revision:active.value.binding_revision}:null)
 const w46SourceMid=computed(()=>active.value?.last_message?.provider_mid||'')
+// Browser synthetic laboratory only. No trusted production W09 STOP HTTP/IPC yet.
+const w46StopPort=createLoopbackManagedStopPort({baseUrl:window.location.origin,enabled:true})
+const w46StopStates=ref<Record<string,string>>({})
+const w46StopGlobalKey=(id:any)=>[id.tenant,id.account,id.channel].join('|')+'|GLOBAL'
+const w46StopContactKey=(id:any)=>[id.tenant,id.account,id.channel,id.peer_id,id.binding_revision].join('|')+'|CONTACT'
+function w46StopUpdate(event:any){
+  if(!event?.identity||!['CONTACT','GLOBAL'].includes(event.scope))return
+  const slot=event.scope==='GLOBAL'?w46StopGlobalKey(event.identity):w46StopContactKey(event.identity)
+  w46StopStates.value={...w46StopStates.value,[slot]:event.status}
+}
+function w46ContactMode(c:any){
+  const statuses=[w46StopStates.value[w46StopContactKey(c)],w46StopStates.value[w46StopGlobalKey(c)]]
+  if(statuses.includes('COMMITTED'))return '已停止'
+  if(statuses.includes('PENDING')||statuses.includes('STOPPING'))return '停止中'
+  if(statuses.includes('UNAVAILABLE'))return '待核验'
+  return currentMode(c)
+}
 const w46NativeMessage=ref<any|null>(null)
 const w46DraftCandidatePort={
   async draftCandidate(identity:any,mid:string,candidateId:string){
@@ -67,7 +86,13 @@ watch([w46Identity,w46SourceMid],async([identity,mid],_,onCleanup)=>{
 `;
    const withScript=code.replace(intro,intro+extra);
    const i=withScript.indexOf(begin),j=withScript.indexOf(end,i);
-   return withScript.slice(0,i)+inserted+withScript.slice(j);
+   const transformed=withScript.slice(0,i)+inserted+withScript.slice(j);
+   // Reuse existing CONTACT header control row, not an extra right panel.
+   const anchor='<div class="chat-actions">';
+   if(!transformed.includes(anchor))throw Error('B_C_HEADER_CONTROLS_CHANGED');
+   return transformed.replace(anchor,anchor+'\n          <BCManagedStop v-if="isBC" :identity="w46Identity" :stop-port="w46StopPort" :appearance="state.appearance" @authority-change="w46StopUpdate"/>')
+     .replaceAll('{{currentMode(c)}}','{{isBC?w46ContactMode(c):currentMode(c)}}')
+     .replaceAll('{{currentMode(active)}}','{{isBC?w46ContactMode(active):currentMode(active)}}');
  }};
 }
 export default {
