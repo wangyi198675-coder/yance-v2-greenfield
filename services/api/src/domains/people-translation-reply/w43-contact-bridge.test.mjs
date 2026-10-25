@@ -37,7 +37,7 @@ async function configured({identity=k(),targetLanguage='de',suggestions=[item('H
      return receipt(identity,suggestions,runOverrides);
    },
    attestNativeReceipt:async({receipt:actual,scope,sourceSHA})=>{
-     assert.equal(sourceSHA,'9d09121b8ba41ae73de82ec4d01add2b23e70df7');
+     assert.equal(sourceSHA,'6ecb8bcf15b7863f132c60d3dce42a871f2c89f9');
      return actual.user_id===w43ScopedIds({...identity}).userId && scope.peer_id===identity.peer_id;
    }
  });
@@ -145,4 +145,53 @@ test('W43 short-input limitation exposed as HOLD, not silently truncating messag
 test('replayed MID cannot change requested language',async()=>{
  const s=svc();await s.ingestInbound(msg(k(),'de'));
  await assert.rejects(s.ingestInbound(msg(k(),'pl')),/MID_REPLAY_CONFLICT/);
+});
+
+test('Qwen3 8B native QUALITY_EVAL receipt produces only actual sourced drafts, never an automatic quality PASS',async()=>{
+ const s=await configured({suggestions:[item('Hallo, wie geht es dir?')],runOverrides:{
+  provider:'OLLAMA_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+  provenance:{run_id:'fake-run-123',source:'OLLAMA_LOCAL_QWEN3_8B_FREE'}
+ }});
+ const result=await s.bridge.propose({identity:k(),mid:'fake-mid-1'});
+ assert.equal(result.status,'CANDIDATES_PRESENT');
+ assert.equal(result.candidates.length,1);
+ assert.equal(result.candidates[0].provenance.model_provider,'OLLAMA_LOCAL_QWEN3_8B_FREE');
+ assert.equal(result.candidates[0].provenance.model_id,'qwen3:8b');
+ assert.equal(result.candidates[0].provenance.quality_qualified,false);
+ assert.equal(result.candidates[0].provenance.quality_status,'MODEL_QUALITY_UNREVIEWED');
+ assert.equal(result.model.quality_qualified,false);
+ assert.equal(result.model.quality_status,'MODEL_QUALITY_UNREVIEWED');
+ const draft=s.service.draftCandidate(k(),'fake-mid-1',result.candidates[0].id);
+ assert.equal(draft.destination,'EXISTING_BC_COMPOSER');
+ assert.equal(draft.delivery,'NOT_REQUESTED');
+});
+test('Qwen3 model/provider/purpose pairs fail closed on false cloud, paid and healthcheck labels',async()=>{
+ for(const pair of [
+  {model_id:'qwen3:8b',provider:'LLAMACPP_LOCAL_NO_PAID_API',purpose:'QUALITY_EVAL'},
+  {model_id:'qwen3:8b',provider:'OLLAMA_LOCAL_QWEN3_8B_FREE',purpose:'HEALTHCHECK'},
+  {model_id:'qwen2.5:1.5b',provider:'OLLAMA_LOCAL_QWEN3_8B_FREE',purpose:'QUALITY_EVAL'},
+  {model_id:'qwen3:8b',provider:'OPENAI_API',purpose:'QUALITY_EVAL'}
+ ]){
+  const s=await configured({suggestions:[item('Hallo')],runOverrides:{...pair,provenance:{run_id:'fake-run-123',source:pair.provider}}});
+  await assert.rejects(s.bridge.propose({identity:k(),mid:'fake-mid-1'}),/W43_RECEIPT_IDENTITY_OR_PROVIDER_INVALID/);
+  assert.equal(s.service.getMessage(k(),'fake-mid-1').candidates.length,0);
+ }
+});
+test('invalid late input cannot produce a draft after W43 SDK model failure',async()=>{
+ const s=await configured({suggestions:[item('Hallo')]});
+ assert.equal((await s.bridge.propose({identity:k(),mid:'fake-mid-1'})).candidates.length,1);
+ const broken=createW43ContactBridge({service:s.service,
+  runW43:async()=>({status:'LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED',suggestions:[],outbound:'DISABLED'}),
+  attestNativeReceipt:async()=>{throw Error('MUST_NOT_ATTEST_FAILED_RUN')}
+ });
+ const result=await broken.propose({identity:k(),mid:'fake-mid-1'});
+ assert.equal(result.status,'W43_RUN_FAILED');
+ assert.equal(result.candidates.length,0);
+ assert.equal(s.service.getMessage(k(),'fake-mid-1').candidates.length,0);
+});
+test('legacy healthcheck is never mislabeled Qwen3 strong quality',async()=>{
+ const s=await configured();
+ const result=await s.bridge.propose({identity:k(),mid:'fake-mid-1'});
+ assert.equal(result.model.quality_status,'HEALTHCHECK_ONLY');
+ assert.equal(result.model.quality_qualified,false);
 });

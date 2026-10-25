@@ -39,3 +39,14 @@ Old SIWC legacy DA424 actually produced three candidates and 166 prior tests, as
 | pl | PASS, fixture/stub only | NOT_RUN | NOT_RUN |
 
 A model downloaded ≠ model installed ≠ a verified actual Agno inference ≠ a linguistically acceptable reply. No invented scores. W24 signed identity/grants, W43 actual Qwen3 8B SDK and model provider eligibility, W46 actual Composer integration, W44/W25 durable authorization and sole sender, and real translation model execution remain HOLD. No production deployment.
+
+## W09 increment — W45 Qwen3 real Run integration, 2026-10-25
+
+- W43 pinned source: PR #36, SHA 6ecb8bcf15b7863f132c60d3dce42a871f2c89f9; W43 source unchanged.
+- Provider+model+purpose contract: OLLAMA_LOCAL_QWEN3_8B_FREE / qwen3:8b / QUALITY_EVAL only; 1.5B llama.cpp is HEALTHCHECK_ONLY. Paid/cloud/mismatched combinations denied. quality_qualified=false is preserved until independent linguistic evaluation.
+- w43-native-eval.py is opt-in nonproduction synthetic diagnostic, not a hosted gateway. It imports W43 native runtime from the pinned W43 source, runs actual Agno SDK and verifies attest_contact_run in the SAME Python process. Missing or failed SDK Run produces 0 candidates. No token or live social identity is read.
+- On this device ollama list showed qwen3:8b installed (5.2GB). Actual official Agno / Ollama Qwen3 8B Run attempted with fake tenant/account/peer/MID, but Ollama returned HTTP 500: error starting llama-server: llama-server binary not found. Actual native_same_process_attested=false, receipt=null, candidates=[]; no real 8B Run ID. This is NOT a quality PASS.
+- W45 initial fixture translation provenance remained SYNTHETIC_FIXTURE; no actual multilingual translation accuracy established. The old LibreTranslate HTTP port was also only stub-tested. Do not expose these as natural real translations.
+- node --test services/api/src/domains/people-translation-reply/*.test.mjs: 33 PASS / 0 FAIL, contract fixtures; extra tests strong Qwen3 provider pair, source/Run quality marking, stale candidates and failing model. NOT real Agno/model tests.
+- After W43 actual Qwen3 Run becomes available, W45 createW43ContactBridge takes the trusted execution and attestNativeReceipt owner ports. Only actual structured Run-supplied 0-3 candidates with MID and ORIGINAL/TRANSLATION sources are eligible. Non-JSON or failed Run gives zero. draftCandidate targets existing B+C Composer (INSERT_DRAFT_ONLY), delivery NOT_REQUESTED.
+- P0 W43 Ollama 8B runtime recovery; W24-authorized cross-process attestation and identity; actual translation model. P1 actual quality rating for Chinese/English/German/Polish, native sourced candidates, W46 Composer UI hook. All real accounts, paid inference, sends and production deployment remain HOLD.

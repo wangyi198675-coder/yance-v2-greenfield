@@ -110,15 +110,18 @@ export function createPeopleTranslationReplyService({translator=null,attestAgnoR
       if(fullKKey(run.identity)!==fullKKey(r.identity) || run.sourceMid!==r.mid)error('AGNO_K_MID_MISMATCH');
       if(run.translationRequestId!==r.translation.provenance.request_id || run.originalSha256!==r.original.sha256)error('AGNO_STALE_TRANSLATION_OR_ORIGINAL');
       if(!exists(run.runId)||!exists(run.sessionId)||!exists(run.agentId))error('AGNO_TRACE_REQUIRED');
-      if(run.provider && run.provider!=='LLAMACPP_LOCAL_NO_PAID_API')error('PAID_PROVIDER_FORBIDDEN');
-      if(run.modelId && !['qwen2.5:1.5b','qwen3:8b'].includes(run.modelId))error('MODEL_NOT_ALLOWLISTED');
+      if(run.provider){
+        const accepted=(run.provider==='LLAMACPP_LOCAL_NO_PAID_API' && run.modelId==='qwen2.5:1.5b') ||
+          (run.provider==='OLLAMA_LOCAL_QWEN3_8B_FREE' && run.modelId==='qwen3:8b' && run.purpose==='QUALITY_EVAL');
+        if(!accepted)error('MODEL_PROVIDER_PAIR_NOT_AUTHORIZED');
+      }
       if(!Array.isArray(run.candidates) || run.candidates.length>3)error('AGNO_CANDIDATES_COUNT_INVALID');
       const seen=new Set();
       const candidates=run.candidates.map(item=>{
         if(!exists(item?.id) || typeof item.text!=='string' || !item.text.trim() || seen.has(item.id))error('AGNO_CANDIDATE_INVALID');
         seen.add(item.id);
         if(!Array.isArray(item.sources) || item.sources.length===0 || item.sources.some(s=>s.mid!==r.mid || !['ORIGINAL','TRANSLATION'].includes(s.part)))error('AGNO_CITATION_INVALID');
-        return {id:String(item.id),text:item.text,action:'DRAFT_ONLY',provenance:{engine:'OFFICIAL_AGNO_SDK',run_id:String(run.runId),session_id:String(run.sessionId),agent_id:String(run.agentId),model_provider:run.provider||'TEST_FIXTURE_NO_PROVIDER',model_id:run.modelId||null,sdk_pin:run.sdkPin||null,source_mid:r.mid,sources:item.sources.map(s=>({mid:s.mid,part:s.part}))}};
+        return {id:String(item.id),text:item.text,action:'DRAFT_ONLY',provenance:{engine:'OFFICIAL_AGNO_SDK',run_id:String(run.runId),session_id:String(run.sessionId),agent_id:String(run.agentId),model_provider:run.provider||'TEST_FIXTURE_NO_PROVIDER',model_id:run.modelId||null,sdk_pin:run.sdkPin||null,quality_qualified:false,quality_status:run.modelId==='qwen3:8b'?'MODEL_QUALITY_UNREVIEWED':'HEALTHCHECK_ONLY',source_mid:r.mid,sources:item.sources.map(s=>({mid:s.mid,part:s.part}))}};
       });
       r.candidates=candidates;
       return snapshot(r);
