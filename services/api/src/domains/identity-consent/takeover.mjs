@@ -106,8 +106,29 @@ export function createNativeTakeoverService({identityConsent,custodyStore,author
     if(before.mode==='HUMAN')deny('ALREADY_HUMAN_USE_GET',409);
     if(authorizeTakeover({trustedContext,identity,action})!==true)
       deny('TAKEOVER_ACTION_NOT_AUTHORIZED',403);
-    // W44 is the ONE durable custody CAS mutation. Translate W46 action
-    // to its existing USER_EDIT authority, never create a second table.
+    // Strict mode uses W44's typed transaction/fence, never legacy direct
+    // setCustody. ARMED is PENDING, not success, until W25 settles evidence.
+    if(identityConsent.isDurableIdentity===true){
+      const result=identityConsent.takeover(trustedContext,identity,{
+        expectedIdentityKey:before.identityKey,expectedEpoch,
+        expectedAccountRevocationEpoch,expectedConsentEpoch,action
+      });
+      if(result.status==='PENDING')return Object.freeze({
+        accepted:false,pending:true,status:'PENDING',reason:result.reason,
+        requestId:result.requestId,generation:result.generation,
+        identity:{...identity},identityKey:before.identityKey,canSend:false
+      });
+      if(result.accepted!==true||result.confirmedByGet!==true)
+        deny('TAKEOVER_POST_VERIFY_FAILED',409);
+      // Preserve W46's exact wire contract; verify again from the same W44 DB.
+      const verified=get({trustedContext,identity});
+      if(verified.mode!=='HUMAN'||verified.epoch!==expectedEpoch+1||
+        verified.accountRevocationEpoch!==expectedAccountRevocationEpoch||
+        verified.consentEpoch!==expectedConsentEpoch)
+        deny('TAKEOVER_POST_VERIFY_FAILED',409);
+      return Object.freeze({...result,identity:{...identity},canSend:false});
+    }
+    // Legacy synthetic compatibility only: no strict production authority.
     try{
       const result=custodyStore.setCustody({
         identity,mode:'HUMAN',action:'USER_EDIT',

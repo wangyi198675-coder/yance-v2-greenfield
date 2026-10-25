@@ -1,4 +1,5 @@
-// W24 Issue #4. Native, in-process IdentityConsent domain for SYNTHETIC_TEST_ONLY.
+// W24 Issue #4. Legacy synthetic plus W44-backed strict durable IdentityConsent domain.
+import {createDurableIdentityDriver} from './durable-identity.mjs';
 // No production authentication, network listener, database, platform credentials or send.
 const CHANNELS = new Set(['FB_PERSONAL', 'FB_PAGE', 'WHATSAPP_PERSONAL', 'TELEGRAM_PERSONAL']);
 const SEND_OPERATIONS = new Set(['SEND_MESSAGE', 'SEND_MEDIA']);
@@ -81,13 +82,33 @@ export class IdentityConsentService {
   #revocationRequests = new Map();
   #grantAuthority;
   #proofAuthority;
+  #durable = null;
 
-  constructor({ grantAuthority = null, proofAuthority = null } = {}) {
+  constructor({grantAuthority = null, proofAuthority = null,
+    requireDurableIdentity = false, durableAuthority = null} = {}) {
     this.#grantAuthority = grantAuthority;
     this.#proofAuthority = proofAuthority;
+    if(requireDurableIdentity){
+      this.#durable = createDurableIdentityDriver({
+        store:durableAuthority,proofAuthority,grantAuthority
+      });
+    }
   }
 
+  get isDurableIdentity(){return this.#durable!==null}
+
+  /** Strict mode mutates ONLY W44's same-transaction account/consent/custody rows. */
+  takeover(ctx,k,expected){if(!this.#durable)deny('DURABLE_TAKEOVER_REQUIRED');
+    return this.#durable.takeover(ctx,k,expected)}
+  mutationResult(ctx,requestId){if(!this.#durable)deny('DURABLE_MUTATION_REQUIRED');
+    return this.#durable.reconcile(ctx,requestId)}
+  finalizePendingMutation(ctx,requestId,typedPayload){
+    if(!this.#durable)deny('DURABLE_MUTATION_REQUIRED');
+    return this.#durable.finishPending(ctx,requestId,typedPayload)}
+
+
   registerAccount(ctx, raw) {
+    if(this.#durable)return this.#durable.registerAccount(ctx,raw);
     context(ctx); validateAccount(raw);
     if (ctx.tenant !== raw.tenant) deny('TENANT_MISMATCH');
     if (raw.principal_id !== ctx.principal_id) deny('ACCOUNT_OWNER_MISMATCH');
@@ -104,6 +125,7 @@ export class IdentityConsentService {
   }
 
   bindPeer(ctx, raw) {
+    if(this.#durable)return this.#durable.bindPeer(ctx,raw);
     context(ctx); validateAccount(raw); id(raw.peer_id, 'PEER');
     const account = this.#ownedAccount(ctx, raw);
     if (!account.active) deny('ACCOUNT_UNBOUND');
@@ -114,6 +136,7 @@ export class IdentityConsentService {
   }
 
   currentK(ctx, raw) {
+    if(this.#durable)return this.#durable.current(ctx,raw);
     context(ctx); validateAccount(raw); id(raw.peer_id, 'PEER');
     const account = this.#ownedAccount(ctx, raw);
     if (!account.active || !this.#peers.has(peerKey(raw))) deny('ACCOUNT_OR_PEER_UNBOUND');
@@ -123,6 +146,7 @@ export class IdentityConsentService {
   }
 
   assertCurrent(ctx, k) {
+    if(this.#durable)return this.#durable.current(ctx,k);
     context(ctx); canonicalK(k);
     const account = this.#ownedAccount(ctx, k);
     if (!account.active || !this.#peers.has(peerKey(k))) deny('ACCOUNT_OR_PEER_UNBOUND');
@@ -133,6 +157,7 @@ export class IdentityConsentService {
   /** Peer-scoped synthetic revision for W44 reservation/dispatch fencing.
    * No hardcoded consent epoch: every create/revoke changes this authority. */
   readConsentEpoch(ctx, k) {
+    if(this.#durable)return this.#durable.epoch(ctx,k);
     this.assertCurrent(ctx, k);
     return this.#consentEpochs.get(peerKey(k)) ?? 1;
   }
@@ -142,7 +167,9 @@ export class IdentityConsentService {
     this.#consentEpochs.set(key, (this.#consentEpochs.get(key) ?? 1) + 1);
   }
 
-  invalidateAccount(ctx, {tenant, account, channel, expected_revision}) {
+  invalidateAccount(ctx, {tenant, account, channel, peer_id, expected_revision, idempotency_key} = {}) {
+    if(this.#durable)return this.#durable.revokeAccount(ctx,{
+      tenant,account,channel,peer_id,expected_revision,idempotency_key});
     context(ctx);
     const record = this.#ownedAccount(ctx, {tenant, account, channel});
     requireExpected(record.binding_revision, expected_revision);
@@ -164,7 +191,10 @@ export class IdentityConsentService {
     return snapshot(record);
   }
 
-  relinkAccount(ctx, {tenant, account, channel, expected_revision}) {
+  relinkAccount(ctx, {tenant, account, channel, peer_id, expected_revision,
+    binding_proof_ref, idempotency_key} = {}) {
+    if(this.#durable)return this.#durable.relinkAccount(ctx,{
+      tenant,account,channel,peer_id,expected_revision,binding_proof_ref,idempotency_key});
     // Explicit synthetic relink; channel credential verification belongs solely to W26-W29.
     context(ctx);
     const record = this.#ownedAccount(ctx, {tenant, account, channel});
@@ -177,6 +207,7 @@ export class IdentityConsentService {
   }
 
   createConsent(ctx, input) {
+    if(this.#durable)return this.#durable.createConsent(ctx,input);
     context(ctx);
     const k = this.assertCurrent(ctx, input.k);
     const consent_id = id(input.consent_id, 'CONSENT_ID');
@@ -211,7 +242,9 @@ export class IdentityConsentService {
     return snapshot({...rec, consent_epoch: this.readConsentEpoch(ctx, k)});
   }
 
-  revokeConsent(ctx, {consent_id, expected_revision, idempotency_key}) {
+  revokeConsent(ctx, {consent_id, expected_revision, idempotency_key, k} = {}) {
+    if(this.#durable)return this.#durable.revokeConsent(ctx,{
+      consent_id,expected_revision,idempotency_key,k});
     context(ctx);
     id(idempotency_key, 'IDEMPOTENCY_KEY');
     id(consent_id, 'CONSENT_ID');
@@ -246,6 +279,7 @@ export class IdentityConsentService {
   }
 
   privacyEvents(ctx) {
+    if(this.#durable)deny('DURABLE_PRIVACY_AUDIT_READ_UNAVAILABLE');
     context(ctx);
     return this.#privacyEvents.filter(e => e.tenant === ctx.tenant && e.owner_principal_id === ctx.principal_id)
       .map(e => snapshot(e));
@@ -256,6 +290,8 @@ export class IdentityConsentService {
    * Never accept a prior allow response as a durable authorization snapshot.
    */
   evaluate(ctx, {k, operation, purpose = null, consent_id = null, now = Date.now()}) {
+    if(this.#durable)return this.#durable.evaluate(ctx,{
+      k,operation,purpose,consent_id,now});
     const current = this.assertCurrent(ctx, k);
     checkTime(now);
     const startingConsentEpoch = this.readConsentEpoch(ctx, k);

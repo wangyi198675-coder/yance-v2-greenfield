@@ -76,3 +76,17 @@ identity/Peer/Consent mutations **must not** be promoted as production-safe.
 state loss and a direct-mutation bypass while running actual W44 SQLite.
 PASS in this diagnostic test suite means **bug reproduced**, not security PASS.
 Release remains **P0 RED/HOLD**. No second database, Outbox or W44/W25 edits.
+
+## 2026-10-25 W44 native strict durable identity source landed (synthetic)
+
+Original W24 `IdentityConsentService` now supports
+`requireDurableIdentity:true` with the existing W44 native authority store.
+All six identity/consent mutators, authoritative reads/epochs and HUMAN takeover
+are routed to W44's real SQLite transaction/fence and NEVER use original W24
+RAM identity/consent for authorization in strict mode. See
+[W24_W44_STRICT_DURABLE_HANDOFF.md](./W24_W44_STRICT_DURABLE_HANDOFF.md)
+for exact injection, tests, proof limitations and remaining release HOLD.
+The earlier P0 audit remains intentionally runnable against **legacy**
+synthetic compatibility and demonstrates that legacy mode is unsafe.
+Never use legacy compatibility in a deployed authorization path. W09-2
+still owns actual strict-mode composition and independent SEC/release gate.

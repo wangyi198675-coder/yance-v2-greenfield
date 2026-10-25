@@ -56,18 +56,19 @@ export function createNativeTakeoverHttpHandler({service,resolveTrustedContext}=
       }
       if(url.search)fail('POST_QUERY_FORBIDDEN',422);
       const body=await jsonBody(req);
-      return emit(res,200,service.post({
+      const outcome=service.post({
         trustedContext,identity:body.identity,
         expectedIdentityKey:body.expectedIdentityKey,
         expectedEpoch:body.expectedEpoch,
         expectedAccountRevocationEpoch:body.expectedAccountRevocationEpoch,
         expectedConsentEpoch:body.expectedConsentEpoch,
         action:body.action,intent:body.intent
-      }));
+      });
+      return emit(res,outcome?.status==='PENDING'?202:200,outcome);
     }catch(e){
       if(e instanceof TakeoverDenied)return emit(res,e.status,{accepted:false,error:e.code});
       if(e instanceof IdentityDenied){
-        const stale=/STALE|UNBOUND|REVOKED|EPOCH/.test(e.code);
+        const stale=/STALE|UNBOUND|REVOKED|EPOCH|CONFLICT|MUTATION_ALREADY_PENDING/.test(e.code);
         return emit(res,stale?409:403,{accepted:false,error:e.code});
       }
       // Never echo secrets / provider errors or claim success on unknown exceptions.
