@@ -4,6 +4,7 @@
  * NOT real authorization, an HTTP service, real model billing or a sender.
  */
 import { DatabaseSync } from 'node:sqlite';
+import {attachDurableAuthority} from './authority-db.mjs';
 const CHANNELS=new Set(['FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL']);
 const pos=x=>Number.isSafeInteger(x)&&x>0;
 const nonneg=x=>Number.isSafeInteger(x)&&x>=0;
@@ -27,8 +28,9 @@ function intentKey(k,id){
   return JSON.stringify([canonicalK(k),id]);
 }
 
-export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,now=Date.now}={}) {
-  if(typeof path!=='string'||!path||path.length>1024||typeof verifyIdentity!=='function'||typeof authorizeMutation!=='function'||
+export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,verifyOwnerMutation,verifyOwnerCancellation,requireDurableIdentity=false,now=Date.now}={}) {
+  if(typeof path!=='string'||!path||path.length>1024||
+    (!requireDurableIdentity&&typeof verifyIdentity!=='function')||typeof authorizeMutation!=='function'||
     typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
   const db=new DatabaseSync(path,{timeout:5000});
   db.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
@@ -62,8 +64,13 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     if(!safe(actor)||!actor.startsWith('fake-')||
       authorizeMutation({actor,action,identity:k})!==true)throw Error('W24_MUTATION_NOT_AUTHORIZED');
   }
+  const durable=attachDurableAuthority({db,transaction,canonicalK,admin,
+    hasLease,readBarrier,now,verifyOwnerMutation,verifyOwnerCancellation});
   function currentIdentity(k){
     canonicalK(k);
+    const native=durable.readNativeCurrent(k);
+    if(native!==undefined)return native;
+    if(requireDurableIdentity)return null;
     const s=verifyIdentity(k); // MUST read authoritative W24 state at every fence
     return s?.valid===true&&s.binding_revision===k.binding_revision&&
       pos(s.identity_epoch)&&pos(s.consent_epoch)?s:null;
@@ -133,6 +140,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     });
   }
   function setCustody({identity:k,mode,action,actor,expectedEpoch=0}){
+    if(requireDurableIdentity)throw Error('NATIVE_TRANSACTIONAL_TAKEOVER_REQUIRED');
     const key=canonicalK(k);
     if(!nonneg(expectedEpoch)||
       !(mode==='HUMAN'&&action==='USER_EDIT'||mode==='AUTO'&&action==='EXPLICIT_RESUME'))
@@ -293,6 +301,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     });
   }
   function requestMutationFence({identity:k,scope,actor,expectedGeneration=0}){
+    if(requireDurableIdentity)throw Error('NATIVE_TRANSACTIONAL_MUTATION_REQUIRED');
     canonicalK(k);
     if(!nonneg(expectedGeneration))throw Error('INVALID_MUTATION_GENERATION');
     admin(actor,'REQUEST_'+scope+'_MUTATION',k);
@@ -308,6 +317,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     });
   }
   function finalizeMutationFence({identity:k,scope,actor,generation,kind,applyW24}){
+    if(requireDurableIdentity)throw Error('IN_MEMORY_W24_CALLBACK_FORBIDDEN');
     canonicalK(k);
     if(!pos(generation)||!['REVOKE_GRANT','REVOKE_ACCOUNT','REVOKE_CONSENT','HUMAN_TAKEOVER'].includes(kind)
         ||typeof applyW24!=='function')throw Error('EXPLICIT_W24_MUTATION_REQUIRED');
@@ -355,6 +365,15 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
         reserved:s.grant.reserved}:null,reason:s.reason??null};
   }
   return Object.freeze({grant,revoke,setCustody,qualify,reserve,checkForSend,
-    enterBoundary,armSend,leaseStatus,requestMutationFence,finalizeMutationFence,
-    settleBoundary,finish,inspection,close:()=>db.close()});
+    enterBoundary,armSend,leaseStatus,
+    requestMutationFence:requireDurableIdentity?durable.requestMutationFence:requestMutationFence,
+    finalizeMutationFence:requireDurableIdentity?durable.finalizeMutationFence:finalizeMutationFence,
+    settleBoundary,finish,inspection,
+    readIdentityAuthority:durable.readIdentityAuthority,
+    readMutationFence:durable.readMutationFence,
+    requestNativeMutationFence:durable.requestMutationFence,
+    finalizeNativeMutationFence:durable.finalizeMutationFence,
+    cancelMutationFence:durable.cancelMutationFence,
+    mutationResult:durable.mutationResult,
+    close:()=>db.close()});
 }
