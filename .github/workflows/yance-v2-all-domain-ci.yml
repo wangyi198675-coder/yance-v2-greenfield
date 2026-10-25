@@ -3,10 +3,25 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact Git commit SHA of an existing PR head in this repository
+        required: false
+        type: string
+      target_base_sha:
+        description: Base Git SHA for accurate changed-source scope
+        required: false
+        type: string
+      target_pr:
+        description: Existing PR number for report linking; never auto merge
+        required: false
+        type: string
+env:
+  CI_BASE_SHA: ${{ inputs.target_base_sha || github.event.pull_request.base.sha || '' }}
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event.pull_request.number || inputs.target_sha || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -41,6 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -63,6 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -73,7 +91,8 @@ jobs:
           if [ -f services/agentos/tests/test_w43_native.py ]; then
             test -f services/agentos/requirements-test.txt || { echo "::error::Agno test dependencies missing"; exit 3; }
             python -m pip install --disable-pip-version-check -r services/agentos/requirements-test.txt
-            python -m pytest -q services/agentos/tests
+            python -m pytest -q -m 'not local_model' services/agentos/tests
+            echo 'NOT_RUN: local_model-marked tests require a protected Windows localhost key and actual llama.cpp; never a hosted CI PASS'
           elif [ -d services/agentos ] && find services/agentos -type f ! -name .gitkeep | grep -q .; then
             echo "::error::Agno native files changed but required real tests are missing"
             exit 3
@@ -88,6 +107,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -112,6 +132,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
