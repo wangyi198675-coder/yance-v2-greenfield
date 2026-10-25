@@ -62,9 +62,12 @@ check('frontend-committed-data-and-OSS-provenance',()=>{
 });
 check('frontend-reproducible-npm-typescript-build-audit',()=>{
  run('npm',['ci','--ignore-scripts','--no-audit','--no-fund'],dir,360000);
+ // Enforce the project's actual committed default test, not an invented historic W39 UAT JSON.
+ // A missing fixture fails and requires the bounded test-only owner repair (PR #33).
+ run('npm',['test'],dir,90000);
  run('npx',['tsc','--noEmit'],dir,180000);run('npm',['run','build'],dir,180000);
  run('npm',['audit','--audit-level=high'],dir,90000);
- return {cleanInstall:true,typescript:true,viteBuild:true,auditHigh:'no findings'}
+ return {cleanInstall:true,defaultNpmTests:'PASS_REAL_COMMITTED_TESTS',typescript:true,viteBuild:true,auditHigh:'no findings'}
 });
 }}
 const out=path.join(reports,'ci-'+mode+'.json');fs.writeFileSync(out,JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(report.errors.length)process.exitCode=1;
