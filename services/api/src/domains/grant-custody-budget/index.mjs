@@ -27,7 +27,7 @@ function intentKey(k,id){
   return JSON.stringify([canonicalK(k),id]);
 }
 
-export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,now=Date.now}={}) {
+export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,now=Date.now}={}) {
   if(typeof path!=='string'||!path||path.length>1024||typeof verifyIdentity!=='function'||typeof authorizeMutation!=='function'||
     typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
   const db=new DatabaseSync(path,{timeout:5000});
@@ -35,11 +35,22 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   db.exec([
     'CREATE TABLE IF NOT EXISTS grants (scope_key TEXT PRIMARY KEY, scope TEXT NOT NULL, enabled INTEGER NOT NULL, epoch INTEGER NOT NULL, expires_at INTEGER NOT NULL, budget_limit INTEGER NOT NULL, spent INTEGER NOT NULL, reserved INTEGER NOT NULL);',
     'CREATE TABLE IF NOT EXISTS custody (k TEXT PRIMARY KEY, mode TEXT NOT NULL, epoch INTEGER NOT NULL);',
-    'CREATE TABLE IF NOT EXISTS reservations (intent_key TEXT PRIMARY KEY, k TEXT NOT NULL, scope_key TEXT NOT NULL, grant_epoch INTEGER NOT NULL, custody_epoch INTEGER NOT NULL, binding_revision INTEGER NOT NULL, identity_epoch INTEGER NOT NULL, consent_epoch INTEGER NOT NULL, units INTEGER NOT NULL, valid_until INTEGER NOT NULL, state TEXT NOT NULL);'
+    'CREATE TABLE IF NOT EXISTS reservations (intent_key TEXT PRIMARY KEY, k TEXT NOT NULL, scope_key TEXT NOT NULL, grant_epoch INTEGER NOT NULL, custody_epoch INTEGER NOT NULL, binding_revision INTEGER NOT NULL, identity_epoch INTEGER NOT NULL, consent_epoch INTEGER NOT NULL, units INTEGER NOT NULL, valid_until INTEGER NOT NULL, state TEXT NOT NULL);',
+    'CREATE TABLE IF NOT EXISTS boundary_leases (k TEXT PRIMARY KEY, intent_key TEXT NOT NULL UNIQUE, armed_at INTEGER NOT NULL, w25_attempt_id TEXT NOT NULL);',
+    'CREATE TABLE IF NOT EXISTS mutation_barriers (scope_key TEXT PRIMARY KEY, generation INTEGER NOT NULL, scope TEXT NOT NULL, pending INTEGER NOT NULL);'
   ].join(' '));
   const readGrant=db.prepare('SELECT * FROM grants WHERE scope_key=?');
   const readCustody=db.prepare('SELECT * FROM custody WHERE k=?');
   const readReservation=db.prepare('SELECT * FROM reservations WHERE intent_key=?');
+  const readLease=db.prepare('SELECT * FROM boundary_leases WHERE k=?');
+  const readBarrier=db.prepare('SELECT * FROM mutation_barriers WHERE scope_key=?');
+  const globalBarrier=k=>readBarrier.get(scopeKey(k,'GLOBAL'))?.pending===1;
+  const peerBarrier=k=>readBarrier.get(scopeKey(k,'CONTACT'))?.pending===1;
+  const anyBarrier=k=>globalBarrier(k)||peerBarrier(k);
+  const hasLease=(k,scope)=>scope==='CONTACT'
+    ?Boolean(readLease.get(canonicalK(k)))
+    :Boolean(db.prepare("SELECT 1 FROM boundary_leases WHERE json_extract(k,'$[0]')=? AND json_extract(k,'$[1]')=? AND json_extract(k,'$[2]')=? LIMIT 1")
+      .get(k.tenant,k.account,k.channel));
   const time=()=>{const t=now();if(!pos(t))throw Error('INVALID_CLOCK');return t};
   function transaction(fn){
     db.exec('BEGIN IMMEDIATE');
@@ -70,6 +81,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   function qualify(k,units=1){
     if(!pos(units)||!bounded(units))throw Error('INVALID_BUDGET_UNITS');
     const key=canonicalK(k),s=currentIdentity(k);
+    if(anyBarrier(k))return deny('AUTHORITY_MUTATION_PENDING');
     if(!s)return deny('W24_IDENTITY_OR_CONSENT_INVALID');
     const custody=readCustody.get(key);
     if(custody&&custody.mode!=='AUTO')return deny('HUMAN_CUSTODY');
@@ -89,6 +101,8 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     const key=scopeKey(k,scope);
     return transaction(()=>{
       const old=readGrant.get(key);
+      if(anyBarrier(k))throw Error('AUTHORITY_MUTATION_PENDING');
+      if(hasLease(k,scope))throw Error('BOUNDARY_LEASE_ACTIVE');
       if((old?.epoch??0)!==expectedEpoch)throw Error('STALE_GRANT_EPOCH');
       const epoch=expectedEpoch+1;
       // A version rollover must NOT erase previously spent or unresolved reserved units.
@@ -103,6 +117,8 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     const key=scopeKey(k,scope);
     return transaction(()=>{
       const old=readGrant.get(key);
+      if(anyBarrier(k))throw Error('AUTHORITY_MUTATION_PENDING');
+      if(hasLease(k,scope))throw Error('BOUNDARY_LEASE_ACTIVE');
       if(!old&&expectedEpoch===0){
         // Revoking one contact under a global grant must create a durable DENY
         // tombstone. Otherwise absence of a contact row silently falls back to GLOBAL.
@@ -124,6 +140,8 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     admin(actor,'CUSTODY_'+action,k);
     return transaction(()=>{
       const old=readCustody.get(key);
+      if(anyBarrier(k))throw Error('AUTHORITY_MUTATION_PENDING');
+      if(readLease.get(key))throw Error('BOUNDARY_LEASE_ACTIVE');
       if((old?.epoch??0)!==expectedEpoch)throw Error('STALE_CUSTODY_EPOCH');
       const epoch=expectedEpoch+1;
       db.prepare('INSERT INTO custody(k,mode,epoch) VALUES(?,?,?) ON CONFLICT(k) DO UPDATE SET mode=excluded.mode,epoch=excluded.epoch')
@@ -155,6 +173,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     });
   }
   function fenceWithinTransaction(k,r){
+    if(anyBarrier(k))return deny('AUTHORITY_MUTATION_PENDING');
     if(time()>=r.valid_until)return deny('RESERVATION_EXPIRED');
     const s=currentIdentity(k);
     if(!s||s.identity_epoch!==r.identity_epoch||s.consent_epoch!==r.consent_epoch||
@@ -219,6 +238,8 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       if(update.changes!==1)throw Error('BUDGET_SETTLEMENT_CAS_FAILED');
       const state=result.outcome==='CHARGED'?'COMMITTED':'RELEASED';
       db.prepare('UPDATE reservations SET state=? WHERE intent_key=?').run(state,key);
+      // No lease may disappear on UNKNOWN, crash or unverified evidence.
+      db.prepare('DELETE FROM boundary_leases WHERE intent_key=?').run(key);
       return {ok:true,state,unitsCharged:actual};
     });
   }
@@ -248,6 +269,82 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       return {ok:true,state};
     });
   }
+  // Atomic with W44 budget rows, but not yet bound to W24's mutation
+  // entrypoints or W25's irreversible sink. W25 remains sole sender.
+  function armSend({identity:k,intentId,w25IntentId}){
+    const key=intentKey(k,intentId),peer=canonicalK(k);
+    if(!safe(w25IntentId))return deny('W25_ATTEMPT_ID_REQUIRED');
+    return transaction(()=>{
+      if(anyBarrier(k))return deny('AUTHORITY_MUTATION_PENDING');
+      const existing=readLease.get(peer);
+      if(existing) return existing.intent_key===key&&existing.w25_attempt_id===w25IntentId
+        ?{ok:true,armed:true,idempotent:true,intentKey:key}:deny('RECIPIENT_SEND_GATE_BUSY');
+      const r=readReservation.get(key);
+      if(!r||r.state!=='BOUNDARY_ENTERED')return deny('BOUNDARY_NOT_DURABLY_ARMED');
+      const f=fenceWithinTransaction(k,r);
+      if(!f.ok)return f;
+      if(typeof verifyDeliveryArm!=='function')return deny('W25_PERSISTED_ATTEMPT_PROOF_MISSING');
+      const proof=verifyDeliveryArm({identity:k,intentId,w25IntentId});
+      if(proof&&typeof proof.then==='function')throw Error('ASYNC_W25_ARM_PORT_UNSUPPORTED');
+      if(proof?.verified!==true)return deny('W25_PERSISTED_ATTEMPT_UNVERIFIED');
+      db.prepare('INSERT INTO boundary_leases(k,intent_key,armed_at,w25_attempt_id) VALUES(?,?,?,?)')
+        .run(peer,key,time(),w25IntentId);
+      return {ok:true,armed:true,intentKey:key};
+    });
+  }
+  function requestMutationFence({identity:k,scope,actor,expectedGeneration=0}){
+    canonicalK(k);
+    if(!nonneg(expectedGeneration))throw Error('INVALID_MUTATION_GENERATION');
+    admin(actor,'REQUEST_'+scope+'_MUTATION',k);
+    const key=scopeKey(k,scope);
+    return transaction(()=>{
+      const current=readBarrier.get(key);
+      if(current?.pending===1)return deny('MUTATION_ALREADY_PENDING');
+      if((current?.generation??0)!==expectedGeneration)return deny('STALE_MUTATION_GENERATION');
+      const generation=expectedGeneration+1;
+      db.prepare('INSERT INTO mutation_barriers(scope_key,generation,scope,pending) VALUES(?,?,?,1) ON CONFLICT(scope_key) DO UPDATE SET generation=excluded.generation,scope=excluded.scope,pending=1')
+        .run(key,generation,scope);
+      return {ok:true,generation,pending:true,activeLease:hasLease(k,scope)};
+    });
+  }
+  function finalizeMutationFence({identity:k,scope,actor,generation,kind,applyW24}){
+    canonicalK(k);
+    if(!pos(generation)||!['REVOKE_GRANT','REVOKE_ACCOUNT','REVOKE_CONSENT','HUMAN_TAKEOVER'].includes(kind)
+        ||typeof applyW24!=='function')throw Error('EXPLICIT_W24_MUTATION_REQUIRED');
+    if(kind==='HUMAN_TAKEOVER'&&scope!=='CONTACT')throw Error('INVALID_TAKEOVER_SCOPE');
+    admin(actor,'FINALIZE_'+kind,k);
+    return transaction(()=>{
+      const row=readBarrier.get(scopeKey(k,scope));
+      if(!row||row.pending!==1||row.generation!==generation)return deny('MUTATION_BARRIER_STALE');
+      if(hasLease(k,scope))return deny('ACTIVE_SEND_MUST_SETTLE_FIRST');
+      // W24 owns the authoritative mutation. Only trusted synchronous
+      // in-process W24 mutation may run here; never accept a prior snapshot.
+      const result=applyW24({identity:k,kind,scope});
+      if(result&&typeof result.then==='function')throw Error('ASYNC_W24_MUTATION_NOT_ATOMIC');
+      if(result?.committed!==true)throw Error('W24_MUTATION_NOT_COMMITTED');
+      if(['REVOKE_GRANT','REVOKE_ACCOUNT'].includes(kind)){
+        const g=readGrant.get(scopeKey(k,scope));
+        if(g)db.prepare('UPDATE grants SET enabled=0,epoch=epoch+1 WHERE scope_key=?')
+          .run(scopeKey(k,scope));
+        else db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,0,1,8640000000000000,0,0,0)')
+          .run(scopeKey(k,scope),scope);
+      }
+      if(kind==='HUMAN_TAKEOVER'){
+        const peer=canonicalK(k),old=readCustody.get(peer);
+        const epoch=(old?.epoch??0)+1;
+        db.prepare('INSERT INTO custody(k,mode,epoch) VALUES(?,?,?) ON CONFLICT(k) DO UPDATE SET mode=excluded.mode,epoch=excluded.epoch')
+          .run(peer,'HUMAN',epoch);
+      }
+      db.prepare('UPDATE mutation_barriers SET pending=0 WHERE scope_key=?')
+        .run(scopeKey(k,scope));
+      return {ok:true,committed:true,generation,w24AuthorityConfirmed:true};
+    });
+  }
+  function leaseStatus(k){
+    const peer=canonicalK(k),active=readLease.get(peer);
+    return {ok:true,active:!!active,mutationPending:anyBarrier(k),
+      intentKey:active?.intent_key??null};
+  }
   function inspection(k){
     const key=canonicalK(k);
     if(!currentIdentity(k))return deny('W24_IDENTITY_OR_CONSENT_INVALID');
@@ -258,5 +355,6 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
         reserved:s.grant.reserved}:null,reason:s.reason??null};
   }
   return Object.freeze({grant,revoke,setCustody,qualify,reserve,checkForSend,
-    enterBoundary,settleBoundary,finish,inspection,close:()=>db.close()});
+    enterBoundary,armSend,leaseStatus,requestMutationFence,finalizeMutationFence,
+    settleBoundary,finish,inspection,close:()=>db.close()});
 }

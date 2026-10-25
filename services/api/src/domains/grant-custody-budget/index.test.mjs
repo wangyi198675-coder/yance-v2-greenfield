@@ -21,9 +21,9 @@ function setup(t){
  const ports=()=>({path,now:()=>time,
    verifyIdentity:k=>({valid,binding_revision:k.binding_revision,identity_epoch:identityEpoch,consent_epoch:consent}),
    authorizeMutation:({actor})=>actor==='fake-operator'});
- const s=openEligibilityStore(ports());
- t.after(()=>{s.close();rmSync(dir,{recursive:true,force:true})});
- return {s,path,ports,tick:n=>time=n,consent:n=>consent=n,identityEpoch:n=>identityEpoch=n,valid:n=>valid=n};
+ const s=openEligibilityStore(ports()),additional=[];
+ t.after(()=>{for(const other of additional)other.close();s.close();rmSync(dir,{recursive:true,force:true})});
+ return {s,path,ports,track:other=>{additional.push(other);return other},tick:n=>time=n,consent:n=>consent=n,identityEpoch:n=>identityEpoch=n,valid:n=>valid=n};
 }
 
 test('full K synthetic tenant/account/peer/binding isolation and no real identities',()=>{
@@ -262,4 +262,109 @@ test('verified W25 NO_SEND releases ambiguous boundary; UNKNOWN never releases',
  assert.equal(verifier.inspection(a).effectiveGrant.reserved,0);
  assert.equal(reserve(verifier,a,'fake-next').ok,true);
  verifier.close();
+});
+
+test('durable final-send lease serializes CONTACT revoke until W25 settlement',t=>{
+ const x=setup(t),a=K();
+ const w=openEligibilityStore({...x.ports(),verifyDeliveryArm:()=>({verified:true}),
+   verifySettlement:()=>({verified:true,outcome:'CHARGED',actualUnits:1})});
+ x.track(w);
+ issue(w,a,'GLOBAL',3);
+ reserve(w,a,'fake-lease');w.enterBoundary({identity:a,intentId:'fake-lease'});
+ assert.equal(w.armSend({identity:a,intentId:'fake-lease',w25IntentId:'fake-w25-1'}).ok,true);
+ const staged=w.requestMutationFence({identity:a,scope:'CONTACT',...admin});
+ assert.equal(staged.pending,true);
+ assert.equal(w.finalizeMutationFence({identity:a,scope:'CONTACT',
+   kind:'HUMAN_TAKEOVER',generation:staged.generation,...admin,
+   applyW24:()=>({committed:true})}).reason,'ACTIVE_SEND_MUST_SETTLE_FIRST');
+ assert.equal(w.qualify(a).reason,'AUTHORITY_MUTATION_PENDING');
+ assert.equal(w.settleBoundary({identity:a,intentId:'fake-lease',evidence:'fake-verified'}).state,'COMMITTED');
+ let commits=0;
+ assert.equal(w.finalizeMutationFence({identity:a,scope:'CONTACT',kind:'HUMAN_TAKEOVER',
+   generation:staged.generation,...admin,applyW24:()=>{commits++;return {committed:true}}}).ok,true);
+ assert.equal(commits,1);
+ assert.equal(w.inspection(a).mode,'HUMAN');
+ assert.equal(w.qualify(a).reason,'HUMAN_CUSTODY');
+});
+test('A slow/UNKNOWN never blocks independent B/C, fake crash preserves active lease',t=>{
+ const x=setup(t),a=K(),b=K('fake-B'),c=K('fake-C');
+ const w=openEligibilityStore({...x.ports(),verifyDeliveryArm:()=>({verified:true}),
+   verifySettlement:()=>({verified:false})});
+ x.track(w);
+ issue(w,a,'GLOBAL',3);
+ reserve(w,a,'fake-A-unknown');w.enterBoundary({identity:a,intentId:'fake-A-unknown'});
+ w.armSend({identity:a,intentId:'fake-A-unknown',w25IntentId:'fake-attempt-A'});
+ assert.equal(w.leaseStatus(a).active,true);
+ const other=openEligibilityStore({...x.ports(),verifyDeliveryArm:()=>({verified:true})});
+ assert.equal(reserve(other,b,'fake-B-send').ok,true);
+ assert.equal(reserve(other,c,'fake-C-send').ok,true);
+ assert.equal(other.armSend({identity:a,intentId:'fake-A-unknown',w25IntentId:'fake-other'}).reason,'RECIPIENT_SEND_GATE_BUSY');
+ assert.equal(w.settleBoundary({identity:a,intentId:'fake-A-unknown',evidence:'fake-unknown'}).reason,'W25_RECEIPT_UNVERIFIED');
+ assert.equal(other.leaseStatus(a).active,true);
+ assert.equal(other.inspection(b).mode,'AUTO');
+ other.close();
+});
+test('account rebind request before arm denies, afterwards must await existing leases',t=>{
+ const x=setup(t),a=K(),b=K('fake-B');
+ const w=openEligibilityStore({...x.ports(),verifyDeliveryArm:()=>({verified:true}),
+   verifySettlement:()=>({verified:true,outcome:'PROVEN_NO_SEND'})});
+ x.track(w);
+ issue(w,a,'GLOBAL',3);
+ reserve(w,a,'fake-original');w.enterBoundary({identity:a,intentId:'fake-original'});
+ const gate=w.requestMutationFence({identity:a,scope:'GLOBAL',...admin});
+ assert.equal(w.armSend({identity:a,intentId:'fake-original',w25IntentId:'fake-w25'}).reason,'AUTHORITY_MUTATION_PENDING');
+ assert.equal(reserve(w,b,'fake-new').reason,'AUTHORITY_MUTATION_PENDING');
+ let epoch=0;
+ assert.equal(w.finalizeMutationFence({identity:a,scope:'GLOBAL',kind:'REVOKE_ACCOUNT',
+   generation:gate.generation,...admin,applyW24:()=>{epoch++;return {committed:true}}}).ok,true);
+ assert.equal(epoch,1);
+ assert.equal(w.qualify(b).reason,'GLOBAL_REVOKED');
+});
+test('crash/restart carries pending GLOBAL barrier and fail-closes new sends',t=>{
+ const x=setup(t),a=K(),b=K('fake-B');
+ const w=openEligibilityStore({...x.ports(),verifyDeliveryArm:()=>({verified:true})});
+ issue(w,a,'GLOBAL',2);reserve(w,a,'fake-pending');
+ const gate=w.requestMutationFence({identity:a,scope:'GLOBAL',...admin});
+ w.close();
+ const restarted=openEligibilityStore({...x.ports(),verifyDeliveryArm:()=>({verified:true})});
+ x.track(restarted);
+ assert.equal(restarted.qualify(b).reason,'AUTHORITY_MUTATION_PENDING');
+ assert.equal(restarted.requestMutationFence({identity:a,scope:'GLOBAL',expectedGeneration:gate.generation,...admin}).reason,'MUTATION_ALREADY_PENDING');
+ assert.equal(restarted.finalizeMutationFence({identity:a,scope:'GLOBAL',kind:'REVOKE_GRANT',
+   generation:gate.generation,...admin,applyW24:()=>({committed:true})}).ok,true);
+ assert.equal(restarted.qualify(b).reason,'GLOBAL_REVOKED');
+});
+test('armSend denies missing W25 verified durable outbox attempt',t=>{
+ const x=setup(t),a=K();
+ const w=openEligibilityStore(x.ports());x.track(w);issue(w,a);
+ reserve(w,a,'fake-1');w.enterBoundary({identity:a,intentId:'fake-1'});
+ assert.equal(w.armSend({identity:a,intentId:'fake-1',w25IntentId:'fake-w25'}).reason,'W25_PERSISTED_ATTEMPT_PROOF_MISSING');
+ assert.equal(w.leaseStatus(a).active,false);
+});
+
+test('actual child-process crash retains committed ARMED lease and blocks revocation',async t=>{
+ const x=setup(t),a=K(),b=K('fake-B');issue(x.s,a,'GLOBAL',3);
+ reserve(x.s,a,'fake-crashed');x.s.enterBoundary({identity:a,intentId:'fake-crashed'});
+ const script=[
+  'import {openEligibilityStore} from '+JSON.stringify(new URL('./index.mjs',import.meta.url).href)+';',
+  'const identity=JSON.parse(process.argv[2]);',
+  'const s=openEligibilityStore({path:process.argv[1],now:()=>100000,',
+  'verifyIdentity:k=>({valid:true,binding_revision:k.binding_revision,identity_epoch:1,consent_epoch:1}),',
+  'authorizeMutation:()=>false,verifyDeliveryArm:()=>({verified:true})});',
+  'const p=s.armSend({identity,intentId:"fake-crashed",w25IntentId:"fake-persisted-w25"});',
+  'if(!p.ok)process.exit(9);process.exit(42);'
+ ].join('\n');
+ const code=await new Promise((resolve,reject)=>{
+  const p=spawn(process.execPath,['--input-type=module','-e',script,x.path,JSON.stringify(a)],
+    {windowsHide:true});
+  p.on('error',reject);p.on('close',resolve);
+ });
+ assert.equal(code,42);
+ assert.equal(x.s.leaseStatus(a).active,true);
+ const pending=x.s.requestMutationFence({identity:a,scope:'CONTACT',...admin});
+ assert.equal(pending.activeLease,true);
+ assert.equal(x.s.finalizeMutationFence({identity:a,scope:'CONTACT',...admin,
+   kind:'HUMAN_TAKEOVER',generation:pending.generation,
+   applyW24:()=>({committed:true})}).reason,'ACTIVE_SEND_MUST_SETTLE_FIRST');
+ assert.equal(reserve(x.s,b,'fake-B-while-A-stuck').ok,true);
 });

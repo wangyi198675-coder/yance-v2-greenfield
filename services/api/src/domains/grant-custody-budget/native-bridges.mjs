@@ -72,13 +72,14 @@ function w25ToW24(k) {
  * AUTO and synthetic SEND_MESSAGE only; HUMAN + media require separate owners.
  * No implicit agent, route, RBAC or consent fallbacks. */
 export function createW25EligibilityPort({
-  store,identityService,trustedContext,readAgentState,readRouteState,
+  store,identityService,trustedContext,readAgentState,readRouteState,getDelivery,
 }={}) {
   if(!store||typeof identityService?.evaluate!=='function'||!trustedContext||
-    typeof readAgentState!=='function'||typeof readRouteState!=='function')
+    typeof readAgentState!=='function'||typeof readRouteState!=='function'||
+    typeof getDelivery!=='function')
     throw Error('W25_W24_W44_W43_ROUTE_PORTS_REQUIRED');
   return {
-    async check({k,mode,businessMessageId,phase}) {
+    async check({k,mode,businessMessageId,phase,intentId:w25IntentId}) {
       if(mode!=='AUTO'||!['ADMISSION','PRE_NETWORK'].includes(phase))
         return denied('NONPROD_AUTO_ONLY');
       if(!text(businessMessageId)||!businessMessageId.startsWith('fake-'))
@@ -110,6 +111,18 @@ export function createW25EligibilityPort({
           ?store.enterBoundary({identity,intentId:businessMessageId})
           :store.checkForSend({identity,intentId:businessMessageId});
         if(!fence.ok)return denied(fence.reason);
+        // Only the second W25 PRE_NETWORK sees its persisted IN_FLIGHT
+        // attempt. No W25 Outbox proof, no final synthetic sink eligibility.
+        if(phase==='PRE_NETWORK'){
+          const delivery=getDelivery();
+          if(!delivery||typeof delivery.getAttempt!=='function')return denied('W25_OUTBOX_READER_UNAVAILABLE');
+          if(!text(w25IntentId))return denied('W25_INTENT_ID_REQUIRED');
+          const attempt=delivery.getAttempt(w25IntentId);
+          if(attempt){
+            const armed=store.armSend({identity,intentId:businessMessageId,w25IntentId});
+            if(!armed.ok)return denied(armed.reason);
+          }
+        }
         const scope=store.inspection(identity);
         if(!scope.ok||scope.mode!=='AUTO'||!scope.effectiveGrant)
           return denied('CUSTODY_OR_GRANT_INVALID');
@@ -129,6 +142,30 @@ export function createW25EligibilityPort({
   };
 }
 
+
+/** Verify W25's actual durable IN_FLIGHT attempt before W44 arms a lease.
+ * This is a read-only W25 lookup, not a second Outbox or fake provider ACK. */
+export function createW25PersistedArmVerifier({getDelivery}={}) {
+  if(typeof getDelivery!=='function')throw Error('W25_OUTBOX_READER_REQUIRED');
+  return ({identity,intentId,w25IntentId})=>{
+    try {
+      canonicalK(identity);
+      const delivery=getDelivery();
+      if(!delivery||typeof delivery.getIntent!=='function'||
+          typeof delivery.getAttempt!=='function'||typeof delivery.getAudit!=='function')
+        return {verified:false};
+      const out=delivery.getIntent(w25IntentId);
+      const attempt=delivery.getAttempt(w25IntentId);
+      if(!out||!attempt||out.businessMessageId!==intentId||
+          out.state!=='IN_FLIGHT'||attempt.state!=='IN_FLIGHT')return {verified:false};
+      if(canonicalK(w25ToW24(out.k))!==canonicalK(identity))return {verified:false};
+      const events=delivery.getAudit(w25IntentId);
+      if(!events.some(e=>e.event_type==='SYNTHETIC_BOUNDARY_ENTERED'
+          &&e.details?.attemptId===attempt.id))return {verified:false};
+      return {verified:true,attemptId:attempt.id};
+    } catch {return {verified:false}}
+  };
+}
 
 /**
  * Read-only nonproduction settlement verifier backed by the ACTUAL W25
@@ -152,8 +189,11 @@ export function createW25SettlementVerifier({getDelivery}={}) {
       const attempt=delivery.getAttempt(evidence.w25IntentId);
       const audit=delivery.getAudit(evidence.w25IntentId);
       if(!attempt||!Array.isArray(audit))return {verified:false};
-      if(out.state==='ACKED_SYNTHETIC'&&attempt.state==='ACKED_SYNTHETIC'&&
-          audit.some(x=>x.event_type==='SYNTHETIC_RESULT'&&x.details?.state==='ACKED_SYNTHETIC'))
+      if(['ACKED_SYNTHETIC','DELIVERED_SYNTHETIC','READ_SYNTHETIC'].includes(out.state)&&
+          ['ACKED_SYNTHETIC','DELIVERED_SYNTHETIC','READ_SYNTHETIC'].includes(attempt.state)&&
+          audit.some(x=>(x.event_type==='SYNTHETIC_RESULT'&&x.details?.state==='ACKED_SYNTHETIC')||
+            (x.event_type==='VERIFIED_SYNTHETIC_RECEIPT'&&
+             ['ACK','DELIVERED','READ'].includes(x.details?.kind))))
         return {verified:true,outcome:'CHARGED',actualUnits:1};
       if(out.state==='DENIED'&&attempt.state==='NOT_SENT_AUTHORITY_DENIED'&&
           audit.some(x=>x.event_type==='FINAL_BOUNDARY_DENIED_NO_SEND'))
