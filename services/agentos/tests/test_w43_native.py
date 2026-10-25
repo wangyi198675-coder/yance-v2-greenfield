@@ -214,7 +214,7 @@ def test_native_agentos_trace_persisted_for_sdk_error(tmp_path):
         "assert r['run_id']\n"
         "t=native.read_trace_receipts(s,r['run_id'])\n"
         "assert t['status']=='NATIVE_TRACE_FOUND', t\n"
-        "assert r['status'] in {'AGNO_RUN_COMPLETED','LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED'}\n"
+        "assert r['status'] in {'AGNO_RUN_COMPLETED','LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED','AGNO_RUN_PAUSED_REQUIRES_APPROVAL'}\n"
         "print('REAL_SDK_TRACE_PERSISTED',t['count'])\n"
     )
     env = os.environ.copy()

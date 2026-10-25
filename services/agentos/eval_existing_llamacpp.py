@@ -203,13 +203,15 @@ def run_all():
             from concurrent.futures import ThreadPoolExecutor
             def concurrent_one(i):
                 other=NativeAgnoRuntime(Path(directory)/("concurrent-"+str(i)+".db"))
-                return safe_run(other,scope("concurrent-"+str(i)), "One short greeting.")
+                return safe_run(other,scope("concurrent-"+str(i)),
+                    "Reply only with the English word Hello. Do not call any tools or request approval.")
             started=time.perf_counter()
             with ThreadPoolExecutor(max_workers=2) as pool:
                 concurrent_results=list(pool.map(concurrent_one,(1,2)))
             report["cases"]["concurrent_two"]={
                 "wall_sec":round(time.perf_counter()-started,3),
                 "statuses":[x["status"] for x in concurrent_results],
+                "sdk_statuses":[x.get("sdk_run_status") for x in concurrent_results],
                 "session_ids_distinct":len({x["session_id"] for x in concurrent_results})==2}
         except Exception as exc:
             report["cases"]["concurrent_two"]={"status":"FAILED","error_type":type(exc).__name__}
@@ -221,9 +223,13 @@ def run_all():
         report["cases"]["agentos_inprocess"] = hasattr(runtime.get_unserved_app(), "routes")
         report["cases"]["outbound"] = "DISABLED"
     concurrent_results = report["cases"].get("concurrent_two", {})
-    concurrent_ok = concurrent_results.get("statuses") == ["AGNO_RUN_COMPLETED", "AGNO_RUN_COMPLETED"]
+    concurrent_ok = (concurrent_results.get("statuses") == ["AGNO_RUN_COMPLETED", "AGNO_RUN_COMPLETED"]
+                     and concurrent_results.get("session_ids_distinct") is True)
+    statuses = concurrent_results.get("statuses", [])
+    paused = any(s == "AGNO_RUN_PAUSED_REQUIRES_APPROVAL" for s in statuses)
     report["status"] = ("RUN_EVIDENCE_CAPTURED_NOT_QUALITY_PASS" if concurrent_ok
-                         else "HOLD_CONCURRENT_AGNO_SESSIONS_FAILED")
+                         else ("HOLD_MODEL_UNEXPECTED_APPROVAL_PAUSE" if paused
+                               else "HOLD_CONCURRENT_AGNO_SESSIONS_FAILED"))
     print("W43_EVIDENCE_JSON_BEGIN")
     print(json.dumps(report, ensure_ascii=True, indent=2))
     print("W43_EVIDENCE_JSON_END")

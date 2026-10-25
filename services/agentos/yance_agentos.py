@@ -342,6 +342,18 @@ class NativeAgnoRuntime:
                 "outbound": "DISABLED",
             }
         sdk_status = getattr(getattr(result, "status", None), "value", None)
+        if sdk_status in {"PAUSED", "paused"}:
+            # Agno paused for a human/tool approval. Never report this as a
+            # provider failure or a successful candidate; never auto-resume.
+            return {
+                "status": "AGNO_RUN_PAUSED_REQUIRES_APPROVAL",
+                "sdk_run_status": sdk_status,
+                "run_id": result.run_id,
+                "session_id": sid,
+                "approval": "WAITING_FOR_HUMAN_NOT_AUTO_EXECUTED",
+                "suggestions": [],
+                "outbound": "DISABLED",
+            }
         if sdk_status not in {"COMPLETED", "completed"}:
             return {
                 "status": "LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED",

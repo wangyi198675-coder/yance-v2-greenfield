@@ -73,3 +73,33 @@ def test_model_mismatch_prevents_sdk_call_and_false_provenance(monkeypatch, tmp_
     assert result["status"] == "HOLD_LOCAL_MODEL_ID_AUTH_OR_SERVER_MISMATCH"
     assert result["suggestions"] == [] and result["outbound"] == "DISABLED"
     assert "run_id" not in result and "original_response" not in result
+
+
+@pytest.mark.parametrize("sdk_state, expected_status", [
+    ("PAUSED", "AGNO_RUN_PAUSED_REQUIRES_APPROVAL"),
+    ("ERROR", "LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED"),
+])
+def test_native_approval_pause_not_misreported_as_model_failure(
+        monkeypatch, tmp_path, sdk_state, expected_status):
+    key = tmp_path / "synthetic-protected-key"
+    key.write_text("synthetic-test-only-credential-123456", encoding="utf-8")
+    runtime = NativeAgnoRuntime(tmp_path / "run.db", local_key_file=key)
+    monkeypatch.setattr(runtime, "_authorized_llamacpp_model_matches", lambda: True)
+    monkeypatch.setattr(runtime.agents["CONTACT"], "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            run_id="fake-sdk-" + sdk_state.lower(),
+            status=SimpleNamespace(value=sdk_state), content=None))
+    output = runtime.run(contact(), "fake-hello")
+    assert output["status"] == expected_status
+    assert output["sdk_run_status"] == sdk_state
+    assert output["run_id"] == "fake-sdk-" + sdk_state.lower()
+    assert output["session_id"] == contact().session_id()
+    assert output["suggestions"] == []
+    assert output["outbound"] == "DISABLED"
+    assert "original_response" not in output
+    assert "provenance" not in output
+    assert not runtime.attest_contact_run(contact(), "fake-hello", output)
+    if sdk_state == "PAUSED":
+        assert output["approval"] == "WAITING_FOR_HUMAN_NOT_AUTO_EXECUTED"
+    else:
+        assert "approval" not in output
