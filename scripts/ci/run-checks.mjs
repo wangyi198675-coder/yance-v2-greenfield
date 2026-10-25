@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';import crypto from 'node:crypto';
 const root=path.resolve(import.meta.dirname,'../..'),mode=process.argv[2]||'all',reports=path.join(root,'ci-artifacts');fs.mkdirSync(reports,{recursive:true});
-const report={mode,sha:process.env.GITHUB_SHA||null,base:process.env.CI_BASE_SHA||null,checks:[],notApplicable:[],errors:[]};
+const report={mode,sha:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),base:process.env.CI_BASE_SHA||null,checks:[],notApplicable:[],errors:[]};
 const cmd=(bin,args,cwd=root,timeout=180000)=>spawnSync(bin,args,{cwd,encoding:'utf8',timeout,windowsHide:true});
 function run(bin,args,cwd=root,timeout){const o=cmd(bin,args,cwd,timeout);if(o.status!==0)throw Error(bin+' '+args.join(' ')+' failed: '+String(o.stderr||o.stdout).slice(-800));return o.stdout}
 function check(name,fn){try{report.checks.push({name,status:'PASS',data:fn()||null})}catch(e){report.checks.push({name,status:'FAIL',detail:String(e.message).slice(0,500)});report.errors.push(name+': '+e.message)}}

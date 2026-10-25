@@ -6,7 +6,7 @@ fs.mkdirSync(screens,{recursive:true});
 const port=4178,url='http://127.0.0.1:'+port;
 const proc=spawn('npm',['run','preview','--','--host','127.0.0.1','--port',String(port),'--strictPort'],{cwd:app,stdio:'pipe'});
 let log='';proc.stdout.on('data',d=>log+=d.toString());proc.stderr.on('data',d=>log+=d.toString());
-const report={sha:process.env.GITHUB_SHA||'',browser:'chromium',cases:[],fail:0,source:'CI real new headless Chromium; NOT independent native Windows or human UX'};
+const report={sha:(await import('node:child_process')).spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),browser:'chromium',cases:[],fail:0,source:'CI real new headless Chromium; NOT independent native Windows or human UX'};
 const record=(label,pass,error)=>{report.cases.push({label,status:pass?'PASS':'FAIL',error:error?String(error).slice(0,400):undefined});if(!pass)report.fail++};
 const wait=async()=>{for(let i=0;i<60;i++){if(proc.exitCode!==null)throw Error('vite-preview-exited: '+log.slice(-1000));try{const r=await fetch(url);if(r.ok)return}catch{}await new Promise(r=>setTimeout(r,800));}throw Error('vite-preview-did-not-start '+log.slice(-600))};
 let browser;
