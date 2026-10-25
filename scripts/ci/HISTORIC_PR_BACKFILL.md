@@ -27,3 +27,10 @@ Live results are authoritative only when the Github Actions run, artifact, and c
 ## Incremental HEAD behavior
 
 On each new run, the discovery job reads the current GitHub check-runs for the exact PR HEAD. It skips only completed successful `w30/exact-head-backfill` checks created by `github-actions` with a valid GitHub Actions details URL. A changed HEAD, failed result, wrong app, or absent check remains eligible for real testing. A zero-pending run safely skips verify/publish instead of generating synthetic green results. The protected `nonproduction-merge-gate` is never manufactured or bypassed.
+
+## Event-driven automatic continuation
+
+- On `pull_request_target` opened/synchronize/reopened/edited/ready_for_review, the **trusted default-branch workflow** scans current same-repository PR SHA heads and runs only missing or changed exact SHA test jobs. It does not trust workflow definitions in old Owner branches. Forked PR source branches are excluded from the candidates.
+- A scheduled UTC `17 */2 * * *` sweep covers cross-branch PRs whose base branch is not main, as well as events that did not dispatch a PR workflow. No extra model fees; synthetic/no-key hosted contracts only.
+- GitHub Actions' own `GITHUB_TOKEN` has at most read permissions in discovery and tests, and only `checks:write` in the isolated publisher job. The publisher never checks out untrusted PR source and only attests exact SHA after independent job-outcome, evidence-artifact and current-HEAD checks. No secrets or outbound platform sends.
+- GitHub Actions scheduling is not a service SLA: report late/missed runs as NOT_RUN rather than claiming timely execution. Do not confuse this scoped check with independent security/legal or the protected `nonproduction-merge-gate`.
