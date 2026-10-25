@@ -1,0 +1,40 @@
+{
+  "source": "REAL_WINDOWS_CHROME_HEADLESS",
+  "w09SourceSha": "b1b30e839a33b3bab20b805d7babcdb359086831",
+  "w24OwnerSha": "e10f9e17988fa19c4dc71ce927e5d9eaa01dbdc9",
+  "uiPositiveSuiteSha": "dc93ced824c808fb0d8f2b032d99535fc6b1d905",
+  "syntheticOnly": true,
+  "noRealSends": true,
+  "results": [
+    {
+      "scenario": "HTTP_409",
+      "peer": "fake-peer-002",
+      "postCount": 1,
+      "state": "BLOCKED",
+      "postState": "AUTO",
+      "postEpoch": 0,
+      "proof": "ACTUAL_W24_HTTP_HANDLER",
+      "screenshot": "W46_BC_REAL_CHROME_NEGATIVE_HTTP_409.png"
+    },
+    {
+      "scenario": "HTTP_422",
+      "peer": "fake-peer-003",
+      "postCount": 1,
+      "state": "BLOCKED",
+      "postState": "AUTO",
+      "postEpoch": 0,
+      "proof": "ACTUAL_W24_HTTP_HANDLER",
+      "screenshot": "W46_BC_REAL_CHROME_NEGATIVE_HTTP_422.png"
+    },
+    {
+      "scenario": "PENDING",
+      "peer": "fake-peer-004",
+      "postCount": 1,
+      "state": "BLOCKED",
+      "postState": "AUTO",
+      "postEpoch": 0,
+      "proof": "SYNTHETIC_GATEWAY_APPROVAL_FIXTURE_NOT_W43_RUN",
+      "screenshot": "W46_BC_REAL_CHROME_NEGATIVE_PENDING.png"
+    }
+  ]
+}
