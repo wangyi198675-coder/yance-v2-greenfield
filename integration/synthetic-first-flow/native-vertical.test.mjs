@@ -4,7 +4,7 @@ import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {IdentityConsentService} from '../../services/api/src/domains/identity-consent/identity-consent.mjs';
-import {createW24GrantAuthority,createW24IdentityPorts,createW25EligibilityPort} from '../../services/api/src/domains/grant-custody-budget/native-bridges.mjs';
+import {createW24GrantAuthority,createW24IdentityPorts,createW25EligibilityPort,createW25PersistedArmVerifier,createW25SettlementVerifier} from '../../services/api/src/domains/grant-custody-budget/native-bridges.mjs';
 import {openEligibilityStore} from '../../services/api/src/domains/grant-custody-budget/index.mjs';
 import {MessageDelivery,SyntheticConnectorSink} from '../../services/api/src/domains/message-delivery/index.mjs';
 import {createPeopleTranslationReplyService} from '../../services/api/src/domains/people-translation-reply/index.mjs';
@@ -63,11 +63,14 @@ test('W26 inbound -> W24 K -> W45 translated fixture -> W44 durable grant -> W25
    const ports=createW24IdentityPorts({identityService:ids,trustedContext:ctx,
      readConsentEpoch:({k})=>ids.readConsentEpoch(ctx,k),
      authorizeOperator:({actor})=>actor==='fake-owner-1'});
-   store=openEligibilityStore({path:join(dir,'grant.sqlite'),...ports});
+   store=openEligibilityStore({path:join(dir,'grant.sqlite'),...ports,
+     verifyDeliveryArm:createW25PersistedArmVerifier({getDelivery:()=>delivery}),
+     verifySettlement:createW25SettlementVerifier({getDelivery:()=>delivery})});
    store.grant({identity,scope:'GLOBAL',actor:'fake-owner-1',budgetUnits:3,
      expiresAt:Date.now()+300000});
    const elig=createW25EligibilityPort({store,identityService:ids,trustedContext:ctx,
-     readAgentState:agent,readRouteState:()=>({ready:true,revision:'fake-route-v1'})});
+     readAgentState:agent,readRouteState:()=>({ready:true,revision:'fake-route-v1'}),
+     getDelivery:()=>delivery});
    const sink=new SyntheticConnectorSink();
    delivery=new MessageDelivery({databasePath:join(dir,'outbox.sqlite'),eligibility:elig,sink,
      receiptVerifier:async()=>({verified:true,source:'SYNTHETIC_TEST_ONLY'})});
@@ -79,7 +82,8 @@ test('W26 inbound -> W24 K -> W45 translated fixture -> W44 durable grant -> W25
    const ack=await delivery.dispatchOne(intent.id);
    assert.equal(ack.state,'ACKED_SYNTHETIC');
    assert.equal(sink.calls.length,1);
-   assert.equal(store.finish({identity,intentId:'fake-business-w09-1',action:'COMMIT',actualUnits:1}).state,'COMMITTED');
+   assert.equal(store.settleBoundary({identity,intentId:'fake-business-w09-1',
+     evidence:{w25IntentId:intent.id}}).state,'COMMITTED');
    // W24's actual peer-scoped consent epoch must fence a queued W25 attempt.
    // This regression must fail if the W44 integration silently restores epoch=1.
    const queued=await delivery.submitIntent({k:k25,businessMessageId:'fake-business-w09-consent',
