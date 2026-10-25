@@ -1,61 +1,80 @@
-# W43 Official Agno / AgentOS — Model Policy Correction 2026-10-25
+# W43 | Existing Yance Local AI Assistant → Official Agno 3.1.10
 
-Source Owner: W43, services/agentos/** only. Nonproduction, synthetic test-only. No live account, real send, paid API, production change, or second agent engine.
+Owner: W43, `services/agentos/**` ONLY. Standalone synthetic M1 development, not a production service.
 
-## Decided model strategy
+## Active model source (2026-10-25 user correction)
 
-1. Qwen2.5 1.5B: **HEALTHCHECK ONLY**. The existing local llama.cpp listener 127.0.0.1:11605 and its protected key file are reused only for Agno connectivity and actual Run/Team/session/trace health checks. The Agno OpenAIChat class is an OpenAI-compatible HTTP format, NOT OpenAI cloud, and no fee is incurred.
-2. Qwen3 8B: preferred free LOCAL quality-test model. Default NativeAgnoRuntime chooses official Agno Ollama adapter with qwen3:8b at localhost:11434. It checks the actual installed model list, and fails closed when missing. It never falls back to a small model or paid provider. Actual model-quality acceptance needs completed install and successful real SDK inference.
-3. ChatGPT plan SIWC: the preferred eventual cloud option IF the V2 application is a confirmed participating app and the current user separately authorizes plan sharing, native grant scope and applicable allowance. Subscription login is NOT API eligibility. V2 authoritative proof is currently HOLD, and the W43 policy always denies a cloud call pending W24/W44 native attestation.
-4. Other authorized providers: must be explicitly selected, authorized, and billed only after approval; W43 cannot authorize them and never automatically switches to paid use.
+**Default:** `NativeAgnoRuntime(db_file)` → the EXISTING authenticated llama.cpp process, `http://127.0.0.1:11605/v1`, model `qwen2.5:1.5b`, official Agno `OpenAIChat` local protocol adapter. The protocol name is not a cloud OpenAI API call. The SDK model is never allowed to change the existing server's process, port, bind address, authorization or model. No subprocess starts a model server. No Ollama invocation occurs in this evaluator.
 
-Agno 3.1.10 SDK/AgentOS remains the **sole agent engine**, and providers are SDK Model adapters. Upstream https://github.com/agno-agi/agno (Apache-2.0), https://docs.agno.com/models/compatibility, https://docs.agno.com/agent-os/introduction.
+**Authentication:** backend-only `YANCE_W43_LOCAL_KEY_FILE` must point to the already protected local API key file or `local_key_file=...` must be provided explicitly. Do not save, log, publish, transmit to browser or commit the key. Missing/unreadable key must fail closed. Requests use only the pinned loopback server and approved model ID; anonymous `/v1/models` must return 401.
 
-## Actual interfaces
+**Purpose:** `HEALTHCHECK`. This 1.5B model supports real SDK connectivity, small synthetic conversation runs, tools and DB isolation experiments, not strong-model or human conversation quality certification. Provenance carries `quality_qualified=false` and `outbound=DISABLED`. Candidate count remains 0 at the W43 layer. Do not offer real automatic reply, paid fallback, production authorization or social account sending.
 
-- Scope: SYNTHETIC_TEST_ONLY, fake full canonical K, separate PRIVATE/CONTACT user/session digests, no mixed memory.
-- NativeAgnoRuntime(db_file,backend="qwen3",purpose="QUALITY_EVAL"): official Agent, Team, Agno SqliteDb and AgentOS. Missing qwen3:8b produces explicit HOLD, zero suggestions, no outbound.
-- NativeAgnoRuntime(db_file,backend="llamacpp",local_key_file=<path>,purpose="HEALTHCHECK"): pinned 127.0.0.1:11605 Qwen2.5 1.5B healthcheck only. The protected key never enters Git.
-- run(): actual official SDK invocation; only native RunStatus.COMPLETED with nonempty response is success. SDK ERROR, returned Run ID and Trace never mean successful inference. No fake candidate padding, no sender.
-- remember_synthetic/read_synthetic_memories/read_trace_receipts: real Agno persisted SQLite memory, full-K isolation and Trace. Tool and Approval SDK objects are registered; actual Qwen3 model-selected tool execution and admin approval resume are still HOLD.
-- run_for_w45(): after a genuine strong Qwen3 completion provides W45 expected full-K, fake MID, original SHA, translation request ID, real Run ID, Session ID, Agent ID, provenance and zero draft-only default candidates. Local attest_w45_same_runtime() verifies only in-process runs. A separately authorized cross-process bridge must be implemented before W45 accepts it. W45 alone owns 0-3 real provenance-linked candidates.
-- get_unserved_app(): native AgentOS FastAPI object for LOCAL INSPECTION ONLY. It must NEVER be network served until W24 supplies authenticated identity, consent and revocation/RBAC.
+**2026-10-25 addendum:** PR #36 retains its already-proven 1.5B HEALTHCHECK contract without pretending it proves quality. Qwen3 8B has now been tested using the **existing installed llama.cpp executable and downloaded model weight** on the authorized local device. W43 adds only an official Agno Model-adapter selection (no new agent system or production service). See the Qwen3 section below for exact qualified smoke evidence and HOLD boundaries.
 
-## Historical ChatGPT SIWC formal results inherited (NOT copied)
+## Exact reuse surface
 
-Read MasterController W512_20261019_CHATGPT_PLAN_NATIVE_SIWC_DA424_REAL_THREE_FORMAL_GO.md.
+- `Scope("SYNTHETIC_TEST_ONLY", "fixture-account-1", "CONTACT", "FB_PERSONAL", "fake-peer-001", 1)` computes full synthetic canonical K, user ID and session ID. A PRIVATE scope is separately isolated.
+- `NativeAgnoRuntime(db_file, local_key_file=...)` constructs native official Agno `Agent`, `Team`, `AgentOS` (in-process only), `SqliteDb`, Tools and Memory.
+- `runtime.run(scope, "fake-<prompt>", thread="default")` calls **actual** SDK `Agent.run` or `Team.run`; returns `status, sdk_pin, provider, model_id, purpose, quality_qualified, space, user_id, run_id, session_id, original_response, token_usage, provenance, suggestions=[], outbound=DISABLED`. Errors contain no secrets and return zero suggestions.
+- `runtime.attest_contact_run(scope, prompt, receipt, thread="default")` verifies an untampered receipt issued by the **same in-process W43 runtime** for exact synthetic scope, prompt and thread. NEVER treat this as W24 effective grant or cross-process authorization. An authenticated cross-service bridge needs W24 owner's endpoint and independent security signoff; no AgentOS HTTP serving.
+- `runtime.remember_synthetic` and `runtime.read_synthetic_memories`: persisted Agno SDK SQLite memory with canonical scope isolation.
+- `runtime.read_trace_receipts(scope, run_id)`: native Agno Trace query. A real trace exists only when Agno tracing has been initialized by `runtime.get_unserved_app()`, and this must NOT be bound to a public socket.
+- `runtime.run_for_w45` remains a **separate** strong-model-only legacy evaluation contract; the active 1.5B model cannot pass that gate. W45 can consume the genuine `runtime.run` receipt in synthetic tests, but must not promote unqualified candidates or remove its authorization/attestation controls.
 
-Old Web SHA 7d1d858eccd804700c714a72702198283051f4a2; old API SHA da4242b7b56fbab76a6a1463444b5d885e277b61. Historical results: native first-party SIWC authorized reply candidate HTTP 200, 3 visible reply suggestions, 166 PASS, zero real outgoing messages. Historical security negative cases distinguish completed reasoning metadata + required assistant output_text from forbidden function calls, empty tool results, agentless unauthorized paths, invalid/revoked grants. These are source contracts to inherit via the responsible V2 native Owners, not authorization proof for V2. Old credentials and user messages MUST NOT be read, copied or replayed.
+W45's current `w43-contact-bridge.mjs` matches provider `LLAMACPP_LOCAL_NO_PAID_API` and model ID `qwen2.5:1.5b`; the same-runtime Python attestation cannot be called from Node without a future authorized binding. Cross-process Attestation and W24 grants: **HOLD**. Translation and 0–3 suggestions are W45-owned; W46 owns draft-only Composer, W25 alone sends through authorized MessageDelivery.
 
-Official SIWC scope/usage reference https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites.
-ChatGPT subscriptions and API are independently billed https://help.openai.com/en/articles/9039756-managing-billing-for-chatgpt-and-the-api-platform.
+## Reproduce on DESKTOP-029FH47
 
-V2 current ChatGPT plan-sharing participation, exact grant scope, per-feature rights and remaining allowance: **HOLD_NOT_VERIFIED**. No paid API fallback or extra mandatory API purchase.
+Use the existing independent Python 3.12 venv with `agno==3.1.10`. Do not install/start Ollama or another model.
 
-## Tests and actual model quality results
+```powershell
+$env:YANCE_W43_LOCAL_KEY_FILE = '<authorized-protected-existing-key-file>'
+$env:PYTHONIOENCODING = 'utf-8'
+Remove-Item Env:OPENAI_API_KEY,Env:OLLAMA_API_KEY -ErrorAction SilentlyContinue
+& '<existing-W43-venv>\Scripts\python.exe' -m pytest -q services/agentos/tests
+& '<existing-W43-venv>\Scripts\python.exe' -u services/agentos/eval_existing_llamacpp.py
+```
 
-Install requirements-test.txt into independent Python 3.12 venv. Never use a production process.
+Evaluator writes synthetic-only, public-safe Run IDs/provenance, timing, model status and short fictional response previews; never the API key. The real-service tests require the user-authorized local machine, and ordinary CI must not invent local-server PASS.
 
-PowerShell, from repo root:
-    $env:YANCE_W43_LOCAL_KEY_FILE = "<authorized protected local key file path>"
-    Remove-Item Env:OPENAI_API_KEY,Env:OLLAMA_API_KEY -ErrorAction SilentlyContinue
-    python -m pytest -q --basetemp="<separate writable private test temp>" services/agentos/tests
+The Agno 3.1.10 model adapter uses OpenAI-compatible loopback HTTP; this is not OpenAI cloud. Agents and Teams use only synthetic fixture context; approved real users and providers are not connected.
 
-W43 tests as of 2026-10-25: 38 PASS, 0 FAIL. Qwen2.5 1.5B REAL SDK Agent/Team/Trace healthcheck and native memory/session persistence succeeded. This is not a quality score. Model-provider policy, cloud denial and simulated W45 DTO shape tests also passed; these latter tests do not call Qwen3 or a cloud model.
+## Status and independent gates
 
-Qwen3 test script:
-    python services/agentos/eval_qwen3_8b.py
+Direct evidence: real four-language ZH/EN/DE/PL Agno Run; Team Run; SQLite Session restart and full-K isolation; native Memory and Trace; one model-selected synthetic Tool; native structured-output schema; expected 401 invalid credential, local transport failure, SDK timeout and concurrent synthetic sessions. See W43's same-day sanitized evaluator log and COORD_AGGREGATE receipt for case-by-case results. Polish naturalness is imperfect. These are engineering connectivity smokes, **not** translation quality, Tool breadth, 200 capabilities or conversational acceptance.
 
-2026-10-25 result: HOLD_MODEL_NOT_INSTALLED, exit code 2, inference_tests_run=0. This script must not fallback. After actual installation, it will exercise four original EN/DE/PL/ZH prompts and one actual model-selected native tool call, reporting per-case SDK status. Even passing script is only an engineering language smoke; full translation semantics and reply style require W45 review.
+**HOLD:** supervised Approval resume, full AgentOS API/Trace control-plane authorization, W24/W44 identity/grants/budget, W45 real translation & qualified candidates, W46 Composer handoff, W25 outbound, real-person data, production deployment, any cloud/paid model. No actual social contact send.
 
-W45 current separate owned branch cc70468bc82bd2d9c7a0fd9dc0e4499cc670cbd8: read-only tests 18/18 PASS. Its LibreTranslate loopback HTTP response is MOCKED, so real multilingual translation and actual 0-3 strong-model suggestions remain pending.
 
-## Owner dependencies and remaining blocks
+## W43 incremental Qwen3 8B actual SDK verification (2026-10-25)
 
-P0 W24/W44: V2 real authorized SIWC participation, share scope, quota, revocation and exact effective grant. W43 NEVER accepts login or caller-supplied flags as authorization.
-P0 W43: Qwen3 8B completed installation, real inference, tool invocation and human approval continuation are not yet verified.
-P1 W45: real EN/DE/PL/Chinese translation engine, real provenance, 0-3 candidates and cross-process W43 attestation.
-P1 W46: unique B+C Composer draft handoff. W25: sole synthetic Outbox/ACK/UNKNOWN, no alternative sender.
-P0 hosted AgentOS/Control Plane: no network hosting before authorized W24 gateway and security review.
+This section supersedes earlier 1.5B-only wording for **new real Qwen3 tests**, without changing historical PR #36 healthcheck findings. No new agent service is developed; the existing local model execution program and weights are reused, in an owner-authorized localhost process. The Qwen3 model at 127.0.0.1:11605 is loaded by an external existing test process with --reasoning off; W43 did not restart or modify that other view's process. An exploratory temporary port 11606 launched by this W43 turn was stopped after its evidence and is NOT a runtime dependency.
 
-The source ACK remains in GitHub Issue #5. An independent human legal/security signoff is separate.
+Actual W43 SDK entrypoint:
+- NativeAgnoRuntime(db_file, backend="qwen3_llamacpp", purpose="QUALITY_EVAL", local_key_file=<existing private path>).
+- Exact model: qwen3:8b (5,225,374,496-byte already downloaded GGUF); exact provider LLAMACPP_LOCAL_QWEN3_8B_FREE, OpenAIChat is ONLY the official Agno localhost HTTP protocol adapter.
+- The Agno adapter disables Qwen3 thinking in the llama.cpp chat template to return actual answer text (not just RunStatus.COMPLETED with an empty result). This is engineering output control, not a translation or style score.
+- The older Ollama qwen3 backend remains fail-closed on that machine because its executable runner is missing. Never relabel the broken Ollama run as model PASS, and never auto-select paid APIs.
+- All contact runs carry native sdk_pin, user/session isolation, provider, model, full Run ID, token counts and same-runtime scope/prompt/receipt attestation. Native Trace/Memory/Team remain existing SDK, no synthetic additional actor or message sender.
+- A native run may be COMPLETED yet return empty text. Only AGNO_RUN_COMPLETED with nonempty original_response and provenance is a usable response.
+- W45 handoff: run_for_w45(scope, source_mid, original, translation_request_id, synthetic_prompt) returns a genuine Qwen3 Run-bound envelope (full K, MID, original SHA, translation request ID, SDK Run/Session/Agent IDs, model provider and zero default candidates); attest_w45_same_runtime verifies this envelope ONLY in process. Cross-process HTTP/Node authorization and candidate generation are W24/W45-owned. No W43 generated 0-3 suggestions and no Composer insert claims.
+
+Actual sanitized evidence on DESKTOP-029FH47:
+- EN -> ZH Run 5e30a28c-da16-4c09-b26c-a947fbb16dc9, COMPLETED + Chinese text.
+- DE -> ZH Run 2f34e2a0-bb3c-4150-8c03-b72f1437ed76, COMPLETED + Chinese text.
+- PL -> ZH Run bcf41b72-07ed-4aec-9936-2a058b8a521b, COMPLETED + Chinese text.
+- ZH synthetic short reply Run 939974ff-df53-4bea-bf8f-c9366375648f, COMPLETED + Chinese text.
+- True model-selected official synthetic_source_lookup tool Run c333b328-806b-4bed-beff-99a42ece278b: COMPLETED and tool returned SYNTHETIC_SOURCE_ONLY:fake-test.
+- W45 envelope Run d6ef5e9b-ea45-4656-a945-a32f3c3a4726, actual SDK COMPLETED, same-runtime attestation TRUE, candidates=[].
+- All above were 6 REAL local Qwen3 SDK calls. The evaluator reports SDK_SMOKE_PASS_HUMAN_QUALITY_HOLD and exit 0; it checks native completion, model source, nonempty appropriate script output, real tool result and native receipt. It is **NOT** independent semantic translation quality, naturalness, style quality, tool catalog breadth, human approval-resume or production acceptance.
+
+Reproduce on the currently authorized local machine (no new download or server start by script):
+  $env:YANCE_W43_LOCAL_KEY_FILE = "<existing protected local key file path>"
+  Remove-Item Env:OPENAI_API_KEY,Env:OLLAMA_API_KEY -ErrorAction SilentlyContinue
+  python services/agentos/eval_qwen3_8b.py
+  python -m pytest -q --basetemp="<private writable test dir>" services/agentos/tests
+
+Unit + synthetic suite at this SHA: **48 PASS / 1 SKIP / 0 FAIL** on the currently Qwen3-loaded machine. The one skip is the old 1.5B live healthcheck requiring qwen2.5:1.5b to be currently advertised at the same 11605 port; PR #36 historical real 1.5B evidence is preserved rather than falsely retested against Qwen3. Do NOT convert the skip to PASS.
+
+Current P0/P1 cross-Owner holds: W24 authenticated actor/K/epoch/revocation; W45 translation semantics (EN/DE/PL/ZH), true 0-3 sourced draft replies, a sanctioned cross-process attested Agno Run bridge; W46 real B+C Composer insertion and manual takeover; W44/W25 grant, budget, single MessageDelivery/Outbox; Agno Approval RESUME and expanded tools untested. Do not log in a real account, send a real message, charge a cloud API, expose AgentOS HTTP or deploy.
