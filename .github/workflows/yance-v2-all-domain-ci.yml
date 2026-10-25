@@ -91,7 +91,8 @@ jobs:
           if [ -f services/agentos/tests/test_w43_native.py ]; then
             test -f services/agentos/requirements-test.txt || { echo "::error::Agno test dependencies missing"; exit 3; }
             python -m pip install --disable-pip-version-check -r services/agentos/requirements-test.txt
-            python -m pytest -q services/agentos/tests
+            python -m pytest -q -m 'not local_model' services/agentos/tests
+            echo 'NOT_RUN: local_model-marked tests require a protected Windows localhost key and actual llama.cpp; never a hosted CI PASS'
           elif [ -d services/agentos ] && find services/agentos -type f ! -name .gitkeep | grep -q .; then
             echo "::error::Agno native files changed but required real tests are missing"
             exit 3

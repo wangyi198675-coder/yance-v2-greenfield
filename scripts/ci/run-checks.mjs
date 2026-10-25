@@ -19,7 +19,7 @@ const nativePaths=[
 ['W28-Baileys','connectors/baileys/'],['W29-TDLib','connectors/tdlib-json/'],
 ['W46-Frontend','apps/web/'],['W43-Agno','services/agentos/'],['M0-Contract','integration/synthetic-first-flow/']];
 if(['all','contract'].includes(mode)){
-check('contract-252-and-UIE100',()=>{run('node',['scripts/verify-evidence.cjs']);let v=fs.readFileSync(path.join(root,'contracts/source/10_authority252.csv'),'utf8');must(v.trim().split(/\r?\n/).length===253,'252 rows required');return {stableIDs:252,uiIDs:100}});
+check('contract-252-and-UIE100',()=>{run('node',['scripts/ci/verify-frozen-contracts.cjs']);let v=fs.readFileSync(path.join(root,'contracts/source/10_authority252.csv'),'utf8');must(v.trim().split(/\r?\n/).length===253,'252 rows required');return {stableIDs:252,uiIDs:100}});
 }
 if(['all','native'].includes(mode)){
 check('committed-domain-tests',()=>{
