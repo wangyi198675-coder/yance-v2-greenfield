@@ -19,15 +19,16 @@ from agno.agent import Agent
 from agno.approval import approval
 from agno.memory import UserMemory
 from agno.db.sqlite import SqliteDb
-from agno.models.ollama import Ollama
 from agno.models.openai import OpenAIChat  # local OpenAI-compatible llama.cpp protocol, not OpenAI cloud
 from agno.os import AgentOS
 from agno.team import Team
 from agno.tools import tool
 from model_policy import classify_provider, v2_chatgpt_siwc_status
+from w43_capacity import one_slot
 
 CHANNELS = frozenset({"FB_PERSONAL", "FB_PAGE", "WHATSAPP_PERSONAL", "TELEGRAM_PERSONAL"})
-PROVIDER = "LLAMACPP_LOCAL_NO_PAID_API"
+PROVIDER = "LLAMACPP_LOCAL_NO_PAID_API"  # legacy 1.5B HEALTHCHECK
+PROVIDER_QWEN3 = "LLAMACPP_LOCAL_QWEN3_8B_FREE"  # W45 PR #16 exact contract
 SDK_PIN = "3.1.10"
 
 
@@ -118,28 +119,22 @@ def review_synthetic_draft(draft_id: str) -> str:
     return "SIMULATED_DRAFT_REVIEW_ONLY_NO_OUTBOUND"
 
 
-def _local_model(host: str, model_id: str) -> Ollama:
-    url = urlsplit(host)
-    if url.scheme != "http" or url.hostname not in {"127.0.0.1", "localhost", "::1"}:
-        raise LocalOnlyError("LOCAL_OLLAMA_HTTP_ONLY")
-    if url.username or url.password or url.query or url.fragment or url.path not in {"", "/"}:
-        raise LocalOnlyError("INVALID_LOCAL_MODEL_ENDPOINT")
-    if os.getenv("OLLAMA_API_KEY") or os.getenv("OPENAI_API_KEY"):
-        raise LocalOnlyError("PAID_OR_CLOUD_PROVIDER_ENV_FORBIDDEN")
-    if model_id not in {"qwen2.5:0.5b", "qwen3:8b"}:
-        raise LocalOnlyError("MODEL_NOT_ALLOWLISTED")
-    return Ollama(id=model_id, host=host, api_key=None, timeout=90, retries=0)
+def _local_model(host: str, model_id: str):
+    """Legacy test symbol. V2's Ollama inference path is disabled."""
+    raise LocalOnlyError("OLLAMA_DISABLED_USE_EXISTING_LLAMACPP")
 
 
 def _local_llamacpp_model(host: str, model_id: str, key_file: str | Path | None) -> OpenAIChat:
     """Use an EXISTING llama.cpp OpenAI-compatible listener, never OpenAI cloud."""
     url = urlsplit(host)
     if (url.scheme != "http" or url.hostname != "127.0.0.1"
-            or url.port != 11605 or url.username or url.password
+            or url.username or url.password
             or url.query or url.fragment or url.path not in {"", "/"}):
         raise LocalOnlyError("LLAMACPP_FIXED_LOOPBACK_ONLY")
-    if model_id != "qwen2.5:1.5b":
-        raise LocalOnlyError("LOCAL_MODEL_NOT_ALLOWLISTED")
+    # Existing 11605 listener advertises exactly one loaded local model at a time.
+    # Neither a different port nor an alternate/cloud model may be selected.
+    if (url.port, model_id) not in {(11605, "qwen2.5:1.5b"), (11605, "qwen3:8b")}:
+        raise LocalOnlyError("LOCAL_MODEL_OR_PORT_NOT_ALLOWLISTED")
     if key_file is None:
         raise LocalOnlyError("LOCAL_API_KEY_FILE_REQUIRED")
     try:
@@ -154,7 +149,11 @@ def _local_llamacpp_model(host: str, model_id: str, key_file: str | Path | None)
     # OpenAIChat here is the official Agno SDK's localhost protocol adapter.
     # The key is passed only to the explicitly pinned 127.0.0.1 listener.
     return OpenAIChat(id=model_id, api_key=key, base_url=host + "/v1",
-                      timeout=90, max_retries=0, temperature=0)
+                      timeout=180 if model_id == "qwen3:8b" else 90,
+                      max_tokens=160 if model_id == "qwen3:8b" else None,
+                      extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+                      if model_id == "qwen3:8b" else None,
+                      max_retries=0, temperature=0)
 
 
 class NativeAgnoRuntime:
@@ -164,42 +163,35 @@ class NativeAgnoRuntime:
         self,
         db_file: str | Path,
         *,
-        backend: str = "qwen3",
+        backend: str = "llamacpp",
         host: str | None = None,
         model_id: str | None = None,
         local_key_file: str | Path | None = None,
-        purpose: str = "QUALITY_EVAL",
+        purpose: str = "HEALTHCHECK",
     ) -> None:
-        if backend == "qwen3":
-            if purpose != "QUALITY_EVAL" or model_id not in (None, "qwen3:8b"):
-                raise LocalOnlyError("QWEN3_8B_QUALITY_ONLY")
-            host = host or "http://127.0.0.1:11434"
-            model_id = "qwen3:8b"
-            self.model = _local_model(host, model_id)
-            self.provider = "OLLAMA_LOCAL_QWEN3_8B_FREE"
-            self.policy_provider = "LOCAL_QWEN3_8B"
-        elif backend == "llamacpp":
-            if purpose != "HEALTHCHECK":
-                raise LocalOnlyError("QWEN25_15B_HEALTHCHECK_ONLY")
-            host = host or "http://127.0.0.1:11605"
-            model_id = model_id or "qwen2.5:1.5b"
-            self.model = _local_llamacpp_model(host, model_id, local_key_file)
-            self.provider = "LLAMACPP_LOCAL_HEALTHCHECK_ONLY"
-            self.policy_provider = "LOCAL_QWEN25_15B"
-        elif backend == "ollama":
-            if purpose != "HEALTHCHECK" or model_id not in (None, "qwen2.5:0.5b"):
-                raise LocalOnlyError("LEGACY_OLLAMA_HEALTHCHECK_ONLY")
-            host = host or "http://127.0.0.1:11434"
-            model_id = "qwen2.5:0.5b"
-            self.model = _local_model(host, model_id)
-            self.provider = "OLLAMA_LOCAL_LEGACY_HEALTHCHECK_ONLY"
-            self.policy_provider = "LOCAL_QWEN25_15B"
-        else:
-            raise LocalOnlyError("UNKNOWN_MODEL_BACKEND")
+        # SINGLE formal V2 inference interface. Historical Ollama backends remain
+        # in immutable old SHAs but are NOT selectable at this W43 new HEAD.
+        if backend != "llamacpp":
+            raise LocalOnlyError("OLLAMA_DISABLED_USE_EXISTING_LLAMACPP")
+        if purpose not in {"HEALTHCHECK", "QUALITY_EVAL"}:
+            raise LocalOnlyError("UNSUPPORTED_PURPOSE")
+        host = host or "http://127.0.0.1:11605"
+        model_id = model_id or "qwen3:8b"
+        if purpose == "QUALITY_EVAL" and model_id != "qwen3:8b":
+            raise LocalOnlyError("STRONG_MODEL_REQUIRED_FOR_QUALITY_EVAL")
+        self._local_key_file = local_key_file or os.getenv("YANCE_W43_LOCAL_KEY_FILE")
+        self.model = _local_llamacpp_model(host, model_id, self._local_key_file)
+        self.provider = PROVIDER_QWEN3 if model_id == "qwen3:8b" else PROVIDER
+        self.policy_provider = (
+            "LOCAL_QWEN3_8B" if model_id == "qwen3:8b" else "LOCAL_QWEN25_15B"
+        )
+        self.backend = backend
         self.purpose = purpose
         self.model_id = model_id
         self._issued_w45_receipts: dict[str, str] = {}  # ephemeral in-process proof; NOT cross-service authorization
+        self._issued_contact_runs: dict[str, str] = {}  # run receipts bound to exact synthetic scope+prompt+thread
         self._native_quality_run_verified = False
+        self._native_health_run_verified = False
         self.db_file = Path(db_file)
         if not self.db_file.parent.is_dir():
             raise FileNotFoundError("DB_PARENT_MUST_EXIST")
@@ -273,6 +265,25 @@ class NativeAgnoRuntime:
         """
         return self.agent_os.get_app()
 
+    def _authorized_llamacpp_model_matches(self) -> bool:
+        """Verify EXACT advertised alias and protected auth before each run."""
+        try:
+            import httpx
+            if not self._local_key_file:
+                return False
+            key = Path(self._local_key_file).read_text(encoding="utf-8-sig").strip()
+            with httpx.Client(timeout=4.0, trust_env=False) as client:
+                resp = client.get(
+                    "http://127.0.0.1:11605/v1/models",
+                    headers={"Authorization": "Bearer " + key},
+                )
+            return (resp.status_code == 200 and any(
+                isinstance(m, dict) and m.get("id") == self.model_id
+                for m in resp.json().get("data", [])
+            ))
+        except Exception:
+            return False
+
     def run(self, scope: Scope, text: str, *, thread: str = "default", team: bool = False) -> dict:
         if not isinstance(scope, Scope):
             raise ScopeError("SCOPE_REQUIRED")
@@ -280,36 +291,41 @@ class NativeAgnoRuntime:
         if not text.startswith("fake-"):
             raise ScopeError("SYNTHETIC_INPUT_REQUIRED")
         sid = scope.session_id(thread)
-        if self.policy_provider == "LOCAL_QWEN3_8B":
-            # A running 0.5B/1.5B instance or partial 8B download does NOT qualify.
-            try:
-                import ollama
-                installed = {x.model for x in ollama.Client(
-                    host="http://127.0.0.1:11434", timeout=8
-                ).list().models}
-            except Exception:
-                installed = set()
-            if "qwen3:8b" not in installed:
-                return {
-                    "status": "HOLD_QWEN3_8B_NOT_INSTALLED_OR_MODEL_SERVER_UNAVAILABLE",
-                    "model_id": self.model_id,
-                    "session_id": sid,
-                    "suggestions": [],
-                    "outbound": "DISABLED",
-                }
         runner = self.teams[scope.space] if team else self.agents[scope.space]
         try:
-            result = runner.run(text, user_id=scope.scoped_user_id, session_id=sid)
+            with one_slot() as admitted:
+                if not admitted:
+                    return {
+                        "status": "HOLD_LOCAL_MODEL_CAPACITY_BUSY",
+                        "session_id": sid, "model_id": self.model_id,
+                        "suggestions": [], "outbound": "DISABLED",
+                    }
+                if not self._authorized_llamacpp_model_matches():
+                    return {
+                        "status": "HOLD_LOCAL_MODEL_ID_AUTH_OR_SERVER_MISMATCH",
+                        "session_id": sid, "model_id": self.model_id,
+                        "suggestions": [], "outbound": "DISABLED",
+                    }
+                result = runner.run(text, user_id=scope.scoped_user_id, session_id=sid)
         except Exception as exc:
-            # No exception detail, credentials, model output, or record IDs leaked.
             return {
                 "status": "LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED",
-                "error_type": type(exc).__name__,
+                "error_type": type(exc).__name__, "session_id": sid,
+                "suggestions": [], "outbound": "DISABLED",
+            }
+        sdk_status = getattr(getattr(result, "status", None), "value", None)
+        if sdk_status in {"PAUSED", "paused"}:
+            # Agno paused for a human/tool approval. Never report this as a
+            # provider failure or a successful candidate; never auto-resume.
+            return {
+                "status": "AGNO_RUN_PAUSED_REQUIRES_APPROVAL",
+                "sdk_run_status": sdk_status,
+                "run_id": result.run_id,
                 "session_id": sid,
+                "approval": "WAITING_FOR_HUMAN_NOT_AUTO_EXECUTED",
                 "suggestions": [],
                 "outbound": "DISABLED",
             }
-        sdk_status = getattr(getattr(result, "status", None), "value", None)
         if sdk_status not in {"COMPLETED", "completed"}:
             return {
                 "status": "LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED",
@@ -320,14 +336,18 @@ class NativeAgnoRuntime:
                 "outbound": "DISABLED",
             }
         content = result.content if isinstance(result.content, str) else ""
-        if self.policy_provider == "LOCAL_QWEN3_8B" and content:
+        if self.purpose == "HEALTHCHECK" and content:
+            self._native_health_run_verified = True  # connectivity only; NEVER a quality certification
+        if self.policy_provider == "LOCAL_QWEN3_8B" and self.purpose == "QUALITY_EVAL" and content:
             self._native_quality_run_verified = True  # model EXECUTION, not a subjective quality grade
-        return {
+        receipt = {
             "status": "AGNO_RUN_COMPLETED" if content else "AGNO_RUN_NO_TEXT",
             "engine": "OFFICIAL_AGNO_SDK",
             "sdk_pin": SDK_PIN,
             "provider": self.provider,
             "model_id": self.model_id,
+            "purpose": self.purpose,
+            "quality_qualified": False,  # no 1.5B quality approval or strong-model certification
             "space": scope.space,
             "user_id": scope.scoped_user_id,
             "session_id": sid,
@@ -338,10 +358,46 @@ class NativeAgnoRuntime:
                 "run_id": result.run_id,
                 "session_id": sid,
                 "source": self.provider,
+                "model_id": self.model_id,
+                "sdk_pin": SDK_PIN,
+                "purpose": self.purpose,
+                "quality_qualified": False,
             },
             "suggestions": [],  # W45 must select 0-3 sourced replies, not W43.
             "outbound": "DISABLED",
         }
+        metrics = getattr(result, "metrics", None)
+        token_usage = {}
+        for field in ("input_tokens", "output_tokens", "total_tokens"):
+            value = getattr(metrics, field, None)
+            if type(value) is int and value >= 0:
+                token_usage[field] = value
+        receipt["token_usage"] = token_usage if token_usage else None
+        if scope.space == "CONTACT" and receipt["status"] == "AGNO_RUN_COMPLETED":
+            digest_source = json.dumps({"scope": scope.canonical_k, "thread": thread,
+                "prompt": text, "receipt": receipt}, ensure_ascii=True, sort_keys=True)
+            self._issued_contact_runs[result.run_id] = hashlib.sha256(digest_source.encode()).hexdigest()
+        return receipt
+
+    def attest_contact_run(self, scope: Scope, prompt: str, receipt: dict, *, thread: str = "default") -> bool:
+        """Same-process W45 adapter evidence, NOT an external security grant.
+
+        W24 must authorize the caller and transport before exposing this via RPC.
+        """
+        if not isinstance(scope, Scope) or scope.space != "CONTACT" or not isinstance(receipt, dict):
+            return False
+        run_id = receipt.get("run_id")
+        if not isinstance(run_id, str) or not run_id or receipt.get("status") != "AGNO_RUN_COMPLETED":
+            return False
+        digest = self._issued_contact_runs.get(run_id)
+        if not digest or not isinstance(prompt, str) or not isinstance(thread, str):
+            return False
+        try:
+            value = json.dumps({"scope": scope.canonical_k, "thread": thread,
+                "prompt": prompt, "receipt": receipt}, ensure_ascii=True, sort_keys=True)
+        except (ValueError, TypeError):
+            return False
+        return hashlib.sha256(value.encode()).hexdigest() == digest
 
     def remember_synthetic(self, scope: Scope, note: str) -> dict:
         """Persist one fake user memory via Agno's native SqliteDb memory API."""
@@ -459,10 +515,10 @@ class NativeAgnoRuntime:
             "purpose": self.purpose,
             "model_policy": classify_provider(
                 self.policy_provider, self.purpose,
-                local_model_verified=self._native_quality_run_verified
+                local_model_verified=(self._native_health_run_verified if self.purpose == "HEALTHCHECK" else self._native_quality_run_verified)
             ).as_dict(),
             "run": "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE"
-                   if self.purpose == "QUALITY_EVAL" else "HEALTHCHECK_ONLY_NOT_QUALITY",
+                   if self.purpose == "QUALITY_EVAL" else ("LOCAL_AGNO_CONNECTIVITY_VERIFIED_NOT_QUALITY" if self._native_health_run_verified else "LOCAL_AGNO_CONNECTIVITY_NOT_YET_VERIFIED"),
             "sessions": "NATIVE_SQLITE_TESTED_SYNTHETIC",
             "team": "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE"
                     if self.purpose == "QUALITY_EVAL" else "HEALTHCHECK_ONLY",
