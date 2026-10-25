@@ -35,6 +35,16 @@ jobs:
           ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -60,6 +70,16 @@ jobs:
           ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -82,6 +102,16 @@ jobs:
         with:
           ref: ${{ inputs.target_sha || github.sha }}
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -109,6 +139,16 @@ jobs:
         with:
           ref: ${{ inputs.target_sha || github.sha }}
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -135,6 +175,16 @@ jobs:
           ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
