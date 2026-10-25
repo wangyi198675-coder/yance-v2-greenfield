@@ -54,6 +54,42 @@ void fetch('/api/v2/contacts',{credentials:'omit',redirect:'error'}).then(async 
           .replace('V2 LAB','V2 本机');
         code=code.replace('function openPrivateWorkspace(){state.privateOpen=true;state.variantMenuOpen=false}',
           "function openPrivateWorkspace(){state.dialog='闺蜜大脑尚未连接可信运行授权，未执行模型调用'}");
+        // Remove remnants of the historical W37 clickable LAB from the real no-provider UI.
+        // Every old demo control here would otherwise suggest that a real account existed.
+        failUnless(code,'四方案真实交互试验 · 本地离线');
+        failUnless(code,'加载更多（25）');
+        failUnless(code,'所有账号均为fixture-account-1/2');
+        code=code.replace('四方案真实交互试验 · 本地离线','本地运行 · 无需言策账号');
+        code=code.replace(/<nav class="arm-switch"[\s\S]*?<\/nav>/,'');
+        code=code.replace(/<Button variant="ghost" size="icon-sm" aria-label="重置所有实验状态"[\s\S]*?<\/Button>/,'');
+        code=code.replace(/<Button variant="ghost" size="icon-sm" aria-label="查看四平台与虚构账号说明"[\s\S]*?<\/Button>/,'');
+        code=code.replace('<div class="account-pills">','<div v-if="allContacts.length" class="account-pills">');
+        code=code.replace('<div class="channel-pills"','<div v-if="allContacts.length" class="channel-pills"');
+        code=code.replace('<div v-if="isAdaptive" class="inbox-pills"','<div v-if="isAdaptive&&allContacts.length" class="inbox-pills"');
+        code=code.replace('按冻结数据未读排序 · 无AI推断','仅按已取得的实际消息状态显示');
+        code=code.replace('<div class="page-bottom">','<div v-if="filtered.length>paged.length" class="page-bottom">');
+        code=code.replace('加载更多（25）','加载更多');
+        code=code.replace('Math.min(120,state.pageSize+25)','Math.min(filtered.length,state.pageSize+25)');
+        code=code.replace(/<Button variant="ghost" size="sm" @click="state.pageSize=120">查看全部(?:120)?<\/Button>/,'');
+        code=code.replace(/<section v-else class="no-active-pane"[\s\S]*?<\/section>/,
+          `<section v-else class="no-active-pane" data-test="no-active">
+            <LockKeyhole :size="30"/>
+            <h2>尚未连接聊天平台</h2>
+            <p>本机 API 已启动，但还没有授权的 Facebook、WhatsApp、Telegram 或 Page 账号。</p>
+            <p>连接平台需要你主动授权。当前无法读取真人联系人或消息，闺蜜大脑托管与发送保持关闭。</p>
+            <small data-test="w47-empty-authority">当前状态：{{w47ApiStatus}}</small>
+          </section>`);
+        code=code.replace("if(q.get('private')==='1')state.privateOpen=true;",'')
+          .replace("if(q.get('pulse')==='1')state.pulseOpen=true;",'')
+          .replace("if(q.get('uat')==='1'){const u=await import('./browser-tests');await u.runBrowserUAT()}",'');
+        code=code.replace('本地模拟状态','当前运行状态')
+          .replace('以下仅为离线测试反馈，不代表真实授权、发送或工具运行。',
+             '平台和联系人尚未授权。这里不会模拟登录、聊天或 AI 成功。');
+        code=code.replace('仅127.0.0.1 · 离线合成数据','本机 127.0.0.1 · 无平台授权');
+        code=code.replace('{{currentArm.sub}} · {{state.theme}} / {{state.appearance}} · reset {{state.resetCount}}',
+          '{{state.theme}} / {{state.appearance}}');
+        code=code.replace("VIEW {{active?.peer_id||'NO_SELECTION'}} · 真实发送 0 · P4 HOLD",
+          '托管未启用 · 消息发送禁用');
         code=code.replace(/<div class="lab-strip">[\s\S]*?<\/div>/,
           `<div class="lab-strip" data-test="w47-api-state">
 <ShieldCheck :size="13"/> V2 本机运行 · API：{{w47ApiStatus}} · Web: {{w47WebSha}} · 无平台连接 · 自动发送禁用
