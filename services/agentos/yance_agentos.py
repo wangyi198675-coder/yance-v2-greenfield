@@ -135,11 +135,13 @@ def _local_llamacpp_model(host: str, model_id: str, key_file: str | Path | None)
     """Use an EXISTING llama.cpp OpenAI-compatible listener, never OpenAI cloud."""
     url = urlsplit(host)
     if (url.scheme != "http" or url.hostname != "127.0.0.1"
-            or url.port != 11605 or url.username or url.password
+            or url.username or url.password
             or url.query or url.fragment or url.path not in {"", "/"}):
         raise LocalOnlyError("LLAMACPP_FIXED_LOOPBACK_ONLY")
-    if model_id != "qwen2.5:1.5b":
-        raise LocalOnlyError("LOCAL_MODEL_NOT_ALLOWLISTED")
+    # Existing 11605 listener advertises exactly one loaded local model at a time.
+    # Neither a different port nor an alternate/cloud model may be selected.
+    if (url.port, model_id) not in {(11605, "qwen2.5:1.5b"), (11605, "qwen3:8b")}:
+        raise LocalOnlyError("LOCAL_MODEL_OR_PORT_NOT_ALLOWLISTED")
     if key_file is None:
         raise LocalOnlyError("LOCAL_API_KEY_FILE_REQUIRED")
     try:
@@ -154,7 +156,11 @@ def _local_llamacpp_model(host: str, model_id: str, key_file: str | Path | None)
     # OpenAIChat here is the official Agno SDK's localhost protocol adapter.
     # The key is passed only to the explicitly pinned 127.0.0.1 listener.
     return OpenAIChat(id=model_id, api_key=key, base_url=host + "/v1",
-                      timeout=90, max_retries=0, temperature=0)
+                      timeout=180 if model_id == "qwen3:8b" else 90,
+                      max_tokens=160 if model_id == "qwen3:8b" else None,
+                      extra_body={"chat_template_kwargs": {"enable_thinking": False}}
+                      if model_id == "qwen3:8b" else None,
+                      max_retries=0, temperature=0)
 
 
 class NativeAgnoRuntime:
@@ -177,6 +183,16 @@ class NativeAgnoRuntime:
             model_id = "qwen3:8b"
             self.model = _local_model(host, model_id)
             self.provider = "OLLAMA_LOCAL_QWEN3_8B_FREE"
+            self.policy_provider = "LOCAL_QWEN3_8B"
+        elif backend == "qwen3_llamacpp":
+            if purpose != "QUALITY_EVAL" or model_id not in (None, "qwen3:8b"):
+                raise LocalOnlyError("QWEN3_8B_QUALITY_ONLY")
+            host = host or "http://127.0.0.1:11605"
+            model_id = "qwen3:8b"
+            self.model = _local_llamacpp_model(
+                host, model_id, local_key_file or os.getenv("YANCE_W43_LOCAL_KEY_FILE")
+            )
+            self.provider = "LLAMACPP_LOCAL_QWEN3_8B_FREE"
             self.policy_provider = "LOCAL_QWEN3_8B"
         elif backend == "llamacpp":
             if purpose != "HEALTHCHECK":
@@ -282,8 +298,9 @@ class NativeAgnoRuntime:
         if not text.startswith("fake-"):
             raise ScopeError("SYNTHETIC_INPUT_REQUIRED")
         sid = scope.session_id(thread)
-        if self.policy_provider == "LOCAL_QWEN3_8B":
-            # A running 0.5B/1.5B instance or partial 8B download does NOT qualify.
+        if self.policy_provider == "LOCAL_QWEN3_8B" and self.provider == "OLLAMA_LOCAL_QWEN3_8B_FREE":
+            # Only the Ollama adapter requires an installed Ollama model tag.
+            # The isolated llama.cpp adapter instead verifies its actual SDK Run.
             try:
                 import ollama
                 installed = {x.model for x in ollama.Client(
