@@ -125,7 +125,11 @@ export function createSyntheticInboundAdapter({ bindings, onInbound }) {
         assert(previous.original === event.original, 'SOURCE_MID_PAYLOAD_CONFLICT');
         return { accepted: false, duplicate: true, reason: 'DUPLICATE_SOURCE_MID', simulated: true };
       }
-      if (pending.has(idempotency)) return pending.get(idempotency);
+      const outstanding = pending.get(idempotency);
+      if (outstanding) {
+        assert(outstanding.original === event.original, 'SOURCE_MID_PAYLOAD_CONFLICT');
+        return outstanding.operation;
+      }
       const normalized = Object.freeze({
         id: route.id, k: route.k, mid, original: event.original,
         source_mid_namespace: namespace,
@@ -142,7 +146,7 @@ export function createSyntheticInboundAdapter({ bindings, onInbound }) {
         seen.set(idempotency, { original: event.original });
         return { accepted: true, duplicate: false, normalized, simulated: true };
       })();
-      pending.set(idempotency, operation);
+      pending.set(idempotency, { original: event.original, operation });
       try { return await operation; }
       finally { pending.delete(idempotency); }
     },

@@ -149,6 +149,12 @@ test('in-flight concurrent duplicate is a single downstream invocation', async (
   assert.equal(a.accepted,true);assert.equal(b.accepted,true);
   assert.equal(calls,1);
 });
+test('concurrent duplicate MID with altered payload is rejected before intake completes', async () => {
+  const {adapter}=setup({onInbound:async()=>await new Promise(r=>setTimeout(r,15))});
+  const firstRun=adapter.receive(event());
+  await assert.rejects(adapter.receive(event({original:'forged concurrent text'})), /SOURCE_MID_PAYLOAD_CONFLICT/);
+  assert.equal((await firstRun).accepted,true);
+});
 test('mock receipt only classifies evidence, never Meta delivery or a send attempt', () => {
   for (const [kind,observation] of [
     ['BRIDGE_ACCEPTED','BRIDGE_ACCEPTED_UNVERIFIED'],
