@@ -1,7 +1,7 @@
 name: YANCE V2 All-Domain PR Quality
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
   workflow_dispatch:
     inputs:
       target_sha:
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_sha || github.sha }}
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -67,7 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_sha || github.sha }}
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -100,7 +100,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_sha || github.sha }}
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
@@ -137,7 +137,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_sha || github.sha }}
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
@@ -172,7 +172,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_sha || github.sha }}
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/checkout@v4
@@ -208,10 +208,65 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  pr-head-evidence:
+    name: exact-source-evidence
+    if: always()
+    needs: [contracts-security, native-node, agno-python, synthetic-m0, frontend-browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Exercise evidence negative cases on trusted CI script
+        shell: bash
+        run: |
+          if test -f .ci-tools/scripts/ci/pr-head-evidence.test.mjs; then
+            node --test .ci-tools/scripts/ci/pr-head-evidence.test.mjs
+          else
+            node --test scripts/ci/pr-head-evidence.test.mjs
+          fi
+      - name: Emit signed-by-runner SHA and outcome provenance, never dispatch-to-PR aliasing
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+          CI_TARGET_SHA: ${{ inputs.target_sha || '' }}
+          CI_PR_NUMBER: ${{ github.event.pull_request.number || inputs.target_pr || '' }}
+          CI_BASE_SHA: ${{ inputs.target_base_sha || github.event.pull_request.base.sha || '' }}
+          CI_NEEDS: ${{ toJSON(needs) }}
+          CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          if test -f .ci-tools/scripts/ci/pr-head-evidence.mjs; then
+            node .ci-tools/scripts/ci/pr-head-evidence.mjs
+          else
+            # Bootstrap once for this CI-only PR; after merge main is the trusted source.
+            test -f scripts/ci/pr-head-evidence.mjs || { echo "::error::Missing CI evidence generator"; exit 6; }
+            node scripts/ci/pr-head-evidence.mjs
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-exact-source-evidence-${{ github.run_id }}
+          path: ci-artifacts/pr-head-evidence.json
+          if-no-files-found: error
+          retention-days: 7
+
   nonproduction-merge-gate:
     name: nonproduction-merge-gate
     if: always()
-    needs: [contracts-security, native-node, agno-python, synthetic-m0, frontend-browser]
+    needs: [contracts-security, native-node, agno-python, synthetic-m0, frontend-browser, pr-head-evidence]
     runs-on: ubuntu-latest
     steps:
       - name: All scoped mandatory jobs must succeed (not skipped or failed)
