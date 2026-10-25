@@ -1,0 +1,17 @@
+# YANCE V2 | CODEOWNERS PREPARATION, NOT ENFORCED
+# No named source owners have independently self-accepted a real GitHub identity.
+# W23-W29 and W43-W46 are proposed scoped implementation roles, not GitHub handles.
+# This comment-only placeholder deliberately has NO effective ownership rules.
+# After real source-maintainer ACK and verified Git permissions, replace with:
+# services/api/src/domains/file-attachment/       @VERIFIED_FILE_OWNER
+# services/api/src/domains/identity-consent/       @VERIFIED_IDENTITY_OWNER
+# services/api/src/domains/message-delivery/      @VERIFIED_DELIVERY_OWNER
+# connectors/mautrix-meta/                       @VERIFIED_META_OWNER
+# connectors/pancake/                            @VERIFIED_PAGE_OWNER
+# connectors/baileys/                            @VERIFIED_WA_OWNER
+# connectors/tdlib-json/                         @VERIFIED_TG_OWNER
+# services/agentos/                              @VERIFIED_AGNO_OWNER
+# services/api/src/domains/grant-custody-budget/ @VERIFIED_GRANTS_OWNER
+# services/api/src/domains/people-translation-reply/ @VERIFIED_PEOPLE_OWNER
+# apps/                                         @VERIFIED_FRONTEND_OWNER
+# design/nonproduction/approved-clickable-abc-bc/ @VERIFIED_W39_OWNER
