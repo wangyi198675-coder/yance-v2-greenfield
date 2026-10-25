@@ -14,7 +14,7 @@ def test_default_is_existing_authenticated_llamacpp_no_ollama(monkeypatch, tmp_p
     key.write_text("this-is-a-synthetic-test-secret-123456",encoding="utf-8")
     monkeypatch.setenv("YANCE_W43_LOCAL_KEY_FILE", str(key))
     obj = NativeAgnoRuntime(tmp_path/"native.sqlite")
-    assert obj.model_id == "qwen2.5:1.5b"
+    assert obj.model_id == "qwen3:8b"
     assert obj.provider == "LLAMACPP_LOCAL_NO_PAID_API" == PROVIDER
     assert obj.model.base_url == "http://127.0.0.1:11605/v1"
     assert obj.purpose == "HEALTHCHECK"
@@ -30,13 +30,14 @@ def test_real_run_provenance_health_but_never_quality(monkeypatch, tmp_path):
     key=tmp_path/"synthetic-secret"
     key.write_text("this-is-a-synthetic-test-secret-123456",encoding="utf-8")
     native=NativeAgnoRuntime(tmp_path/"run.sqlite", local_key_file=key)
+    monkeypatch.setattr(native, "_authorized_llamacpp_model_matches", lambda: True)
     monkeypatch.setattr(native.agents["CONTACT"], "run",
         lambda *args,**kwargs: SimpleNamespace(
            run_id="fake-sdk-run", status=SimpleNamespace(value="COMPLETED"),
            content="A generated synthetic sample"))
     output = native.run(contact(), "fake-synthetic hello")
     assert output["status"]=="AGNO_RUN_COMPLETED"
-    assert output["model_id"]=="qwen2.5:1.5b"
+    assert output["model_id"]=="qwen3:8b"
     assert output["provider"]==PROVIDER
     assert output["quality_qualified"] is False
     assert output["provenance"]["quality_qualified"] is False
@@ -58,3 +59,17 @@ def test_restrict_llamacpp_loopback_and_no_paid_environment(monkeypatch, tmp_pat
                      "https://api.openai.com", "http://127.0.0.1:11605/x"):
         with pytest.raises(LocalOnlyError):
             _local_llamacpp_model(endpoint,"qwen2.5:1.5b",key)
+
+
+def test_model_mismatch_prevents_sdk_call_and_false_provenance(monkeypatch, tmp_path):
+    key = tmp_path/"synthetic-secret"
+    key.write_text("synthetic-not-an-actual-key-1234567", encoding="utf-8")
+    native = NativeAgnoRuntime(tmp_path/"mismatch.sqlite", local_key_file=key)
+    monkeypatch.setattr(native, "_authorized_llamacpp_model_matches", lambda: False)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("MODEL_RUN_MUST_NOT_BE_ATTEMPTED")
+    monkeypatch.setattr(native.agents["CONTACT"], "run", forbidden)
+    result = native.run(contact(), "fake-synthetic mismatch")
+    assert result["status"] == "HOLD_LOCAL_MODEL_ID_AUTH_OR_SERVER_MISMATCH"
+    assert result["suggestions"] == [] and result["outbound"] == "DISABLED"
+    assert "run_id" not in result and "original_response" not in result
