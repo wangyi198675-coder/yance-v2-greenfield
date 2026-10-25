@@ -36,6 +36,7 @@ jobs:
         name: Read real GitHub open PR HEADs, exclude W30 CI maintenance
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          W30_TARGET_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: node scripts/ci/pr-head-backfill.mjs discover
 
   verify:
