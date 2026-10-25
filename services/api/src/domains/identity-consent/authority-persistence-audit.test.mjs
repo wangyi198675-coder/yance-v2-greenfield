@@ -1,7 +1,7 @@
 /**
  * W24 P0 RED / gap witness. Tests pass when the EXISTING split-brain risk
  * is reproduced: PASS here is NOT release security PASS.
- * Uses unmodified W44 real SQLite in a separate owner worktree.
+ * Uses actual W44 native SQLite from an explicit W44 Owner or W09 integrated sibling root.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,8 +11,10 @@ import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 import {IdentityConsentService} from './identity-consent.mjs';
-const w44Root=process.env.YANCE_W44_ROOT;
-if(!w44Root)throw Error('EXPLICIT_EXISTING_W44_ROOT_REQUIRED');
+// W30's real-sibling CI supplies the W09 native composition as YANCE_PR32_ROOT;
+// standalone Owner execution supplies YANCE_W44_ROOT. Never fallback to mocks.
+const w44Root=process.env.YANCE_W44_ROOT || process.env.YANCE_PR32_ROOT;
+if(!w44Root)throw Error('EXPLICIT_EXISTING_W44_OR_PR32_ROOT_REQUIRED');
 const w44Module=resolve(w44Root,'services/api/src/domains/grant-custody-budget/index.mjs');
 const {openEligibilityStore}=await import(pathToFileURL(w44Module).href);
 const k={tenant:'SYNTHETIC_TEST_ONLY',account:'fixture-w24-audit',channel:'FB_PERSONAL',
