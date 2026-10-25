@@ -22,6 +22,10 @@ function assertStatus(s,id){
  if(!Number.isSafeInteger(s.epoch)||s.epoch<0)error('INVALID_EPOCH');
  if(s.accountActive!==true||s.canTakeover!==true)error('TAKEOVER_AUTH_DENIED');
  if(!['HUMAN','AUTO'].includes(s.mode))error('INVALID_MODE');
+ if(s.status!=='NATIVE_TAKEOVER_STATE'||s.identityKey!==fullK(id)||
+    !Number.isSafeInteger(s.accountRevocationEpoch)||s.accountRevocationEpoch<0||
+    !Number.isSafeInteger(s.consentEpoch)||s.consentEpoch<1||s.canSend!==false)
+   error('INCOMPLETE_W24_AUTHORITY_SNAPSHOT');
  return s;
 }
 export function createComposerBridge({takeoverPort=null}={}){
@@ -108,13 +112,25 @@ export function createComposerBridge({takeoverPort=null}={}){
      try{
        const before=assertStatus(await takeoverPort.get({...id}),id);
        if(before.mode==='AUTO'){
-         const receipt=await takeoverPort.post({...id},{expectedEpoch:before.epoch,action,
-           intent:'TAKEOVER_HUMAN_COMPOSER'});
-         if(receipt?.accepted!==true)error('TAKEOVER_POST_REJECTED');
+         const receipt=await takeoverPort.post({...id},{
+           expectedIdentityKey:before.identityKey,
+           expectedEpoch:before.epoch,
+           expectedAccountRevocationEpoch:before.accountRevocationEpoch,
+           expectedConsentEpoch:before.consentEpoch,
+           action,intent:'TAKEOVER_HUMAN_COMPOSER'});
+         if(receipt?.accepted!==true||receipt.confirmedByGet!==true||
+            receipt.identityKey!==k||fullK(receipt.identity)!==k||
+            receipt.mode!=='HUMAN'||receipt.epoch!==before.epoch+1||
+            receipt.accountRevocationEpoch!==before.accountRevocationEpoch||
+            receipt.consentEpoch!==before.consentEpoch||receipt.canSend!==false)
+            error('TAKEOVER_POST_NOT_CONFIRMED');
        }
        const after=assertStatus(await takeoverPort.get({...id}),id);
-       if(after.mode!=='HUMAN'||after.epoch<before.epoch||
-          (before.mode==='AUTO'&&after.epoch===before.epoch))error('TAKEOVER_NOT_VERIFIED');
+       if(after.mode!=='HUMAN'||
+          after.accountRevocationEpoch!==before.accountRevocationEpoch||
+          after.consentEpoch!==before.consentEpoch||
+          (before.mode==='AUTO'?after.epoch!==before.epoch+1:after.epoch<before.epoch))
+          error('TAKEOVER_NOT_VERIFIED');
        states.set(k,{status:'READY_HUMAN',epoch:after.epoch});
        return {key:k,status:'READY_HUMAN',verifiedEpoch:after.epoch,canSend:false};
      }catch(e){

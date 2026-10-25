@@ -41,3 +41,17 @@ Reproducible Windows commands from W46 worktree root:
 If owner paths are missing, the cross-owner test is SKIPPED, not a PASS.
 
 Remaining HARD HOLDS: W24 authenticated persistent effective state and real GET -> POST TAKEOVER -> GET HUMAN epoch; W43 verified Qwen3 8B Run + W45 genuine translator and qualified 0-3 candidate; W25/W44 sole irreversible send authorization; physical mounting into approved B+C product shell, real Chrome viewports/themes and Windows WebView2. No real login, provider send, paid cloud model, production deploy or source-owner independent signoff.
+
+
+## W46 final W24 CAS snapshot correction (2026-10-25)
+
+The targeted W24 HTTP 422 gap is closed **in the W46 Owner path only**. The existing composer-bridge.mjs now carries all four fields from the immediately preceding live W24 GET into its POST: expectedIdentityKey, expectedEpoch, expectedAccountRevocationEpoch and expectedConsentEpoch. POST is not accepted on accepted:true alone: identity K, mode HUMAN, incremented epoch, unchanged consent/account versions, confirmedByGet:true and canSend:false are checked, followed by W46's *own* fresh GET of the same K. 409/422, a failed or incomplete POST, changed epochs and W44 unsettled leases fail closed. Focus/switch/view and candidate adoption do not POST; independently entrusted AUTO contacts B/C remain AUTO. No SendIntent or sender exists in W46.
+
+Actual existing W24 Owner SHA e10f9e17988fa19c4dc71ce927e5d9eaa01dbdc9; inherited selected B+C baseline SHA 34467cf10c0e9457c2a22dee5a37d1e05dd2ed8b. Existing W44 SQLite in W09-2 PR #32 is used read-only through its actual module; tests create temporary nonproduction SQLite files and remove them afterward. The owner modules are not copied or modified.
+
+W46 tests (from existing independent Windows worktree):
+Set YANCE_W24_NATIVE_DIR to the existing W24 services/api/src/domains/identity-consent directory, YANCE_W44_NATIVE_DIR to W09-2 existing services/api/src/domains/grant-custody-budget directory, YANCE_W24_MODULE to W24 identity-consent.mjs and YANCE_W45_MODULE to W45 index.mjs.
+Run: node --test apps/web/tests/*.test.mjs
+No owner path => explicit SKIP, not a purported real HTTP PASS. The actual nonproduction suite includes W46 contract/negative coverage, native W24/W45 source tests, and real loopback W24 HTTP + W44 SQLite integration. Existing W24 14/14 and W09-2 205/205 are inherited, not rebuilt or falsely counted as new tests.
+
+Remaining HOLD: backend trusted app/IPC session resolver with real auth; independently reviewed authorization/CSRF and browser-click UAT; formal W44/W25 cross-worker in-flight send-versus-takeover settlement and production-readiness; W45/W43 natural suggestions and real translations. No production deploy, real account connection, paid inference or human delivery.

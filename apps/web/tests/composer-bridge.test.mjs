@@ -8,17 +8,22 @@ const B={...A,peer_id:'fake-peer-004'};
 const C={...A,account:'fixture-account-2',channel:'WHATSAPP_PERSONAL',peer_id:'fake-peer-001'};
 function mockPort(custom={}){
  const trace=[],modes=new Map(),epochs=new Map();
+ const wrap=(id,raw)=>({status:'NATIVE_TAKEOVER_STATE',identityKey:fullK(id),
+   accountRevocationEpoch:0,consentEpoch:1,canSend:false,...raw});
  const get=async id=>{
    trace.push('GET '+fullK(id));
-   if(custom.get) return custom.get(id,trace);
-   return {identity:id,mode:modes.get(fullK(id))||'AUTO',
-     epoch:epochs.get(fullK(id))||1,accountActive:true,canTakeover:true};
+   if(custom.get) return wrap(id,await custom.get(id,trace));
+   return wrap(id,{identity:id,mode:modes.get(fullK(id))||'AUTO',
+     epoch:epochs.get(fullK(id))||1,accountActive:true,canTakeover:true});
  };
  const post=async(id,request)=>{
    trace.push('POST '+fullK(id));
    if(custom.post)return custom.post(id,request,trace);
    modes.set(fullK(id),'HUMAN');epochs.set(fullK(id),request.expectedEpoch+1);
-   return {accepted:true};
+   return {accepted:true,confirmedByGet:true,identity:id,identityKey:fullK(id),
+     mode:'HUMAN',epoch:request.expectedEpoch+1,
+     accountRevocationEpoch:request.expectedAccountRevocationEpoch,
+     consentEpoch:request.expectedConsentEpoch,canSend:false};
  };
  return {trace,get,post};
 }
@@ -79,7 +84,10 @@ test('identity rebind mismatch fails closed before POST',async()=>{
  assert.equal(p.trace.filter(x=>x.startsWith('POST')).length,0);
 });
 test('POST accepted then GET still AUTO: do not claim HUMAN',async()=>{
- const p=mockPort({post:async()=>({accepted:true})});
+ const p=mockPort({post:async(id,r)=>({accepted:true,confirmedByGet:true,
+   identity:id,identityKey:fullK(id),mode:'HUMAN',epoch:r.expectedEpoch+1,
+   accountRevocationEpoch:r.expectedAccountRevocationEpoch,
+   consentEpoch:r.expectedConsentEpoch,canSend:false})});
  const b=createComposerBridge({takeoverPort:p});b.choose(A);
  assert.equal((await b.userAction(A,'TYPE',{text:'draft'})).status,'BLOCKED');
  assert.equal(p.trace.length,3);
@@ -88,7 +96,7 @@ test('POST rejection/exception => BLOCKED, keep local unsent draft',async()=>{
  const p=mockPort({post:async()=>({accepted:false})});
  const b=createComposerBridge({takeoverPort:p});b.choose(A);
  const out=await b.userAction(A,'TYPE',{text:'keep'});
- assert.match(out.reason,/POST_REJECTED/);assert.equal(b.view().draft.text,'keep');
+ assert.match(out.reason,/POST_NOT_CONFIRMED/);assert.equal(b.view().draft.text,'keep');
  assert.equal(out.canSend,false);
 });
 test('concurrent same-K edits coalesce, preserve latest draft',async()=>{
