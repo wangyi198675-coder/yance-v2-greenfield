@@ -23,3 +23,7 @@ git diff --check
 ```
 
 Live results are authoritative only when the Github Actions run, artifact, and commit-linked check-runs are confirmed through the GitHub API.
+
+## Incremental HEAD behavior
+
+On each new run, the discovery job reads the current GitHub check-runs for the exact PR HEAD. It skips only completed successful `w30/exact-head-backfill` checks created by `github-actions` with a valid GitHub Actions details URL. A changed HEAD, failed result, wrong app, or absent check remains eligible for real testing. A zero-pending run safely skips verify/publish instead of generating synthetic green results. The protected `nonproduction-merge-gate` is never manufactured or bypassed.

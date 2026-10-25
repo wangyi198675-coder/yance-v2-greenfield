@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validatePlan,classify} from './pr-head-backfill.mjs';
+import {validatePlan,classify,alreadyAttestedAtExactHead} from './pr-head-backfill.mjs';
 
 const sha='a'.repeat(40), base='b'.repeat(40), item={number:26,sha,base,ref:'owner/agentos/native'};
 const all=()=>Object.fromEntries(['source','contract','security','native','agno','m0','frontend','browserInstall','browser'].map(x=>[x,'success']));
@@ -39,4 +39,15 @@ test('canceled or unknown job state is never green',()=>{
  assert.equal(classify(item,sha,a).conclusion,'failure');
  a=all();a.native='success-because-I-said-so';
  assert.throws(()=>classify(item,sha,a),/invalid step/);
+});
+
+test('reuses only genuine successful W30 checks on the SAME immutable SHA',()=>{
+ const good={name:'w30/exact-head-backfill',head_sha:sha,status:'completed',conclusion:'success',app:{slug:'github-actions'},details_url:'https://github.com/owner/repo/actions/runs/123'};
+ assert.equal(alreadyAttestedAtExactHead(item,[good]),true);
+ assert.equal(alreadyAttestedAtExactHead({...item,sha:base},[good]),false);
+ assert.equal(alreadyAttestedAtExactHead(item,[{...good,conclusion:'failure'}]),false);
+ assert.equal(alreadyAttestedAtExactHead(item,[{...good,name:'nonproduction-merge-gate'}]),false);
+ assert.equal(alreadyAttestedAtExactHead(item,[{...good,app:{slug:'other-app'}}]),false);
+ assert.equal(alreadyAttestedAtExactHead(item,[{...good,details_url:'https://evil.invalid/forged'}]),false);
+ assert.equal(alreadyAttestedAtExactHead(item,[]),false);
 });
