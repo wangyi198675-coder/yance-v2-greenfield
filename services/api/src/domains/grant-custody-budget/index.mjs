@@ -27,7 +27,7 @@ function intentKey(k,id){
   return JSON.stringify([canonicalK(k),id]);
 }
 
-export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=Date.now}={}) {
+export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,now=Date.now}={}) {
   if(typeof path!=='string'||!path||path.length>1024||typeof verifyIdentity!=='function'||typeof authorizeMutation!=='function'||
     typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
   const db=new DatabaseSync(path,{timeout:5000});
@@ -91,7 +91,9 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
       const old=readGrant.get(key);
       if((old?.epoch??0)!==expectedEpoch)throw Error('STALE_GRANT_EPOCH');
       const epoch=expectedEpoch+1;
-      db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,?,?,?,?,0,0) ON CONFLICT(scope_key) DO UPDATE SET enabled=excluded.enabled,epoch=excluded.epoch,expires_at=excluded.expires_at,budget_limit=excluded.budget_limit,spent=0,reserved=0')
+      // A version rollover must NOT erase previously spent or unresolved reserved units.
+      // Otherwise renew/revoke/regrant turns an outstanding attempt into fresh budget.
+      db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,?,?,?,?,0,0) ON CONFLICT(scope_key) DO UPDATE SET enabled=excluded.enabled,epoch=excluded.epoch,expires_at=excluded.expires_at,budget_limit=excluded.budget_limit')
         .run(key,scope,Number(enabled),epoch,expiresAt,budgetUnits);
       return {scopeKey:key,epoch,enabled};
     });
@@ -108,7 +110,9 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
         return {scopeKey:key,epoch:1,enabled:false};
       }
       if(!old||old.epoch!==expectedEpoch)throw Error('STALE_GRANT_EPOCH');
-      db.prepare('UPDATE grants SET enabled=0,epoch=epoch+1,reserved=0 WHERE scope_key=?').run(key);
+      // Preserve unresolved reservations across revoke; W25 receipt/no-send
+      // reconciliation must explicitly release them, not the grant mutation.
+      db.prepare('UPDATE grants SET enabled=0,epoch=epoch+1 WHERE scope_key=?').run(key);
       return {scopeKey:key,epoch:old.epoch+1,enabled:false};
     });
   }
@@ -173,12 +177,59 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
         consentEpoch:r.consent_epoch}:check;
     });
   }
+  function enterBoundary({identity:k,intentId}) {
+    // This is W44's durable budget boundary marker, NOT a second delivery
+    // Outbox. W25 alone decides when to reach its irreversible fake sink.
+    const key=intentKey(k,intentId);
+    return transaction(()=>{
+      const r=readReservation.get(key);
+      if(!r||!['RESERVED','BOUNDARY_ENTERED'].includes(r.state))return deny('BOUNDARY_MISSING_OR_SETTLED');
+      const fence=fenceWithinTransaction(k,r);
+      if(!fence.ok)return fence;
+      // W25 executes PRE_NETWORK twice (once before persisting the attempt,
+      // once immediately before its single sink). Repeat read is NOT another
+      // reservation or sender; fail if W24/W44 authority changed meanwhile.
+      if(r.state==='RESERVED'){
+        const updated=db.prepare("UPDATE reservations SET state='BOUNDARY_ENTERED' WHERE intent_key=? AND state='RESERVED'").run(key);
+        if(updated.changes!==1)throw Error('BOUNDARY_RACE');
+      }
+      return {ok:true,idempotent:r.state==='BOUNDARY_ENTERED',intentKey:key,state:'BOUNDARY_ENTERED',
+        grantEpoch:r.grant_epoch,custodyEpoch:r.custody_epoch,
+        identityEpoch:r.identity_epoch,consentEpoch:r.consent_epoch};
+    });
+  }
+  function settleBoundary({identity:k,intentId,evidence}) {
+    // Only actual W25 persisted evidence can settle an ambiguous boundary.
+    // A client-supplied status, raw ACK, or timeout has no authority here.
+    if(typeof verifySettlement!=='function')return deny('W25_SETTLEMENT_AUTHORITY_UNAVAILABLE');
+    const key=intentKey(k,intentId);
+    return transaction(()=>{
+      const r=readReservation.get(key);
+      if(!r||r.state!=='BOUNDARY_ENTERED')return deny('NO_UNRESOLVED_BOUNDARY');
+      const result=verifySettlement({identity:k,intentId,evidence});
+      if(result&&typeof result.then==='function')throw Error('ASYNC_SETTLEMENT_PORT_UNSUPPORTED');
+      if(result?.verified!==true||!['CHARGED','PROVEN_NO_SEND'].includes(result.outcome))
+        return deny('W25_RECEIPT_UNVERIFIED');
+      const actual=result.outcome==='CHARGED'?result.actualUnits:0;
+      if(!nonneg(actual)||actual>r.units)return deny('INVALID_SETTLEMENT_UNITS');
+      const g=readGrant.get(r.scope_key);
+      if(!g||g.reserved<r.units)return deny('BUDGET_LEDGER_INCONSISTENT');
+      const update=db.prepare('UPDATE grants SET reserved=reserved-?,spent=spent+? WHERE scope_key=? AND reserved>=?')
+        .run(r.units,actual,r.scope_key,r.units);
+      if(update.changes!==1)throw Error('BUDGET_SETTLEMENT_CAS_FAILED');
+      const state=result.outcome==='CHARGED'?'COMMITTED':'RELEASED';
+      db.prepare('UPDATE reservations SET state=? WHERE intent_key=?').run(state,key);
+      return {ok:true,state,unitsCharged:actual};
+    });
+  }
   function finish({identity:k,intentId,action,actualUnits}){
     if(!['RELEASE','COMMIT'].includes(action))throw Error('BAD_RESERVATION_ACTION');
     const key=intentKey(k,intentId);
     return transaction(()=>{
       const r=readReservation.get(key);
-      if(!r||r.state!=='RESERVED')return deny('RESERVATION_NOT_ACTIVE');
+      if(!r||!['RESERVED','BOUNDARY_ENTERED'].includes(r.state))return deny('RESERVATION_NOT_ACTIVE');
+      if(action==='RELEASE'&&r.state==='BOUNDARY_ENTERED')return deny('BOUNDARY_UNCERTAIN_HOLD');
+      if(action==='COMMIT'&&r.state==='BOUNDARY_ENTERED')return deny('W25_SETTLEMENT_PROOF_REQUIRED');
       if(action==='COMMIT'&&(!nonneg(actualUnits)||actualUnits>r.units))
         return deny('INVALID_ACTUAL_UNITS');
       if(action==='COMMIT'){
@@ -186,9 +237,12 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
         if(!f.ok)return f;
       }
       const g=readGrant.get(r.scope_key);
-      if(g&&g.epoch===r.grant_epoch)
-        db.prepare('UPDATE grants SET reserved=reserved-?,spent=spent+? WHERE scope_key=?')
-          .run(r.units,action==='COMMIT'?actualUnits:0,r.scope_key);
+      if(!g||g.reserved<r.units)return deny('BUDGET_LEDGER_INCONSISTENT');
+      // RELEASE is safe for proven noncharges even after a grant epoch changes.
+      // COMMIT still requires an active, exact pre-send fence above.
+      const update=db.prepare('UPDATE grants SET reserved=reserved-?,spent=spent+? WHERE scope_key=? AND reserved>=?')
+        .run(r.units,action==='COMMIT'?actualUnits:0,r.scope_key,r.units);
+      if(update.changes!==1)throw Error('BUDGET_LEDGER_CAS_FAILED');
       const state=action==='COMMIT'?'COMMITTED':'RELEASED';
       db.prepare('UPDATE reservations SET state=? WHERE intent_key=?').run(state,key);
       return {ok:true,state};
@@ -203,6 +257,6 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
         expiresAt:s.grant.expires_at,budgetLimit:s.grant.budget_limit,spent:s.grant.spent,
         reserved:s.grant.reserved}:null,reason:s.reason??null};
   }
-  return Object.freeze({grant,revoke,setCustody,qualify,reserve,checkForSend,finish,
-    inspection,close:()=>db.close()});
+  return Object.freeze({grant,revoke,setCustody,qualify,reserve,checkForSend,
+    enterBoundary,settleBoundary,finish,inspection,close:()=>db.close()});
 }

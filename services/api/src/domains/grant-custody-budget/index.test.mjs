@@ -163,3 +163,103 @@ test('same request ID across accounts is isolated, no cross-account spend',t=>{
  assert.equal(s.inspection(a).effectiveGrant.reserved,1);
  assert.equal(s.inspection(b).effectiveGrant.reserved,1);
 });
+
+test('grant epoch refresh preserves consumed budget and pending reservations',t=>{
+ const {s}=setup(t),a=K();
+ const g1=issue(s,a,'GLOBAL',2);
+ assert.equal(reserve(s,a,'fake-sent',1).ok,true);
+ assert.equal(s.finish({identity:a,intentId:'fake-sent',action:'COMMIT',actualUnits:1}).ok,true);
+ assert.equal(reserve(s,a,'fake-pending',1).ok,true);
+ const g2=issue(s,a,'GLOBAL',2,999999,g1.epoch);
+ assert.equal(g2.epoch,2);
+ const v=s.inspection(a).effectiveGrant;
+ assert.equal(v.spent,1);
+ assert.equal(v.reserved,1);
+ assert.equal(s.qualify(a).reason,'BUDGET_EXHAUSTED');
+ assert.equal(fence(s,a,'fake-pending').reason,'GRANT_CHANGED');
+ assert.equal(s.finish({identity:a,intentId:'fake-pending',action:'RELEASE'}).ok,true);
+ assert.equal(s.inspection(a).effectiveGrant.reserved,0);
+ assert.equal(s.inspection(a).effectiveGrant.spent,1);
+ assert.equal(s.qualify(a).availableUnits,1);
+});
+test('revoke then re-grant retains unsettled reservations, permits only safe release',t=>{
+ const {s}=setup(t),a=K();
+ const g1=issue(s,a,'GLOBAL',1);
+ assert.equal(reserve(s,a,'fake-risk',1).ok,true);
+ const revoked=s.revoke({identity:a,scope:'GLOBAL',expectedEpoch:g1.epoch,...admin});
+ assert.equal(s.qualify(a).reason,'GLOBAL_REVOKED');
+ const g3=issue(s,a,'GLOBAL',1,999999,revoked.epoch);
+ assert.equal(g3.epoch,3);
+ assert.equal(s.qualify(a).reason,'BUDGET_EXHAUSTED');
+ assert.equal(s.finish({identity:a,intentId:'fake-risk',action:'COMMIT',actualUnits:1}).reason,'GRANT_CHANGED');
+ assert.equal(s.finish({identity:a,intentId:'fake-risk',action:'RELEASE'}).ok,true);
+ assert.equal(s.inspection(a).effectiveGrant.reserved,0);
+ assert.equal(reserve(s,a,'fake-after-explicit-release').ok,true);
+});
+test('budget version conservation across reopen and competing SQLite connection',t=>{
+ const x=setup(t),a=K();
+ const v1=issue(x.s,a,'GLOBAL',1);
+ assert.equal(reserve(x.s,a,'fake-first').ok,true);
+ const s2=openEligibilityStore(x.ports());
+ const v2=issue(s2,a,'GLOBAL',1,999999,v1.epoch);
+ assert.equal(v2.epoch,2);
+ assert.equal(reserve(s2,a,'fake-second').reason,'BUDGET_EXHAUSTED');
+ assert.equal(x.s.inspection(a).effectiveGrant.reserved,1);
+ assert.equal(x.s.finish({identity:a,intentId:'fake-first',action:'RELEASE'}).ok,true);
+ assert.equal(reserve(s2,a,'fake-second').ok,true);
+ s2.close();
+});
+
+test('pre-network boundary marker is durable and duplicate checks reuse one reservation',t=>{
+ const x=setup(t),a=K();issue(x.s,a,'GLOBAL',2);
+ assert.equal(reserve(x.s,a,'fake-boundary').ok,true);
+ assert.equal(x.s.enterBoundary({identity:a,intentId:'fake-boundary'}).state,'BOUNDARY_ENTERED');
+ assert.equal(x.s.enterBoundary({identity:a,intentId:'fake-boundary'}).idempotent,true);
+ assert.equal(fence(x.s,a,'fake-boundary').reason,'NO_ACTIVE_RESERVATION');
+ assert.equal(x.s.finish({identity:a,intentId:'fake-boundary',action:'RELEASE'}).reason,'BOUNDARY_UNCERTAIN_HOLD');
+ assert.equal(x.s.inspection(a).effectiveGrant.reserved,1);
+ assert.equal(x.s.finish({identity:a,intentId:'fake-boundary',action:'COMMIT',actualUnits:1}).reason,'W25_SETTLEMENT_PROOF_REQUIRED');
+ const ledger=openEligibilityStore({...x.ports(),verifySettlement:({evidence})=>
+   evidence==='fake-verified-w25'?{verified:true,outcome:'CHARGED',actualUnits:1}:{verified:false}});
+ assert.equal(ledger.settleBoundary({identity:a,intentId:'fake-boundary',evidence:'fake-verified-w25'}).state,'COMMITTED');
+ ledger.close();
+ assert.equal(x.s.inspection(a).effectiveGrant.spent,1);
+ assert.equal(x.s.inspection(a).effectiveGrant.reserved,0);
+});
+test('late charge after revoke cannot refund, verified W25 evidence settles spent once',t=>{
+ const x=setup(t),a=K();const g=issue(x.s,a,'GLOBAL',1);
+ reserve(x.s,a,'fake-unknown');
+ x.s.enterBoundary({identity:a,intentId:'fake-unknown'});
+ const rev=x.s.revoke({identity:a,scope:'GLOBAL',expectedEpoch:g.epoch,...admin});
+ issue(x.s,a,'GLOBAL',1,999999,rev.epoch);
+ assert.equal(x.s.qualify(a).reason,'BUDGET_EXHAUSTED');
+ assert.equal(x.s.finish({identity:a,intentId:'fake-unknown',action:'RELEASE'}).reason,'BOUNDARY_UNCERTAIN_HOLD');
+ assert.equal(x.s.finish({identity:a,intentId:'fake-unknown',action:'COMMIT',actualUnits:1}).reason,'W25_SETTLEMENT_PROOF_REQUIRED');
+ const noPort=x.s.settleBoundary({identity:a,intentId:'fake-unknown',evidence:'fake-verified-charge'});
+ assert.equal(noPort.reason,'W25_SETTLEMENT_AUTHORITY_UNAVAILABLE');
+ const recorder=openEligibilityStore({...x.ports(),verifySettlement:({evidence})=>
+   evidence==='fake-verified-charge'?{verified:true,outcome:'CHARGED',actualUnits:1}:{verified:false}});
+ assert.equal(recorder.settleBoundary({identity:a,intentId:'fake-unknown',evidence:'fake-unsigned'}).reason,'W25_RECEIPT_UNVERIFIED');
+ assert.equal(recorder.inspection(a).effectiveGrant.reserved,1);
+ const charged=recorder.settleBoundary({identity:a,intentId:'fake-unknown',evidence:'fake-verified-charge'});
+ assert.equal(charged.state,'COMMITTED');
+ assert.equal(charged.unitsCharged,1);
+ assert.equal(recorder.inspection(a).effectiveGrant.spent,1);
+ assert.equal(recorder.inspection(a).effectiveGrant.reserved,0);
+ assert.equal(recorder.settleBoundary({identity:a,intentId:'fake-unknown',evidence:'fake-verified-charge'}).reason,'NO_UNRESOLVED_BOUNDARY');
+ assert.equal(recorder.qualify(a).reason,'BUDGET_EXHAUSTED');
+ recorder.close();
+});
+test('verified W25 NO_SEND releases ambiguous boundary; UNKNOWN never releases',t=>{
+ const x=setup(t),a=K();issue(x.s,a,'GLOBAL',1);
+ reserve(x.s,a,'fake-rejected');
+ x.s.enterBoundary({identity:a,intentId:'fake-rejected'});
+ const verifier=openEligibilityStore({...x.ports(),verifySettlement:({evidence})=>
+   evidence==='fake-proven-rejected'?{verified:true,outcome:'PROVEN_NO_SEND'}:{verified:false}});
+ assert.equal(verifier.settleBoundary({identity:a,intentId:'fake-rejected',evidence:'fake-unknown'}).reason,'W25_RECEIPT_UNVERIFIED');
+ assert.equal(verifier.inspection(a).effectiveGrant.reserved,1);
+ assert.equal(verifier.settleBoundary({identity:a,intentId:'fake-rejected',evidence:'fake-proven-rejected'}).state,'RELEASED');
+ assert.equal(verifier.inspection(a).effectiveGrant.reserved,0);
+ assert.equal(reserve(verifier,a,'fake-next').ok,true);
+ verifier.close();
+});

@@ -67,3 +67,15 @@ For explicit **native cross-owner synthetic smoke** (requires both separate Owne
 The smoke uses the actual W24 IdentityConsentService, the actual W44 SQLite service and the actual W25 MessageDelivery native Outbox with a SyntheticConnectorSink. It verifies fixture ACK, reservation COMMIT and revoke denial. The agent, route, consent epoch and operator permission callbacks are **synthetic test authorities**; there are no production owner bindings or real provider receipts.
 
 This smoke is intentionally explicit rather than silently importing missing siblings on main. The three domain branches must be merged/accepted by their respective authorized Owners before a shared continuous integration test can replace it. P0 cross-domain atomicity/final network send race remains unresolved.
+
+## Post PR #32: grant epoch and irreversible-boundary safety delta
+
+Fixed prior defect: a renewal reset spent/reserved to zero and revoke zeroed reserved, potentially hiding old unsettled attempts. W44 now preserves both spent and unsettled reservations across renewal, revoke and regrant, with exact epoch invalidation. Proven pre-boundary RELEASE can clear old held units; unresolved/UNKNOWN state cannot.
+
+The actual W25 native dispatch invokes PRE_NETWORK twice: before its durable IN_FLIGHT attempt and immediately before its synthetic sink. W44's existing eligibility adapter invokes enterBoundary for both passes: the first marks the EXISTING budget reservation BOUNDARY_ENTERED, repeat is idempotent with freshly validated W24/W44 epochs and no new reservation or sender. Version changes between checks fail closed.
+
+For BOUNDARY_ENTERED, legacy finish RELEASE returns BOUNDARY_UNCERTAIN_HOLD, and finish COMMIT returns W25_SETTLEMENT_PROOF_REQUIRED. W44 settleBoundary needs a separately provided trusted evidence-verification callback. The new createW25SettlementVerifier with injected read-only W25 MessageDelivery ledger looks up current full K/business ID, actual W25 attempt and audit: SYNTHETIC ACK can settle a fictional unit, authoritative FINAL_BOUNDARY_DENIED_NO_SEND or REJECTED_NO_SEND can release, while UNKNOWN, unverified receipt and mere timeout remain held. Late verified charge after revoke/regrant is still counted once. This is **not real model billing**.
+
+W44 target test suite: 19 PASS / 0 FAIL (original 13 retained plus six version, race and settlement cases). New W24/W44/W25 synthetic interop: ACK budget COMMIT and revoke between two W25 PRE_NETWORK checks yields DENIED, zero sink calls, then explicit proven-no-send settlement releases held units. No real provider network calls.
+
+P0 remains OPEN: W24 in-memory authority, W44 budget SQLite and W25 outbox SQLite do not have an atomic transaction spanning final eligibility and irreversible external effects. Real credential/authorization ownership, route, actual provider receipts, paid model usage, multihost persistence and deployment remain unverified/HOLD. Do not enable live sending.

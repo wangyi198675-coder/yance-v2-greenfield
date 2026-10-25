@@ -104,7 +104,11 @@ export function createW25EligibilityPort({
           if(!reserved.ok&&reserved.reason!=='IDEMPOTENT_RESERVED')
             return denied(reserved.reason);
         }
-        const fence=store.checkForSend({identity,intentId:businessMessageId});
+        // Admission only reads the reservation; W25's PRE_NETWORK phase must
+        // atomically persist the W44 boundary marker exactly once.
+        const fence=phase==='PRE_NETWORK'
+          ?store.enterBoundary({identity,intentId:businessMessageId})
+          :store.checkForSend({identity,intentId:businessMessageId});
         if(!fence.ok)return denied(fence.reason);
         const scope=store.inspection(identity);
         if(!scope.ok||scope.mode!=='AUTO'||!scope.effectiveGrant)
@@ -121,6 +125,45 @@ export function createW25EligibilityPort({
       } catch(error) {
         return denied(error?.code||error?.message||'AUTHORITY_UNAVAILABLE');
       }
+    }
+  };
+}
+
+
+/**
+ * Read-only nonproduction settlement verifier backed by the ACTUAL W25
+ * MessageDelivery Outbox. Evidence is just a locator; caller cannot assert
+ * a receipt. UNKNOWN and unverified states never free reserved budget.
+ */
+export function createW25SettlementVerifier({getDelivery}={}) {
+  if(typeof getDelivery!=='function')throw Error('W25_OUTBOX_READER_REQUIRED');
+  return ({identity,intentId,evidence})=>{
+    try {
+      canonicalK(identity);
+      if(!text(intentId)||!intentId.startsWith('fake-')||!text(evidence?.w25IntentId))
+        return {verified:false};
+      const delivery=getDelivery();
+      if(typeof delivery?.getIntent!=='function'||typeof delivery?.getAttempt!=='function'
+          ||typeof delivery?.getAudit!=='function')return {verified:false};
+      const out=delivery.getIntent(evidence.w25IntentId);
+      if(!out||out.businessMessageId!==intentId)return {verified:false};
+      const other=w25ToW24(out.k);
+      if(canonicalK(other)!==canonicalK(identity))return {verified:false};
+      const attempt=delivery.getAttempt(evidence.w25IntentId);
+      const audit=delivery.getAudit(evidence.w25IntentId);
+      if(!attempt||!Array.isArray(audit))return {verified:false};
+      if(out.state==='ACKED_SYNTHETIC'&&attempt.state==='ACKED_SYNTHETIC'&&
+          audit.some(x=>x.event_type==='SYNTHETIC_RESULT'&&x.details?.state==='ACKED_SYNTHETIC'))
+        return {verified:true,outcome:'CHARGED',actualUnits:1};
+      if(out.state==='DENIED'&&attempt.state==='NOT_SENT_AUTHORITY_DENIED'&&
+          audit.some(x=>x.event_type==='FINAL_BOUNDARY_DENIED_NO_SEND'))
+        return {verified:true,outcome:'PROVEN_NO_SEND'};
+      if(out.state==='REJECTED_NO_SEND'&&attempt.state==='REJECTED_NO_SEND'&&
+          audit.some(x=>x.event_type==='SYNTHETIC_RESULT'&&x.details?.state==='REJECTED_NO_SEND'))
+        return {verified:true,outcome:'PROVEN_NO_SEND'};
+      return {verified:false};
+    } catch {
+      return {verified:false};
     }
   };
 }
