@@ -1,0 +1,1352 @@
+{
+  "source": "WINDOWS_CHROME_REAL_WHEEL_AND_KEYBOARD",
+  "upstreamW09Pr53Sha": "860e99c8e3a69d11e34e721c9b6f746732d42abc",
+  "w46Scope": "BCProductWorkspaceCandidate.vue ONLY",
+  "oldShellOverflow": "hidden",
+  "passes": 15,
+  "previouslyFailedW40Scenarios": 7,
+  "allBottomTargetsReachable": true,
+  "noSession": true,
+  "noContacts": true,
+  "noSends": true,
+  "noMutatingRequests": true,
+  "errors": [],
+  "writes": [],
+  "result": [
+    {
+      "w": 1360,
+      "h": 850,
+      "workspace": "ACCOUNTS",
+      "before": {
+        "target": {
+          "top": 598.5,
+          "bottom": 634.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 598.5,
+          "bottom": 634.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 598.5,
+          "bottom": 634.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 1360,
+      "h": 850,
+      "workspace": "AUTOPILOT",
+      "before": {
+        "target": {
+          "top": 354.5,
+          "bottom": 522
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 354.5,
+          "bottom": 522
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 354.5,
+          "bottom": 522
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 1360,
+      "h": 850,
+      "workspace": "SETTINGS",
+      "before": {
+        "target": {
+          "top": 263.5,
+          "bottom": 609.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 263.5,
+          "bottom": 609.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 263.5,
+          "bottom": 609.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 705,
+          "clientHeight": 705,
+          "overflowY": "auto",
+          "rect": {
+            "top": 144,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 56,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 1360,
+        "viewW": 1360,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 950,
+      "h": 620,
+      "workspace": "ACCOUNTS",
+      "before": {
+        "target": {
+          "top": 591,
+          "bottom": 627
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 559,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 511,
+          "bottom": 547
+        },
+        "scroller": {
+          "top": 80,
+          "scrollHeight": 559,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 511,
+          "bottom": 547
+        },
+        "scroller": {
+          "top": 80,
+          "scrollHeight": 559,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": true,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 950,
+      "h": 620,
+      "workspace": "AUTOPILOT",
+      "before": {
+        "target": {
+          "top": 435,
+          "bottom": 602.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 555,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 359,
+          "bottom": 526.5
+        },
+        "scroller": {
+          "top": 76,
+          "scrollHeight": 555,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 359,
+          "bottom": 526.5
+        },
+        "scroller": {
+          "top": 76,
+          "scrollHeight": 555,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 950,
+      "h": 620,
+      "workspace": "SETTINGS",
+      "before": {
+        "target": {
+          "top": 256,
+          "bottom": 602
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 527,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 208,
+          "bottom": 554
+        },
+        "scroller": {
+          "top": 48,
+          "scrollHeight": 527,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 208,
+          "bottom": 554
+        },
+        "scroller": {
+          "top": 48,
+          "scrollHeight": 527,
+          "clientHeight": 479,
+          "overflowY": "auto",
+          "rect": {
+            "top": 140,
+            "bottom": 619
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 98
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 950,
+        "viewW": 950,
+        "viewH": 620,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 430,
+      "h": 850,
+      "workspace": "ACCOUNTS",
+      "before": {
+        "target": {
+          "top": 805,
+          "bottom": 841
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 783,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 725,
+          "bottom": 761
+        },
+        "scroller": {
+          "top": 80,
+          "scrollHeight": 783,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 725,
+          "bottom": 761
+        },
+        "scroller": {
+          "top": 80,
+          "scrollHeight": 783,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 430,
+      "h": 850,
+      "workspace": "AUTOPILOT",
+      "before": {
+        "target": {
+          "top": 426.5,
+          "bottom": 949
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 927,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 202.5,
+          "bottom": 725
+        },
+        "scroller": {
+          "top": 224,
+          "scrollHeight": 927,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 202.5,
+          "bottom": 725
+        },
+        "scroller": {
+          "top": 224,
+          "scrollHeight": 927,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": true,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 430,
+      "h": 850,
+      "workspace": "SETTINGS",
+      "before": {
+        "target": {
+          "top": 247.5,
+          "bottom": 609
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 703,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 247.5,
+          "bottom": 609
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 703,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 247.5,
+          "bottom": 609
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 703,
+          "clientHeight": 703,
+          "overflowY": "auto",
+          "rect": {
+            "top": 146,
+            "bottom": 849
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 102
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 430,
+        "viewW": 430,
+        "viewH": 850,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 360,
+      "h": 740,
+      "workspace": "ACCOUNTS",
+      "before": {
+        "target": {
+          "top": 883,
+          "bottom": 919
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 842,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 615,
+          "bottom": 651
+        },
+        "scroller": {
+          "top": 268,
+          "scrollHeight": 842,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 615,
+          "bottom": 651
+        },
+        "scroller": {
+          "top": 268,
+          "scrollHeight": 842,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": true,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 360,
+      "h": 740,
+      "workspace": "AUTOPILOT",
+      "before": {
+        "target": {
+          "top": 504.5,
+          "bottom": 1027
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 986,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 92.5,
+          "bottom": 615
+        },
+        "scroller": {
+          "top": 412,
+          "scrollHeight": 986,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 92.5,
+          "bottom": 615
+        },
+        "scroller": {
+          "top": 412,
+          "scrollHeight": 986,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": true,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 360,
+      "h": 740,
+      "workspace": "SETTINGS",
+      "before": {
+        "target": {
+          "top": 309,
+          "bottom": 679.5
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 596,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 287,
+          "bottom": 657.5
+        },
+        "scroller": {
+          "top": 22,
+          "scrollHeight": 596,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 287,
+          "bottom": 657.5
+        },
+        "scroller": {
+          "top": 22,
+          "scrollHeight": 596,
+          "clientHeight": 574,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 739
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 360,
+        "viewW": 360,
+        "viewH": 740,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": false,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 320,
+      "h": 680,
+      "workspace": "ACCOUNTS",
+      "before": {
+        "target": {
+          "top": 916,
+          "bottom": 952
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 875,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 555,
+          "bottom": 591
+        },
+        "scroller": {
+          "top": 361,
+          "scrollHeight": 875,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 555,
+          "bottom": 591
+        },
+        "scroller": {
+          "top": 361,
+          "scrollHeight": 875,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": true,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 320,
+      "h": 680,
+      "workspace": "AUTOPILOT",
+      "before": {
+        "target": {
+          "top": 504.5,
+          "bottom": 1027
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 986,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 32.5,
+          "bottom": 555
+        },
+        "scroller": {
+          "top": 472,
+          "scrollHeight": 986,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 32.5,
+          "bottom": 555
+        },
+        "scroller": {
+          "top": 472,
+          "scrollHeight": 986,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": true,
+      "wheelReached": true,
+      "keyboardReached": true
+    },
+    {
+      "w": 320,
+      "h": 680,
+      "workspace": "SETTINGS",
+      "before": {
+        "target": {
+          "top": 309,
+          "bottom": 696
+        },
+        "scroller": {
+          "top": 0,
+          "scrollHeight": 612,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "after": {
+        "target": {
+          "top": 211,
+          "bottom": 598
+        },
+        "scroller": {
+          "top": 98,
+          "scrollHeight": 612,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "keyboard": {
+        "target": {
+          "top": 211,
+          "bottom": 598
+        },
+        "scroller": {
+          "top": 98,
+          "scrollHeight": 612,
+          "clientHeight": 514,
+          "overflowY": "auto",
+          "rect": {
+            "top": 165,
+            "bottom": 679
+          }
+        },
+        "nav": {
+          "top": 52,
+          "bottom": 121
+        },
+        "shellOverflow": "hidden",
+        "docWidth": 320,
+        "viewW": 320,
+        "viewH": 680,
+        "singleComposerSourceNodes": 0,
+        "mainVisible": false,
+        "authCount": 0
+      },
+      "scrollNeeded": true,
+      "wheelReached": true,
+      "keyboardReached": true
+    }
+  ]
+}

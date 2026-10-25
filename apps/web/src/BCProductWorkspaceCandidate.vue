@@ -1,5 +1,5 @@
 <script setup>
-import {ref,watch,computed} from 'vue';
+import {ref,watch,computed,nextTick} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
 import {WORKSPACES,CHANNELS,R4_SETTINGS_CATEGORIES,R4_STOP_FAILURE_STATES,
@@ -13,6 +13,7 @@ const props=defineProps({
 const emit=defineEmits(['select']);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
+const contentScroller=ref(null);
 const settingCategory=ref('general');
 const category=computed(()=>R4_SETTINGS_CATEGORIES.find(c=>c.id===settingCategory.value)||R4_SETTINGS_CATEGORIES[0]);
 let epoch=0;
@@ -31,7 +32,11 @@ async function refresh(){
  }finally{if(rev===epoch)loading.value=false}
 }
 watch(()=>props.enabled,refresh,{immediate:true});
-watch(()=>props.activeWorkspace,()=>{menuOpen.value=false});
+watch(()=>props.activeWorkspace,async()=>{
+ menuOpen.value=false;
+ await nextTick();
+ if(contentScroller.value)contentScroller.value.scrollTop=0;
+});
 function choose(k){if(!WORKSPACES.some(x=>x.id===k))return;emit('select',k);menuOpen.value=false}
 const status=computed(()=>{
  if(loading.value)return '连接检查中';
@@ -66,7 +71,8 @@ defineExpose({refresh});
       @click="choose(item.id)">{{item.label}}</Button>
    </div>
   </div>
-  <div v-if="activeWorkspace!=='CHAT'" class="w46-candidate-content" data-test="w46-workspace-content">
+  <div v-if="activeWorkspace!=='CHAT'" ref="contentScroller" tabindex="0" role="region"
+   :aria-label="selected.label+'工作区内容（可滚动）'" class="w46-candidate-content" data-test="w46-workspace-content">
    <div class="w46-workspace-intro">
     <div><p class="w46-caption">{{selected.section}} · 原生能力权限待签署</p><h2>{{selected.label}}</h2>
       <p>{{selected.hint}}</p></div>
@@ -176,6 +182,12 @@ defineExpose({refresh});
 #yance-prototype:has(> .w46-product-candidate) .brand span{display:none!important}
 .w46-product-candidate{--w46-panel:#f7f9fc;--w46-text:#172232;--w46-edge:#ced7e4;--w46-accent:#225073;background:var(--w46-panel);color:var(--w46-text);border-bottom:1px solid var(--w46-edge);font-size:13px}
 .w46-product-candidate[data-mode=dark]{--w46-panel:#182a39;--w46-text:#eff5fc;--w46-edge:#355064;--w46-accent:#c1ef59}
+.w46-product-candidate:not([data-active-workspace='CHAT']){
+ flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden
+}
+.w46-product-candidate:not([data-active-workspace='CHAT']) .w46-product-top,
+.w46-product-candidate:not([data-active-workspace='CHAT']) .w46-workspace-tabs,
+.w46-product-candidate:not([data-active-workspace='CHAT']) .w46-small-workspaces{flex:0 0 auto}
 .w46-product-top{display:flex;align-items:center;gap:13px;min-height:42px;padding:7px 14px;flex-wrap:wrap}
 .w46-product-heading{display:flex;align-items:center;gap:8px}.w46-product-marker{font-size:10px;opacity:.7}
 .w46-product-state{flex:1;min-width:120px;text-align:right;color:var(--w46-accent);font-size:12px}
@@ -183,7 +195,14 @@ defineExpose({refresh});
 .w46-workspace-tabs button{white-space:nowrap;flex-shrink:0}
 .w46-small-workspaces{display:none;position:relative}
 .w46-workspace-menu{position:absolute;top:100%;left:9px;z-index:80;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:var(--w46-panel);color:var(--w46-text);border:1px solid var(--w46-edge);border-radius:12px;padding:10px;width:min(340px,calc(100vw - 18px));box-shadow:0 16px 44px #0005}
-.w46-candidate-content{padding:clamp(14px,3vw,32px);min-height:calc(100vh - 125px);display:grid;gap:20px;align-content:start}
+.w46-candidate-content{
+ flex:1 1 0;min-height:0;min-width:0;
+ overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;
+ scroll-behavior:auto;touch-action:pan-y;
+ padding:clamp(14px,3vw,32px);padding-bottom:max(28px,env(safe-area-inset-bottom,0px));
+ display:grid;gap:20px;align-content:start
+}
+.w46-candidate-content:focus-visible{outline:2px solid var(--w46-accent);outline-offset:-3px}
 .w46-workspace-intro{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
 .w46-workspace-intro h2{font-size:22px;font-weight:700}.w46-workspace-intro p{opacity:.8}
 .w46-caption{letter-spacing:.06em;text-transform:uppercase;font-size:10px}
