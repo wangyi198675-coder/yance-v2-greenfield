@@ -7,13 +7,20 @@ import {createComposerBridge,fullK} from './composer-bridge.mjs';
 // Replacement seam for the ONE selected B+C CONTACT Composer; not a second sender.
 const props=defineProps({
   identity:{type:Object,default:null}, sourceMid:{type:String,default:''},
-  suggestions:{type:Array,default:()=>[]}, takeoverPort:{type:Object,default:null}
+  suggestions:{type:Array,default:()=>[]}, nativeMessage:{type:Object,default:null},
+  takeoverPort:{type:Object,default:null}
 });
 let bridge=createComposerBridge({takeoverPort:props.takeoverPort});
 const current=ref({key:null,status:'NO_CONTACT',draft:null,canSend:false});
 const composing=ref(false),compositionK=ref(null),why=ref('');
 const update=()=>{current.value=bridge.view()};
-const safeIdentity=()=>props.identity&&current.value.key===fullK(props.identity)?props.identity:null;
+const safeIdentity=()=>{try{return props.identity&&current.value.key===fullK(props.identity)?props.identity:null}catch{return null}};
+const sourceMessage=computed(()=>{
+  const id=safeIdentity(),m=props.nativeMessage;
+  return id&&m?.identityKey===fullK(id)&&m.mid&&m.delivery==='NOT_REQUESTED'&&
+    m.canSend===false?m:null;
+});
+const currentMid=computed(()=>sourceMessage.value?.mid||props.sourceMid);
 watch(()=>props.takeoverPort,()=>{
   bridge=createComposerBridge({takeoverPort:props.takeoverPort});why.value='';
   if(props.identity)bridge.choose(props.identity);update();
@@ -25,7 +32,8 @@ watch(()=>props.identity,async id=>{
 },{immediate:true});
 const cards=computed(()=>{
   if(!safeIdentity())return [];
-  try{return bridge.candidates(props.identity,props.sourceMid,props.suggestions)}
+  try{return bridge.candidates(props.identity,currentMid.value,
+    sourceMessage.value?sourceMessage.value.suggestions:props.suggestions)}
   catch{return []} // Invalid/unsourced suggestions are not rendered.
 });
 async function action(kind,patch){
@@ -49,7 +57,7 @@ function onAttach(event){if(event.target.files?.length)action('ATTACH',{attachme
 function onPaste(event){if(event.clipboardData?.files?.length)
   action('PASTE',{attachments:filesOf(event.clipboardData.files)})}
 function chooseSuggestion(row){const id=safeIdentity();if(!id)return;
-  try{bridge.adoptCandidate(id,row,props.sourceMid);why.value='';update()}
+  try{bridge.adoptCandidate(id,row,currentMid.value);why.value='';update()}
   catch(e){why.value=String(e.message||e)}}
 function sourceQuote(source){const id=safeIdentity();if(!id)return false;
   try{bridge.quote(id,source);update();return true}catch{return false}}
@@ -60,6 +68,11 @@ defineExpose({sourceQuote}); // Parent timeline source MID, never synthetic quot
   <section class="bc-native-composer" aria-label="唯一 CONTACT Composer" @dragover.prevent @drop="onDrop">
     <p class="bc-identity">CONTACT · {{current.key||'NO_CONTACT'}} · {{current.status}}</p>
     <p v-if="why" role="alert" class="bc-warning">{{why}}</p>
+    <div v-if="sourceMessage" class="bc-source" data-test="native-message">
+      <p>原文 · MID {{sourceMessage.mid}} · {{sourceMessage.original}}</p>
+      <p v-if="sourceMessage.zh">有来源的译文（质量另行验收） · {{sourceMessage.zh}}</p>
+      <p v-else>中文译文：{{sourceMessage.translationStatus==='FIXTURE_ONLY'?'仅模拟数据，不作为真实译文':'暂无经过验证的译文'}}</p>
+    </div>
     <div class="bc-replies" aria-label="有来源的建议回复">
       <span>{{cards.length}} 条有来源建议</span>
       <div v-for="s in cards" :key="s.id" class="bc-card">

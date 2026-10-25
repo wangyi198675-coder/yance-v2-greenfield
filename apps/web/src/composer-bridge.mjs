@@ -74,8 +74,14 @@ export function createComposerBridge({takeoverPort=null}={}){
    const k=requireSelected(id);
    if(!takeoverPort?.get){states.set(k,{status:'UNAVAILABLE'});return view()}
    try{
-     const s=assertStatus(await takeoverPort.get({...id}),id);
-     states.set(k,{status:s.mode==='HUMAN'?'READY_HUMAN':'READ_ONLY_AUTO',epoch:s.epoch});
+     const raw=await takeoverPort.get({...id});
+     if(raw?.status==='IDENTITY_READ_VERIFIED'&&raw.identityKey===k&&
+       raw.canTakeover===false&&raw.canSend===false&&fullK(raw.identity)===k){
+       states.set(k,{status:'READ_ONLY_IDENTITY_VERIFIED'});
+     }else{
+       const s=assertStatus(raw,id);
+       states.set(k,{status:s.mode==='HUMAN'?'READY_HUMAN':'READ_ONLY_AUTO',epoch:s.epoch});
+     }
    }catch{states.set(k,{status:'BLOCKED'})}
    return view(); // Safe GET on view, never POST.
  }
@@ -93,7 +99,8 @@ export function createComposerBridge({takeoverPort=null}={}){
      drafts.set(k,{...drafts.get(k),attachments:patch.attachments.map(a=>({name:a.name,size:a.size}))});
    }
    if(!takeoverPort?.get||!takeoverPort?.post){
-     states.set(k,{status:'UNAVAILABLE'});return {key:k,status:'UNAVAILABLE',canSend:false};
+     const status=takeoverPort?.get?'READ_ONLY_NO_TAKEOVER_API':'UNAVAILABLE';
+     states.set(k,{status});return {key:k,status,canSend:false};
    }
    if(pending.has(k))return pending.get(k);
    const promise=(async()=>{
