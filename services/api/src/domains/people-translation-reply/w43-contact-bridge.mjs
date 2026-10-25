@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import {assertFullK} from './index.mjs';
 export const LOCAL_W43_PROVIDER='LLAMACPP_LOCAL_NO_PAID_API';
 export const LANGUAGES=Object.freeze({'zh-CN':'中文',en:'English',de:'Deutsch',pl:'polski'});
-const W43_SHA='9d09121b8ba41ae73de82ec4d01add2b23e70df7';
+const W43_SHA='d0987e9c64b937c923b3d32bda7bd05f86a638ba';
+export const LOCAL_QWEN3_PROVIDER='LLAMACPP_LOCAL_QWEN3_8B_FREE';
 const err=code=>{const e=new Error(code);e.code=code;throw e;};
 const digest=x=>createHash('sha256').update(x,'utf8').digest('hex');
 const keyOK=x=>typeof x==='string' && /^[A-Za-z0-9_.-]{1,160}$/.test(x);
@@ -28,12 +29,16 @@ export function w43ScopedIds(identity,thread='default'){
 export function w43ReplyPrompt({original,translation,targetLanguage='de'}){
   if(!Object.hasOwn(LANGUAGES,targetLanguage))err('UNSUPPORTED_LANGUAGE');
   if(typeof original!=='string'||typeof translation!=='string')err('INVALID_PROMPT_CONTEXT');
-  const prompt='fake-Reply '+targetLanguage+', natural, 0-3 short options. JSON only: {"suggestions":[{"text":"...","sources":["ORIGINAL"]}]}. Original:'+original+' Translation:'+translation;
+  const language={"zh-CN":"Chinese",en:"English",de:"German",pl:"Polish"}[targetLanguage];
+  // The verified translation stays in W45 provenance; do not append its Chinese
+  // text to this reply instruction, because the actual model copied the gloss.
+  const prompt='fake-/no_think As a fictional friend, reply in '+language+' only. Never echo or translate. ONLY JSON {"suggestions":[{"text":"...","sources":["ORIGINAL"]}]}. Message:'+original;
   if(prompt.length>200)err('W43_PROMPT_200_CHAR_CAP');
   if(/[\u0000-\u001f|]/.test(prompt))err('W43_PROMPT_UNSUPPORTED_CHARACTER');
   return prompt;
 }
-export function parseW43Candidates({receipt,mid}){
+export function parseW43Candidates({receipt,mid,replyLanguage=null,sourceOriginal=null,sourceTranslation=null}){
+  if(replyLanguage!==null&&!Object.hasOwn(LANGUAGES,replyLanguage))err('UNSUPPORTED_LANGUAGE');
   if(!receipt||receipt.status!=='AGNO_RUN_COMPLETED'||!receipt.original_response)return {status:'RUN_UNAVAILABLE',candidates:[]};
   if(typeof receipt.original_response!=='string'||receipt.original_response.length>8000)return {status:'OUTPUT_UNSTRUCTURED',candidates:[]};
   let output;
@@ -47,6 +52,12 @@ export function parseW43Candidates({receipt,mid}){
        item.sources.some(s=>!['ORIGINAL','TRANSLATION'].includes(s))||
        item.sources.length!==new Set(item.sources).size)return {status:'OUTPUT_UNSTRUCTURED',candidates:[]};
     const txt=item.text.trim();
+    if(/^(?:\.{2,}|…|example|reply|回复)$/iu.test(txt))return {status:'MODEL_PLACEHOLDER',candidates:[]};
+    if(typeof sourceOriginal==='string' && txt===sourceOriginal.trim())return {status:'MODEL_ORIGINAL_ECHO',candidates:[]};
+    if(typeof sourceTranslation==='string' && txt===sourceTranslation.trim())return {status:'MODEL_TRANSLATION_ECHO',candidates:[]};
+    const han=/[\u3400-\u9fff]/u.test(txt);
+    if(replyLanguage==='zh-CN'?!han:(replyLanguage!==null && (han||!/[A-Za-zÀ-ž]/u.test(txt))))
+      return {status:'MODEL_LANGUAGE_MISMATCH',candidates:[]};
     if(unique.has(txt))return {status:'OUTPUT_UNSTRUCTURED',candidates:[]};
     unique.add(txt);
     suggestions.push({id:'w45-'+digest(String(receipt.run_id)+'|'+mid+'|'+i).slice(0,20),
@@ -71,26 +82,26 @@ export function createW43ContactBridge({service,runW43,attestNativeReceipt,threa
       if(!receipt||receipt.status!=='AGNO_RUN_COMPLETED')return {status:'W43_RUN_FAILED',candidates:[]};
       if(!row.translation.provenance || row.translation.provenance.synthetic===false && row.translation.provenance.kind!=='LOCAL_ENGINE')err('TRANSLATION_PROVENANCE_INVALID');
       if(receipt.engine!=='OFFICIAL_AGNO_SDK'||receipt.sdk_pin!=='3.1.10' ||
-         receipt.provider!==LOCAL_W43_PROVIDER||
-         !['qwen2.5:1.5b','qwen3:8b'].includes(receipt.model_id)||
+         !((receipt.provider===LOCAL_W43_PROVIDER&&receipt.model_id==='qwen2.5:1.5b'&&receipt.purpose!=='QUALITY_EVAL')||
+           (receipt.provider===LOCAL_QWEN3_PROVIDER&&receipt.model_id==='qwen3:8b'&&receipt.purpose==='QUALITY_EVAL'))||
          receipt.space!=='CONTACT'||receipt.user_id!==ids.userId||
          receipt.session_id!==ids.sessionId||!receipt.run_id||
          receipt.outbound!=='DISABLED'||receipt.provenance?.run_id!==receipt.run_id||
          receipt.provenance?.source!==receipt.provider)err('W43_RECEIPT_IDENTITY_OR_PROVIDER_INVALID');
       if(await attestNativeReceipt({receipt,scope:ids.scope,thread,prompt,sourceSHA:W43_SHA})!==true)err('W43_NATIVE_ATTESTATION_REQUIRED');
-      const parsed=parseW43Candidates({receipt,mid});
-      if(parsed.status==='OUTPUT_UNSTRUCTURED')return {...parsed,model:{provider:receipt.provider,model_id:receipt.model_id,run_id:receipt.run_id,quality_qualified:false}};
+      const parsed=parseW43Candidates({receipt,mid,replyLanguage:targetLanguage,sourceOriginal:row.original.text,sourceTranslation:row.translation.text});
+      if(['OUTPUT_UNSTRUCTURED','MODEL_LANGUAGE_MISMATCH','MODEL_ORIGINAL_ECHO','MODEL_TRANSLATION_ECHO','MODEL_PLACEHOLDER'].includes(parsed.status))return {...parsed,model:{provider:receipt.provider,model_id:receipt.model_id,run_id:receipt.run_id,quality_qualified:false,quality_status:receipt.model_id==='qwen3:8b'?'MODEL_QUALITY_UNREVIEWED':'HEALTHCHECK_ONLY'}};
       const mapped={
         engine:'OFFICIAL_AGNO_SDK',status:'COMPLETED',identity:row.identity,sourceMid:mid,
         originalSha256:row.original.sha256,translationRequestId:row.translation.provenance.request_id,
         runId:receipt.run_id,sessionId:receipt.session_id,agentId:'w43-contact-brain',
-        provider:receipt.provider,modelId:receipt.model_id,
+        provider:receipt.provider,modelId:receipt.model_id,purpose:receipt.purpose||'HEALTHCHECK',
         sdkPin:receipt.sdk_pin,sourceSHA:W43_SHA,
         candidates:parsed.candidates,native_receipt:receipt,
       };
       const updated=service.acceptAgnoRun(identity,mid,mapped);
       return {status:parsed.status,candidates:updated.candidates,
-        model:{provider:receipt.provider,model_id:receipt.model_id,run_id:receipt.run_id,quality_qualified:false}};
+        model:{provider:receipt.provider,model_id:receipt.model_id,run_id:receipt.run_id,quality_qualified:false,quality_status:receipt.model_id==='qwen3:8b'?'MODEL_QUALITY_UNREVIEWED':'HEALTHCHECK_ONLY'}};
     }
   });
 }

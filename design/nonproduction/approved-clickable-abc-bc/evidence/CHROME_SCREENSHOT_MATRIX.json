@@ -1,0 +1,1067 @@
+{
+  "device": "DESKTOP-029FH47",
+  "browser": "Chrome Headless CDP native device metrics override",
+  "localOnly": true,
+  "source": "127.0.0.1:4174",
+  "screenshots": [
+    {
+      "file": "evidence/chrome/arm-A-1360.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-A-V25_VISUAL_NORMALIZED&pulse=0",
+      "kind": "ARM",
+      "requestedCSSWidth": 1360,
+      "actualCSSWidth": 1360,
+      "actualCSSHeight": 900,
+      "actualDPR": 1,
+      "pngRealWidth": 1360,
+      "pngRealHeight": 900,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 449,
+          "right": 553,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 559,
+          "right": 660,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 666,
+          "right": 763,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 769,
+          "right": 862,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1345,
+      "cssOverflow": false,
+      "sha256": "b671f1240743e9edbf91bc28eb95b5e518c7549be81f9ffacde7fdceff428a4d",
+      "bytes": 123937,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/arm-B-1360.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&pulse=0",
+      "kind": "ARM",
+      "requestedCSSWidth": 1360,
+      "actualCSSWidth": 1360,
+      "actualCSSHeight": 900,
+      "actualDPR": 1,
+      "pngRealWidth": 1360,
+      "pngRealHeight": 900,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 449,
+          "right": 553,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 559,
+          "right": 660,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 666,
+          "right": 763,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 769,
+          "right": 862,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1345,
+      "cssOverflow": false,
+      "sha256": "67169ec3f8035bde637334f964b4c3979fb958d0c871fd60b6abee8ff6835a90",
+      "bytes": 123881,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/arm-C-1360.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-C-PULSE_MAIN&pulse=0",
+      "kind": "ARM",
+      "requestedCSSWidth": 1360,
+      "actualCSSWidth": 1360,
+      "actualCSSHeight": 900,
+      "actualDPR": 1,
+      "pngRealWidth": 1360,
+      "pngRealHeight": 900,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 449,
+          "right": 553,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 559,
+          "right": 660,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 666,
+          "right": 763,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 769,
+          "right": 862,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1345,
+      "cssOverflow": false,
+      "sha256": "89598294273e37e88cbf2796144d2b7cd6a714b76fc3e0e9e451f3bec92c3b19",
+      "bytes": 111010,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/arm-BC-1360.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "ARM",
+      "requestedCSSWidth": 1360,
+      "actualCSSWidth": 1360,
+      "actualCSSHeight": 900,
+      "actualDPR": 1,
+      "pngRealWidth": 1360,
+      "pngRealHeight": 900,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 449,
+          "right": 553,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 559,
+          "right": 660,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 666,
+          "right": 763,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 769,
+          "right": 862,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1345,
+      "cssOverflow": false,
+      "sha256": "e2fae5c09a99675dded98dc69347108e2c4a22707051c58b58f4b0b4b08020e7",
+      "bytes": 135436,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-1-dark-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Obsidian+Lime&mode=dark",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 269,
+          "right": 353,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 355,
+          "right": 435,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 437,
+          "right": 513,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 515,
+          "right": 589,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "25e4f3e7a815759f02a3e098e87fa8613fc84d02633f89f86b3495f6b8967ccb",
+      "bytes": 74132,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-1-light-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Obsidian+Lime&mode=light",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 269,
+          "right": 353,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 355,
+          "right": 435,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 437,
+          "right": 513,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 515,
+          "right": 589,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "c52727e596155750cfd8a200b2b185b45371f08a622fd4c83af23e94b93ca83f",
+      "bytes": 73063,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-2-dark-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Cosmic+Sunset&mode=dark",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 269,
+          "right": 352,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 354,
+          "right": 434,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 436,
+          "right": 513,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 515,
+          "right": 588,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "f6dc269ab0d18f8c8e0975ebe232e072181df9791306b1ba947c8e4ea6459a40",
+      "bytes": 74971,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-2-light-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Cosmic+Sunset&mode=light",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 269,
+          "right": 352,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 354,
+          "right": 434,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 436,
+          "right": 513,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 515,
+          "right": 588,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "ce704f801efff96b608c14759cabaa7bee067beba0af152efb395a8dd3b107b7",
+      "bytes": 73293,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-3-dark-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Ocean+Electric&mode=dark",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 270,
+          "right": 353,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 355,
+          "right": 435,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 437,
+          "right": 514,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 516,
+          "right": 589,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "e652f22ceeed4181e25faf08a519c56362b481dd06bdc9248687387768965574",
+      "bytes": 74843,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-3-light-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Ocean+Electric&mode=light",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 270,
+          "right": 353,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 355,
+          "right": 435,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 437,
+          "right": 514,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 516,
+          "right": 589,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "f020d9f83afd6794fb1bf7e5db4364532f152c4cbc0b35e7cd00e7b8bc64e1cb",
+      "bytes": 74481,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-4-dark-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Amber+Ember&mode=dark",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 271,
+          "right": 354,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 356,
+          "right": 436,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 438,
+          "right": 515,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 517,
+          "right": 590,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "82e62a7cf5bdada866fde44c2a5615a660ef15fa46892b3df19ada089229ee61",
+      "bytes": 74482,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-4-light-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Amber+Ember&mode=light",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 271,
+          "right": 354,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 356,
+          "right": 436,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 438,
+          "right": 515,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 517,
+          "right": 590,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "58f467a240354e5e821200a0aa957f1aff03df2f86ba0e81b1a65788565e10c5",
+      "bytes": 72995,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-5-dark-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Opal+Prism&mode=dark",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 279,
+          "right": 362,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 364,
+          "right": 444,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 446,
+          "right": 523,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 525,
+          "right": 598,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "cf3a11ca18cb22986ffed14e74f63bc368de207d6a4ad291239fe8662a4a3794",
+      "bytes": 74933,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/theme-5-light-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-B-ADAPTIVE_INBOX&theme=Opal+Prism&mode=light",
+      "kind": "THEME",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 620,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 620,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 279,
+          "right": 362,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 364,
+          "right": 444,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 446,
+          "right": 523,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 525,
+          "right": 598,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "070ba2dd473c433ddab42520ab46917d6d6889bda09cea30363450d9d477b120",
+      "bytes": 72843,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-360.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 360,
+      "actualCSSWidth": 360,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 360,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 9,
+          "right": 171,
+          "top": 46,
+          "bottom": 74
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 175,
+          "right": 336,
+          "top": 46,
+          "bottom": 74
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 9,
+          "right": 171,
+          "top": 78,
+          "bottom": 106
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 175,
+          "right": 336,
+          "top": 78,
+          "bottom": 106
+        }
+      ],
+      "bodyScrollWidth": 345,
+      "cssOverflow": false,
+      "sha256": "03bddb036ec79c0cc90c57d17a14552095a856e60c7e63b2f129a0a090a26ff8",
+      "bytes": 59396,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-430.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 430,
+      "actualCSSWidth": 430,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 430,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 9,
+          "right": 206,
+          "top": 46,
+          "bottom": 74
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 210,
+          "right": 406,
+          "top": 46,
+          "bottom": 74
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 9,
+          "right": 206,
+          "top": 78,
+          "bottom": 106
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 210,
+          "right": 406,
+          "top": 78,
+          "bottom": 106
+        }
+      ],
+      "bodyScrollWidth": 415,
+      "cssOverflow": false,
+      "sha256": "67002bd4811e93d7bbee274a9102c92cd9f876e0a7f5f4c59b4406fedce33ded",
+      "bytes": 61265,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-720.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 720,
+      "actualCSSWidth": 720,
+      "actualCSSHeight": 780,
+      "actualDPR": 1,
+      "pngRealWidth": 720,
+      "pngRealHeight": 780,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 12,
+          "right": 181,
+          "top": 53,
+          "bottom": 85
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 183,
+          "right": 352,
+          "top": 53,
+          "bottom": 85
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 354,
+          "right": 522,
+          "top": 53,
+          "bottom": 85
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 524,
+          "right": 693,
+          "top": 53,
+          "bottom": 85
+        }
+      ],
+      "bodyScrollWidth": 705,
+      "cssOverflow": false,
+      "sha256": "8dde64d74f61f795c078908b89f1e69bfbf7e054705c71f003c1170537055389",
+      "bytes": 79009,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-920.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 920,
+      "actualCSSWidth": 920,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 920,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 254,
+          "right": 338,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 340,
+          "right": 420,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 422,
+          "right": 498,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 500,
+          "right": 574,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 905,
+      "cssOverflow": false,
+      "sha256": "8460f0ebbf73028aab51578c7b10f17100f91c7117573b48dd9b6368ec94a30d",
+      "bytes": 91831,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-950.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 950,
+      "actualCSSWidth": 950,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 950,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 269,
+          "right": 353,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 355,
+          "right": 435,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 437,
+          "right": 513,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 515,
+          "right": 589,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 935,
+      "cssOverflow": false,
+      "sha256": "571de809b45ff840fc86e3e22efb8e120858c292a778dac4575cd2ac7757e628",
+      "bytes": 92018,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-1050.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 1050,
+      "actualCSSWidth": 1050,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 1050,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 319,
+          "right": 403,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 405,
+          "right": 485,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 487,
+          "right": 563,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 565,
+          "right": 639,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1035,
+      "cssOverflow": false,
+      "sha256": "2b06b3d23931f19a04ba01b4ec4e4a208e16a878c940fd3bbec6927f71dcd9e0",
+      "bytes": 93151,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-1100.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 1100,
+      "actualCSSWidth": 1100,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 1100,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 344,
+          "right": 428,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 430,
+          "right": 510,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 512,
+          "right": 588,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 590,
+          "right": 664,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1085,
+      "cssOverflow": false,
+      "sha256": "a5289f89fb3219d2cd75eea40bf60e14c027efb168e5566c7c464ad0ed4a889b",
+      "bytes": 93558,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-1101.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 1101,
+      "actualCSSWidth": 1101,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 1101,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 345,
+          "right": 428,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 430,
+          "right": 510,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 512,
+          "right": 589,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 591,
+          "right": 664,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1086,
+      "cssOverflow": false,
+      "sha256": "483c8c71185733bb3f3d3ddbba49c39f04790b70923b918c53e77f0dcf3050b2",
+      "bytes": 94385,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    },
+    {
+      "file": "evidence/chrome/viewport-BC-1360.png",
+      "url": "http://127.0.0.1:4174/?arm=CHAT-BC-FUSION&pulse=1",
+      "kind": "RESPONSIVE",
+      "requestedCSSWidth": 1360,
+      "actualCSSWidth": 1360,
+      "actualCSSHeight": 850,
+      "actualDPR": 1,
+      "pngRealWidth": 1360,
+      "pngRealHeight": 850,
+      "nav": [
+        {
+          "text": "A · V2.5 标准化",
+          "left": 449,
+          "right": 553,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B · 自适应会话",
+          "left": 559,
+          "right": 660,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "C · 全屏 Pulse",
+          "left": 666,
+          "right": 763,
+          "top": 18,
+          "bottom": 50
+        },
+        {
+          "text": "B+C · 融合版",
+          "left": 769,
+          "right": 862,
+          "top": 18,
+          "bottom": 50
+        }
+      ],
+      "bodyScrollWidth": 1345,
+      "cssOverflow": false,
+      "sha256": "79d26f10e74f88f9742401aa10e566a9f4723b85c4ff90a5b1f6885305a175b9",
+      "bytes": 130864,
+      "chromeStatus": "CDP_EMULATION_EXACT_CSS_VIEWPORT_AND_SCREENSHOT_CAPTURED_NOT_INDEPENDENT_QA"
+    }
+  ],
+  "caution": "Headless Chrome/Chrome CDP is W39 owner test only; independent W40 QA and real Windows WebView2 remain NOT_RUN"
+}

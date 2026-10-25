@@ -1,0 +1,11 @@
+const fs=require('fs'),p=require('path'),crypto=require('crypto'),root=__dirname;
+const src='C:/Users/1/Documents/YanceV2/Phase3_OSS_Worktrees_20261024/DISPATCH/P2_AUDIT_ONLY_20261024/INDEPENDENT_REVIEW_RECEIPTS/P3-W42-OSS-PREIMPORT-POSTBUILD/';
+const bytes=fs.readFileSync(p.join(src,'VITE_ESBUILD_MINIMAL_SAFE_PIN_DELTA.csv'));
+const actual=crypto.createHash('sha256').update(bytes).digest('hex');
+if(actual!=='8287614bdf28e28fd51eb994037f351adbd9e74110fa0f9ec48409c1dc4c9e60')throw Error('W42_PREIMPORT_DELTA_HASH_MISMATCH '+actual);
+fs.copyFileSync(p.join(src,'VITE_ESBUILD_MINIMAL_SAFE_PIN_DELTA.csv'),p.join(root,'evidence','W42_APPROVED_VITE_ESBUILD_DELTA.csv'));
+fs.copyFileSync(p.join(src,'PREIMPORT_DELTA_TO_W39_W09.md'),p.join(root,'evidence','W42_PREIMPORT_DELTA_TO_W39.md'));
+const f=p.join(root,'package.json'),pkg=JSON.parse(fs.readFileSync(f,'utf8'));
+if(pkg.devDependencies.vite!=='7.3.1'||pkg.overrides||Object.keys(pkg.dependencies).length+Object.keys(pkg.devDependencies).length!==14)throw Error('NOT_OLD_14_LOCK');
+pkg.devDependencies.vite='7.3.7';pkg.overrides={esbuild:'0.28.1'};
+fs.writeFileSync(f,JSON.stringify(pkg,null,2)+'\n');console.log('W42_PREIMPORT_DELTA_ALLOW_44_ROWS_VERIFIED',actual,'vite@7.3.7 esbuild override 0.28.1');
