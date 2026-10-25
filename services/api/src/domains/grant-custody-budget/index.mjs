@@ -1,0 +1,208 @@
+/**
+ * W44 Issue #8: NONPRODUCTION SYNTHETIC grant/custody/budget store.
+ * W24 is authoritative for identity/consent; W25 alone owns MessageDelivery.
+ * NOT real authorization, an HTTP service, real model billing or a sender.
+ */
+import { DatabaseSync } from 'node:sqlite';
+const CHANNELS=new Set(['FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL']);
+const pos=x=>Number.isSafeInteger(x)&&x>0;
+const nonneg=x=>Number.isSafeInteger(x)&&x>=0;
+const bounded=x=>nonneg(x)&&x<=1_000_000_000;
+const safe=x=>typeof x==='string'&&x.length>0&&x.length<=180&&!/[\r\n\u0000-\u001f]/.test(x);
+const deny=reason=>({ok:false,reason});
+
+export function canonicalK(k) {
+  if(!k||k.tenant!=='SYNTHETIC_TEST_ONLY'||!safe(k.account)||!k.account.startsWith('fixture-')||
+    !CHANNELS.has(k.channel)||!safe(k.peer_id)||!k.peer_id.startsWith('fake-')||
+    !pos(k.binding_revision))throw Error('ONLY_SYNTHETIC_FULL_K');
+  return JSON.stringify([k.tenant,k.account,k.channel,k.peer_id,k.binding_revision]);
+}
+function scopeKey(k,scope) {
+  if(scope==='GLOBAL')return JSON.stringify(['G',k.tenant,k.account,k.channel]);
+  if(scope==='CONTACT')return JSON.stringify(['C',canonicalK(k)]);
+  throw Error('INVALID_SCOPE');
+}
+function intentKey(k,id){
+  if(!safe(id)||!id.startsWith('fake-'))throw Error('ONLY_SYNTHETIC_INTENT');
+  return JSON.stringify([canonicalK(k),id]);
+}
+
+export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=Date.now}={}) {
+  if(typeof path!=='string'||!path||path.length>1024||typeof verifyIdentity!=='function'||typeof authorizeMutation!=='function'||
+    typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
+  const db=new DatabaseSync(path,{timeout:5000});
+  db.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;');
+  db.exec([
+    'CREATE TABLE IF NOT EXISTS grants (scope_key TEXT PRIMARY KEY, scope TEXT NOT NULL, enabled INTEGER NOT NULL, epoch INTEGER NOT NULL, expires_at INTEGER NOT NULL, budget_limit INTEGER NOT NULL, spent INTEGER NOT NULL, reserved INTEGER NOT NULL);',
+    'CREATE TABLE IF NOT EXISTS custody (k TEXT PRIMARY KEY, mode TEXT NOT NULL, epoch INTEGER NOT NULL);',
+    'CREATE TABLE IF NOT EXISTS reservations (intent_key TEXT PRIMARY KEY, k TEXT NOT NULL, scope_key TEXT NOT NULL, grant_epoch INTEGER NOT NULL, custody_epoch INTEGER NOT NULL, binding_revision INTEGER NOT NULL, identity_epoch INTEGER NOT NULL, consent_epoch INTEGER NOT NULL, units INTEGER NOT NULL, valid_until INTEGER NOT NULL, state TEXT NOT NULL);'
+  ].join(' '));
+  const readGrant=db.prepare('SELECT * FROM grants WHERE scope_key=?');
+  const readCustody=db.prepare('SELECT * FROM custody WHERE k=?');
+  const readReservation=db.prepare('SELECT * FROM reservations WHERE intent_key=?');
+  const time=()=>{const t=now();if(!pos(t))throw Error('INVALID_CLOCK');return t};
+  function transaction(fn){
+    db.exec('BEGIN IMMEDIATE');
+    try {const v=fn();db.exec('COMMIT');return v}
+    catch(e){db.exec('ROLLBACK');throw e}
+  }
+  function admin(actor,action,k){
+    canonicalK(k);
+    if(!safe(actor)||!actor.startsWith('fake-')||
+      authorizeMutation({actor,action,identity:k})!==true)throw Error('W24_MUTATION_NOT_AUTHORIZED');
+  }
+  function currentIdentity(k){
+    canonicalK(k);
+    const s=verifyIdentity(k); // MUST read authoritative W24 state at every fence
+    return s?.valid===true&&s.binding_revision===k.binding_revision&&
+      pos(s.identity_epoch)&&pos(s.consent_epoch)?s:null;
+  }
+  function effective(k){
+    const g=readGrant.get(scopeKey(k,'GLOBAL'));
+    const c=readGrant.get(scopeKey(k,'CONTACT'));
+    if(g&&(!g.enabled||g.expires_at<=time()))
+      return {reason:g.enabled?'GLOBAL_EXPIRED':'GLOBAL_REVOKED'};
+    if(c&&(!c.enabled||c.expires_at<=time()))
+      return {reason:c.enabled?'CONTACT_EXPIRED':'CONTACT_REVOKED'};
+    const found=c||g;
+    return found&&found.enabled?{grant:found}:{reason:'NO_EFFECTIVE_GRANT'};
+  }
+  function qualify(k,units=1){
+    if(!pos(units)||!bounded(units))throw Error('INVALID_BUDGET_UNITS');
+    const key=canonicalK(k),s=currentIdentity(k);
+    if(!s)return deny('W24_IDENTITY_OR_CONSENT_INVALID');
+    const custody=readCustody.get(key);
+    if(custody&&custody.mode!=='AUTO')return deny('HUMAN_CUSTODY');
+    const choice=effective(k);
+    if(!choice.grant)return deny(choice.reason);
+    const g=choice.grant;
+    if(g.spent+g.reserved+units>g.budget_limit)return deny('BUDGET_EXHAUSTED');
+    return {ok:true,k:key,scopeKey:g.scope_key,grantEpoch:g.epoch,
+      custodyEpoch:custody?.epoch??0,identityEpoch:s.identity_epoch,
+      consentEpoch:s.consent_epoch,availableUnits:g.budget_limit-g.spent-g.reserved};
+  }
+  function grant({identity:k,scope,actor,enabled=true,expiresAt,budgetUnits,expectedEpoch=0}){
+    canonicalK(k);
+    if(typeof enabled!=='boolean'||!pos(expiresAt)||!bounded(budgetUnits)||!nonneg(expectedEpoch))
+      throw Error('INVALID_GRANT_TERMS');
+    admin(actor,'GRANT_'+scope,k);
+    const key=scopeKey(k,scope);
+    return transaction(()=>{
+      const old=readGrant.get(key);
+      if((old?.epoch??0)!==expectedEpoch)throw Error('STALE_GRANT_EPOCH');
+      const epoch=expectedEpoch+1;
+      db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,?,?,?,?,0,0) ON CONFLICT(scope_key) DO UPDATE SET enabled=excluded.enabled,epoch=excluded.epoch,expires_at=excluded.expires_at,budget_limit=excluded.budget_limit,spent=0,reserved=0')
+        .run(key,scope,Number(enabled),epoch,expiresAt,budgetUnits);
+      return {scopeKey:key,epoch,enabled};
+    });
+  }
+  function revoke({identity:k,scope,actor,expectedEpoch}){
+    canonicalK(k);admin(actor,'REVOKE_'+scope,k);
+    const key=scopeKey(k,scope);
+    return transaction(()=>{
+      const old=readGrant.get(key);
+      if(!old&&expectedEpoch===0){
+        // Revoking one contact under a global grant must create a durable DENY
+        // tombstone. Otherwise absence of a contact row silently falls back to GLOBAL.
+        db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,0,1,8640000000000000,0,0,0)').run(key,scope);
+        return {scopeKey:key,epoch:1,enabled:false};
+      }
+      if(!old||old.epoch!==expectedEpoch)throw Error('STALE_GRANT_EPOCH');
+      db.prepare('UPDATE grants SET enabled=0,epoch=epoch+1,reserved=0 WHERE scope_key=?').run(key);
+      return {scopeKey:key,epoch:old.epoch+1,enabled:false};
+    });
+  }
+  function setCustody({identity:k,mode,action,actor,expectedEpoch=0}){
+    const key=canonicalK(k);
+    if(!nonneg(expectedEpoch)||
+      !(mode==='HUMAN'&&action==='USER_EDIT'||mode==='AUTO'&&action==='EXPLICIT_RESUME'))
+      throw Error('FOCUS_CANNOT_TAKEOVER');
+    admin(actor,'CUSTODY_'+action,k);
+    return transaction(()=>{
+      const old=readCustody.get(key);
+      if((old?.epoch??0)!==expectedEpoch)throw Error('STALE_CUSTODY_EPOCH');
+      const epoch=expectedEpoch+1;
+      db.prepare('INSERT INTO custody(k,mode,epoch) VALUES(?,?,?) ON CONFLICT(k) DO UPDATE SET mode=excluded.mode,epoch=excluded.epoch')
+        .run(key,mode,epoch);
+      return {k:key,mode,epoch};
+    });
+  }
+  function reserve({identity:k,intentId,units=1,ttlMs=60000}){
+    const key=intentKey(k,intentId);
+    if(!pos(units)||!bounded(units)||!pos(ttlMs)||ttlMs>300000)throw Error('INVALID_RESERVATION_TERMS');
+    return transaction(()=>{
+      const old=readReservation.get(key);
+      if(old)return old.units===units?
+        {ok:false,reason:'IDEMPOTENT_'+old.state,intentKey:key,state:old.state}:
+        deny('IDEMPOTENCY_CONFLICT');
+      const s=qualify(k,units);
+      if(!s.ok)return s;
+      const expiry=Math.min(time()+ttlMs,readGrant.get(s.scopeKey).expires_at);
+      if(expiry<=time())return deny('GRANT_EXPIRED');
+      const changed=db.prepare('UPDATE grants SET reserved=reserved+? WHERE scope_key=? AND epoch=? AND enabled=1 AND budget_limit-spent-reserved>=?')
+        .run(units,s.scopeKey,s.grantEpoch,units);
+      if(changed.changes!==1)return deny('RACING_BUDGET_OR_EPOCH');
+      db.prepare('INSERT INTO reservations(intent_key,k,scope_key,grant_epoch,custody_epoch,binding_revision,identity_epoch,consent_epoch,units,valid_until,state) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+        .run(key,s.k,s.scopeKey,s.grantEpoch,s.custodyEpoch,k.binding_revision,
+          s.identityEpoch,s.consentEpoch,units,expiry,'RESERVED');
+      return {ok:true,intentKey:key,state:'RESERVED',grantEpoch:s.grantEpoch,
+        custodyEpoch:s.custodyEpoch,identityEpoch:s.identityEpoch,
+        consentEpoch:s.consentEpoch,validUntil:expiry};
+    });
+  }
+  function fenceWithinTransaction(k,r){
+    if(time()>=r.valid_until)return deny('RESERVATION_EXPIRED');
+    const s=currentIdentity(k);
+    if(!s||s.identity_epoch!==r.identity_epoch||s.consent_epoch!==r.consent_epoch||
+      s.binding_revision!==r.binding_revision)return deny('W24_EPOCH_STALE');
+    const c=readCustody.get(r.k);
+    if((c?.epoch??0)!==r.custody_epoch||c?.mode==='HUMAN')return deny('CUSTODY_CHANGED');
+    const choice=effective(k);
+    if(!choice.grant||choice.grant.scope_key!==r.scope_key||
+      choice.grant.epoch!==r.grant_epoch)return deny('GRANT_CHANGED');
+    return {ok:true};
+  }
+  function checkForSend({identity:k,intentId}){
+    const key=intentKey(k,intentId);
+    return transaction(()=>{
+      const r=readReservation.get(key);
+      if(!r||r.state!=='RESERVED')return deny('NO_ACTIVE_RESERVATION');
+      const check=fenceWithinTransaction(k,r);
+      return check.ok?{ok:true,intentKey:key,grantEpoch:r.grant_epoch,
+        custodyEpoch:r.custody_epoch,identityEpoch:r.identity_epoch,
+        consentEpoch:r.consent_epoch}:check;
+    });
+  }
+  function finish({identity:k,intentId,action,actualUnits}){
+    if(!['RELEASE','COMMIT'].includes(action))throw Error('BAD_RESERVATION_ACTION');
+    const key=intentKey(k,intentId);
+    return transaction(()=>{
+      const r=readReservation.get(key);
+      if(!r||r.state!=='RESERVED')return deny('RESERVATION_NOT_ACTIVE');
+      if(action==='COMMIT'&&(!nonneg(actualUnits)||actualUnits>r.units))
+        return deny('INVALID_ACTUAL_UNITS');
+      if(action==='COMMIT'){
+        const f=fenceWithinTransaction(k,r);
+        if(!f.ok)return f;
+      }
+      const g=readGrant.get(r.scope_key);
+      if(g&&g.epoch===r.grant_epoch)
+        db.prepare('UPDATE grants SET reserved=reserved-?,spent=spent+? WHERE scope_key=?')
+          .run(r.units,action==='COMMIT'?actualUnits:0,r.scope_key);
+      const state=action==='COMMIT'?'COMMITTED':'RELEASED';
+      db.prepare('UPDATE reservations SET state=? WHERE intent_key=?').run(state,key);
+      return {ok:true,state};
+    });
+  }
+  function inspection(k){
+    const key=canonicalK(k);
+    if(!currentIdentity(k))return deny('W24_IDENTITY_OR_CONSENT_INVALID');
+    const c=readCustody.get(key),s=effective(k);
+    return {ok:true,mode:c?.mode??'AUTO',custodyEpoch:c?.epoch??0,
+      effectiveGrant:s.grant?{scope:s.grant.scope,epoch:s.grant.epoch,
+        budgetLimit:s.grant.budget_limit,spent:s.grant.spent,
+        reserved:s.grant.reserved}:null,reason:s.reason??null};
+  }
+  return Object.freeze({grant,revoke,setCustody,qualify,reserve,checkForSend,finish,
+    inspection,close:()=>db.close()});
+}
