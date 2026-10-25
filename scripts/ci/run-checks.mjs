@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';import path from 'node:path';import {spawnSync} from 'node:child_process';import crypto from 'node:crypto';
+import {attachActualNativeSiblings} from './native-sibling-refs.mjs';
 const root=path.resolve(import.meta.dirname,'../..'),mode=process.argv[2]||'all',reports=path.join(root,'ci-artifacts');fs.mkdirSync(reports,{recursive:true});
 const report={mode,sha:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),base:process.env.CI_BASE_SHA||null,checks:[],notApplicable:[],errors:[]};
 const cmd=(bin,args,cwd=root,timeout=180000)=>spawnSync(bin,args,{cwd,encoding:'utf8',timeout,windowsHide:true});
@@ -23,6 +24,9 @@ check('contract-252-and-UIE100',()=>{run('node',['scripts/ci/verify-frozen-contr
 }
 if(['all','native'].includes(mode)){
 check('committed-domain-tests',()=>{
+ const siblings=attachActualNativeSiblings(root);
+ try {
+ report.actualNativeSiblingSources=siblings.sources;
  const results=[];
  for(const [name,prefix] of nativePaths){
   const tests=filesUnder(prefix).filter(x=>/\.test\.mjs$|\.spec\.mjs$/i.test(x));
@@ -34,6 +38,7 @@ check('committed-domain-tests',()=>{
  }
  if(!results.length)absent('native','No domain files present on this branch; native PASS not asserted');
  return results
+ } finally {siblings.dispose()}
 });
 }
 if(['all','security'].includes(mode)){

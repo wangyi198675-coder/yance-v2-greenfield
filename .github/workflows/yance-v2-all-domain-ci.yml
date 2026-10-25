@@ -83,6 +83,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Verify immutable real-sibling source checkout guard
+        if: ${{ hashFiles('scripts/ci/native-sibling-refs.test.mjs') != '' }}
+        run: node --test scripts/ci/native-sibling-refs.test.mjs
       - name: Execute committed source-domain JS tests (never fake pass)
         run: node scripts/ci/run-checks.mjs native
       - uses: actions/upload-artifact@v4
