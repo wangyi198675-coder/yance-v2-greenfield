@@ -22,7 +22,7 @@ type Draft={text:string;quote:LocalQuote|null;files:{name:string;size:number}[]}
 const getFresh=()=>({
  arm:ARMS[1].id as Arm,theme:'Obsidian Lime',appearance:'dark',themeMenuOpen:false,selected:key(originalContacts[0]),
  search:'',channel:'ALL',account:'ALL',pageSize:30,pulseOpen:false,privateOpen:false,
- dialog:'',suggestExpanded:false,composerComposing:false,privateDraft:'',
+ dialog:'',suggestExpanded:false,composerComposing:false,privateDraft:'',variantMenuOpen:false,mobileView:'chat' as 'chat'|'contacts',inboxView:'ALL' as 'ALL'|'UNREAD'|'AUTO',
  drafts:{} as Record<string,Draft>,mode:{} as Record<string,string>,
  exceptions:{} as Record<string,string>,
  notes:[] as string[],
@@ -49,16 +49,21 @@ export const candidates=(c:Contact)=>overlay.reply_cases.find(x=>x.peer_id===c.p
 export const displayName=(c:Contact)=>c.peer_id==='fake-peer-003'||c.peer_id==='fake-peer-117'?'同名演示联系人':c.display_name
 export const filtered=computed(()=>{
  const q=state.search.toLowerCase().trim()
- return allContacts.filter(c=>
+ const adaptive=state.arm==='CHAT-B-ADAPTIVE_INBOX'||state.arm==='CHAT-BC-FUSION'
+ const base=allContacts.filter(c=>
    (state.channel==='ALL'||c.channel===state.channel)&&
    (state.account==='ALL'||c.account===state.account)&&
-   (!q||[displayName(c),c.peer_id,c.account,c.channel,c.last_message.original,c.last_message.zh].some(v=>v.toLowerCase().includes(q)))
+   (!q||[displayName(c),c.peer_id,c.account,c.channel,c.last_message.original,c.last_message.zh].some(v=>v.toLowerCase().includes(q)))&&
+   (!adaptive||state.inboxView==='ALL'||(state.inboxView==='UNREAD'?c.unread>0:currentMode(c)==='AUTO'))
  )
+ if(!adaptive)return base
+ // Only factual frozen unread counts, no inferred attention/relationship scores.
+ return [...base].sort((a,b)=>Number(b.unread)-Number(a.unread))
 })
 export const paged=computed(()=>filtered.value.slice(0,state.pageSize))
-export function select(c:Contact){if(!filtered.value.some(x=>key(x)===key(c))){note('BLOCK OUT_OF_SCOPE '+key(c));return false}state.selected=key(c);state.suggestExpanded=false;state.pulseOpen=state.arm==='CHAT-C-PULSE_MAIN'?false:state.pulseOpen;note('VIEW '+key(c)+' – no takeover / no read ack');return true}
+export function select(c:Contact){if(!filtered.value.some(x=>key(x)===key(c))){note('BLOCK OUT_OF_SCOPE '+key(c));return false}state.selected=key(c);state.suggestExpanded=false;state.mobileView='chat';state.pulseOpen=state.arm==='CHAT-C-PULSE_MAIN'?false:state.pulseOpen;note('VIEW '+key(c)+' – no takeover / no read ack');return true}
 export function applyScope(account:string,channel:string){state.account=account;state.channel=channel;state.pageSize=30;const c=getByK(state.selected);if(!c||!filtered.value.some(x=>key(x)===key(c))){const replacement=filtered.value[0];state.selected=replacement?key(replacement):'';note('SCOPE_CHANGE_SAFE '+(replacement?key(replacement):'NO_SELECTION')+'; no read ack/takeover/send')}}
-export function setArm(arm:Arm){state.arm=arm;state.pulseOpen=arm==='CHAT-C-PULSE_MAIN';state.privateOpen=false;note('SWITCH ARM '+arm+'; data unchanged')}
+export function setArm(arm:Arm){state.arm=arm;state.mobileView='chat';state.inboxView='ALL';state.variantMenuOpen=false;state.pulseOpen=arm==='CHAT-C-PULSE_MAIN';state.privateOpen=false;note('SWITCH ARM '+arm+'; data unchanged')}
 export function reset(arm:Arm=state.arm){
  const n=state.resetCount+1;Object.assign(state,getFresh());state.resetCount=n;state.arm=arm;state.pulseOpen=arm==='CHAT-C-PULSE_MAIN';note('RESET frozen W37 seed; all contact-local state cleared')
 }

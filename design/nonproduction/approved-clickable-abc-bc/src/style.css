@@ -92,3 +92,39 @@ html,body,#app{height:100%;max-height:100%;overflow:hidden}
 
 /* P2: B+C close target usable by keyboard, pointer and touch. */
 .autopilot-pane .cn-button-size-icon-sm{min-width:40px;min-height:40px}
+
+/* W09 delegated UX delta: product-layout-only; OSS component primitives unmodified. */
+.topbar{height:56px;min-height:56px;padding:0 16px}
+.arm-menu,.mobile-contact-back{display:none!important}
+.global-private-entry{white-space:nowrap}
+.inbox-pills{display:flex;align-items:center;gap:5px;padding:3px 12px 9px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.inbox-pills>span{color:var(--muted);font-size:10px;flex-basis:100%}
+.message-context{cursor:pointer}
+.message-context:hover .source-bubble{border-color:var(--accent)}
+.private-drawer{left:10px;right:10px;width:auto;top:84px;bottom:28px;border-radius:12px;max-width:none;display:flex;z-index:24}
+.private-drawer .private-head{padding:14px 20px}
+.private-drawer .private-tabs{grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.private-drawer .private-history{width:min(900px,100%);margin:0 auto}
+.private-drawer .private-bottom{width:100%;justify-content:center}
+.private-drawer .private-input{max-width:820px}
+@media(min-width:551px) and (max-width:1050px){.topbar{height:52px;min-height:52px}.arm-switch .cn-button{font-size:10px;padding:0 5px}}
+@media(max-width:550px){
+ .topbar{height:52px!important;min-height:52px!important;display:flex!important;flex-wrap:nowrap!important;padding:0 9px!important;gap:4px!important}
+ .brand{min-width:0!important}.arm-switch{display:none!important}
+ .top-actions{gap:4px;min-width:0;justify-self:auto}.top-actions .cn-button{padding:0 6px}
+ .arm-menu{display:inline-flex!important}.global-private-entry{height:31px}
+ .workspace{display:flex!important;flex-direction:column!important;height:0!important;overflow:hidden!important}
+ .workspace .contact-pane{display:none!important}
+ .workspace.mobile-show-contacts .contact-pane{display:flex!important;flex:1 1 0!important;height:100%!important;min-height:0!important;max-height:none!important}
+ .workspace.mobile-show-contacts .chat-pane,.workspace.mobile-show-contacts .no-active-pane{display:none!important}
+ .workspace.mobile-show-chat .chat-pane{display:flex!important;height:100%!important;max-height:none!important;flex:1 1 0!important}
+ .contact-pane .contacts-scroll{min-height:110px!important;flex:1 1 0!important;height:auto!important}
+ .chat-pane .timeline{min-height:100px!important}
+ .mobile-contact-back{display:inline-flex!important;padding:0 6px!important;height:30px}
+ .chat-header .header-avatar{display:none}
+ .chat-header{gap:4px;min-height:63px}
+ .chat-person p,.chat-person small{font-size:10px}
+ .private-drawer{top:80px!important;bottom:28px!important;left:0!important;right:0!important;width:100vw!important;border-radius:0}
+ .private-drawer .private-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .private-drawer .private-head h3{font-size:14px}
+}
