@@ -266,7 +266,7 @@ test('existing W46 loopback GET/POST port talks to exact W24 owner endpoints',as
   });
 });
 
-test('unmodified W46 Composer cannot claim success without forwarding required epochs',async()=>{
+test('current W46 Composer forwards all CAS versions; real PASTE becomes HUMAN after W24 GET→POST→GET',async()=>{
   const w46root=process.env.YANCE_W46_ROOT;
   if(!w46root)throw Error('YANCE_W46_ROOT_EXISTING_W46_WORKTREE_REQUIRED');
   const src=resolve(w46root,'apps/web/src');
@@ -277,13 +277,63 @@ test('unmodified W46 Composer cannot claim success without forwarding required e
       endpoints:{get:TAKEOVER_GET,post:TAKEOVER_POST}});
     const bridge=createComposerBridge({takeoverPort:port});
     bridge.choose(A);
+    const before=await port.get(A);
+    assert.equal(before.mode,'AUTO');
     const inspected=await bridge.inspect(A);
     assert.equal(inspected.status,'READ_ONLY_AUTO');
+    assert.equal((await port.get(A)).epoch,before.epoch,
+      'select/view/inspect must never take human custody');
     const response=await bridge.userAction(A,'PASTE',{text:'fake-test-edit'});
-    assert.equal(response.status,'BLOCKED');
-    assert.match(response.reason,/NATIVE_HTTP_422/);
-    assert.equal((await port.get(A)).mode,'AUTO');
-    assert.equal((await port.get(B)).mode,'AUTO');
-    assert.equal((await port.get(C)).mode,'AUTO');
+    assert.equal(response.status,'READY_HUMAN');
+    assert.equal(response.key,before.identityKey);
+    assert.equal(response.verifiedEpoch,before.epoch+1);
+    assert.equal(response.canSend,false,'takeover is never a send authorization');
+    const after=await port.get(A);
+    assert.deepEqual(after.identity,before.identity);
+    assert.equal(after.identityKey,before.identityKey);
+    assert.equal(after.mode,'HUMAN');
+    assert.equal(after.epoch,before.epoch+1);
+    assert.equal(after.accountRevocationEpoch,before.accountRevocationEpoch);
+    assert.equal(after.consentEpoch,before.consentEpoch);
+    assert.equal(f.store.inspection(A).mode,'HUMAN','must reflect W44 SQLite custody');
+    for(const peer of [B,C]){
+      const other=await port.get(peer);
+      assert.equal(other.mode,'AUTO');
+      assert.equal(other.epoch,0);
+      assert.equal(f.store.inspection(peer).effectiveGrant.scope,'CONTACT');
+    }
+  });
+});
+
+test('current W46 HTTP rejects stale full-K and stale custody CAS with independent 409 responses',async()=>{
+  await withFixture(async f=>{
+    const before=await f.get(A);
+    const badK=await f.post(A,before,'TYPE',{expectedIdentityKey:
+      'SYNTHETIC_TEST_ONLY|fixture-a|FB_PERSONAL|fake-contact-A|99'});
+    assert.equal(badK.status,409);
+    assert.equal(badK.body.accepted,false);
+    assert.equal(badK.body.error,'STALE_TAKEOVER_IDENTITY');
+    const staleEpoch=await f.post(A,before,'PASTE',{expectedEpoch:before.body.epoch+1});
+    assert.equal(staleEpoch.status,409);
+    assert.equal(staleEpoch.body.accepted,false);
+    assert.equal(staleEpoch.body.error,'STALE_TAKEOVER_EPOCH');
+    assert.equal((await f.get(A)).body.mode,'AUTO');
+    for(const peer of [B,C])assert.equal((await f.get(peer)).body.mode,'AUTO');
+  });
+});
+
+test('current W46 HTTP rejects missing mandatory CAS fields with independent 422 responses',async()=>{
+  await withFixture(async f=>{
+    const before=await f.get(A);
+    const missingConsent=await f.post(A,before,'TYPE',{expectedConsentEpoch:undefined});
+    assert.equal(missingConsent.status,422);
+    assert.equal(missingConsent.body.error,'EXPECTED_EPOCHS_REQUIRED');
+    assert.equal(missingConsent.body.accepted,false);
+    const missingAccount=await f.post(A,before,'PASTE',{expectedAccountRevocationEpoch:undefined});
+    assert.equal(missingAccount.status,422);
+    assert.equal(missingAccount.body.error,'EXPECTED_EPOCHS_REQUIRED');
+    assert.equal(missingAccount.body.accepted,false);
+    assert.equal((await f.get(A)).body.mode,'AUTO');
+    for(const peer of [B,C])assert.equal((await f.get(peer)).body.mode,'AUTO');
   });
 });

@@ -108,22 +108,24 @@ a provider ACK or a paid model action.
 Only GET 200 and verified POST 200 are success. All errors return
 `{accepted:false,error:'STABLE_CODE'}`; no fabricated success.
 
-## Exact W46 integration gap discovered by real execution
+## Current W46 Composer integration confirmed (2026-10-25)
 
-At the observed W46 worktree `W46_BC_NATIVE_20261025`,
-`apps/web/src/native-takeover-port.mjs` already correctly calls GET and POST.
-**Its existing `apps/web/src/composer-bridge.mjs` currently only POSTs
-`{expectedEpoch,action,intent}`.** To satisfy strict authority CAS, W46 Owner
-must add these three exact fields from its immediately prior GET:
+W46 Owner exact SHA `88f6c30094a3d6217491c3d1f410a040d91ab3f0`
+already supplies all strict CAS fields from the preceding GET in
+`apps/web/src/composer-bridge.mjs`:
 `expectedIdentityKey:before.identityKey`,
+`expectedEpoch:before.epoch`,
 `expectedAccountRevocationEpoch:before.accountRevocationEpoch`,
 `expectedConsentEpoch:before.consentEpoch`.
-No changes to W46 sources were made by W24.
+The prior W24 assertion expecting a legal PASTE to return `BLOCKED` /
+HTTP 422 was obsolete and has been corrected **only in W24 test source**.
 
-An actual W46 **loopback port** GET -> POST(with all epochs) -> GET passed
-against real W44 SQLite on loopback. In a separate real regression the
-**unmodified W46 Composer** PASTE action correctly returned `BLOCKED` /
-HTTP 422 and W44 remained AUTO; this is not frontend integration success.
+The actual W46 Composer now returns `READY_HUMAN`, verified epoch +1
+for legal PASTE, and independent GET and W44 SQLite inspection confirm
+same full K in HUMAN; B/C remain AUTO. Separate explicit HTTP negative
+requests using a stale full K/custody epoch yield 409, and missing
+mandatory version fields yield 422. No W46 source was altered by W24.
+This is local synthetic loopback execution, not production account UAT.
 
 W44: existing setCustody is sole custody authority; ensure mutation delegation
 remains identity + actor scoped and CAS. W25: HUMAN takeover should fence AUTO
@@ -139,17 +141,21 @@ $env:YANCE_W46_ROOT='C:\Users\1\Documents\YanceV2\Worktrees\W46_BC_NATIVE_202610
 node --test services/api/src/domains/identity-consent/takeover-http.test.mjs
 ```
 
-14/14 PASS. Existing W24 identity/Consent and 205 historical PR #32 tests are
-not reimplemented. This is local loopback execution, not a real Windows
-WebView2 graphical click UAT and not production signoff.
+Current targeted suite: 16/16 PASS; W24 combined 28 original
+IdentityConsent + 16 takeover HTTP + 4 intentionally RED diagnostic audit
+assertions = 48/48 executable assertions. The 4 audit PASS are reproduced
+P0 vulnerabilities, **not** security-release pass. This is local loopback
+execution, not a real provider, production HTTP or WebView2 graphical signoff.
 
 ## Remaining safety gates
 
-P0: W46 Composer must forward the three additional GET snapshot fields and
-run genuine user-edit E2E UAT without synthetic mock success. A trusted
-authenticated app/IPC resolver with real session validation is not yet installed;
-test injected context MUST NOT be reused in production. No production HTTP,
-identity/consent proof or live provider authorization.
+P0: The W46 CAS forwarding defect is ALREADY CLOSED at W46 SHA
+`88f6c30094a3d6217491c3d1f410a040d91ab3f0`.
+The W24 separate identity-persistence / W44 atomic mutation-fence issue
+remains **RED** (see `P0_DB_OWNER_MINIMAL_INTERFACE_REQUEST.md`).
+A trusted authenticated app/IPC resolver with real session validation is
+not yet installed; test injected context MUST NOT be reused in production.
+No production HTTP, identity/consent proof or live provider authorization.
 
 P1: separate SEC review of loopback caller auth/CSRF and cross-process retry,
 and server-side semantic integrity of "real edit" action (the backend cannot
