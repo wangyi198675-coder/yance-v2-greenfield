@@ -21,6 +21,7 @@ function gate(){
         // B+C is the accepted product view; hide the obsolete A/B/C experiment switch.
         code=code.replace(/export const ARMS:[\s\S]*?\n]\nexport const THEMES/,
           "export const ARMS: {id:Arm;label:string;sub:string}[] = [{id:'CHAT-BC-FUSION',label:'B+C · 融合版',sub:'Inbox + Autopilot'}]\nexport const THEMES");
+        code=code.replace('arm:ARMS[3].id as Arm','arm:ARMS[0].id as Arm');
         code=code.replace('selected:key(originalContacts[0])', "selected:originalContacts[0]?key(originalContacts[0]):''");
         code=code.replace('export const allContacts=originalContacts as Contact[]',`export const allContacts=originalContacts as Contact[]
 // Server supplied list only; no fixture hydration or fake success on failed reads.
