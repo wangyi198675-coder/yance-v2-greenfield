@@ -1,0 +1,150 @@
+{
+  "source": "REAL_WINDOWS_GOOGLE_CHROME_HEADLESS",
+  "exactW09SourceSha": "0423d7d347c2538e8ca9804dca1c2fc2baf1760b",
+  "underlyingAPIOriginalW47Sha": "86a16e57e92722ec11a95c22d364071a33c8a5cb",
+  "r4ExactHtmlAccessible": true,
+  "r4OriginalVerifiedSha256": "4d95254bf39281173b0756f723a512111471187f201c40479599b6a6b46878e4",
+  "readiness": "NONPRODUCTION_CANDIDATE_NOT_OWNER_SIGNED",
+  "trustedSession": false,
+  "realAccounts": 0,
+  "realContacts": 0,
+  "canSend": false,
+  "oneOriginalContactComposerRetained": true,
+  "frozenDemoHidden": true,
+  "navWorkspaces": [
+    "CHAT",
+    "BRAIN",
+    "AUTOPILOT",
+    "ACCOUNTS",
+    "PEOPLE",
+    "PERSONA",
+    "TASKS",
+    "MEDIA",
+    "SETTINGS"
+  ],
+  "widths": [
+    {
+      "width": 320,
+      "inner": 320,
+      "scroll": 320,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 360,
+      "inner": 360,
+      "scroll": 360,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 375,
+      "inner": 375,
+      "scroll": 375,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 430,
+      "inner": 430,
+      "scroll": 430,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 500,
+      "inner": 500,
+      "scroll": 500,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 720,
+      "inner": 720,
+      "scroll": 720,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 920,
+      "inner": 920,
+      "scroll": 920,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 950,
+      "inner": 950,
+      "scroll": 950,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 1050,
+      "inner": 1050,
+      "scroll": 1050,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 1100,
+      "inner": 1100,
+      "scroll": 1100,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 1101,
+      "inner": 1101,
+      "scroll": 1101,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    },
+    {
+      "width": 1360,
+      "inner": 1360,
+      "scroll": 1360,
+      "navCount": 10,
+      "candidateVisible": true,
+      "demoVisible": false,
+      "mode": "dark"
+    }
+  ],
+  "themeStates": 10,
+  "settingsCategories": 9,
+  "failClosedStatusExamples": 3,
+  "brandSvgPathsVerified": 4,
+  "apiMutationRequests": [],
+  "pageErrors": [],
+  "screenshots": [
+    "W46_R4_CANDIDATE_CHROME_1360_ACCOUNTS.png",
+    "W46_R4_CANDIDATE_CHROME_360_MENU.png",
+    "W46_R4_CANDIDATE_CHROME_THEME_4_DARK.png",
+    "W46_R4_CANDIDATE_CHROME_430_SETTINGS.png",
+    "W46_R4_CANDIDATE_CHROME_430_FAILCLOSED.png",
+    "W46_R4_CANDIDATE_CHROME_430_AUTOPILOT.png",
+    "W46_R4_CANDIDATE_CHROME_320_SETTINGS.png"
+  ]
+}
