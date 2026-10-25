@@ -52,3 +52,18 @@ W25 calls finish COMMIT only for a confirmed fictional charge, or RELEASE only w
     node --test services/api/src/domains/grant-custody-budget/index.test.mjs
 
 Tests use temporary local SQLite, run cross-process budget contention, and do not access the network.
+
+## Cross-Owner native adapters (available in native-bridges.mjs)
+
+- createW24IdentityPorts requires the ACTUAL W24 IdentityConsentService.assertCurrent and separate current consent epoch and operator RBAC callbacks. It does not invent W24 durable consent or an authenticated caller.
+- createW24GrantAuthority provides W24's grantAuthority.evaluate synchronous contract using W44 inspection and an injected authoritative W43 agent state port.
+- createW25EligibilityPort provides W25 MessageDelivery.eligibility.check; translates W25 camelCase full-K to W24 original full-K, reserves one budget unit on ADMISSION, checks original reservation plus W24 epoch on PRE_NETWORK, and supplies frozen account/grant/custody/route/agent versions. W25's one durable Outbox is always the only sink. HUMAN/manual, media and unproved route/agent are fail-closed.
+- W25 businessMessageId must be a stable fake-* ID for synthetic admission and the same ID must be used to reconcile W44's reservation; no blind new intent on duplicate.
+
+For explicit **native cross-owner synthetic smoke** (requires both separate Owner files checked out):
+
+    node services/api/src/domains/grant-custody-budget/interop.native.mjs <absolute-W24-identity-consent.mjs> <absolute-W25-message-delivery-index.mjs>
+
+The smoke uses the actual W24 IdentityConsentService, the actual W44 SQLite service and the actual W25 MessageDelivery native Outbox with a SyntheticConnectorSink. It verifies fixture ACK, reservation COMMIT and revoke denial. The agent, route, consent epoch and operator permission callbacks are **synthetic test authorities**; there are no production owner bindings or real provider receipts.
+
+This smoke is intentionally explicit rather than silently importing missing siblings on main. The three domain branches must be merged/accepted by their respective authorized Owners before a shared continuous integration test can replace it. P0 cross-domain atomicity/final network send race remains unresolved.

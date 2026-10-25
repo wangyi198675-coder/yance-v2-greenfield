@@ -79,7 +79,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
     if(g.spent+g.reserved+units>g.budget_limit)return deny('BUDGET_EXHAUSTED');
     return {ok:true,k:key,scopeKey:g.scope_key,grantEpoch:g.epoch,
       custodyEpoch:custody?.epoch??0,identityEpoch:s.identity_epoch,
-      consentEpoch:s.consent_epoch,availableUnits:g.budget_limit-g.spent-g.reserved};
+      consentEpoch:s.consent_epoch,expiresAt:g.expires_at,availableUnits:g.budget_limit-g.spent-g.reserved};
   }
   function grant({identity:k,scope,actor,enabled=true,expiresAt,budgetUnits,expectedEpoch=0}){
     canonicalK(k);
@@ -200,7 +200,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
     const c=readCustody.get(key),s=effective(k);
     return {ok:true,mode:c?.mode??'AUTO',custodyEpoch:c?.epoch??0,
       effectiveGrant:s.grant?{scope:s.grant.scope,epoch:s.grant.epoch,
-        budgetLimit:s.grant.budget_limit,spent:s.grant.spent,
+        expiresAt:s.grant.expires_at,budgetLimit:s.grant.budget_limit,spent:s.grant.spent,
         reserved:s.grant.reserved}:null,reason:s.reason??null};
   }
   return Object.freeze({grant,revoke,setCustody,qualify,reserve,checkForSend,finish,
