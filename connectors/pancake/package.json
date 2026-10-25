@@ -1,0 +1,12 @@
+{
+  "name": "@yance-v2/pancake-synthetic-adapter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --test adapter.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
