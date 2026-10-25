@@ -1,0 +1,184 @@
+name: YANCE V2 W30 Exact PR Head Backfill
+on:
+  push:
+    branches:
+      - ci/w30-backfill-run-20261025
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: w30-pr-backfill
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: w30-discover-current-open-heads
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - id: plan
+        name: Read real GitHub open PR HEADs, exclude W30 CI maintenance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ci/pr-head-backfill.mjs discover
+
+  verify:
+    name: audit-pr-${{ matrix.number }}
+    needs: discover
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      CI_BASE_SHA: ${{ matrix.base }}
+    steps:
+      - id: source
+        name: Checkout exact immutable PR HEAD without credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Checkout trusted main CI scripts independently
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install trusted CI scripts only, never business Owner code
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "${{ matrix.sha }}" || { echo "::error::Actual checkout HEAD mismatch"; exit 9; }
+      - id: contract
+        continue-on-error: true
+        run: node scripts/ci/run-checks.mjs contract
+      - id: security
+        continue-on-error: true
+        run: node scripts/ci/run-checks.mjs security
+      - id: native
+        continue-on-error: true
+        run: node scripts/ci/run-checks.mjs native
+      - id: agno
+        if: ${{ hashFiles('services/agentos/requirements-test.txt') != '' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          test -f services/agentos/tests/test_w43_native.py || { echo "::error::missing real Agno tests"; exit 2; }
+          python -m pip install --disable-pip-version-check -r services/agentos/requirements-test.txt
+          python -m pytest -q -m 'not local_model' services/agentos/tests
+          echo 'NOT_RUN: 3 Windows protected local_model tests; no model secrets in hosted CI'
+      - id: agno_missing_test
+        if: ${{ hashFiles('services/agentos/requirements-test.txt') == '' && hashFiles('services/agentos/**') != '' }}
+        continue-on-error: true
+        run: |
+          echo "::error::Agno files exist with no declared trusted dependency/test suite"
+          exit 3
+      - id: m0
+        continue-on-error: true
+        shell: bash
+        run: |
+          if [ -f integration/synthetic-first-flow/flow.test.mjs ]; then
+            node --test integration/synthetic-first-flow/flow.test.mjs
+            node -e 'const fs=require("fs");const f=fs.readFileSync("integration/synthetic-first-flow/STABLE252_PROVISIONAL_DOMAIN_OWNER_MAP.csv","utf8");if(f.trim().split(/\r?\n/).length!==253)throw Error("252 source mapping absent");'
+          elif [ -d integration/synthetic-first-flow ] && find integration/synthetic-first-flow -type f | grep -q .; then
+            echo "::error::Integration files without tests"; exit 5
+          else
+            echo 'NOT_APPLICABLE: no M0 source on this PR HEAD'
+          fi
+      - id: frontend
+        continue-on-error: true
+        run: node scripts/ci/run-checks.mjs frontend
+      - id: browserInstall
+        if: ${{ hashFiles('design/nonproduction/approved-clickable-abc-bc/package-lock.json') != '' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - id: browser
+        if: ${{ hashFiles('design/nonproduction/approved-clickable-abc-bc/package-lock.json') != '' }}
+        continue-on-error: true
+        run: node scripts/ci/browser-smoke.mjs
+      - id: evidence
+        if: always()
+        name: Immutable SHA and step outcome evidence (fail closed)
+        env:
+          CI_ITEM: ${{ toJSON(matrix) }}
+          CI_STEPS_JSON: ${{ toJSON(steps) }}
+          CI_AGNO_EXISTS: ${{ hashFiles('services/agentos/requirements-test.txt') != '' }}
+          CI_M0_EXISTS: ${{ hashFiles('integration/synthetic-first-flow/flow.test.mjs') != '' }}
+          CI_BROWSER_EXISTS: ${{ hashFiles('design/nonproduction/approved-clickable-abc-bc/package-lock.json') != '' }}
+          CI_EVIDENCE_DIR: ci-artifacts/w30
+        shell: bash
+        run: |
+          export CI_STEPS_JSON="$(node -e 'let a=JSON.parse(process.env.CI_STEPS_JSON);if(a.agno_missing_test?.outcome==="failure")a.agno={outcome:"failure"};console.log(JSON.stringify(Object.fromEntries(Object.entries(a).map(([k,v])=>[k,v.outcome||"missing"]))))')"
+          export CI_APPLICABILITY="$(node -e 'console.log(JSON.stringify({agno:process.env.CI_AGNO_EXISTS==="true",m0:process.env.CI_M0_EXISTS==="true",browser:process.env.CI_BROWSER_EXISTS==="true"}))')"
+          if test -f scripts/ci/pr-head-backfill.mjs; then
+            node scripts/ci/pr-head-backfill.mjs record
+          else
+            echo "::error::trusted W30 recorder absent"; exit 9
+          fi
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w30-pr-${{ matrix.number }}-${{ matrix.sha }}
+          path: ci-artifacts/w30/pr-head.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  publish:
+    name: w30-post-attested-exact-head-results
+    if: ${{ always() && needs.discover.result == 'success' }}
+    needs: [discover, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: w30-pr-*
+          path: ci-artifacts/backfill
+          merge-multiple: false
+      - name: Publish only scoped actual GitHub tests at still-current exact HEAD
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CI_MATRIX: ${{ needs.discover.outputs.matrix }}
+          CI_ARTIFACT_DIR: ci-artifacts/backfill
+        run: node scripts/ci/pr-head-backfill.mjs publish
+
+# Never upload local/production model secrets; PR test job has zero checks:write permission.
+# Publishing check is "w30/exact-head-backfill", never spoofs protected "nonproduction-merge-gate".
