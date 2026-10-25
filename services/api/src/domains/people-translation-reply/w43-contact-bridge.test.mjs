@@ -37,7 +37,7 @@ async function configured({identity=k(),targetLanguage='de',suggestions=[item('H
      return receipt(identity,suggestions,runOverrides);
    },
    attestNativeReceipt:async({receipt:actual,scope,sourceSHA})=>{
-     assert.equal(sourceSHA,'6ecb8bcf15b7863f132c60d3dce42a871f2c89f9');
+     assert.equal(sourceSHA,'d0987e9c64b937c923b3d32bda7bd05f86a638ba');
      return actual.user_id===w43ScopedIds({...identity}).userId && scope.peer_id===identity.peer_id;
    }
  });
@@ -149,13 +149,13 @@ test('replayed MID cannot change requested language',async()=>{
 
 test('Qwen3 8B native QUALITY_EVAL receipt produces only actual sourced drafts, never an automatic quality PASS',async()=>{
  const s=await configured({suggestions:[item('Hallo, wie geht es dir?')],runOverrides:{
-  provider:'OLLAMA_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
-  provenance:{run_id:'fake-run-123',source:'OLLAMA_LOCAL_QWEN3_8B_FREE'}
+  provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+  provenance:{run_id:'fake-run-123',source:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}
  }});
  const result=await s.bridge.propose({identity:k(),mid:'fake-mid-1'});
  assert.equal(result.status,'CANDIDATES_PRESENT');
  assert.equal(result.candidates.length,1);
- assert.equal(result.candidates[0].provenance.model_provider,'OLLAMA_LOCAL_QWEN3_8B_FREE');
+ assert.equal(result.candidates[0].provenance.model_provider,'LLAMACPP_LOCAL_QWEN3_8B_FREE');
  assert.equal(result.candidates[0].provenance.model_id,'qwen3:8b');
  assert.equal(result.candidates[0].provenance.quality_qualified,false);
  assert.equal(result.candidates[0].provenance.quality_status,'MODEL_QUALITY_UNREVIEWED');
@@ -168,8 +168,8 @@ test('Qwen3 8B native QUALITY_EVAL receipt produces only actual sourced drafts, 
 test('Qwen3 model/provider/purpose pairs fail closed on false cloud, paid and healthcheck labels',async()=>{
  for(const pair of [
   {model_id:'qwen3:8b',provider:'LLAMACPP_LOCAL_NO_PAID_API',purpose:'QUALITY_EVAL'},
-  {model_id:'qwen3:8b',provider:'OLLAMA_LOCAL_QWEN3_8B_FREE',purpose:'HEALTHCHECK'},
-  {model_id:'qwen2.5:1.5b',provider:'OLLAMA_LOCAL_QWEN3_8B_FREE',purpose:'QUALITY_EVAL'},
+  {model_id:'qwen3:8b',provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',purpose:'HEALTHCHECK'},
+  {model_id:'qwen2.5:1.5b',provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',purpose:'QUALITY_EVAL'},
   {model_id:'qwen3:8b',provider:'OPENAI_API',purpose:'QUALITY_EVAL'}
  ]){
   const s=await configured({suggestions:[item('Hallo')],runOverrides:{...pair,provenance:{run_id:'fake-run-123',source:pair.provider}}});
@@ -194,4 +194,101 @@ test('legacy healthcheck is never mislabeled Qwen3 strong quality',async()=>{
  const result=await s.bridge.propose({identity:k(),mid:'fake-mid-1'});
  assert.equal(result.model.quality_status,'HEALTHCHECK_ONLY');
  assert.equal(result.model.quality_qualified,false);
+});
+
+test('llama.cpp Qwen3 official provider is the ONLY qualified local strong-model route',async()=>{
+ const valid=await configured({suggestions:[item('Guten Morgen!')],
+  runOverrides:{provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+    provenance:{run_id:'fake-run-123',source:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}}});
+ const r=await valid.bridge.propose({identity:k(),mid:'fake-mid-1'});
+ assert.equal(r.status,'CANDIDATES_PRESENT');
+ assert.equal(r.candidates.length,1);
+ assert.equal(r.candidates[0].provenance.model_provider,'LLAMACPP_LOCAL_QWEN3_8B_FREE');
+ assert.equal(r.candidates[0].provenance.model_id,'qwen3:8b');
+ assert.equal(r.candidates[0].provenance.quality_qualified,false);
+});
+test('Ollama model now rejects as obsolete provider even if it claims Qwen3 and VALID Run',async()=>{
+ const s=await configured({runOverrides:{provider:'OLLAMA_LOCAL_QWEN3_8B_FREE',
+  model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+  provenance:{run_id:'fake-run-123',source:'OLLAMA_LOCAL_QWEN3_8B_FREE'}}});
+ await assert.rejects(s.bridge.propose({identity:k(),mid:'fake-mid-1'}),/W43_RECEIPT_IDENTITY_OR_PROVIDER_INVALID/);
+ assert.equal(s.service.getMessage(k(),'fake-mid-1').candidates.length,0);
+});
+test('real-shaped German reply with Chinese characters is zero, never displayed as natural German',async()=>{
+ const s=await configured({suggestions:[item('早上好')],runOverrides:{
+   provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',
+   purpose:'QUALITY_EVAL',provenance:{run_id:'fake-run-123',source:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}}});
+ const r=await s.bridge.propose({identity:k(),mid:'fake-mid-1',targetLanguage:'de'});
+ assert.equal(r.status,'MODEL_LANGUAGE_MISMATCH');
+ assert.deepEqual(r.candidates,[]);
+ assert.equal(s.service.getMessage(k(),'fake-mid-1').candidates.length,0);
+});
+test('Chinese candidates must include Han and remain only unapproved drafts',()=>{
+ const e=receipt(k(),[item('你好，最近怎么样？')]);
+ assert.equal(parseW43Candidates({receipt:e,mid:'fake-mid-1',replyLanguage:'zh-CN'}).candidates.length,1);
+ assert.equal(parseW43Candidates({receipt:e,mid:'fake-mid-1',replyLanguage:'en'}).candidates.length,0);
+ assert.equal(parseW43Candidates({receipt:receipt(k(),[item('Hello')]),mid:'fake-mid-1',replyLanguage:'zh-CN'}).status,'MODEL_LANGUAGE_MISMATCH');
+});
+test('duplicate actual Run ID cannot be accepted twice, even under the same K/MID',async()=>{
+ const s=await configured({suggestions:[item('Guten Morgen')],runOverrides:{
+  provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+  provenance:{run_id:'fake-run-123',source:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}}});
+ const a=await s.bridge.propose({identity:k(),mid:'fake-mid-1'});
+ assert.equal(a.candidates.length,1);
+ await assert.rejects(s.bridge.propose({identity:k(),mid:'fake-mid-1'}),/AGNO_RUN_REPLAY_DENIED/);
+ assert.equal(s.service.getMessage(k(),'fake-mid-1').candidates.length,0);
+});
+test('the lab executable denies invocation without explicit synthetic-only opt-in before backend access',async()=>{
+ const {spawnSync}=await import('node:child_process');
+ const {fileURLToPath}=await import('node:url');
+ const script=fileURLToPath(new URL('./w43-live-synthetic-lab.mjs',import.meta.url));
+ const r=spawnSync(process.execPath,[script],{
+   encoding:'utf8',timeout:5000,env:{...process.env,W45_NONPROD_LAB:''}});
+ assert.notEqual(r.status,0);
+ assert.match(r.stderr,/NONPROD_EXPLICIT_LAB_OPT_IN_REQUIRED/);
+});
+
+test('actual-model-looking original echo and translated-text echo create zero candidates',async()=>{
+ for(const [replyLanguage,text,expect] of [
+  ['de','Guten Tag','MODEL_ORIGINAL_ECHO'],
+  ['de','Guten Tag','MODEL_ORIGINAL_ECHO'],
+  ['de','Hello','MODEL_TRANSLATION_ECHO']
+ ]){
+  const service=createPeopleTranslationReplyService({
+    translator:{async translate({mid,inputSha256,targetLanguage}){return{
+      status:'OK',translatedText:'Hello',sourceLanguage:'de',targetLanguage,
+      provenance:{kind:'LOCAL_ENGINE',provider:'LOCAL_TEST_ONLY',requestId:'fake-trans-replay',
+       sourceMid:mid,inputSha256}}}},
+    attestAgnoRun:run=>run?.native_receipt?.run_id===run?.runId
+  });
+  await service.ingestInbound({identity:k(),mid:'fake-echo-mid',original:'Guten Tag',
+    targetLanguage:'zh-CN',source});
+  const r=receipt(k(),[item(text)],{
+    provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+    provenance:{run_id:'fake-run-123',source:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}});
+  const bridge=createW43ContactBridge({service,runW43:async()=>r,attestNativeReceipt:async()=>true});
+  const proposal=await bridge.propose({identity:k(),mid:'fake-echo-mid',targetLanguage:replyLanguage});
+  assert.equal(proposal.status,expect);
+  assert.equal(proposal.candidates.length,0);
+ }
+});
+
+test('Qwen3 receipt for another account/session never yields a suggestion for this full K',async()=>{
+ const realK=k('fixture-account-1','fake-peer-001');
+ const wrongK=k('fixture-other-account','fake-peer-001');
+ const s=await configured({identity:realK,suggestions:[item('Hallo, wie geht es dir?')],runOverrides:{
+  ...receipt(wrongK,[],{}),provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',
+  model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+  provenance:{run_id:'fake-run-123',source:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}}});
+ await assert.rejects(s.bridge.propose({identity:realK,mid:'fake-mid-1'}),/W43_RECEIPT_IDENTITY_OR_PROVIDER_INVALID/);
+ assert.equal(s.service.getMessage(realK,'fake-mid-1').candidates.length,0);
+});
+test('llama.cpp fake placeholder cannot become a Composer draft',async()=>{
+ const s=await configured({suggestions:[item('...')],runOverrides:{
+  provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',model_id:'qwen3:8b',purpose:'QUALITY_EVAL',
+  provenance:{run_id:'fake-run-123',source:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}}});
+ const r=await s.bridge.propose({identity:k(),mid:'fake-mid-1',targetLanguage:'de'});
+ assert.equal(r.status,'MODEL_PLACEHOLDER');
+ assert.deepEqual(r.candidates,[]);
+ assert.equal(s.service.getMessage(k(),'fake-mid-1').candidates.length,0);
 });

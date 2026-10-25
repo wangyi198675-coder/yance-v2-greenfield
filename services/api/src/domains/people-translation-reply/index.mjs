@@ -47,14 +47,15 @@ function validTranslation(value,record) {
       source_mid:record.mid,input_sha256:record.original.sha256,
       synthetic:p.kind==='SYNTHETIC_FIXTURE',
       model_id:typeof p.modelId==='string'?p.modelId:null,
-      sdk_run_id:typeof p.sdkRunId==='string'?p.sdkRunId:null
+      sdk_run_id:typeof p.sdkRunId==='string'?p.sdkRunId:null,
+      sdk_session_id:typeof p.sdkSessionId==='string'?p.sdkSessionId:null
     }
   };
 }
 
 /** Native DTO layer. Translator execution and W43 Agno attestation are explicit dependencies. */
 export function createPeopleTranslationReplyService({translator=null,attestAgnoRun=null,clock=()=>new Date().toISOString()}={}) {
-  const records=new Map(),pending=new Map();
+  const records=new Map(),pending=new Map(),consumedRunIds=new Set();
   const key=(identity,mid)=>fullKKey(identity)+'\u0000'+mid;
   function find(identity,mid){const r=records.get(key(identity,mid));if(!r)error('UNKNOWN_K_OR_MID');return r;}
   const snapshot=(r)=>clone({identity:r.identity,mid:r.mid,original:r.original,translation:r.translation,candidates:r.candidates,delivery:'NOT_REQUESTED',draft_only:true});
@@ -110,9 +111,10 @@ export function createPeopleTranslationReplyService({translator=null,attestAgnoR
       if(fullKKey(run.identity)!==fullKKey(r.identity) || run.sourceMid!==r.mid)error('AGNO_K_MID_MISMATCH');
       if(run.translationRequestId!==r.translation.provenance.request_id || run.originalSha256!==r.original.sha256)error('AGNO_STALE_TRANSLATION_OR_ORIGINAL');
       if(!exists(run.runId)||!exists(run.sessionId)||!exists(run.agentId))error('AGNO_TRACE_REQUIRED');
+      if(run.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE' && consumedRunIds.has(String(run.runId)))error('AGNO_RUN_REPLAY_DENIED');
       if(run.provider){
         const accepted=(run.provider==='LLAMACPP_LOCAL_NO_PAID_API' && run.modelId==='qwen2.5:1.5b') ||
-          (run.provider==='OLLAMA_LOCAL_QWEN3_8B_FREE' && run.modelId==='qwen3:8b' && run.purpose==='QUALITY_EVAL');
+          (run.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE' && run.modelId==='qwen3:8b' && run.purpose==='QUALITY_EVAL');
         if(!accepted)error('MODEL_PROVIDER_PAIR_NOT_AUTHORIZED');
       }
       if(!Array.isArray(run.candidates) || run.candidates.length>3)error('AGNO_CANDIDATES_COUNT_INVALID');
@@ -123,6 +125,7 @@ export function createPeopleTranslationReplyService({translator=null,attestAgnoR
         if(!Array.isArray(item.sources) || item.sources.length===0 || item.sources.some(s=>s.mid!==r.mid || !['ORIGINAL','TRANSLATION'].includes(s.part)))error('AGNO_CITATION_INVALID');
         return {id:String(item.id),text:item.text,action:'DRAFT_ONLY',provenance:{engine:'OFFICIAL_AGNO_SDK',run_id:String(run.runId),session_id:String(run.sessionId),agent_id:String(run.agentId),model_provider:run.provider||'TEST_FIXTURE_NO_PROVIDER',model_id:run.modelId||null,sdk_pin:run.sdkPin||null,quality_qualified:false,quality_status:run.modelId==='qwen3:8b'?'MODEL_QUALITY_UNREVIEWED':'HEALTHCHECK_ONLY',source_mid:r.mid,sources:item.sources.map(s=>({mid:s.mid,part:s.part}))}};
       });
+      if(run.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE')consumedRunIds.add(String(run.runId));
       r.candidates=candidates;
       return snapshot(r);
     },
