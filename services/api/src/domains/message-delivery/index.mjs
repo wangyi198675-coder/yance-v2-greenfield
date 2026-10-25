@@ -240,6 +240,30 @@ export class MessageDelivery {
       this.db.prepare("UPDATE send_intents SET state='IN_FLIGHT',revision=revision+1,updated_at=? WHERE id=?").run(this.now(),id);
       this.audit(id, 'SYNTHETIC_BOUNDARY_ENTERED', { attemptId, recipientFence: lease.fence });
     });
+    // Recheck once more AFTER recording the durable attempt and as close as
+    // possible to the synthetic side-effect. W44's existing PRE_NETWORK port
+    // is reused: do not invent a parallel eligibility/authorization system.
+    // This narrows the cross-DB TOCTOU gap; it does NOT make W24/W44/W25 atomic.
+    try {
+      const finalProof = await this.eligibility.check({
+        k: intent.k, mode: intent.mode, businessMessageId: intent.businessMessageId,
+        phase: 'PRE_NETWORK', intentId: id
+      });
+      requireAuthorized(intent, finalProof, this.now(), intent.authority);
+    } catch (err) {
+      const code = err.code || 'ELIGIBILITY_ERROR';
+      return this.tx(() => {
+        const row = this.db.prepare('SELECT state FROM send_intents WHERE id=?').get(id);
+        if (row?.state !== 'IN_FLIGHT') throw new DeliveryError('BOUNDARY_STATE_STALE');
+        this.db.prepare("UPDATE send_intents SET state='DENIED',denial_code=?,revision=revision+1,updated_at=? WHERE id=?")
+          .run(code,this.now(),id);
+        this.db.prepare("UPDATE outbox_attempts SET state='NOT_SENT_AUTHORITY_DENIED',error_code=?,updated_at=? WHERE id=?")
+          .run(code,this.now(),attemptId);
+        this.db.prepare('DELETE FROM recipient_leases WHERE peer_key=? AND intent_id=?').run(key,id);
+        this.audit(id,'FINAL_BOUNDARY_DENIED_NO_SEND',{code,attemptId});
+        return {state:'DENIED',denialCode:code,dispatched:false,attemptId};
+      });
+    }
     let result;
     try {
       result = await this.sink.send({
@@ -313,7 +337,9 @@ export class MessageDelivery {
         throw new DeliveryError('RECEIPT_STATE_CONFLICT');
       const existing = this.db.prepare('SELECT * FROM receipt_events WHERE source_event_id=?').get(event.sourceEventId);
       if (existing) {
-        if (existing.intent_id !== event.intentId || existing.attempt_id !== event.attemptId)
+        if (existing.intent_id !== event.intentId || existing.attempt_id !== event.attemptId ||
+            existing.kind !== event.kind || existing.provider_mid !== event.providerMid ||
+            existing.verified_source !== verification.source)
           throw new DeliveryError('RECEIPT_REPLAY_CONFLICT');
         return { state: i.state, duplicate: true };
       }
