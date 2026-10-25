@@ -1,0 +1,12 @@
+# One runnable nonproduction synthetic chat transaction, not 11 parallel architecture studies
+Objective: single deterministic synthetic end-to-end flow passing through official Agno-native abstraction and canonical message domain boundaries. Incrementally add real source in its own owner's branch with contracts, CI and independent changed-scope tests. Avoid duplicate engines, duplicate Outbox, and redoing the completed four prototype designs.
+Event chain:
+1. Connector-simulator emits fake inbound with tenant/account/channel/peer/binding-revision, provider MID and original bytes; IdentityConsent validates canonical K and current authorization.
+2. People/Translation/Reply persists source text + translated text/provenance and queries approved local/test Agno route (no paid cloud calls). Agno must generate 0-3 actually available candidates with id/provenance (no filler).
+3. Frontend/Composer shows draft-only suggestions, private workspace in separate SELF_PRIVATE domain; focus/view does not takeover, actual edits of contact A update only A; B/C AUTO remain independent.
+4. An authorized synthetic 'send' requests a single MessageDelivery SendIntent. Right before irreversible boundary recheck channel account/peer/binding/authorization/epoch/budget and custody; no approved identity -> block and audit.
+5. Simulator Outbox produces deterministic ACK or UNKNOWN with idempotent physical-recipient lock and no blind retry UNKNOWN. Audit and replay/recovery must be deterministic, duplicate request IDs must not create extra provider sends. NO real providers or actual messaging.
+6. Run concurrent A/B/C recipient tests plus revoke, expiry, stale binding, manual takeover, budget exhausted, duplicate inbound/ACK and UNKNOWN late ACK; store event trace, stable IDs and costs=0. Canonical MessageDelivery is the ONLY sending authority.
+Shared integration contract first: exact event types, payload schema, ownership, test harness, run command. Owners independently implement only their segments in separate worktrees and propose PRs, not write to another's branch.
+Milestones: M0 11 owner personal ACK/permission verified and hosted private repo governance; M1 synthetic receive→translate→suggest→Composer (no send); M2 mock authorizations→Outbox→ACK/UNKNOWN→audit; M3 concurrency/recovery; M4 separately authorized live channel test, if ever approved.
+Each milestone pass means a **running synthetic workflow**, not document count. Do not block M1 source work for unrelated physical channel authorizations, but do not call M4 complete.

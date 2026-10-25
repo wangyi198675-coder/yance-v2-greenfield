@@ -1,0 +1,34 @@
+name: YANCE V2 Greenfield synthetic contract checks
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Frozen source contract 252 and UIE 100
+        run: node scripts/verify-evidence.cjs
+      - name: Owner governance invariants
+        run: node scripts/verify-governance.cjs
+      - name: Isolated clickable prototype check if present
+        shell: bash
+        run: |
+          app=design/nonproduction/approved-clickable-abc-bc
+          if [ -f "$app/package-lock.json" ]; then
+            cd "$app"
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run build
+            npm test
+            npm audit --audit-level=high
+          else
+            echo 'Prototype not present in current branch; only immutable contracts were checked'
+          fi
+# STAGED ONLY: no Git hosted repo, no protected main, no CI run evidence yet.
