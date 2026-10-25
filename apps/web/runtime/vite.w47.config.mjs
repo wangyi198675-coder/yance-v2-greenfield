@@ -1,11 +1,43 @@
 // W47 composition ONLY: preserve W46 original B+C renderer and unique Composer.
 // Suppress frozen W37 fixtures in the actual runtime build; real data comes only from local API.
-import {resolve} from 'node:path';
+import {resolve,join} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
+import {readFileSync,existsSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 const root=resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
-// W09 composition references the tracked W46 source in THIS checkout, not a sibling Owner worktree.
+// W09 portable integration: import the exact W46 Owner files cherry-picked into this checkout.
 const original=resolve(root,'apps/web/vite.w46.config.mjs');
 const owner=(await import(pathToFileURL(original).href)).default;
+// Owner-controlled nonproduction preview only. Never touch the signed 4399 stage.
+const r4IsolatedPreview=process.env.W47_R4_ISOLATED_PREVIEW==='1';
+// An uncommitted or unacknowledged W46 moving tree must never enter W47's R4 preview.
+if(r4IsolatedPreview){
+ // W09 portable join: signed W46 Owner blobs MUST match this checkout; never
+ // resolve a different developer worktree or trust a browser query as authority.
+ const w46Root=root;
+ const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
+ const expectedOwnerSha='5ad548d2a7b2e202411cb1cfa7d13118556b34ad';
+ const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
+ const ownerFiles={
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'d6c026552c50a83f3429ee501f523e781189c4d9',
+  'apps/web/src/BCBrandIcon.vue':'d99edca93a61f0464349cd515a6fee1a0580bb11',
+  'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
+  'apps/web/src/product-workspace-contract.mjs':'01c9be64e4d2e8fa0a5cf3f33c29c5cda3eb235b',
+  'apps/web/vite.w46.config.mjs':'d6ee0b098a3b01d22462180d6714b8997bb81f1f',
+  [canonicalAck]:'45893dca88309c678bc7b232f12809d879890c9e'
+ };
+ const handoff=join(w46Root,canonicalAck);
+ const git=(...args)=>execFileSync('git',args,{cwd:w46Root,encoding:'utf8'}).trim();
+ const ownerAck=existsSync(handoff)?readFileSync(handoff,'utf8'):'';
+ const receiptTracked=git('ls-tree','-r','--name-only','HEAD','--',canonicalAck)===canonicalAck;
+ const dirtySource=git('status','--porcelain','--','apps/web/src','apps/web/tests','apps/web/vite.w46.config.mjs',canonicalAck);
+ const validSignedBlobs=Object.entries(ownerFiles).every(([path,sha])=>
+   existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&
+   git('rev-parse','HEAD:'+path)===sha);
+ if(signedSha!==expectedOwnerSha||dirtySource||!receiptTracked||!validSignedBlobs||
+    !ownerAck.includes('W46 → W09-2')||!ownerAck.includes('R4 Vue'))
+   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
+}
 function failUnless(code,text){if(!code.includes(text))throw Error('W47_BC_CONTRACT_DRIFT: '+text)}
 function gate(){
   return {name:'w47-runtime-truth-gate',enforce:'pre',
@@ -46,7 +78,16 @@ void fetch('/api/v2/contacts',{credentials:'omit',redirect:'error'}).then(async 
         return code;
       }
       if(file.endsWith('/approved-clickable-abc-bc/src/App.vue')){
-        failUnless(code,'<div class="lab-strip">');
+        const w46R4Candidate=code.includes('<BCProductWorkspaceCandidate');
+        if(r4IsolatedPreview&&!w46R4Candidate)throw Error('W47_R4_W46_OWNER_COMPONENT_NOT_MOUNTED');
+        if(!code.includes('<div class="lab-strip">')&&
+           !code.includes('<div v-if="!w46WorkspaceEnabled" class="lab-strip">'))
+          throw Error('W47_BC_LAB_STRIP_CONTRACT_CHANGED');
+        if(w46R4Candidate&&!r4IsolatedPreview){
+          const activation="const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'";
+          failUnless(code,activation);
+          code=code.replace(activation,'const w46WorkspaceEnabled=false');
+        }
         code=code.replace(/const accounts=\[[^\n]*\]/,"const accounts=['ALL']");
         code=code.replace(/const queue=\[[\s\S]*?\n\]\nconst currentException/,
           'const queue=[]\nconst currentException');
@@ -91,8 +132,8 @@ void fetch('/api/v2/contacts',{credentials:'omit',redirect:'error'}).then(async 
           '{{state.theme}} / {{state.appearance}}');
         code=code.replace("VIEW {{active?.peer_id||'NO_SELECTION'}} · 真实发送 0 · P4 HOLD",
           '托管未启用 · 消息发送禁用');
-        code=code.replace(/<div class="lab-strip">[\s\S]*?<\/div>/,
-          `<div class="lab-strip" data-test="w47-api-state">
+        code=code.replace(/<div(?: v-if="!w46WorkspaceEnabled")? class="lab-strip">[\s\S]*?<\/div>/,
+          `<div v-if="${w46R4Candidate?'!w46WorkspaceEnabled':'true'}" class="lab-strip" data-test="w47-api-state">
 <ShieldCheck :size="13"/> V2 本机运行 · API：{{w47ApiStatus}} · Web: {{w47WebSha}} · 无平台连接 · 自动发送禁用
 </div>`);
         code=code.replace('const filePicker=ref<HTMLInputElement|null>(null)',`const filePicker=ref<HTMLInputElement|null>(null)
@@ -123,7 +164,7 @@ export default {
  ...owner,
  plugins:[...owner.plugins,gate()],
  server:{...owner.server,proxy:{'/api/v2':'http://127.0.0.1:47182'}},
- preview:{...owner.preview,port:4399,strictPort:true,
+ preview:{...owner.preview,host:'127.0.0.1',port:r4IsolatedPreview?44747:4399,strictPort:true,
   proxy:{'/api/v2':{target:'http://127.0.0.1:47182',changeOrigin:true},
          '/w46-native-test':{target:'http://127.0.0.1:47182',changeOrigin:true}}}
 };

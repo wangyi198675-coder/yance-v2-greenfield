@@ -27,6 +27,7 @@ function replaceOnlyOriginalComposer(){
    const extra=String.raw`
 import BCNativeComposer from '../../../../apps/web/src/BCNativeComposer.vue'
 import BCManagedStop from '../../../../apps/web/src/BCManagedStop.vue'
+import BCProductWorkspaceCandidate from '../../../../apps/web/src/BCProductWorkspaceCandidate.vue'
 import {createLoopbackManagedStopPort} from '../../../../apps/web/src/managed-stop.mjs'
 import {createLoopbackTakeoverPort} from '../../../../apps/web/src/native-takeover-port.mjs'
 const w46Port=createLoopbackTakeoverPort({baseUrl:window.location.origin,enabled:true,
@@ -37,6 +38,9 @@ const w46Identity=computed(()=>active.value?{
 const w46SourceMid=computed(()=>active.value?.last_message?.provider_mid||'')
 // Browser synthetic laboratory only. No trusted production W09 STOP HTTP/IPC yet.
 const w46StopPort=createLoopbackManagedStopPort({baseUrl:window.location.origin,enabled:true})
+// W46 nonproduction only. W47 owns the actual runtime shell and signed routing.
+const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'
+const w46Workspace=ref('CHAT')
 const w46StopStates=ref<Record<string,string>>({})
 const w46StopGlobalKey=(id:any)=>[id.tenant,id.account,id.channel].join('|')+'|GLOBAL'
 const w46StopContactKey=(id:any)=>[id.tenant,id.account,id.channel,id.peer_id,id.binding_revision].join('|')+'|CONTACT'
@@ -90,9 +94,18 @@ watch([w46Identity,w46SourceMid],async([identity,mid],_,onCleanup)=>{
    // Reuse existing CONTACT header control row, not an extra right panel.
    const anchor='<div class="chat-actions">';
    if(!transformed.includes(anchor))throw Error('B_C_HEADER_CONTROLS_CHANGED');
-   return transformed.replace(anchor,anchor+'\n          <BCManagedStop v-if="isBC" :identity="w46Identity" :stop-port="w46StopPort" :appearance="state.appearance" @authority-change="w46StopUpdate"/>')
+   const header=transformed.replace(anchor,anchor+'\n          <BCManagedStop v-if="isBC" :identity="w46Identity" :stop-port="w46StopPort" :appearance="state.appearance" @authority-change="w46StopUpdate"/>')
      .replaceAll('{{currentMode(c)}}','{{isBC?w46ContactMode(c):currentMode(c)}}')
      .replaceAll('{{currentMode(active)}}','{{isBC?w46ContactMode(active):currentMode(active)}}');
+   const lab='<div class="lab-strip">';
+   if(!header.includes(lab))throw Error('ORIGINAL_BC_LAB_STRIP_CHANGED');
+   return header.replace(lab,`<BCProductWorkspaceCandidate v-if="isBC&&w46WorkspaceEnabled"
+      :enabled="w46WorkspaceEnabled" :active-workspace="w46Workspace"
+      :appearance="state.appearance" @select="w46Workspace=$event"/>
+  <div v-if="!w46WorkspaceEnabled" class="lab-strip">`)
+     .replace('<section v-if="isPulse"','<section v-if="!w46WorkspaceEnabled&&isPulse"')
+     .replace('<main v-else class="workspace"',
+       '<main v-else v-show="!w46WorkspaceEnabled||w46Workspace===\'CHAT\'" class="workspace"');
  }};
 }
 export default {
@@ -104,8 +117,11 @@ export default {
  server:{host:'127.0.0.1',port:4173,strictPort:true,proxy:{
    '/api/v2/identity-consent':nativeBackend,'/w46-native-test':nativeBackend
  }},
- preview:{host:'127.0.0.1',port:4174,strictPort:true,proxy:{
-   '/api/v2/identity-consent':nativeBackend,'/w46-native-test':nativeBackend
- }},
+ preview:{host:'127.0.0.1',port:4174,strictPort:true,proxy:
+   process.env.W46_R4_SAFE_PREVIEW==='1'?
+   {'/api/v2':{target:'http://127.0.0.1:47182',changeOrigin:true},
+    '/w46-native-test':nativeBackend}:
+   {'/api/v2/identity-consent':nativeBackend,'/w46-native-test':nativeBackend}
+ },
  build:{outDir:join(repo,'apps/web/.w46-test-dist'),emptyOutDir:true,sourcemap:false}
 };
