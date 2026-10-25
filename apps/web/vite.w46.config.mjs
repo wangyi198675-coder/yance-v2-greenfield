@@ -104,7 +104,8 @@ watch([w46Identity,w46SourceMid],async([identity,mid],_,onCleanup)=>{
       :appearance="state.appearance" @select="w46Workspace=$event"/>
   <div v-if="!w46WorkspaceEnabled" class="lab-strip">`)
      .replace('<section v-if="isPulse"','<section v-if="!w46WorkspaceEnabled&&isPulse"')
-     .replace('<main v-else class="workspace"','<main v-else v-show="!w46WorkspaceEnabled" class="workspace"');
+     .replace('<main v-else class="workspace"',
+       '<main v-else v-show="!w46WorkspaceEnabled||w46Workspace===\'CHAT\'" class="workspace"');
  }};
 }
 export default {

@@ -43,7 +43,7 @@ const readonlyAccount=computed(()=>snapshot.value?.connectedAccountCount||0);
 defineExpose({refresh});
 </script>
 <template>
- <div v-if="enabled" class="w46-product-candidate" :data-mode="appearance" data-test="w46-product-candidate">
+ <div v-if="enabled" class="w46-product-candidate" :data-mode="appearance" :data-active-workspace="activeWorkspace" data-test="w46-product-candidate">
   <div class="w46-product-top">
    <div class="w46-product-heading">
     <strong>言策 V2</strong><span class="w46-product-marker">独立候选 · 未经 R4 原件复核</span>
@@ -66,7 +66,7 @@ defineExpose({refresh});
       @click="choose(item.id)">{{item.label}}</Button>
    </div>
   </div>
-  <div class="w46-candidate-content" data-test="w46-workspace-content">
+  <div v-if="activeWorkspace!=='CHAT'" class="w46-candidate-content" data-test="w46-workspace-content">
    <div class="w46-workspace-intro">
     <div><p class="w46-caption">{{selected.section}} · 原生能力权限待签署</p><h2>{{selected.label}}</h2>
       <p>{{selected.hint}}</p></div>
@@ -166,7 +166,7 @@ defineExpose({refresh});
 </template>
 <style>
 /* Draft-only overlay: never expose the frozen W37 120 synthetic contacts as live data. */
-#yance-prototype:has(> .w46-product-candidate) main.workspace{display:none!important}
+#yance-prototype:has(> .w46-product-candidate:not([data-active-workspace='CHAT'])) main.workspace{display:none!important}
 #yance-prototype:has(> .w46-product-candidate) .lab-strip{display:none!important}
 #yance-prototype:has(> .w46-product-candidate) .arm-switch,
 #yance-prototype:has(> .w46-product-candidate) .arm-menu,
