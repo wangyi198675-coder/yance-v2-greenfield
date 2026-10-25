@@ -1,0 +1,281 @@
+name: YANCE V2 All-Domain PR Quality
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact Git commit SHA of an existing PR head in this repository
+        required: false
+        type: string
+      target_base_sha:
+        description: Base Git SHA for accurate changed-source scope
+        required: false
+        type: string
+      target_pr:
+        description: Existing PR number for report linking; never auto merge
+        required: false
+        type: string
+env:
+  CI_BASE_SHA: ${{ inputs.target_base_sha || github.event.pull_request.base.sha || '' }}
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || inputs.target_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts-security:
+    name: contracts-security
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify immutable Stable252 and UIE100
+        run: node scripts/ci/run-checks.mjs contract
+      - name: Public repo secret scan and code-boundary checks
+        run: node scripts/ci/run-checks.mjs security
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-contract-security-${{ github.run_id }}
+          path: ci-artifacts/*.json
+          if-no-files-found: error
+          retention-days: 7
+
+  native-node:
+    name: native-node-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify immutable real-sibling source checkout guard
+        if: ${{ hashFiles('scripts/ci/native-sibling-refs.test.mjs') != '' }}
+        run: node --test scripts/ci/native-sibling-refs.test.mjs
+      - name: Execute committed source-domain JS tests (never fake pass)
+        run: node scripts/ci/run-checks.mjs native
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-native-node-${{ github.run_id }}
+          path: ci-artifacts/*.json
+          if-no-files-found: error
+          retention-days: 7
+
+  agno-python:
+    name: agno-python-native
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Real official Agno SDK contracts if implemented
+        shell: bash
+        run: |
+          if [ -f services/agentos/tests/test_w43_native.py ]; then
+            test -f services/agentos/requirements-test.txt || { echo "::error::Agno test dependencies missing"; exit 3; }
+            python -m pip install --disable-pip-version-check -r services/agentos/requirements-test.txt
+            python -m pytest -q -m 'not local_model' services/agentos/tests
+            echo 'NOT_RUN: local_model-marked tests require a protected Windows localhost key and actual llama.cpp; never a hosted CI PASS'
+          elif [ -d services/agentos ] && find services/agentos -type f ! -name .gitkeep | grep -q .; then
+            echo "::error::Agno native files changed but required real tests are missing"
+            exit 3
+          else
+            echo "NOT_APPLICABLE: no Agno source on this PR ref; NOT a native Agno PASS"
+          fi
+
+  synthetic-m0:
+    name: synthetic-m0-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run actual M0 contracts when source exists
+        shell: bash
+        run: |
+          if [ -f integration/synthetic-first-flow/flow.test.mjs ]; then
+            node --test integration/synthetic-first-flow/flow.test.mjs
+            node -e 'const fs=require("fs");const f=fs.readFileSync("integration/synthetic-first-flow/STABLE252_PROVISIONAL_DOMAIN_OWNER_MAP.csv","utf8");if(f.trim().split(/\r?\n/).length!==253)throw Error("252 mapping missing");'
+          elif [ -d integration/synthetic-first-flow ] && find integration/synthetic-first-flow -type f | grep -q .; then
+            echo "::error::Integration code without committed tests"
+            exit 5
+          else
+            echo "NOT_APPLICABLE: M0 source not in this PR branch, cannot claim business E2E PASS"
+          fi
+
+  frontend-browser:
+    name: frontend-chromium-synthetic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - name: Install trusted CI executor without editing PR source commit
+        shell: bash
+        run: |
+          mkdir -p scripts/ci
+          cp -R .ci-tools/scripts/ci/. scripts/ci/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Fresh OSS vendor hash, npm CI, TypeScript, Vite, high audit
+        run: node scripts/ci/run-checks.mjs frontend
+      - name: Install pinned Playwright Chromium for real DOM tests
+        if: ${{ hashFiles('design/nonproduction/approved-clickable-abc-bc/package-lock.json') != '' }}
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Actual browser responsive, Composer, Autopilot and private-space tests
+        if: ${{ hashFiles('design/nonproduction/approved-clickable-abc-bc/package-lock.json') != '' }}
+        run: node scripts/ci/browser-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-ui-synthetic-${{ github.run_id }}
+          path: |
+            ci-artifacts/*.json
+            ci-artifacts/browser/*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+  pr-head-evidence:
+    name: exact-source-evidence
+    if: always()
+    needs: [contracts-security, native-node, agno-python, synthetic-m0, frontend-browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .ci-tools
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Exercise evidence negative cases on trusted CI script
+        shell: bash
+        run: |
+          if test -f .ci-tools/scripts/ci/pr-head-evidence.test.mjs; then
+            node --test .ci-tools/scripts/ci/pr-head-evidence.test.mjs
+          else
+            node --test scripts/ci/pr-head-evidence.test.mjs
+          fi
+      - name: Emit signed-by-runner SHA and outcome provenance, never dispatch-to-PR aliasing
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
+          CI_TARGET_SHA: ${{ inputs.target_sha || '' }}
+          CI_PR_NUMBER: ${{ github.event.pull_request.number || inputs.target_pr || '' }}
+          CI_BASE_SHA: ${{ inputs.target_base_sha || github.event.pull_request.base.sha || '' }}
+          CI_NEEDS: ${{ toJSON(needs) }}
+          CI_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          if test -f .ci-tools/scripts/ci/pr-head-evidence.mjs; then
+            node .ci-tools/scripts/ci/pr-head-evidence.mjs
+          else
+            # Bootstrap once for this CI-only PR; after merge main is the trusted source.
+            test -f scripts/ci/pr-head-evidence.mjs || { echo "::error::Missing CI evidence generator"; exit 6; }
+            node scripts/ci/pr-head-evidence.mjs
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-exact-source-evidence-${{ github.run_id }}
+          path: ci-artifacts/pr-head-evidence.json
+          if-no-files-found: error
+          retention-days: 7
+
+  nonproduction-merge-gate:
+    name: nonproduction-merge-gate
+    if: always()
+    needs: [contracts-security, native-node, agno-python, synthetic-m0, frontend-browser, pr-head-evidence]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All scoped mandatory jobs must succeed (not skipped or failed)
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | python3 -c 'import json,sys; d=json.load(sys.stdin); print({k:v["result"] for k,v in d.items()}); assert all(v["result"]=="success" for v in d.values()), "Required CI job failed or skipped"'
+# No secrets, no self-hosted runner, no actual platform account.
+# Windows WebView2/DPI/IME human acceptance remains LOCAL_HOLD, never pretended GitHub PASS.
