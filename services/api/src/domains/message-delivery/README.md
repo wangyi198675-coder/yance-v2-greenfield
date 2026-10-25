@@ -70,3 +70,15 @@ Native external-domain regression with the ALREADY existing owner worktrees (no 
 That script imports native W24 and W44 own code, uses W44's real SQLite reservation and GET/CAS send qualification, withdraws W44 authorization precisely between first PRE_NETWORK check and the final post-ARM check and asserts synthetic sink calls remain 0. It never sends a real message or spends actual model fees.
 
 **Remaining P0:** two cross-service eligibility checks narrow, but do NOT eliminate the unavoidable TOCTOU window across W24 in-memory identity, W44 SQLite budget and W25 SQLite outbox. True atomic/fenced irreversible side-effect execution requires W24/W44/W25 coordinated transactional protocol and SEC owner review. **Remaining P1:** W44 reservation finalization/release for every definitive W25 outcome, UNKNOWN budget hold/reconcile, crash-aware recovery coordination and a production-grade Postgres storage/security architecture are not established. Current test sinks and ACKs are SYNTHETIC, never actual Provider ACK or Meta Delivered.
+
+## W09-2 SQLite cold-start WAL concurrency delta (2026-10-25)
+
+**Only SQLite initialization modified**: the two-process intermittent SQLITE_BUSY from PR #32 originates in simultaneous first-open PRAGMA journal_mode=WAL. Initialize with a 250ms SQLite startup busy timeout and at most 16 BUSY re-attempts separated by 40ms (applied ONLY to WAL PRAGMA and idempotent IF NOT EXISTS schema DDL), then restore the original 5000ms transactional busy timeout. The constructor closes the connection if init fails. Business operations, dispatchOne, W44 armSend / settlement, ACK, UNKNOWN, and crash-recovery behavior are unchanged; never retry UNKNOWN or a side-effecting send.
+
+**Measured before patch**: original two-independent-worker cold-start test failed with "database is locked" at index.mjs:46 on round 7 of 24 (23 PASS / 1 FAIL).
+
+**After final bounded retry**: 28/28 native W25 tests ×3 runs PASS. The new simultaneous-start test holds 6 independent OS workers behind one startup barrier, then releases them together against a fresh DB, validates one business SendIntent, one persisted Outbox attempt and one per-peer fence, and repeats this 12 times per suite; 36 verified cold starts / 216 subprocess workers across the final 3 runs. Separate test proves UNKNOWN persists through database close/reopen and two independent restarted workers never retransmit that intent. All are fake synthetic data, not real provider ACKs.
+
+W44 exact native SHA 1509f4c44a49faf9a8a831d52b0a659ca6f3ddc1 interop script also PASS against this W25 code: persisted W25 attempt → W44 armSend, revoke/takeover fence, trusted settlement, UNKNOWN/late synthetic ACK preserved. PR #32 integration SHA 198d2530ba04625e4ab6ab8681ce3f6044dc78a5 is inherited; its historical 80-item suite was not redundantly rerun.
+
+**Remaining HOLD**: no independent production security release; W24 memory-based authority and multiple SQLite DBs still require full across-process mutation closure, real provider irreversible-send controls, trusted signed provider receipts and a production-grade DB/storage/secret migration. No live sending allowed.

@@ -42,9 +42,29 @@ export class SyntheticConnectorSink {
   }
 }
 
+// First-open WAL setup needs a short exclusive database lock. On Windows two
+// Node processes can both successfully open the cold file but one journal_mode
+// switch returns SQLITE_BUSY even with SQLite's busy handler enabled.
+// RETRY ONLY idempotent startup DDL/PRAGMA; NEVER retry an Outbox/ACK/UNKNOWN op.
+const INIT_BUSY_MAX_RETRIES = 16;
+const INIT_BUSY_WAIT_MS = 40;
+const initWaitCell = new Int32Array(new SharedArrayBuffer(4));
+function retryBusyDuringStartup(action) {
+  for (let retry = 0; ; retry++) {
+    try { return action(); }
+    catch (error) {
+      if (error?.errcode !== 5 || retry >= INIT_BUSY_MAX_RETRIES) throw error;
+      Atomics.wait(initWaitCell, 0, 0, INIT_BUSY_WAIT_MS);
+    }
+  }
+}
 function initSchema(db) {
-  db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;');
-  db.exec([
+  // Keep the entire cold-start retry budget bounded; restore normal 5s
+  // transaction busy timeout after setup completes, without retrying sends.
+  db.exec('PRAGMA busy_timeout = 250;');
+  retryBusyDuringStartup(() => db.exec('PRAGMA journal_mode = WAL;'));
+  db.exec('PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;');
+  retryBusyDuringStartup(() => db.exec([
     'CREATE TABLE IF NOT EXISTS send_intents (',
     ' id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, account_id TEXT NOT NULL, channel TEXT NOT NULL,',
     ' peer_id TEXT NOT NULL, binding_revision TEXT NOT NULL, business_id TEXT NOT NULL,',
@@ -71,7 +91,8 @@ function initSchema(db) {
     ' seq INTEGER PRIMARY KEY AUTOINCREMENT, intent_id TEXT NOT NULL, event_type TEXT NOT NULL,',
     ' details TEXT NOT NULL, at INTEGER NOT NULL',
     ');'
-  ].join('\n'));
+  ].join('\n')));
+  db.exec('PRAGMA busy_timeout = 5000;');
 }
 function asIntent(row) {
   if (!row) return null;
@@ -124,8 +145,9 @@ export class MessageDelivery {
     if (!(sink instanceof SyntheticConnectorSink) || sink.syntheticOnly !== true)
       throw new DeliveryError('SYNTHETIC_SINK_ONLY');
     if (typeof receiptVerifier !== 'function') throw new DeliveryError('RECEIPT_VERIFIER_REQUIRED');
-    this.db = new DatabaseSync(databasePath);
-    initSchema(this.db);
+    this.db = new DatabaseSync(databasePath, { timeout: 5000 });
+    try { initSchema(this.db); }
+    catch (error) { this.db.close(); throw error; }
     this.eligibility = eligibility;
     this.sink = sink;
     this.receiptVerifier = receiptVerifier;

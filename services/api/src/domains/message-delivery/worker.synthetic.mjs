@@ -1,6 +1,8 @@
 // Subprocess fixture invoked by worker-process.test.mjs; no external network provider.
 import { MessageDelivery, SyntheticConnectorSink } from './index.mjs';
-const [databasePath, kJson] = process.argv.slice(2);
+import { existsSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+const [databasePath, kJson, barrierFile, readyDirectory] = process.argv.slice(2);
 if (!databasePath || !kJson) throw new Error('SYNTHETIC_WORKER_ARGS_REQUIRED');
 const k = JSON.parse(kJson);
 const eligibility = { async check({ k: incomingK, mode }) {
@@ -12,6 +14,16 @@ const eligibility = { async check({ k: incomingK, mode }) {
     budget: { reserved: true, reservationId: 'budget-1' }
   };
 }};
+// Test-only barrier synchronizes independent processes BEFORE cold SQLite open.
+if (barrierFile && readyDirectory) {
+  writeFileSync(join(readyDirectory, process.pid + '.ready'), '1');
+  const cutoff = Date.now() + 15000;
+  const waitCell = new Int32Array(new SharedArrayBuffer(4));
+  while (!existsSync(barrierFile)) {
+    if (Date.now() > cutoff) throw Error('COLD_START_TEST_BARRIER_TIMEOUT');
+    Atomics.wait(waitCell, 0, 0, 10);
+  }
+}
 const svc = new MessageDelivery({
   databasePath, eligibility, sink: new SyntheticConnectorSink(),
   receiptVerifier: () => ({ verified: false })
