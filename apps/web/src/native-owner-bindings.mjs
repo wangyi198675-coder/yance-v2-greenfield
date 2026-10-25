@@ -33,7 +33,7 @@ export function createW24ReadOnlyPort({identityConsent,trustedContext}={}){
   });
 }
 export function readW45ForComposer({identityConsent,trustedContext,peopleService,
-  identity,mid,qualifyModelRun=null,qualifyTranslation=null}={}){
+  identity,mid,qualifyModelRun=null,qualifyTranslation=null,now=()=>Date.now()}={}){
   ownerAuthority(identityConsent,trustedContext,identity);
   if(typeof peopleService?.getMessage!=='function')fail('W45_OWNER_REQUIRED');
   if(typeof mid!=='string' || !mid.startsWith('fake-'))fail('SYNTHETIC_MID_ONLY');
@@ -49,9 +49,12 @@ export function readW45ForComposer({identityConsent,trustedContext,peopleService
     tr.provenance.input_sha256===row.original.sha256&&
     typeof tr.text==='string'&&tr.text.trim().length>0;
   // W45 'LOCAL_ENGINE' is metadata, not model/quality attestation by itself.
-  const displayable=proven&&typeof qualifyTranslation==='function'&&
+  const translationAttestation=proven&&typeof qualifyTranslation==='function'?
     qualifyTranslation({identity:{...row.identity},mid,
-      originalSha256:row.original.sha256,provenance:structuredClone(tr.provenance)})===true;
+      originalSha256:row.original.sha256,provenance:structuredClone(tr.provenance)}):null;
+  const displayable=translationAttestation===true||
+    (translationAttestation?.verified===true&&
+      Number.isSafeInteger(translationAttestation.expiresAt)&&translationAttestation.expiresAt>now());
   const candidates=[];
   for(const c of row.candidates||[]){
     const p=c?.provenance;
@@ -60,11 +63,19 @@ export function readW45ForComposer({identityConsent,trustedContext,peopleService
        p.model_id!=='qwen3:8b'||!p.run_id||p.source_mid!==mid||
        !Array.isArray(p.sources)||p.sources.length===0||
        p.sources.some(s=>s.mid!==mid||!['ORIGINAL','TRANSLATION'].includes(s.part)))continue;
-    if(qualifyModelRun({identity:{...row.identity},mid,runId:p.run_id,modelId:p.model_id,
-       provider:p.model_provider,provenance:structuredClone(p)})!==true)continue;
-    candidates.push({id:c.id,text:c.text,provenance:{kind:'AGNO_RUN',
-      identityKey:fullK(identity),sourceMid:mid,runId:p.run_id,
-      provider:p.model_provider,modelId:p.model_id,sourceRefs:p.sources}});
+    const attestation=qualifyModelRun({identity:{...row.identity},mid,
+       runId:p.run_id,modelId:p.model_id,provider:p.model_provider,
+       provenance:structuredClone(p)});
+    if(attestation?.verified!==true||!Number.isSafeInteger(attestation.expiresAt)||
+       attestation.expiresAt<=now())continue;
+    if(p.model_provider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'||
+       p.quality_qualified!==false||p.quality_status!=='MODEL_QUALITY_UNREVIEWED')continue;
+    candidates.push({id:c.id,text:c.text,action:'INSERT_DRAFT_ONLY',
+      qualityQualified:false,qualityStatus:'MODEL_QUALITY_UNREVIEWED',
+      runExpiresAt:attestation.expiresAt,
+      provenance:{kind:'AGNO_RUN',identityKey:fullK(identity),sourceMid:mid,
+       runId:p.run_id,sessionId:p.session_id,agentId:p.agent_id,
+       provider:p.model_provider,modelId:p.model_id,sourceRefs:p.sources}});
   }
   if(candidates.length>3)fail('W45_CANDIDATE_COUNT_INVALID');
   return Object.freeze({
@@ -73,7 +84,44 @@ export function readW45ForComposer({identityConsent,trustedContext,peopleService
     zh:displayable&&tr.target_language==='zh-CN'?tr.text:null,
     translated:displayable?tr.text:null,translationStatus:tr?.status||'UNAVAILABLE',
     translationProvenance:displayable?structuredClone(tr.provenance):null,
+    translationQuality:'MODEL_QUALITY_UNREVIEWED',
     suggestions:candidates,delivery:'NOT_REQUESTED',canSend:false,
     // Never represent fixture zh as authentic translation or unverified Agno runs as candidates.
+  });
+}
+
+
+/** Server-side W45 Owner port; no second draft database, no sending.
+ * The caller must supply independent trusted receipt freshness attestations.
+ * The current W45 DTO has no signed Run expiry; fail closed without a deadline.
+ */
+export function createW45DraftPort({identityConsent,trustedContext,peopleService,
+  qualifyModelRun,qualifyTranslation,now=()=>Date.now()}={}){
+  if(typeof peopleService?.draftCandidate!=='function'||
+      typeof peopleService?.getMessage!=='function')fail('W45_DRAFT_OWNER_REQUIRED');
+  const get=(identity,mid)=>readW45ForComposer({identityConsent,trustedContext,
+      peopleService,identity,mid,qualifyModelRun,qualifyTranslation,now});
+  return Object.freeze({
+    get,
+    draftCandidate(identity,mid,candidateId){
+      const current=get(identity,mid);
+      const row=current.suggestions.find(c=>c.id===candidateId);
+      if(!row)fail('W45_CANDIDATE_NOT_ATTESTED_OR_EXPIRED');
+      const receipt=peopleService.draftCandidate(identity,mid,candidateId);
+      if(receipt?.destination!=='EXISTING_BC_COMPOSER'||
+         receipt.action!=='INSERT_DRAFT_ONLY'||receipt.delivery!=='NOT_REQUESTED'||
+         fullK(receipt.identity)!==fullK(identity)||receipt.source_mid!==mid||
+         receipt.candidate_id!==row.id||receipt.text!==row.text||
+         receipt.provenance?.run_id!==row.provenance.runId||
+         receipt.provenance?.source_mid!==mid||
+         receipt.provenance?.quality_qualified!==false||
+         receipt.provenance?.quality_status!=='MODEL_QUALITY_UNREVIEWED')
+         fail('W45_INSERT_DRAFT_CONTRACT_MISMATCH');
+      return Object.freeze({
+        ...structuredClone(receipt),qualityQualified:false,
+        qualityStatus:'MODEL_QUALITY_UNREVIEWED',
+        runExpiresAt:row.runExpiresAt
+      });
+    }
   });
 }

@@ -72,7 +72,29 @@ export function createComposerBridge({takeoverPort=null}={}){
  }
  function adoptCandidate(id,row,sourceMid){
    const r=candidates(id,sourceMid,[row])[0];
-   return write(id,{text:r.text,candidateId:r.id}); // Does NOT trigger takeover.
+   return write(id,{text:r.text,candidateId:r.id}); // Legacy contract / does NOT take over.
+ }
+ function insertW45Draft(id,sourceMid,row,receipt,now=Date.now()){
+   const k=requireSelected(id);
+   const candidate=candidates(id,sourceMid,[row])[0];
+   if(!Number.isSafeInteger(now)||receipt?.destination!=='EXISTING_BC_COMPOSER'||
+      receipt.action!=='INSERT_DRAFT_ONLY'||receipt.delivery!=='NOT_REQUESTED'||
+      fullK(receipt.identity)!==k||receipt.source_mid!==sourceMid||
+      receipt.candidate_id!==candidate.id||receipt.text!==candidate.text||
+      receipt.provenance?.engine!=='OFFICIAL_AGNO_SDK'||
+      receipt.provenance?.source_mid!==sourceMid||
+      receipt.provenance?.run_id!==candidate.provenance.runId||
+      receipt.provenance?.model_id!=='qwen3:8b'||
+      receipt.provenance?.model_provider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'||
+      receipt.provenance?.quality_qualified!==false||
+      receipt.provenance?.quality_status!=='MODEL_QUALITY_UNREVIEWED'||
+      receipt.qualityQualified!==false||
+      receipt.qualityStatus!=='MODEL_QUALITY_UNREVIEWED'||
+      !Number.isSafeInteger(receipt.runExpiresAt)||receipt.runExpiresAt<=now)
+      error('W45_DRAFT_PROVENANCE_INVALID_OR_EXPIRED');
+   return write(id,{text:receipt.text,candidateId:receipt.candidate_id,
+      provenance:{sourceMid,runId:receipt.provenance.run_id,
+        candidateId:receipt.candidate_id,qualityStatus:receipt.qualityStatus}});
  }
  async function inspect(id){
    const k=requireSelected(id);
@@ -140,7 +162,7 @@ export function createComposerBridge({takeoverPort=null}={}){
    })();
    pending.set(k,promise);return promise;
  }
- return Object.freeze({choose,view,quote,candidates,adoptCandidate,inspect,userAction,
+ return Object.freeze({choose,view,quote,candidates,adoptCandidate,insertW45Draft,inspect,userAction,
    selectedIdentity:()=>selected?{...selected}:null});
  // Deliberately no send/outbox/ACK/retry; W25 owns MessageDelivery.
 }

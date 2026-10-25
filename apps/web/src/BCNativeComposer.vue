@@ -8,7 +8,7 @@ import {createComposerBridge,fullK} from './composer-bridge.mjs';
 const props=defineProps({
   identity:{type:Object,default:null}, sourceMid:{type:String,default:''},
   suggestions:{type:Array,default:()=>[]}, nativeMessage:{type:Object,default:null},
-  takeoverPort:{type:Object,default:null}
+  takeoverPort:{type:Object,default:null}, draftCandidatePort:{type:Object,default:null}
 });
 let bridge=createComposerBridge({takeoverPort:props.takeoverPort});
 const current=ref({key:null,status:'NO_CONTACT',draft:null,canSend:false});
@@ -54,14 +54,34 @@ function onDrop(event){event.preventDefault();if(event.dataTransfer?.files?.leng
   action('DROP',{attachments:filesOf(event.dataTransfer.files)})}
 function onAttach(event){if(event.target.files?.length)action('ATTACH',{attachments:filesOf(event.target.files)});
   event.target.value=''}
-function onPaste(event){if(event.clipboardData?.files?.length)
-  action('PASTE',{attachments:filesOf(event.clipboardData.files)})}
-function chooseSuggestion(row){const id=safeIdentity();if(!id)return;
-  try{bridge.adoptCandidate(id,row,currentMid.value);why.value='';update()}
-  catch(e){why.value=String(e.message||e)}}
+function onPaste(event){
+  if(event.clipboardData?.files?.length){event.preventDefault();
+    action('PASTE',{attachments:filesOf(event.clipboardData.files)});return}
+  const str=event.clipboardData?.getData('text/plain');
+  if(typeof str==='string'&&str.length){
+    event.preventDefault();const element=event.target,old=String(current.value.draft?.text||'');
+    const a=Number.isInteger(element.selectionStart)?element.selectionStart:old.length;
+    const b=Number.isInteger(element.selectionEnd)?element.selectionEnd:a;
+    action('PASTE',{text:old.slice(0,a)+str+old.slice(b)})
+  }
+}
+async function chooseSuggestion(row){const id=safeIdentity();if(!id)return;
+  try{
+    if(typeof props.draftCandidatePort?.draftCandidate!=='function')throw Error('W45_DRAFT_PORT_UNAVAILABLE');
+    const capturedK=fullK(id),capturedMid=currentMid.value;
+    const receipt=await props.draftCandidatePort.draftCandidate({...id},capturedMid,row.id);
+    if(!safeIdentity()||fullK(safeIdentity())!==capturedK||currentMid.value!==capturedMid)
+      throw Error('STALE_W45_CONTACT_SELECTION');
+    bridge.insertW45Draft(id,capturedMid,row,receipt);why.value='';update();
+  }catch(e){why.value=String(e.message||e);update()}
+}
+function onSendAttempt(e){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&!composing.value){
+  e.preventDefault();action('SEND_ATTEMPT',{})}}
+function onVoiceReady(metadata){if(metadata?.size>=0)action('VOICE',{attachments:[metadata]})}
+// Voice is supplied by the existing capture/attachment owner, never fabricated here.
 function sourceQuote(source){const id=safeIdentity();if(!id)return false;
   try{bridge.quote(id,source);update();return true}catch{return false}}
-defineExpose({sourceQuote}); // Parent timeline source MID, never synthetic quotation.
+defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never synthetic quotation.
 </script>
 
 <template>
@@ -74,9 +94,9 @@ defineExpose({sourceQuote}); // Parent timeline source MID, never synthetic quot
       <p v-else>中文译文：{{sourceMessage.translationStatus==='FIXTURE_ONLY'?'仅模拟数据，不作为真实译文':'暂无经过验证的译文'}}</p>
     </div>
     <div class="bc-replies" aria-label="有来源的建议回复">
-      <span>{{cards.length}} 条有来源建议</span>
+      <span>{{cards.length}} 条有来源建议（质量审核：未通过正式签署）</span>
       <div v-for="s in cards" :key="s.id" class="bc-card">
-        <p>{{s.text}}</p><small>Agno Run {{s.provenance.runId}} · MID {{s.provenance.sourceMid}}</small>
+        <p>{{s.text}}</p><small>未审核 · {{s.qualityStatus||'MODEL_QUALITY_UNREVIEWED'}} · 候选 {{s.id}} · Agno Run {{s.provenance.runId}} · MID {{s.provenance.sourceMid}}</small>
         <Button size="sm" variant="outline" @click="chooseSuggestion(s)">填入草稿</Button>
       </div>
     </div>
@@ -86,7 +106,7 @@ defineExpose({sourceQuote}); // Parent timeline source MID, never synthetic quot
         :disabled="!current.key" aria-label="当前 CONTACT 私有草稿"
         placeholder="输入消息后核验真实接管；未授权不会发送"
         @update:model-value="onInput" @compositionstart="startIME"
-        @compositionend="endIME" @paste="onPaste"/>
+        @compositionend="endIME" @paste="onPaste" @keydown="onSendAttempt"/>
     </InputGroup>
     <div class="bc-footer">
       <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key"/></label>

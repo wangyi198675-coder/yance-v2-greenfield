@@ -179,6 +179,23 @@ if(paths.some(name=>!process.env[name])){
      assert.equal(postCount,0);assert.equal(getCount,2);
    });
  });
+ test('two real simultaneous W24 HTTP POST requests with same four-field GET snapshot yield 200 + 409',async()=>{
+   await withServer(async s=>{
+     const before=await s.port.get(A);
+     const payload={
+       expectedIdentityKey:before.identityKey,expectedEpoch:before.epoch,
+       expectedAccountRevocationEpoch:before.accountRevocationEpoch,
+       expectedConsentEpoch:before.consentEpoch,
+       action:'TYPE',intent:'TAKEOVER_HUMAN_COMPOSER'};
+     const both=await Promise.allSettled([s.port.post(A,payload),s.port.post(A,payload)]);
+     assert.equal(both.filter(x=>x.status==='fulfilled'&&x.value.accepted===true).length,1);
+     assert.equal(both.filter(x=>x.status==='rejected'&&/NATIVE_HTTP_409/.test(x.reason?.message)).length,1);
+     assert.equal((await s.port.get(A)).mode,'HUMAN');
+     assert.equal((await s.port.get(A)).epoch,before.epoch+1);
+     assert.equal((await s.port.get(B)).mode,'AUTO');
+     assert.equal((await s.port.get(C)).mode,'AUTO');
+   });
+ });
  test('real W44 unsettled PRE_NETWORK send boundary lease blocks W24 takeover until W25 proof',async()=>{
    await withServer(async s=>{
      const grant=s.custody.grant({identity:A,scope:'CONTACT',actor:context.principal_id,
