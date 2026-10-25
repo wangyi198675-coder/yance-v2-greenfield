@@ -4,7 +4,7 @@ import {chromium} from 'playwright';import {spawn} from 'node:child_process';imp
 const root=path.resolve(import.meta.dirname,'../..'),app=path.join(root,'design/nonproduction/approved-clickable-abc-bc'),screens=path.join(root,'ci-artifacts','browser');
 fs.mkdirSync(screens,{recursive:true});
 const port=4178,url='http://127.0.0.1:'+port;
-const proc=spawn('npm',['run','preview','--','--host','127.0.0.1','--port',String(port),'--strictPort'],{cwd:app,stdio:'pipe'});
+const proc=spawn('npm',['run','preview','--','--host','127.0.0.1','--port',String(port),'--strictPort'],{cwd:app,stdio:'pipe',detached:true});
 let log='';proc.stdout.on('data',d=>log+=d.toString());proc.stderr.on('data',d=>log+=d.toString());
 const report={sha:(await import('node:child_process')).spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim(),browser:'chromium',cases:[],fail:0,source:'CI real new headless Chromium; NOT independent native Windows or human UX'};
 const record=(label,pass,error)=>{report.cases.push({label,status:pass?'PASS':'FAIL',error:error?String(error).slice(0,400):undefined});if(!pass)report.fail++};
@@ -13,7 +13,7 @@ let browser;
 try{
  await wait();browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  for(const width of [360,430,720,920,950,1050,1100,1101,1360]){
-  const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});
+  const page=await browser.newPage({viewport:{width,height:900},deviceScaleFactor:1});page.setDefaultTimeout(6500);page.setDefaultNavigationTimeout(15000);
   const errors=[];const outbound=[];
   page.on('pageerror',e=>errors.push(e.message));page.on('request',req=>{const u=req.url();if(/^https?:|^wss?:/.test(u)&&!u.startsWith(url))outbound.push(u.slice(0,80))});
   try{
@@ -30,10 +30,10 @@ try{
   }catch(e){record('BC_WIDTH_AND_DRAWER_'+width,false,e.message)}
   await page.close();
  }
- const page=await browser.newPage({viewport:{width:1360,height:900}});
+ const page=await browser.newPage({viewport:{width:1360,height:900}});page.setDefaultTimeout(6500);page.setDefaultNavigationTimeout(15000);
  try{await page.goto(url,{waitUntil:'domcontentloaded'});const composer=page.locator('[data-test="composer"]');await composer.waitFor({state:'visible',timeout:10000});record('DEFAULT_CHAT_FIRST_BC',true)}catch(e){record('DEFAULT_CHAT_FIRST_BC',false,e.message)}
  try{const field=page.locator('.composer-box textarea').first();await field.fill('synthetic A draft only');const v=await field.inputValue();if(!v.includes('synthetic'))throw Error('composer not updated');record('COMPOSER_SYNTHETIC_DRAFT_ONLY',true)}catch(e){record('COMPOSER_SYNTHETIC_DRAFT_ONLY',false,e.message)}
  try{await page.locator('.global-private-entry').click();const all=await page.locator('body').innerText();if(!/Agno/i.test(all)||!/模拟|MOCK|离线/i.test(all))throw Error('private mock label missing');record('PRIVATE_AGNO_MOCK_LABELED',true)}catch(e){record('PRIVATE_AGNO_MOCK_LABELED',false,e.message)}
  await page.close();
 } catch(e){record('BROWSER_STARTUP',false,e.message)}
-finally{if(browser)await browser.close();proc.kill();fs.writeFileSync(path.join(root,'ci-artifacts','browser-report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(report.fail)process.exitCode=1}
+finally{if(browser)await Promise.race([browser.close().catch(()=>{}),new Promise(r=>setTimeout(r,5000))]);try{if(process.platform!=='win32'&&proc.pid)process.kill(-proc.pid,'SIGKILL');else proc.kill('SIGKILL')}catch{proc.kill('SIGKILL')}fs.writeFileSync(path.join(root,'ci-artifacts','browser-report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));process.exit(report.fail?1:0)}
