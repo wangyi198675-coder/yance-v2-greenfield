@@ -31,7 +31,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,now=
   if(typeof path!=='string'||!path||path.length>1024||typeof verifyIdentity!=='function'||typeof authorizeMutation!=='function'||
     typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
   const db=new DatabaseSync(path,{timeout:5000});
-  db.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;');
+  db.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
   db.exec([
     'CREATE TABLE IF NOT EXISTS grants (scope_key TEXT PRIMARY KEY, scope TEXT NOT NULL, enabled INTEGER NOT NULL, epoch INTEGER NOT NULL, expires_at INTEGER NOT NULL, budget_limit INTEGER NOT NULL, spent INTEGER NOT NULL, reserved INTEGER NOT NULL);',
     'CREATE TABLE IF NOT EXISTS custody (k TEXT PRIMARY KEY, mode TEXT NOT NULL, epoch INTEGER NOT NULL);',
