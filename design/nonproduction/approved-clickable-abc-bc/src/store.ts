@@ -20,7 +20,8 @@ const originalContacts=Object.freeze(effectiveFixture.contacts.map(c=>Object.fre
 export const key=(c:Contact)=>[c.tenant,c.account,c.channel,c.peer_id,c.binding_revision].join('|')
 type Draft={text:string;quote:LocalQuote|null;files:{name:string;size:number}[]}
 const getFresh=()=>({
- arm:ARMS[1].id as Arm,theme:'Obsidian Lime',appearance:'dark',themeMenuOpen:false,selected:key(originalContacts[0]),
+ // User-selected V2 chat default: B+C daily contact chat; autopilot is available on demand and does not take over contacts on view.
+ arm:ARMS[3].id as Arm,theme:'Obsidian Lime',appearance:'dark',themeMenuOpen:false,selected:key(originalContacts[0]),
  search:'',channel:'ALL',account:'ALL',pageSize:30,pulseOpen:false,privateOpen:false,
  dialog:'',suggestExpanded:false,composerComposing:false,privateDraft:'',variantMenuOpen:false,mobileView:'chat' as 'chat'|'contacts',inboxView:'ALL' as 'ALL'|'UNREAD'|'AUTO',
  drafts:{} as Record<string,Draft>,mode:{} as Record<string,string>,
