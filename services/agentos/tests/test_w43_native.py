@@ -82,7 +82,7 @@ def test_cloud_keys_never_used():
 
 
 def test_actual_agno_agentos_team_registered(tmp_path):
-    native = NativeAgnoRuntime(tmp_path / "w43.sqlite", backend="ollama")
+    native = NativeAgnoRuntime(tmp_path / "w43.sqlite", backend="ollama", purpose="HEALTHCHECK")
     assert isinstance(native.agents["CONTACT"], Agent)
     assert isinstance(native.agents["PRIVATE"], Agent)
     assert isinstance(native.teams["CONTACT"], Team)
@@ -96,7 +96,7 @@ def test_actual_agno_agentos_team_registered(tmp_path):
 
 
 def test_no_shortcut_for_non_fixture_and_no_raw_session_override(tmp_path):
-    native = NativeAgnoRuntime(tmp_path / "w43.sqlite", backend="ollama")
+    native = NativeAgnoRuntime(tmp_path / "w43.sqlite", backend="ollama", purpose="HEALTHCHECK")
     with pytest.raises(ScopeError):
         native.run(c(), "hello")
     with pytest.raises(ScopeError):
@@ -115,7 +115,7 @@ def test_local_llamacpp_native_agno_run_and_session_persistence(tmp_path):
     assert response.status_code == 200
     assert any(item["id"] == "qwen2.5:1.5b" for item in response.json()["data"])
     db_file = tmp_path / "native.sqlite"
-    native = NativeAgnoRuntime(db_file, backend="llamacpp", local_key_file=_local_key())
+    native = NativeAgnoRuntime(db_file, backend="llamacpp", local_key_file=_local_key(), purpose="HEALTHCHECK")
     scope = c()
     first = native.run(scope, "fake-Test only. Reply with one short greeting.")
     assert first["status"] == "AGNO_RUN_COMPLETED", first
@@ -125,7 +125,7 @@ def test_local_llamacpp_native_agno_run_and_session_persistence(tmp_path):
     assert first["provenance"]["run_id"] == first["run_id"]
     assert first["suggestions"] == [] and first["outbound"] == "DISABLED"
     assert first["original_response"]
-    restarted = NativeAgnoRuntime(db_file, backend="llamacpp", local_key_file=_local_key())
+    restarted = NativeAgnoRuntime(db_file, backend="llamacpp", local_key_file=_local_key(), purpose="HEALTHCHECK")
     second = restarted.run(scope, "fake-Say one short greeting again.")
     assert second["status"] == "AGNO_RUN_COMPLETED", second
     assert second["session_id"] == first["session_id"]
@@ -135,7 +135,7 @@ def test_local_llamacpp_native_agno_run_and_session_persistence(tmp_path):
 
 
 def test_api_not_auto_served(tmp_path):
-    native = NativeAgnoRuntime(tmp_path / "sdk.db", backend="ollama")
+    native = NativeAgnoRuntime(tmp_path / "sdk.db", backend="ollama", purpose="HEALTHCHECK")
     assert not hasattr(native, "serve")
     app = native.get_unserved_app()
     assert hasattr(app, "routes")
@@ -144,7 +144,7 @@ def test_api_not_auto_served(tmp_path):
 
 
 def test_native_agno_persistent_scoped_memory(tmp_path):
-    native = NativeAgnoRuntime(tmp_path / "native-memory.db", backend="ollama")
+    native = NativeAgnoRuntime(tmp_path / "native-memory.db", backend="ollama", purpose="HEALTHCHECK")
     a = c()
     b = c(peer="fake-peer-002")
     prv = p()
@@ -155,13 +155,13 @@ def test_native_agno_persistent_scoped_memory(tmp_path):
     assert "fake-contact-A-only" in native.read_synthetic_memories(a)
     assert native.read_synthetic_memories(b) == []
     assert "fake-owner-private-only" not in native.read_synthetic_memories(a)
-    fresh = NativeAgnoRuntime(tmp_path / "native-memory.db", backend="ollama")
+    fresh = NativeAgnoRuntime(tmp_path / "native-memory.db", backend="ollama", purpose="HEALTHCHECK")
     assert "fake-contact-A-only" in fresh.read_synthetic_memories(a)
     assert "fake-owner-private-only" in fresh.read_synthetic_memories(prv)
 
 
 def test_native_agno_trace_contract_is_truthful(tmp_path):
-    native = NativeAgnoRuntime(tmp_path / "traces.db", backend="ollama")
+    native = NativeAgnoRuntime(tmp_path / "traces.db", backend="ollama", purpose="HEALTHCHECK")
     receipt = native.read_trace_receipts(c(), "fake-no-such-run")
     assert receipt["status"] == "TRACE_NOT_FOUND"
     assert receipt["count"] == 0
@@ -170,7 +170,7 @@ def test_native_agno_trace_contract_is_truthful(tmp_path):
 @pytest.mark.local_model
 def test_local_llamacpp_native_team_run(tmp_path):
     """Native Team.run may fail on small-model delegation: never claim mock success."""
-    native = NativeAgnoRuntime(tmp_path / "team.db", backend="llamacpp", local_key_file=_local_key())
+    native = NativeAgnoRuntime(tmp_path / "team.db", backend="llamacpp", local_key_file=_local_key(), purpose="HEALTHCHECK")
     result = native.run(c(), "fake-Reply briefly about a fictional greeting.", team=True)
     assert result["status"] == "AGNO_RUN_COMPLETED", result
     assert result["engine"] == "OFFICIAL_AGNO_SDK"
@@ -180,7 +180,7 @@ def test_local_llamacpp_native_team_run(tmp_path):
 def test_sdk_error_status_not_misreported_as_success(tmp_path, monkeypatch):
     """Regression: the Agno SDK may return error content and a run_id on failure."""
     from types import SimpleNamespace
-    native = NativeAgnoRuntime(tmp_path / "failed-run.db", backend="ollama")
+    native = NativeAgnoRuntime(tmp_path / "failed-run.db", backend="ollama", purpose="HEALTHCHECK")
     monkeypatch.setattr(
         native.agents["CONTACT"], "run",
         lambda *args, **kwargs: SimpleNamespace(
@@ -207,7 +207,7 @@ def test_native_agentos_trace_persisted_for_sdk_error(tmp_path):
         f"sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})\n"
         "from yance_agentos import NativeAgnoRuntime, Scope\n"
         "from pathlib import Path\n"
-        f"native=NativeAgnoRuntime(Path({str(tmp_path)!r})/'native-trace.db', backend='llamacpp', local_key_file=os.environ['YANCE_W43_LOCAL_KEY_FILE'])\n"
+        f"native=NativeAgnoRuntime(Path({str(tmp_path)!r})/'native-trace.db', backend='llamacpp', local_key_file=os.environ['YANCE_W43_LOCAL_KEY_FILE'], purpose='HEALTHCHECK')\n"
         "native.get_unserved_app()\n"
         "s=Scope('SYNTHETIC_TEST_ONLY','fixture-account-1','CONTACT','FB_PERSONAL','fake-peer-001',1)\n"
         "r=native.run(s,'fake-Trace a local test greeting.')\n"

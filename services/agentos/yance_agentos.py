@@ -24,6 +24,7 @@ from agno.models.openai import OpenAIChat  # local OpenAI-compatible llama.cpp p
 from agno.os import AgentOS
 from agno.team import Team
 from agno.tools import tool
+from model_policy import classify_provider, v2_chatgpt_siwc_status
 
 CHANNELS = frozenset({"FB_PERSONAL", "FB_PAGE", "WHATSAPP_PERSONAL", "TELEGRAM_PERSONAL"})
 PROVIDER = "LLAMACPP_LOCAL_NO_PAID_API"
@@ -125,7 +126,7 @@ def _local_model(host: str, model_id: str) -> Ollama:
         raise LocalOnlyError("INVALID_LOCAL_MODEL_ENDPOINT")
     if os.getenv("OLLAMA_API_KEY") or os.getenv("OPENAI_API_KEY"):
         raise LocalOnlyError("PAID_OR_CLOUD_PROVIDER_ENV_FORBIDDEN")
-    if not model_id.startswith("qwen2.5:") or len(model_id) > 40:
+    if model_id not in {"qwen2.5:0.5b", "qwen3:8b"}:
         raise LocalOnlyError("MODEL_NOT_ALLOWLISTED")
     return Ollama(id=model_id, host=host, api_key=None, timeout=90, retries=0)
 
@@ -163,24 +164,42 @@ class NativeAgnoRuntime:
         self,
         db_file: str | Path,
         *,
-        backend: str = "llamacpp",
+        backend: str = "qwen3",
         host: str | None = None,
         model_id: str | None = None,
         local_key_file: str | Path | None = None,
+        purpose: str = "QUALITY_EVAL",
     ) -> None:
-        if backend == "llamacpp":
+        if backend == "qwen3":
+            if purpose != "QUALITY_EVAL" or model_id not in (None, "qwen3:8b"):
+                raise LocalOnlyError("QWEN3_8B_QUALITY_ONLY")
+            host = host or "http://127.0.0.1:11434"
+            model_id = "qwen3:8b"
+            self.model = _local_model(host, model_id)
+            self.provider = "OLLAMA_LOCAL_QWEN3_8B_FREE"
+            self.policy_provider = "LOCAL_QWEN3_8B"
+        elif backend == "llamacpp":
+            if purpose != "HEALTHCHECK":
+                raise LocalOnlyError("QWEN25_15B_HEALTHCHECK_ONLY")
             host = host or "http://127.0.0.1:11605"
             model_id = model_id or "qwen2.5:1.5b"
             self.model = _local_llamacpp_model(host, model_id, local_key_file)
-            self.provider = "LLAMACPP_LOCAL_NO_PAID_API"
+            self.provider = "LLAMACPP_LOCAL_HEALTHCHECK_ONLY"
+            self.policy_provider = "LOCAL_QWEN25_15B"
         elif backend == "ollama":
+            if purpose != "HEALTHCHECK" or model_id not in (None, "qwen2.5:0.5b"):
+                raise LocalOnlyError("LEGACY_OLLAMA_HEALTHCHECK_ONLY")
             host = host or "http://127.0.0.1:11434"
-            model_id = model_id or "qwen2.5:0.5b"
+            model_id = "qwen2.5:0.5b"
             self.model = _local_model(host, model_id)
-            self.provider = "OLLAMA_LOCAL_NO_PAID_API"
+            self.provider = "OLLAMA_LOCAL_LEGACY_HEALTHCHECK_ONLY"
+            self.policy_provider = "LOCAL_QWEN25_15B"
         else:
             raise LocalOnlyError("UNKNOWN_MODEL_BACKEND")
+        self.purpose = purpose
         self.model_id = model_id
+        self._issued_w45_receipts: dict[str, str] = {}  # ephemeral in-process proof; NOT cross-service authorization
+        self._native_quality_run_verified = False
         self.db_file = Path(db_file)
         if not self.db_file.parent.is_dir():
             raise FileNotFoundError("DB_PARENT_MUST_EXIST")
@@ -261,6 +280,23 @@ class NativeAgnoRuntime:
         if not text.startswith("fake-"):
             raise ScopeError("SYNTHETIC_INPUT_REQUIRED")
         sid = scope.session_id(thread)
+        if self.policy_provider == "LOCAL_QWEN3_8B":
+            # A running 0.5B/1.5B instance or partial 8B download does NOT qualify.
+            try:
+                import ollama
+                installed = {x.model for x in ollama.Client(
+                    host="http://127.0.0.1:11434", timeout=8
+                ).list().models}
+            except Exception:
+                installed = set()
+            if "qwen3:8b" not in installed:
+                return {
+                    "status": "HOLD_QWEN3_8B_NOT_INSTALLED_OR_MODEL_SERVER_UNAVAILABLE",
+                    "model_id": self.model_id,
+                    "session_id": sid,
+                    "suggestions": [],
+                    "outbound": "DISABLED",
+                }
         runner = self.teams[scope.space] if team else self.agents[scope.space]
         try:
             result = runner.run(text, user_id=scope.scoped_user_id, session_id=sid)
@@ -284,6 +320,8 @@ class NativeAgnoRuntime:
                 "outbound": "DISABLED",
             }
         content = result.content if isinstance(result.content, str) else ""
+        if self.policy_provider == "LOCAL_QWEN3_8B" and content:
+            self._native_quality_run_verified = True  # model EXECUTION, not a subjective quality grade
         return {
             "status": "AGNO_RUN_COMPLETED" if content else "AGNO_RUN_NO_TEXT",
             "engine": "OFFICIAL_AGNO_SDK",
@@ -345,18 +383,95 @@ class NativeAgnoRuntime:
         return {"status": "NATIVE_TRACE_FOUND" if count else "TRACE_NOT_FOUND",
                 "count": count}
 
+    def run_for_w45(
+        self, scope: Scope, source_mid: str, original: str,
+        translation_request_id: str, synthetic_prompt: str,
+    ) -> dict:
+        """Prepare W45's exact envelope from an actual Agno SDK completion.
+
+        W45's JavaScript attestAgnoRun must validate via a separately authorized,
+        same-runtime adapter before accepting this. Never self-issue live consent.
+        """
+        if self.purpose != "QUALITY_EVAL" or self.policy_provider != "LOCAL_QWEN3_8B":
+            raise LocalOnlyError("W45_REQUIRES_VERIFIED_STRONG_MODEL")
+        if not isinstance(scope, Scope) or scope.space != "CONTACT":
+            raise ScopeError("W45_CONTACT_SCOPE_REQUIRED")
+        _field(source_mid, "source_mid")
+        if not source_mid.startswith("fake-"):
+            raise ScopeError("SYNTHETIC_MID_REQUIRED")
+        _field(original, "original")
+        _field(translation_request_id, "translation_request_id")
+        _field(synthetic_prompt, "synthetic_prompt")
+        if not synthetic_prompt.startswith("fake-"):
+            raise ScopeError("SYNTHETIC_PROMPT_REQUIRED")
+        actual = self.run(scope, synthetic_prompt)
+        if actual.get("status") != "AGNO_RUN_COMPLETED":
+            return {
+                "status": "AGNO_QUALITY_RUN_UNAVAILABLE",
+                "sourceMid": source_mid,
+                "candidates": [],
+                "draftOnly": True,
+                "outbound": "DISABLED",
+            }
+        identity = dict(tenant=scope.tenant, account=scope.account, channel=scope.channel,
+                        peer_id=scope.peer_id, binding_revision=str(scope.binding_revision))
+        envelope = {
+            "engine": "OFFICIAL_AGNO_SDK",
+            "status": "COMPLETED",
+            "identity": identity,
+            "sourceMid": source_mid,
+            "originalSha256": hashlib.sha256(original.encode("utf-8")).hexdigest(),
+            "translationRequestId": translation_request_id,
+            "runId": actual["run_id"],
+            "sessionId": actual["session_id"],
+            "agentId": self.agents["CONTACT"].id,
+            "modelProvider": self.provider,
+            "modelId": self.model_id,
+            "purpose": self.purpose,
+            "provenance": actual["provenance"],
+            "candidates": [],  # W45 alone chooses 0-3 with actual original/translation sources.
+        }
+        canonical = json.dumps(envelope, ensure_ascii=True, sort_keys=True)
+        self._issued_w45_receipts[actual["run_id"]] = hashlib.sha256(canonical.encode()).hexdigest()
+        return envelope
+
+    def attest_w45_same_runtime(self, envelope: dict) -> bool:
+        """Local-only verifier; NOT transferable across processes or trust boundaries."""
+        if not isinstance(envelope, dict) or envelope.get("engine") != "OFFICIAL_AGNO_SDK":
+            return False
+        run_id = envelope.get("runId")
+        if not isinstance(run_id, str) or not run_id:
+            return False
+        digest = self._issued_w45_receipts.get(run_id)
+        if not digest:
+            return False
+        try:
+            value = json.dumps(envelope, ensure_ascii=True, sort_keys=True)
+        except (TypeError, ValueError):
+            return False
+        return hashlib.sha256(value.encode()).hexdigest() == digest
+
     def capability_report(self) -> dict:
         return {
             "sdk": "AGNO_3.1.10_INSTALLED",
             "agent_os": "NATIVE_APP_AVAILABLE_NOT_NETWORK_SERVED",
-            "run": "EXECUTION_REQUIRED_TO_VERIFY",
-            "sessions": "NATIVE_SQLITE_CONFIGURED_TEST_REQUIRED",
-            "team": "REGISTERED_EXECUTION_NOT_ASSUMED",
-            "tools": "SDK_REGISTERED_INVOCATION_NOT_ASSUMED",
-            "memory": "NATIVE_USER_MEMORY_READ_CONFIGURED_NO_AUTOMATIC_WRITE",
-            "trace": "AGENTOS_TRACING_ENABLED_PERSISTENCE_NOT_ASSUMED",
-            "approval": "SDK_CONFIRMATION_DECORATOR_REGISTERED_NO_ADMIN_APPROVAL_CLAIM",
+            "model_id": self.model_id,
+            "purpose": self.purpose,
+            "model_policy": classify_provider(
+                self.policy_provider, self.purpose,
+                local_model_verified=self._native_quality_run_verified
+            ).as_dict(),
+            "run": "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE"
+                   if self.purpose == "QUALITY_EVAL" else "HEALTHCHECK_ONLY_NOT_QUALITY",
+            "sessions": "NATIVE_SQLITE_TESTED_SYNTHETIC",
+            "team": "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE"
+                    if self.purpose == "QUALITY_EVAL" else "HEALTHCHECK_ONLY",
+            "tools": "SDK_REGISTERED_REAL_QWEN3_TOOL_SELECTION_HOLD",
+            "memory": "NATIVE_USER_MEMORY_READ_WRITE_RESTART_TESTED_SYNTHETIC",
+            "trace": "NATIVE_SQLITE_TRACE_TESTED_SYNTHETIC",
+            "approval": "SDK_CONFIRMATION_DECORATOR_REGISTERED_ADMIN_RESUME_HOLD",
             "control_plane": "NOT_CONNECTED_NO_EXTERNAL_SERVICE",
+            "chatgpt_siwc_v2": v2_chatgpt_siwc_status().as_dict(),
             "w24_grant": "NOT_IN_W43_SCOPE",
             "w45_candidates": "NOT_IN_W43_SCOPE",
             "w25_delivery": "DISABLED",
