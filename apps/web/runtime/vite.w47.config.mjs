@@ -16,14 +16,14 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='370ee569c3ec1eb78b01361c6b3ae34db9f0ae6c';
+ const expectedOwnerSha='b50201b444ee500b55df8ca869d5164fa0c14149';
  const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'f360d91ba17e92db3a0f0ad521bd52f11175772d',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'307e413ff7d71ef8e2df5944a3e56b1e4935159b',
   'apps/web/src/BCBrandIcon.vue':'d99edca93a61f0464349cd515a6fee1a0580bb11',
   'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
   'apps/web/src/product-workspace-contract.mjs':'01c9be64e4d2e8fa0a5cf3f33c29c5cda3eb235b',
-  'apps/web/vite.w46.config.mjs':'40766bc9a4743882b552bc86354e70150c87148b',
+  'apps/web/vite.w46.config.mjs':'d6ee0b098a3b01d22462180d6714b8997bb81f1f',
   [canonicalAck]:'45893dca88309c678bc7b232f12809d879890c9e'
  };
  const handoff=join(w46Root,canonicalAck);
