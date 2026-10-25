@@ -8,7 +8,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node ./tests/parity.cjs"
+    "test": "node --test ./tests/reproducible.cjs",
+    "test:historical-w39-uat": "node ./tests/parity.cjs"
   },
   "dependencies": {
     "@tanstack/virtual-core": "3.19.6",
