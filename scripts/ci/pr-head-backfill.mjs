@@ -17,6 +17,17 @@ export function validatePlan(items){
     return {number:p.number,sha:p.sha,base:p.base,ref:p.ref||''};
   });
 }
+export function alreadyAttestedAtExactHead(item,checkRuns){
+  if(!SHA.test(item?.sha) || !Array.isArray(checkRuns))return false;
+  return checkRuns.some(x=>
+    x.name==='w30/exact-head-backfill'&&
+    x.head_sha===item.sha&&
+    x.status==='completed'&&
+    x.conclusion==='success'&&
+    x.app?.slug==='github-actions'&&
+    typeof x.details_url==='string'&&x.details_url.startsWith('https://github.com/')
+  );
+}
 export function classify(item,actualSha,outcomes,applicability={}){
   if(!SHA.test(actualSha)||actualSha!==item.sha)throw Error('CHECKOUT_SHA_MISMATCH');
   const states={};
@@ -62,11 +73,17 @@ async function discover(){
   const [owner,name]=process.env.GITHUB_REPOSITORY.split('/');
   const chosen=prs.filter(p=>p.head?.repo?.full_name===owner+'/'+name && !p.head?.ref?.startsWith('ci/w30-'))
     .map(p=>({number:p.number,sha:p.head.sha,base:p.base.sha,ref:p.head.ref}));
-  const plan=validatePlan(chosen);
+  const pending=(await Promise.all(chosen.map(async p=>{
+    const response=await api('GET','/commits/'+p.sha+'/check-runs?check_name=w30%2Fexact-head-backfill&per_page=100');
+    if(alreadyAttestedAtExactHead(p,response.check_runs||[]))return null;
+    return p;
+  }))).filter(Boolean);
+  const plan=pending.length?validatePlan(pending):[];
   const matrix=JSON.stringify({include:plan});
   const out=process.env.GITHUB_OUTPUT;
-  if(out)fs.appendFileSync(out,'matrix='+matrix+'\n');
+  if(out)fs.appendFileSync(out,'matrix='+matrix+'\ncount='+plan.length+'\n');
   console.log('W30_PR_HEAD_PLAN '+JSON.stringify(plan));
+  console.log('W30_ALREADY_ATTESTED_SKIPPED '+(chosen.length-plan.length));
 }
 function record(){
   const item=JSON.parse(process.env.CI_ITEM||'{}');
