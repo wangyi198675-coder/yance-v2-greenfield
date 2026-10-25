@@ -45,3 +45,7 @@ submitIntent() is admission, not sending. dispatchOne() performs an additional a
 ## Covered negative cases
 
 Actor/Session/request ID idempotency, two independent OS processes, account/tenant K isolation, payload mutation, grant revoke/epoch/expiry, budget, agent inactive, A/B/C independent contacts, Page send owner fence, UNKNOWN/late ACK/replay, restart unknown recovery. No test performs actual social-channel delivery, login, production installation or paid inference.
+
+## PR #3 M0 send Port compatibility (native ledger replacing the mock Send function)
+
+M0 uses snake_case tenant/account/channel/peer_id/binding_revision; W25 uses structured tenantId/accountId/channel/peerId/bindingRevision. The pure bridge in m0-port.mjs exports canonicalKFromM0SyntheticContact(contact) and createM0SyntheticSendPort({delivery,contacts}). It only accepts the 120 fictional-contact fixture tenant SYNTHETIC_TEST_ONLY and fake-* business IDs. Repeated M0 sends call one durable native intent (not W09's local mock attempts Map) and return only synthetic ACK/UNKNOWN to the existing M0 harness. Real contact IDs, login and send remain rejected. W09 can wire the returned send callback into PR #3 harness without changing W25's sole sender; native W24/W44 service eligibility must replace fixture checks before authentic M1/M2 can claim integration.

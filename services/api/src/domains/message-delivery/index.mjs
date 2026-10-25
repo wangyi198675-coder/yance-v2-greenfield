@@ -43,7 +43,7 @@ export class SyntheticConnectorSink {
 }
 
 function initSchema(db) {
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
+  db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;');
   db.exec([
     'CREATE TABLE IF NOT EXISTS send_intents (',
     ' id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, account_id TEXT NOT NULL, channel TEXT NOT NULL,',
