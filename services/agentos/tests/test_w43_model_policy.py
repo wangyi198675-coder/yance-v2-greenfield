@@ -79,7 +79,7 @@ def test_explicit_health_only_is_enforced(tmp_path, monkeypatch):
     key = tmp_path / "synthetic_local_key"
     key.write_text("a" * 44, encoding="utf-8")
     with pytest.raises(LocalOnlyError):
-        NativeAgnoRuntime(tmp_path / "bad.sqlite", backend="llamacpp",
+        NativeAgnoRuntime(tmp_path / "bad.sqlite", backend="llamacpp", model_id="qwen2.5:1.5b",
                           local_key_file=key, purpose="QUALITY_EVAL")
     with pytest.raises(LocalOnlyError):
         NativeAgnoRuntime(tmp_path / "bad.sqlite", backend="ollama", purpose="QUALITY_EVAL")

@@ -35,6 +35,8 @@ def safe_run(runtime, s, prompt, *, team=False):
         "response_chars": len(text), "response_preview": text[:110],
         "outbound": out.get("outbound"),
         "quality_qualified": out.get("quality_qualified", False),
+        "sdk_run_status": out.get("sdk_run_status"),
+        "error_type": out.get("error_type"),
         "token_usage": out.get("token_usage"),
     }
 
@@ -42,7 +44,7 @@ def run_all():
     report = {
         "sdk": importlib.metadata.version("agno"),
         "model_backend": "EXISTING_LLAMACPP_127.0.0.1_11605",
-        "model_id": "qwen2.5:1.5b",
+        "model_id": "qwen3:8b",
         "no_paid_provider": True,
         "not_a_quality_certification": True,
         "cases": {},
@@ -62,7 +64,7 @@ def run_all():
             "anonymous_http_status": unauth.status_code,
             "authorized_http_status": authorized.status_code,
             "model_advertised": authorized.status_code == 200 and
-                any(row.get("id") == "qwen2.5:1.5b" for row in authorized.json().get("data", [])),
+                any(row.get("id") == "qwen3:8b" for row in authorized.json().get("data", [])),
         }
         del key
     if report["api"] != {"anonymous_http_status": 401, "authorized_http_status": 200, "model_advertised": True}:
@@ -171,8 +173,8 @@ def run_all():
         try:
             from agno.models.openai import OpenAIChat
             unavailable = Agent(model=OpenAIChat(
-                id="qwen2.5:1.5b", api_key="synthetic-test-only",
-                base_url="http://127.0.0.1:11606/v1", timeout=0.5,
+                id="qwen3:8b", api_key="synthetic-test-only",
+                base_url="http://127.0.0.1:11619/v1", timeout=0.5,
                 max_retries=0), telemetry=False)
             start=time.perf_counter()
             failed=unavailable.run("fake-Synthetic transport negative test.")
@@ -185,7 +187,7 @@ def run_all():
         # SDK explicit tiny timeout against the authorized ORIGINAL server (no server modification).
         try:
             fast_model=_local_llamacpp_model("http://127.0.0.1:11605",
-                                             "qwen2.5:1.5b", key_file)
+                                             "qwen3:8b", key_file)
             fast_model.timeout=0.001
             timed=Agent(model=fast_model, telemetry=False)
             start=time.perf_counter()
@@ -201,28 +203,37 @@ def run_all():
             from concurrent.futures import ThreadPoolExecutor
             def concurrent_one(i):
                 other=NativeAgnoRuntime(Path(directory)/("concurrent-"+str(i)+".db"))
-                return safe_run(other,scope("concurrent-"+str(i)), "One short greeting.")
+                return safe_run(other,scope("concurrent-"+str(i)),
+                    "Reply only with the English word Hello. Do not call any tools or request approval.")
             started=time.perf_counter()
             with ThreadPoolExecutor(max_workers=2) as pool:
                 concurrent_results=list(pool.map(concurrent_one,(1,2)))
             report["cases"]["concurrent_two"]={
                 "wall_sec":round(time.perf_counter()-started,3),
                 "statuses":[x["status"] for x in concurrent_results],
+                "sdk_statuses":[x.get("sdk_run_status") for x in concurrent_results],
                 "session_ids_distinct":len({x["session_id"] for x in concurrent_results})==2}
         except Exception as exc:
             report["cases"]["concurrent_two"]={"status":"FAILED","error_type":type(exc).__name__}
         report["cases"]["no_key_fail_closed"] = False
         try:
-            _local_llamacpp_model("http://127.0.0.1:11605","qwen2.5:1.5b", None)
+            _local_llamacpp_model("http://127.0.0.1:11605","qwen3:8b", None)
         except Exception:
             report["cases"]["no_key_fail_closed"] = True
         report["cases"]["agentos_inprocess"] = hasattr(runtime.get_unserved_app(), "routes")
         report["cases"]["outbound"] = "DISABLED"
-    report["status"] = "RUN_EVIDENCE_CAPTURED_NOT_QUALITY_PASS"
+    concurrent_results = report["cases"].get("concurrent_two", {})
+    concurrent_ok = (concurrent_results.get("statuses") == ["AGNO_RUN_COMPLETED", "AGNO_RUN_COMPLETED"]
+                     and concurrent_results.get("session_ids_distinct") is True)
+    statuses = concurrent_results.get("statuses", [])
+    paused = any(s == "AGNO_RUN_PAUSED_REQUIRES_APPROVAL" for s in statuses)
+    report["status"] = ("RUN_EVIDENCE_CAPTURED_NOT_QUALITY_PASS" if concurrent_ok
+                         else ("HOLD_MODEL_UNEXPECTED_APPROVAL_PAUSE" if paused
+                               else "HOLD_CONCURRENT_AGNO_SESSIONS_FAILED"))
     print("W43_EVIDENCE_JSON_BEGIN")
     print(json.dumps(report, ensure_ascii=True, indent=2))
     print("W43_EVIDENCE_JSON_END")
-    return 0
+    return 0 if concurrent_ok else 1
 
 if __name__ == "__main__":
     try:

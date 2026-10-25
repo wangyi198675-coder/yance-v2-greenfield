@@ -138,7 +138,7 @@ def _local_llamacpp_model(host: str, model_id: str, key_file: str | Path | None)
             or url.port != 11605 or url.username or url.password
             or url.query or url.fragment or url.path not in {"", "/"}):
         raise LocalOnlyError("LLAMACPP_FIXED_LOOPBACK_ONLY")
-    if model_id != "qwen2.5:1.5b":
+    if model_id not in {"qwen3:8b", "qwen2.5:1.5b"}:
         raise LocalOnlyError("LOCAL_MODEL_NOT_ALLOWLISTED")
     if key_file is None:
         raise LocalOnlyError("LOCAL_API_KEY_FILE_REQUIRED")
@@ -179,13 +179,13 @@ class NativeAgnoRuntime:
             self.provider = "OLLAMA_LOCAL_QWEN3_8B_FREE"
             self.policy_provider = "LOCAL_QWEN3_8B"
         elif backend == "llamacpp":
-            if purpose != "HEALTHCHECK":
-                raise LocalOnlyError("QWEN25_15B_HEALTHCHECK_ONLY")
             host = host or "http://127.0.0.1:11605"
-            model_id = model_id or "qwen2.5:1.5b"
+            model_id = model_id or "qwen3:8b"
+            if purpose not in {"HEALTHCHECK", "QUALITY_EVAL"} or (purpose == "QUALITY_EVAL" and model_id != "qwen3:8b"):
+                raise LocalOnlyError("LLAMACPP_PURPOSE_RESTRICTED")
             self.model = _local_llamacpp_model(host, model_id, local_key_file or os.getenv("YANCE_W43_LOCAL_KEY_FILE"))
             self.provider = PROVIDER
-            self.policy_provider = "LOCAL_QWEN25_15B"
+            self.policy_provider = "LOCAL_QWEN3_8B" if model_id == "qwen3:8b" else "LOCAL_QWEN25_15B"
         elif backend == "ollama":
             if purpose != "HEALTHCHECK" or model_id not in (None, "qwen2.5:0.5b"):
                 raise LocalOnlyError("LEGACY_OLLAMA_HEALTHCHECK_ONLY")
@@ -196,6 +196,8 @@ class NativeAgnoRuntime:
             self.policy_provider = "LOCAL_QWEN25_15B"
         else:
             raise LocalOnlyError("UNKNOWN_MODEL_BACKEND")
+        self.backend = backend
+        self._local_key_file = (local_key_file or os.getenv("YANCE_W43_LOCAL_KEY_FILE")) if backend == "llamacpp" else None
         self.purpose = purpose
         self.model_id = model_id
         self._issued_w45_receipts: dict[str, str] = {}  # ephemeral in-process proof; NOT cross-service authorization
@@ -275,6 +277,28 @@ class NativeAgnoRuntime:
         """
         return self.agent_os.get_app()
 
+    def _authorized_llamacpp_model_matches(self) -> bool:
+        """Actual original loopback server must advertise the exact SDK model alias.
+
+        Fail closed if daemon rolled back to 1.5B, credentials changed, or endpoint
+        unavailable. Does not contact Ollama or a paid/cloud provider.
+        """
+        try:
+            import httpx
+            if not self._local_key_file:
+                return False
+            key = Path(self._local_key_file).read_text(encoding="utf-8-sig").strip()
+            with httpx.Client(timeout=4.0, trust_env=False) as client:
+                response = client.get("http://127.0.0.1:11605/v1/models",
+                    headers={"Authorization": "Bearer " + key})
+            if response.status_code != 200:
+                return False
+            models = response.json().get("data", [])
+            return any(isinstance(row, dict) and row.get("id") == self.model_id
+                       for row in models)
+        except Exception:
+            return False
+
     def run(self, scope: Scope, text: str, *, thread: str = "default", team: bool = False) -> dict:
         if not isinstance(scope, Scope):
             raise ScopeError("SCOPE_REQUIRED")
@@ -282,8 +306,8 @@ class NativeAgnoRuntime:
         if not text.startswith("fake-"):
             raise ScopeError("SYNTHETIC_INPUT_REQUIRED")
         sid = scope.session_id(thread)
-        if self.policy_provider == "LOCAL_QWEN3_8B":
-            # A running 0.5B/1.5B instance or partial 8B download does NOT qualify.
+        if self.policy_provider == "LOCAL_QWEN3_8B" and self.backend == "qwen3":
+            # Historical explicit Ollama evaluation only; NEVER probe Ollama for active llama.cpp.
             try:
                 import ollama
                 installed = {x.model for x in ollama.Client(
@@ -299,6 +323,12 @@ class NativeAgnoRuntime:
                     "suggestions": [],
                     "outbound": "DISABLED",
                 }
+        if self.backend == "llamacpp" and not self._authorized_llamacpp_model_matches():
+            return {
+                "status": "HOLD_LOCAL_MODEL_ID_AUTH_OR_SERVER_MISMATCH",
+                "model_id": self.model_id, "session_id": sid,
+                "suggestions": [], "outbound": "DISABLED",
+            }
         runner = self.teams[scope.space] if team else self.agents[scope.space]
         try:
             result = runner.run(text, user_id=scope.scoped_user_id, session_id=sid)
@@ -312,6 +342,18 @@ class NativeAgnoRuntime:
                 "outbound": "DISABLED",
             }
         sdk_status = getattr(getattr(result, "status", None), "value", None)
+        if sdk_status in {"PAUSED", "paused"}:
+            # Agno paused for a human/tool approval. Never report this as a
+            # provider failure or a successful candidate; never auto-resume.
+            return {
+                "status": "AGNO_RUN_PAUSED_REQUIRES_APPROVAL",
+                "sdk_run_status": sdk_status,
+                "run_id": result.run_id,
+                "session_id": sid,
+                "approval": "WAITING_FOR_HUMAN_NOT_AUTO_EXECUTED",
+                "suggestions": [],
+                "outbound": "DISABLED",
+            }
         if sdk_status not in {"COMPLETED", "completed"}:
             return {
                 "status": "LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED",
@@ -322,9 +364,9 @@ class NativeAgnoRuntime:
                 "outbound": "DISABLED",
             }
         content = result.content if isinstance(result.content, str) else ""
-        if self.policy_provider == "LOCAL_QWEN25_15B" and content:
+        if self.purpose == "HEALTHCHECK" and content:
             self._native_health_run_verified = True  # connectivity only; NEVER a quality certification
-        if self.policy_provider == "LOCAL_QWEN3_8B" and content:
+        if self.policy_provider == "LOCAL_QWEN3_8B" and self.purpose == "QUALITY_EVAL" and content:
             self._native_quality_run_verified = True  # model EXECUTION, not a subjective quality grade
         receipt = {
             "status": "AGNO_RUN_COMPLETED" if content else "AGNO_RUN_NO_TEXT",
@@ -501,7 +543,7 @@ class NativeAgnoRuntime:
             "purpose": self.purpose,
             "model_policy": classify_provider(
                 self.policy_provider, self.purpose,
-                local_model_verified=(self._native_health_run_verified if self.policy_provider == "LOCAL_QWEN25_15B" else self._native_quality_run_verified)
+                local_model_verified=(self._native_health_run_verified if self.purpose == "HEALTHCHECK" else self._native_quality_run_verified)
             ).as_dict(),
             "run": "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE"
                    if self.purpose == "QUALITY_EVAL" else ("LOCAL_AGNO_CONNECTIVITY_VERIFIED_NOT_QUALITY" if self._native_health_run_verified else "LOCAL_AGNO_CONNECTIVITY_NOT_YET_VERIFIED"),
