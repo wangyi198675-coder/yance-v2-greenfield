@@ -28,6 +28,18 @@ export function alreadyAttestedAtExactHead(item,checkRuns){
     typeof x.details_url==='string'&&x.details_url.startsWith('https://github.com/')
   );
 }
+// A PR event owns only its triggering PR. Full incremental sweeps remain on schedule/dispatch/push.
+// This prevents an unrelated existing RED Owner PR from contaminating another PR's new run.
+export function eventScopedPrs(prs,{eventName,targetNumber}={}){
+  if(!Array.isArray(prs))throw Error('open PR list required');
+  if(eventName==='pull_request_target'){
+    const raw=String(targetNumber??'');
+    if(!/^[1-9][0-9]*$/.test(raw)||!Number.isSafeInteger(Number(raw)))throw Error('PULL_REQUEST_EVENT_NUMBER_REQUIRED');
+    return prs.filter(p=>p.number===Number(raw));
+  }
+  if(!['push','schedule','workflow_dispatch'].includes(eventName))throw Error('UNRECOGNIZED_BACKFILL_EVENT');
+  return prs;
+}
 export function classify(item,actualSha,outcomes,applicability={}){
   if(!SHA.test(actualSha)||actualSha!==item.sha)throw Error('CHECKOUT_SHA_MISMATCH');
   const states={};
@@ -71,7 +83,8 @@ async function discover(){
     prs.push(...batch);if(batch.length<100)break;if(++page>5)throw Error('PR pagination limit');
   }
   const [owner,name]=process.env.GITHUB_REPOSITORY.split('/');
-  const chosen=prs.filter(p=>p.head?.repo?.full_name===owner+'/'+name && !p.head?.ref?.startsWith('ci/w30-'))
+  const scoped=eventScopedPrs(prs,{eventName:process.env.GITHUB_EVENT_NAME,targetNumber:process.env.W30_TARGET_PR_NUMBER});
+  const chosen=scoped.filter(p=>p.head?.repo?.full_name===owner+'/'+name && !p.head?.ref?.startsWith('ci/w30-'))
     .map(p=>({number:p.number,sha:p.head.sha,base:p.base.sha,ref:p.head.ref}));
   const pending=(await Promise.all(chosen.map(async p=>{
     const response=await api('GET','/commits/'+p.sha+'/check-runs?check_name=w30%2Fexact-head-backfill&per_page=100');

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validatePlan,classify,alreadyAttestedAtExactHead} from './pr-head-backfill.mjs';
+import {validatePlan,classify,alreadyAttestedAtExactHead,eventScopedPrs} from './pr-head-backfill.mjs';
 
 const sha='a'.repeat(40), base='b'.repeat(40), item={number:26,sha,base,ref:'owner/agentos/native'};
 const all=()=>Object.fromEntries(['source','contract','security','native','agno','m0','frontend','browserInstall','browser'].map(x=>[x,'success']));
@@ -50,4 +50,27 @@ test('reuses only genuine successful W30 checks on the SAME immutable SHA',()=>{
  assert.equal(alreadyAttestedAtExactHead(item,[{...good,app:{slug:'other-app'}}]),false);
  assert.equal(alreadyAttestedAtExactHead(item,[{...good,details_url:'https://evil.invalid/forged'}]),false);
  assert.equal(alreadyAttestedAtExactHead(item,[]),false);
+});
+
+
+test('pull_request_target event audits only the triggering open Owner PR, not unrelated RED PRs',()=>{
+ const prs=[{number:17},{number:21},{number:32}];
+ assert.deepEqual(eventScopedPrs(prs,{eventName:'pull_request_target',targetNumber:'21'}),[prs[1]]);
+ assert.deepEqual(eventScopedPrs(prs,{eventName:'pull_request_target',targetNumber:'99'}),[]);
+});
+
+test('scheduled/manual/trusted push scans preserve full open-PR coverage',()=>{
+ const prs=[{number:17},{number:21}];
+ for(const eventName of ['schedule','workflow_dispatch','push']){
+   assert.deepEqual(eventScopedPrs(prs,{eventName,targetNumber:''}),prs);
+ }
+});
+
+test('unattributed or malformed PR events fail closed, never silently scan every PR',()=>{
+ const prs=[{number:17},{number:21}];
+ for(const targetNumber of ['',undefined,'0','-1','1.1','1e3','evil','9007199254740992']){
+  assert.throws(()=>eventScopedPrs(prs,{eventName:'pull_request_target',targetNumber}),/PULL_REQUEST_EVENT_NUMBER_REQUIRED/);
+ }
+ assert.throws(()=>eventScopedPrs(prs,{eventName:'pull_request',targetNumber:'17'}),/UNRECOGNIZED_BACKFILL_EVENT/);
+ assert.throws(()=>eventScopedPrs(null,{eventName:'push'}),/open PR list required/);
 });
