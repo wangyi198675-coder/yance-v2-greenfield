@@ -254,6 +254,9 @@
     }
   ],
   "shotNames": [
+    "W46_BC_REAL_CHROME_NEGATIVE_HTTP_409.png",
+    "W46_BC_REAL_CHROME_NEGATIVE_HTTP_422.png",
+    "W46_BC_REAL_CHROME_NEGATIVE_PENDING.png",
     "W46_BC_THEME_0_DARK.png",
     "W46_BC_THEME_1_DARK.png",
     "W46_BC_THEME_2_DARK.png",

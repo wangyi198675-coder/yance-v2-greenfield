@@ -2,6 +2,7 @@
 // Never expose this injected synthetic principal resolver beyond 127.0.0.1.
 // No provider sender, no model, no real accounts, no production server.
 import {createServer} from 'node:http';
+import {Readable} from 'node:stream';
 import {mkdtempSync,rmSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
@@ -54,12 +55,41 @@ const draftPort=createW45DraftPort({identityConsent:identity,
   trustedContext:ctx,peopleService:people});
 const respond=(res,status,body)=>{res.writeHead(status,{'content-type':'application/json',
  'cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(body))};
+const failureOnce=new Map();
 const server=createServer(async(req,res)=>{
   try{
+    // Synthetic failure injection MUST use existing W24 HTTP handler for real 409/422.
+    // A PAUSED-shaped 202 response is a gateway-negative fixture only, not a real W43 Run.
+    if(req.url===TAKEOVER_POST&&req.method==='POST'&&failureOnce.size){
+      let body='';for await(const chunk of req){body+=chunk;if(body.length>4096)throw Error('INVALID_TEST_BODY')}
+      const parsed=JSON.parse(body),key=JSON.stringify([
+        parsed?.identity?.tenant,parsed?.identity?.account,parsed?.identity?.channel,
+        parsed?.identity?.peer_id,String(parsed?.identity?.binding_revision)]);
+      const scenario=failureOnce.get(key);if(scenario)failureOnce.delete(key);
+      if(scenario==='PENDING')return respond(res,202,{accepted:false,
+        status:'AGNO_RUN_PAUSED_REQUIRES_APPROVAL',canSend:false});
+      if(scenario==='HTTP_409')parsed.expectedEpoch+=1;
+      if(scenario==='HTTP_422')delete parsed.expectedConsentEpoch;
+      // Replay original real request headers into the original W24 HTTP contract.
+      const request=Readable.from([Buffer.from(JSON.stringify(parsed))]);
+      request.method=req.method;request.url=req.url;request.headers=req.headers;
+      request.socket={remoteAddress:req.socket.remoteAddress};
+      return authHandler(request,res);
+    }
     if(req.url?.startsWith('/api/v2/identity-consent/'))return authHandler(req,res);
     if(req.socket.remoteAddress!=='127.0.0.1'&&req.socket.remoteAddress!=='::1')return respond(res,403,{error:'LOOPBACK_ONLY'});
     if(req.headers['x-yance-environment']!=='synthetic-only')return respond(res,403,{error:'TEST_ENV_REQUIRED'});
     const url=new URL(req.url||'/', 'http://127.0.0.1');
+    if(url.pathname==='/w46-native-test/negative-once'&&req.method==='POST'){
+      let data='';for await(const chunk of req){data+=chunk;if(data.length>2048)throw Error('NEGATIVE_SCENARIO_TOO_LARGE')}
+      const {identity:k,scenario}=JSON.parse(data);
+      if(!['HTTP_409','HTTP_422','PENDING'].includes(scenario))throw Error('UNKNOWN_NEGATIVE_SCENARIO');
+      const current=identity.assertCurrent(ctx,k);
+      if(!current?.identity_key)throw Error('NOT_A_CURRENT_SYNTHETIC_CONTACT');
+      const key=JSON.stringify([k.tenant,k.account,k.channel,k.peer_id,String(k.binding_revision)]);
+      failureOnce.set(key,scenario);
+      return respond(res,200,{armed:true,scenario,delivery:'NOT_REQUESTED'});
+    }
     if(url.pathname==='/w46-native-test/message'&&req.method==='GET'){
       const k=parseIdentityKey(url.searchParams.get('k')),mid=url.searchParams.get('mid');
       return respond(res,200,draftPort.get(k,mid));
