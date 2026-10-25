@@ -1,0 +1,25 @@
+name: YANCE V2 Synthetic Contract M0
+on:
+  pull_request:
+    paths:
+      - 'integration/synthetic-first-flow/**'
+      - 'design/fixtures/synthetic_120_contacts.json'
+      - '.github/workflows/synthetic-vertical-m0.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Execute no-provider synthetic contract tests
+        run: node --test integration/synthetic-first-flow/flow.test.mjs
+      - name: Assert 252 historical IDs are retained in candidate owner map
+        run: |
+          node -e "const fs=require('fs');const f=fs.readFileSync('integration/synthetic-first-flow/STABLE252_PROVISIONAL_DOMAIN_OWNER_MAP.csv','utf8');if(f.trim().split(/\r?\n/).length!==253)process.exit(2)"
+# NOTE: successful M0 checks do not attest to official Agno, real channels, production auth, or delivery.
