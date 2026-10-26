@@ -25,10 +25,11 @@ const session=x=>x&&x.authorized===true&&x.isNative===true&&
   Number.isSafeInteger(x.connectionEpoch)&&x.connectionEpoch>0;
 
 export function createW25NativeInboundPort({
-  delivery, verifyNativeSource, readW24Identity, maxTextBytes=65536
+  delivery, verifyNativeSource, readW24Identity, checkPrivateInboundConsent, maxTextBytes=65536
 }={}){
  if(typeof delivery?.tx!=='function'||!delivery.db||
-   typeof verifyNativeSource!=='function'||typeof readW24Identity!=='function')
+   typeof verifyNativeSource!=='function'||typeof readW24Identity!=='function'||
+   typeof checkPrivateInboundConsent!=='function')
    reject('EXISTING_W25_DB_AND_NATIVE_W24_PORTS_REQUIRED');
  if(!Number.isSafeInteger(maxTextBytes)||maxTextBytes<1||maxTextBytes>65536)
    reject('INBOUND_LIMIT_INVALID');
@@ -85,6 +86,14 @@ export function createW25NativeInboundPort({
     proof.consentEpoch!==verified.consentEpoch||
     proof.bindingRevision!==verified.bindingRevision)
      reject('W24_IDENTITY_BINDING_OR_EPOCH_STALE');
+  // Current account/epoch alone does not authorize storing private text.
+  // W24/W47 must validate the user's explicit inbound privacy scope.
+  const privacy=await checkPrivateInboundConsent({k:{...event.k},
+    nativePrincipalId:verified.principalId,providerMid:event.providerMid,operation:'PERSIST_INBOUND'});
+  if(privacy?.authorized!==true||privacy.principalId!==verified.principalId||
+    privacy.consentEpoch!==proof.consentEpoch||privacy.accountEpoch!==proof.accountEpoch||
+    String(privacy.bindingRevision)!==event.k.bindingRevision)
+    reject('PRIVATE_INBOUND_CONSENT_REQUIRED');
   const source=event.source,mid=event.providerMid,eventId=event.sourceEventId;
   const id=digest([event.k.tenantId,event.k.accountId,event.k.channel,
     event.k.peerId,event.k.bindingRevision,source,mid]);
@@ -127,6 +136,12 @@ export function createW25NativeInboundPort({
     authority.accountEpoch!==row.account_epoch||
     authority.consentEpoch!==row.consent_epoch)
     reject('PRIVATE_INBOUND_READ_AUTHORIZATION_STALE');
+  const privacy=await checkPrivateInboundConsent({k,nativePrincipalId,
+    providerMid:row.provider_mid,operation:'READ_INBOUND'});
+  if(privacy?.authorized!==true||privacy.principalId!==nativePrincipalId||
+    privacy.consentEpoch!==row.consent_epoch||privacy.accountEpoch!==row.account_epoch||
+    String(privacy.bindingRevision)!==k.bindingRevision)
+    reject('PRIVATE_INBOUND_CONSENT_REQUIRED');
   return convert(row);
  }
  return Object.freeze({acceptInbound,getInbound});

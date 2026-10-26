@@ -30,7 +30,10 @@ function harness(t){
   instances.push(db);
   return createW25NativeInboundPort({delivery:db,
    verifyNativeSource:cfg.verifyNativeSource??verified,
-   readW24Identity:cfg.readW24Identity??identity});
+   readW24Identity:cfg.readW24Identity??identity,
+   checkPrivateInboundConsent:cfg.checkPrivateInboundConsent??(async({nativePrincipalId})=>({
+     authorized:true,principalId:nativePrincipalId,consentEpoch:5,accountEpoch:2,bindingRevision:3
+   }))});
  };
  t.after(()=>{for(const d of instances.reverse())d.close();rmSync(dir,{recursive:true,force:true})});
  return {open};
@@ -95,4 +98,22 @@ test('W25 inbound does not authorize any outbound or create an Outbox Intent',as
  await assert.rejects(db.submitIntent({k:baseK,businessMessageId:'live-looking',
    payload:{text:'must not send'},mode:'AUTO',actorId:'untrusted',sessionId:'untrusted'}),
    /NO_NATIVE_AUTH/);
+});
+
+test('private inbound persistence and later read each require explicit verified user Consent',async t=>{
+ const h=harness(t);
+ const denied=h.open({checkPrivateInboundConsent:async()=>({authorized:false})});
+ await assert.rejects(denied.acceptInbound(event()),/PRIVATE_INBOUND_CONSENT_REQUIRED/);
+ const authorized=h.open();
+ const recorded=await authorized.acceptInbound(event());
+ assert.equal(recorded.duplicate,false);
+ await assert.rejects(denied.getInbound({id:recorded.id,
+   nativePrincipalId:'verified-fixture-principal'}),/PRIVATE_INBOUND_CONSENT_REQUIRED/);
+ const stale=h.open({checkPrivateInboundConsent:async({nativePrincipalId})=>({
+   authorized:true,principalId:nativePrincipalId,consentEpoch:4,
+   accountEpoch:2,bindingRevision:3})});
+ await assert.rejects(stale.acceptInbound(event({providerMid:'second-mid',sourceEventId:'second-event'})),
+   /PRIVATE_INBOUND_CONSENT_REQUIRED/);
+ await assert.rejects(stale.getInbound({id:recorded.id,
+   nativePrincipalId:'verified-fixture-principal'}),/PRIVATE_INBOUND_CONSENT_REQUIRED/);
 });
