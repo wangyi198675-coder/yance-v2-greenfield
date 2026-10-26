@@ -78,3 +78,38 @@ test('cross origin, wrong Host and malformed query denied; deliberate stub revoc
     assert.equal(status,403);
   });
 });
+
+test('ChatGPT utm_source on user-clicked public auth entry redirects to canonical, then renders real manager launch',async()=>{
+  await withServer(async()=>{
+    let r=await fetch(BASE+'/connect?utm_source=chatgpt.com',{redirect:'manual'});
+    assert.equal(r.status,302);
+    assert.equal(r.headers.get('location'),'/api/v2/providers/fb-personal/connect');
+    assert.equal(r.headers.get('cache-control'),'no-store');
+    r=await fetch(BASE+'/connect?utm_source=chatgpt.com');
+    assert.equal(r.status,200);
+    const html=await r.text();
+    assert.match(html,/href="mautrix-manager:\/\/open\/"/);
+    assert.equal(new URL(r.url).search,'');
+    r=await fetch(BASE+'/setup?utm_source=chatgpt.com');
+    assert.equal(r.status,200);
+    const setup=await r.json();
+    assert.equal(setup.action,'OPEN_NATIVE_MANAGER');
+  });
+});
+test('only benign bounded UTM on public entry can be stripped; authenticated routes and unknown query stay rejected',async()=>{
+  await withServer(async()=>{
+    for(const suffix of ['?utm_source=chatgpt.com&next=https://evil.test',
+      '?logout=true','?token=not-a-real-token','?utm_source='+('A'.repeat(121))]){
+      const r=await fetch(BASE+'/connect'+suffix,{redirect:'manual'});
+      assert.equal(r.status,422);
+    }
+    const userRoute=await fetch(BASE+'/account/status?utm_source=chatgpt.com',{
+      headers:{Authorization:'Bearer matrix-user-token'},redirect:'manual'});
+    assert.equal(userRoute.status,422);
+    const revokeRoute=await fetch(BASE+'/auth/revoke?utm_source=chatgpt.com',{
+      method:'POST',redirect:'manual',headers:{Authorization:'Bearer matrix-user-token',
+        'X-Yance-User-Intent':'REVOKE_THIS_FACEBOOK_LOGIN',
+        'Content-Type':'application/json'},body:'{}'});
+    assert.equal(revokeRoute.status,422);
+  });
+});

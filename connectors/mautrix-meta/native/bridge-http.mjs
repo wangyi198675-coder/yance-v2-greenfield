@@ -60,7 +60,22 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
       return send(res,403,{ok:false,error:'CROSS_ORIGIN_ACTION_FORBIDDEN'});
     try{
       const url=new URL(req.url||'/', 'http://127.0.0.1:'+port);
-      if(url.search)return send(res,422,{ok:false,error:'NO_QUERY_INPUT'});
+      if(url.search){
+        // ChatGPT can append ordinary UTM attribution to user-clicked local
+        // links. Strip ONLY harmless tracking parameters on public GET pages.
+        // Never pass them to login, token-bearing, revoke or state-changing APIs.
+        const publicEntry=req.method==='GET'&&
+          [BASE+'/connect',BASE+'/setup',BASE+'/authorize'].includes(url.pathname);
+        const pairs=[...url.searchParams.entries()];
+        const harmless=publicEntry&&pairs.length>0&&pairs.length<=5&&
+          pairs.every(([key,value])=>/^utm_(source|medium|campaign|term|content)$/.test(key)
+            &&value.length<=120);
+        if(harmless){
+          res.writeHead(302,{...jsonHeaders,location:url.pathname});
+          return res.end();
+        }
+        return send(res,422,{ok:false,error:'NO_QUERY_INPUT'});
+      }
       if(req.method!=='GET'&&!(req.method==='POST'&&url.pathname===BASE+'/auth/revoke'))
         return send(res,403,{ok:false,error:'NO_UNAPPROVED_PROVIDER_ACTION'});
       if(req.method==='GET'&&url.pathname===BASE+'/connect')return sendAuthPage(res);
