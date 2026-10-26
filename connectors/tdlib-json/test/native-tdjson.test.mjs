@@ -44,7 +44,7 @@ test('no explicit trusted OS user gesture => WAITING_USER_AUTH; no DLL loaded',a
     findAuthorizedAccount:async()=>{throw Error('MUST_NOT_CALL');},
     verifyCurrentPeerK:async()=>true,onAuthorizedInbound:async()=>{},
     verifyW25Receipt:async()=>({verified:false}), onW25Receipt:async()=>{},
-    onNativeAccountIdentity:async()=>{}
+    onNativeAccountIdentity:async()=>{}, onTrustedChatIndex:async()=>{}
   });
   assert.deepEqual(controller.status().stage,'WAITING_USER_AUTH');
   await assert.rejects(controller.begin({sessionHandle:'fake',gestureId:'fake'}),{
@@ -64,7 +64,7 @@ test('gesture alone without trusted W24 channel account => no worker',async()=>{
     findAuthorizedAccount:async()=>({authorizedForLogin:false}),
     verifyCurrentPeerK:async()=>true,onAuthorizedInbound:async()=>{},
     verifyW25Receipt:async()=>({verified:false}), onW25Receipt:async()=>{},
-    onNativeAccountIdentity:async()=>{},
+    onNativeAccountIdentity:async()=>{}, onTrustedChatIndex:async()=>{},
   });
   await assert.rejects(ctrl.begin({}),{code:'CHANNEL_ACCOUNT_PROOF_MISSING'});
   assert.equal(ctrl.status().nativeRunning,false);
@@ -76,7 +76,7 @@ test('cannot call native authorizeStep until real trusted worker exists',async()
     findAuthorizedAccount:async()=>null,verifyCurrentPeerK:async()=>false,
     onAuthorizedInbound:async()=>{},
     verifyW25Receipt:async()=>({verified:false}), onW25Receipt:async()=>{},
-    onNativeAccountIdentity:async()=>{},
+    onNativeAccountIdentity:async()=>{}, onTrustedChatIndex:async()=>{},
   });
   await assert.rejects(ctrl.authorizeStep({request:{'@type':'sendMessage'}}),{
     code:'NO_RUNNING_TRUSTED_TDLIB_SESSION'
