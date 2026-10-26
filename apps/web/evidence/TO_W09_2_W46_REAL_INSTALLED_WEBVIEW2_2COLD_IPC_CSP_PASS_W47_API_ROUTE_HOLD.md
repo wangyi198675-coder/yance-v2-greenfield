@@ -27,3 +27,11 @@
 - Inherited GitHub PR#70 native-node CI's two ERR_MODULE_NOT_FOUND are original W28 Baileys SDK `baileys` and `qrcode` missing npm ci in CI, distinct from W46 tests and now original W55 secret scan passed; coordinate W28/test Owner, don't skip negative testing.
 
 **W46 owner ACK: `W46_TAURI_WEBVIEW2_UI_AND_IPC_SECURITY_DELTA_PASS`. This ACK does NOT claim `W47_TRUSTED_API_PASS`, paid Agno, real account authorization, genuine social messages, Windows production update or user-delivered final product.**
+
+## 追加 P0｜真实已安装 WebView2 原生主动注销安全验收 PASS
+
+在相同独立 NSIS 0.1.5 已安装EXE上，另启动实际 WebView2 CDP，**实际点击现有 BRAIN 工作区 `退出当前原生会话`**（不是调用模拟函数，也不是假造Chrome状态），通过正式 Tauri `session_status` 取前后状态：
+- 点击前原生OS核验为true，本机Session活跃true，`serverTrusted:false`、`canSend:false`。
+- 点击后真正回读 `nativeSessionActive:false`，`serverTrusted:false`、`canSend:false`。测试脚本实际返回 `W46_INSTALLED_TAURI_NATIVE_LOGOUT_PASS beforeActive=true afterActive=false serverTrusted=false canSend=false`。
+- 原生IPC安全日志未出现 `LOOPBACK_ONLY`、`ipc.localhost` CSP阻断。未绑定任何真实渠道账号、付费模型或用户真实私人会话；此测试仅注销 **独立QA应用**，不触碰44751、其他W54实例或真实用户账号。
+- 完整操作回执 `apps/web/evidence/W46_REAL_INSTALLED_WEBVIEW2_LOGOUT_UAT.json`，重放脚本 `apps/web/evidence/W46_TAURI_REAL_WEBVIEW2_LOGOUT_CAPTURE.mjs`。相关 W54/W47真人 Session Host/HttpOnly Cookie复签仍然是HOLD。
