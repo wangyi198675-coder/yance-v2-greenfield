@@ -1,0 +1,33 @@
+# W54 | Minimal first-party Windows native host child-protocol contract | 2026-10-26
+
+STATUS: **W54_PINNED_BUNDLE_CHILD_PRIVATE_PIPE_SOURCE_PASS / REAL_W47_CHILD_AND_WEBVIEW_AUTH_HOLD / NO_DEPLOY**.
+
+This replaces neither the W47 Session authority nor W55 OS vault. It is scoped to apps/windows/**. The existing native profile, Windows Known Folder AppData, installation reference and persistent revoke generations are reused.
+
+## New W54 source
+
+- src-tauri/src/native_launch.rs adds only INTERNAL Rust NativeChildLaunch, constructed from Tauri official app.path().resource_dir() and managed in native process state. There is NO Tauri invoke command to access it.
+- Security-approved W54 native caller may call launch_reviewed(relative_binary, exact_sha256_pin, native_profile, native_session). Only a canonical path beneath the actual app resource tree is allowed. Parent-traversal, absolute path, symlink and unapproved binary SHA256 are rejected. The child executable is checked before and immediately after process start. No web/client path may supply the binary or digest. No arbitrary localhost request is elevated.
+- The host spawns ONLY this pinned direct child with a PRIVATE inherited stdin/stdout pipe. No bearer token in process arguments, environment, browser JavaScript, cookie or logs. It requires a fresh 32-byte CSPRNG launch challenge echoed by the child and verifies the same W54 native current-user installation and live revocation generation after the handshake. Timeout, mismatch, binary change, expired/revoked native session -> kill child and refuse approval. Child process is killed/waited on HostedChild drop; no perpetual unaudited background daemon.
+- Frame is 4-byte unsigned big-endian length + strict UTF-8 JSON, max 4096-byte request: protocol W54_W47_NATIVE_CHILD_V1, challenge, principalRef, installationRef, nativeSessionRef, nativeSessionRevision, nativeRevocationGeneration, appLocalDataRoot. ACK is same framing max 512 bytes with {protocol:'W54_W47_NATIVE_CHILD_V1',status:'CHILD_READY',challenge:EXACT}. No customer API Key, User Consent claim, selected cloud model, authorization to send or HTTP cookie in this frame.
+- The current W54 lab does NOT contain a signed/approved bundled W47 child binary or a reviewed W47 child-side reader, so its startup registers the native-only launch gate but **does not call launch_reviewed**. The baseline tauri.conf.json remains nonproduction bundle.active=false. No W47 Session or WebView browser cookie is issued; this is an intentional release HOLD.
+
+## Minimum W47/SEC interface before NORMAL_USER_AUTO_LOGIN
+
+1. W47 owns services/api/runtime/**. Verify the approved packaged W54 parent process and code integrity using actual installed launcher provenance; a child receiving a random challenge from arbitrary same-user host is NOT proof it was launched by official W54. Sign one exact native startup framing/OS process lifecycle contract, reject stand-alone/local browsers/localhost. Do NOT make approveNativeLaunch() return true based merely on supplied JSON, Origin, SID, filename, or source='W54_NATIVE_CURRENT_USER'.
+2. W47's approved child reader must consume the single private length-prefixed frame. W47 must keep a live host ownership/revocation channel and kill/revoke HTTP Sessions when native host closes, logs out or changes epoch. The one-shot ACK in current W54 prototype does NOT establish continuing liveness and cannot alone authorize access.
+3. W47 must securely deliver its own server-owned HttpOnly/CSRF Session ONLY to the actual approved Tauri WebView2 renderer instance (reviewed native cookie setup / per-renderer binding). Any generic browser on the same loopback address must remain unauthorized. The HTTP first-party handler must not accept independent arbitrary localhost requests just because a native process once started. A normal user should not type pairing code, but automatic app first-party approval must still be bound to the installed app and current user, not silently grant paid API consent.
+4. W54 native revocation_generation and W47 Cookie/Session revision are distinct; both must be checked after each private W43 call and before HTTP response. No W54 change authorizes W24/W44/W25 platform sending. The W43 original Agno request ledger, W45 translation and sole W46 BRAIN/Composer remain intact.
+5. W55 solely owns production current-user OpenRouter/OpenAI secret custody and narrow original W43 executor leases; W54 never reads, logs or writes API Keys. Choosing a paid model must still require valid user-owned credentials and explicit budget/paid approval, separate from automatic local session.
+6. W46+W47 original Owners must independently sign the unique model listing/select/provider DTO. W54 never publishes a model catalog or leaks cloud keys.
+
+## Actual isolated Windows QA
+
+- Rust cargo test --offline --locked: 32/32 PASS (existing 27 + 5 native launch tests). Added negative traversal/absolute-path, unapproved SHA256, exact digest, no secret/Cloud fields, **genuine second Windows process** via packaged copied node.exe private pipe ACK positive and malicious wrong-challenge rejection. Child is a TEST-ONLY mock, not W47 itself.
+- cargo build --offline --locked: PASS. cargo fmt --all -- --check: PASS.
+- Node test-nonauth.mjs + test-portable-build.cjs: 8/8 PASS; prior no-login/browser self-asserted client negatives preserved.
+- Launched rebuilt W54 lab EXE in actual current Windows session: true RUNNING/CLOSE/EXIT, existing installation persistent revocation generation +1 at boot and +1 at clean exit. EXE compiled SHA256 recorded in W09 handoff.
+- Issued non-chargeable POST to existing isolated staging at 127.0.0.1:48185 /api/v2/local-session/first-party with approved 44760 Origin and empty body: ACTUAL HTTP 503 (as required; no approved W54 issuer). Did not modify or redeploy staging.
+- DO NOT interpret this as installed product, actual W47 child verified, actual Chrome positive user session, signed automatic pair or provider Cloud readiness. Two genuine distinct Windows OS user profiles, unknown-process tamper, installed code signing, browser/native cookie isolation, live W47 cancellation, and W55 real Key lease all remain HOLD.
+
+**Required follow-on:** W09-2 assign W47's exact secure child-reader and per-Tauri-WebView cookie session contract to original W47 Owner, with independent SEC review. After signing, W54 may wire its already defined gate to the actual bundled signed W47 native child with no new account platform/IPC layer. W55 and W46/W47 complete their own two remaining P0s independently. Keep 44751/47182/main unchanged.
