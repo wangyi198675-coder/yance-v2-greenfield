@@ -25,6 +25,7 @@ from agno.team import Team
 from agno.tools import tool
 from model_policy import classify_provider, v2_chatgpt_siwc_status
 from w43_capacity import one_slot
+from private_scope import is_native_private_scope
 
 CHANNELS = frozenset({"FB_PERSONAL", "FB_PAGE", "WHATSAPP_PERSONAL", "TELEGRAM_PERSONAL"})
 PROVIDER = "LLAMACPP_LOCAL_NO_PAID_API"  # legacy 1.5B HEALTHCHECK
@@ -203,7 +204,7 @@ class NativeAgnoRuntime:
                 model=self.model,
                 db=self.db,
                 instructions=[
-                    "Only synthetic test data. Never send messages or invoke network/paid tools.",
+                    "PRIVATE: only the authenticated local owner or isolated synthetic tests; never send external messages or invoke network/paid tools.",
                     "PRIVATE space is for owner-only conversations, not a contact reply.",
                     "Do not invent sources. State uncertainty plainly.",
                 ],
@@ -406,7 +407,8 @@ class NativeAgnoRuntime:
         trusted current-local-user session and map it to the correct private
         scope/db file. No contact is necessary and no HTTP server is started.
         """
-        if not isinstance(scope, Scope) or scope.space != "PRIVATE":
+        if not ((isinstance(scope, Scope) and scope.space == "PRIVATE")
+                or is_native_private_scope(scope)):
             raise ScopeError("PRIVATE_SCOPE_REQUIRED")
         session_id = scope.session_id(thread)
         session = self.db.get_session(session_id, user_id=scope.scoped_user_id)
@@ -434,6 +436,10 @@ class NativeAgnoRuntime:
             for msg in getattr(run, "messages", None) or []:
                 role = getattr(msg, "role", None)
                 if role not in {"user", "assistant", "tool"}:
+                    continue
+                # An interrupted/failed Run can contain partial model/tool
+                # items; NEVER represent those as completed assistant history.
+                if role in {"assistant", "tool"} and run_status not in {"COMPLETED", "completed"}:
                     continue
                 content = getattr(msg, "content", None)
                 if not isinstance(content, str) or not content:
