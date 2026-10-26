@@ -5,6 +5,7 @@
  * eligibility port is mandatory for BOTH admission and just-before-sink validation.
  * SQLite transactions are durable; crossing W24/W44 DB boundaries is NOT atomic yet.
  */
+export {createW25NativeInboundPort} from './native-inbound.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 
