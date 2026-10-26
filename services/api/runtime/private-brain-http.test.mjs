@@ -209,7 +209,7 @@ test('signed cloud selection cannot execute original local-only W43 or create du
  let executes=0;
  const store=ledger();
  const b=await api({profileProvider:async()=>profile(),requestLedger:store,
-  signedModelSelection:async()=>({provider:'openrouter',modelId:'openai/gpt-4o-mini'}),
+  signedModelSelection:async()=>({provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'}),
   w43Port:{turn:async()=>{executes++;return modelReceipt()},history:async()=>historyReceipt()}});
  try{
   const s=await b.pair();

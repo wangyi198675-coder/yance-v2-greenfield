@@ -45,7 +45,7 @@ def main():
         if not isinstance(selected, dict) or set(selected) != {"provider", "modelId"}:
             emit({"kind": "W43_ERROR", "error": "MODEL_SELECTION_INVALID", "httpStatus": 422})
             return
-        if selected != {"provider": "local", "modelId": "qwen3:8b"}:
+        if selected != {"provider": "LLAMACPP_LOCAL_QWEN3_8B_FREE", "modelId": "qwen3:8b"}:
             emit({"kind": "W43_ERROR", "error": "CLOUD_AGNO_OWNER_ADAPTER_NOT_SIGNED", "httpStatus": 503})
             return
     if method not in {

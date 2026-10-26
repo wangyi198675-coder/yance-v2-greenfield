@@ -12,7 +12,7 @@ test('actual original W43 3d399 IPC rejects cloud-selected turn, never falls bac
  await assert.rejects(
   ()=>w43.turn({checkCurrent:async()=>{access++;throw Error('MUST_NOT_ASK_OR_RUN')}},
    'personal','Do not spend credits','request_cloud_test_001',
-   {provider:'openrouter',modelId:'openai/gpt-4o-mini'}),
+   {provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'}),
   e=>e?.httpStatus===503&&String(e.code).includes('CLOUD_AGNO_OWNER_ADAPTER_NOT_SIGNED')
  );
  assert.equal(access,0);

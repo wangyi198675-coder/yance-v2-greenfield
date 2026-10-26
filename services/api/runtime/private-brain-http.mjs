@@ -43,9 +43,9 @@ const w43Turn=(r,selection=null)=>r&&r.status==='COMPLETED'&&r.canSend===false&&
  typeof r.assistantText==='string'&&r.assistantText.trim().length>0&&r.assistantText.length<=128000&&
  opaque(r.runId)&&opaque(r.sessionId)&&typeof r.modelProvider==='string'&&
  (selection?(r.modelId===selection.modelId&&
-   (selection.provider==='local'?r.modelProvider.startsWith('LLAMACPP_LOCAL_'):
-    selection.provider==='openrouter'?r.modelProvider.startsWith('OPENROUTER_'):
-    selection.provider==='openai'&&r.modelProvider.startsWith('OPENAI_'))):
+   (selection.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?r.modelProvider==='LLAMACPP_LOCAL_QWEN3_8B_FREE':
+    selection.provider==='OPENROUTER_USER_API'?r.modelProvider==='OPENROUTER_USER_API':
+    selection.provider==='OPENAI_USER_API'&&r.modelProvider==='OPENAI_USER_API')):
    r.modelProvider.startsWith('LLAMACPP_LOCAL_')&&r.modelId==='qwen3:8b');
 const w43History=r=>r&&['HISTORY_PRESENT','HISTORY_EMPTY','HISTORY_NOT_FOUND'].includes(r.status)&&
  r.canSend===false&&r.qualityQualified===false&&opaque(r.sessionId)&&
@@ -121,7 +121,7 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
   if(turn&&resolveSignedModelSelection){
    try{signedSelection=await resolveSignedModelSelection({verifiedContext:original,threadId})}
    catch{reject(res,503,'W43_SIGNED_MODEL_SELECTION_UNAVAILABLE');return true}
-   const permitted=signedSelection&&['local','openai','openrouter'].includes(signedSelection.provider)&&
+   const permitted=signedSelection&&['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENAI_USER_API','OPENROUTER_USER_API'].includes(signedSelection.provider)&&
     typeof signedSelection.modelId==='string'&&signedSelection.modelId.length>1&&signedSelection.modelId.length<=128;
    if(!permitted){reject(res,503,'MODEL_CONFIGURATION_REQUIRED');return true}
    if(typeof w43Port.supportsSelection!=='function'||

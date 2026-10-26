@@ -4,9 +4,9 @@
 // Default ports are NULL until W54/W55/W43 security-signed native adapters.
 import {timingSafeEqual} from 'node:crypto';
 const catalog=Object.freeze([
- Object.freeze({provider:'openrouter',displayName:'OpenRouter',requiresUserApiKey:true,requiresLocalModel:false}),
- Object.freeze({provider:'openai',displayName:'OpenAI API',requiresUserApiKey:true,requiresLocalModel:false}),
- Object.freeze({provider:'local',displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true})
+ Object.freeze({provider:'OPENROUTER_USER_API',displayName:'OpenRouter',requiresUserApiKey:true,requiresLocalModel:false}),
+ Object.freeze({provider:'OPENAI_USER_API',displayName:'OpenAI API',requiresUserApiKey:true,requiresLocalModel:false}),
+ Object.freeze({provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true})
 ]);
 const maxBody=2048;
 const write=(res,status,value)=>{
@@ -17,9 +17,9 @@ const write=(res,status,value)=>{
  res.end(JSON.stringify(value))
 };
 const deny=(res,status,error)=>write(res,status,{ok:false,error,canSend:false});
-const isProvider=v=>['local','openrouter','openai'].includes(v);
+const isProvider=v=>['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENROUTER_USER_API','OPENAI_USER_API'].includes(v);
 const validModel=v=>typeof v==='string'&&v.length>=2&&v.length<=128&&
- /^[A-Za-z0-9][A-Za-z0-9._:/+-]*$/.test(v);
+ /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(v);
 const validSelection=s=>s&&isProvider(s.provider)&&validModel(s.modelId);
 const csrfOk=(req,s)=>{
  const k=s?.record?.csrf,v=req.headers['x-yance-csrf'];
@@ -114,7 +114,7 @@ export function createPrivateModelHttp({
    deny(res,422,'W43_MODEL_NOT_SUPPORTED');return true
   }
   const vaultState=async provider=>{
-   if(provider==='local')return {configured:true,status:'READY'};
+   if(provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE')return {configured:true,status:'READY'};
    const v=await credentialVaultPort.status({profile,provider});
    if(!v||typeof v.configured!=='boolean')throw Error('W55_VAULT_STATE_UNVERIFIED');
    return {configured:v.configured,status:v.status??(v.configured?'READY':'SETUP_REQUIRED')};
@@ -123,7 +123,7 @@ export function createPrivateModelHttp({
   try{
    if(isSelect){
     const v=await vaultState(selection.provider);
-    if(!v.configured){deny(res,409,selection.provider==='local'?
+    if(!v.configured){deny(res,409,selection.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?
       'MODEL_UNAVAILABLE':'MODEL_CREDENTIAL_SETUP_REQUIRED');return true}
     // W43 owner must confirm price/credit scope before any paid model call.
     if(typeof w43ModelPort.authorizeSelection!=='function'){
@@ -144,9 +144,39 @@ export function createPrivateModelHttp({
   if(!final||final.id!==session.id||final.record.rev!==session.record.rev){
    deny(res,401,'LOCAL_SESSION_REVOKED_DURING_MODEL_ACCESS');return true
   }
-  const sources=store.sources.map(({provider,configured,available,status,models})=>
-   ({provider,configured,available,status,...(models?{models}:{})}));
-  write(res,200,{ok:true,selected:store.selected,sources,
+  // Single W46/W47 canonical signed DTO: do NOT promote public metadata
+  // into an authorized model. Availability is native W54 config AND W55
+  // protected credential eligibility AND exact original W43 capability.
+  const models=[];
+  try{
+   for(const source of store.sources){
+    const credential=await vaultState(source.provider);
+    for(const modelId of source.models??[]){
+     if(models.length>=24)break;
+     if(!capabilities.some(m=>m.provider===source.provider&&m.modelId===modelId))continue;
+     const configured=source.configured&&credential.configured;
+     models.push({provider:source.provider,modelId,configured,
+       available:configured&&source.available&&source.status==='READY',
+       keyRequired:source.provider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE',
+       billingNotice:source.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?
+         '本地可选模型，不消耗云端 API 额度':
+         '使用本人独立 API Key，按实际服务商计费；必须通过原生授权'});
+    }
+   }
+  }catch{deny(res,503,'W55_PROTECTED_MODEL_STATUS_UNAVAILABLE');return true}
+  const selected=models.find(m=>store.selected&&
+    m.provider===store.selected.provider&&m.modelId===store.selected.modelId&&
+    m.available&&m.configured);
+  // Independent session revocation may occur while native vault was awaited.
+  const refreshed=sessionAuthority.sessionFor(req);
+  if(!refreshed||refreshed.id!==session.id||refreshed.record.rev!==session.record.rev){
+   deny(res,401,'LOCAL_SESSION_REVOKED_DURING_MODEL_STATUS');return true
+  }
+  write(res,200,{ok:true,authoritative:true,models,
+   selectedProvider:selected?.provider??'',selectedModelId:selected?.modelId??'',
+   // W55's real production Key lease is not yet signed. No browser
+   // POST /credentials, even if Rust's test vault can store fake bytes.
+   secureCredentialStorage:false,
    canSend:false,providerAuthorized:false,credentialsExposed:false});
   return true;
  };

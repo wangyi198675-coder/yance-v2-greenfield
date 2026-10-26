@@ -8,9 +8,9 @@ const webOrigin='http://127.0.0.1:48761';
 const profile={source:'W54_NATIVE_CURRENT_USER',verified:true,principalRef:'TEST-ONLY-PROFILE-NOT-OS-IDENTITY',
  installationRef:'TEST-ONLY-INSTALL-0001'};
 const models=[
- {provider:'openrouter',modelId:'openai/gpt-4o-mini'},
- {provider:'openai',modelId:'gpt-4o-mini'},
- {provider:'local',modelId:'qwen3:8b'}
+ {provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'},
+ {provider:'OPENAI_USER_API',modelId:'gpt-4o-mini'},
+ {provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',modelId:'qwen3:8b'}
 ];
 async function fixture({trustedLaunch=null,modelPorts=false,now=()=>Date.now()}={}){
  const authority=createLocalSessionAuthority({approveNativeLaunch:trustedLaunch,now,ttlMs:5000,nativeTtlMs:120000});
@@ -19,18 +19,18 @@ async function fixture({trustedLaunch=null,modelPorts=false,now=()=>Date.now()}=
  let selected=null;
  const config={
   read:async()=>{lookups++;return {selected,sources:[
-   {provider:'openrouter',configured:true,available:true,status:'READY',models:['openai/gpt-4o-mini']},
-   {provider:'openai',configured:false,available:false,status:'SETUP_REQUIRED',models:['gpt-4o-mini']},
-   {provider:'local',configured:false,available:false,status:'MODEL_UNAVAILABLE',models:['qwen3:8b']}
+   {provider:'OPENROUTER_USER_API',configured:true,available:true,status:'READY',models:['openai/gpt-4o-mini']},
+   {provider:'OPENAI_USER_API',configured:false,available:false,status:'SETUP_REQUIRED',models:['gpt-4o-mini']},
+   {provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',configured:false,available:false,status:'MODEL_UNAVAILABLE',models:['qwen3:8b']}
   ]}},
   select:async({selection})=>{stores++;selected=selection;return config.read()}
  };
  const app=createPrivateModelHttp({sessionAuthority:authority,webOrigin,
   resolveNativePrincipal:modelPorts?async()=>profile:null,
   modelConfigPort:modelPorts?config:null,
-  credentialVaultPort:modelPorts?{status:async({provider})=>{vaultChecks++;return {configured:provider==='openrouter'}}}:null,
+  credentialVaultPort:modelPorts?{status:async({provider})=>{vaultChecks++;return {configured:provider==='OPENROUTER_USER_API'}}}:null,
   w43ModelPort:modelPorts?{capabilities:async()=>models,authorizeSelection:async({selection})=>{
-   selections++;return selection.provider==='openrouter';
+   selections++;return selection.provider==='OPENROUTER_USER_API';
   }}:null});
  const server=createServer(async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1');
@@ -63,7 +63,7 @@ test('no W54 signed native launch: localhost and exact Origin never create a Ses
   assert.equal((await x.req('/api/v2/local-session/first-party',{method:'POST',body:{actor:'admin'}})).status,422);
   assert.equal((await x.req('/api/v2/local-session/first-party',{method:'POST',body:{},origin:'https://evil.example'})).status,403);
   assert.equal((await x.req('/api/v2/private-brain/model-selection',{method:'POST',
-    body:{provider:'openrouter',modelId:'openai/gpt-4o-mini'}})).status,401);
+    body:{provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'}})).status,401);
  }finally{await x.close()}
 });
 test('explicitly TEST ONLY native-launch verifier yields 2-minute session, logout and restart-grade revocation',async()=>{
@@ -91,7 +91,7 @@ test('model catalog public never exposes keys; sensitive status and selection re
  const x=await fixture();
  try{
   const r=await x.req('/api/v2/private-brain/model-catalog');
-  assert.equal(r.status,200);assert.deepEqual(r.data.providers.map(a=>a.provider),['openrouter','openai','local']);
+  assert.equal(r.status,200);assert.deepEqual(r.data.providers.map(a=>a.provider),['OPENROUTER_USER_API','OPENAI_USER_API','LLAMACPP_LOCAL_QWEN3_8B_FREE']);
   assert.equal(r.data.authoritative,false);assert.equal(r.data.canSend,false);
   assert.equal((await x.req('/api/v2/private-brain/model-config')).status,401);
  }finally{await x.close()}
@@ -101,15 +101,26 @@ test('local-first app with verified synthetic TEST port can select Cloud without
  try{
   const a=await x.bootstrap(),cookie=a.cookie.split(';')[0],csrf=a.data.csrfToken;
   const s=await x.req('/api/v2/private-brain/model-selection',{method:'POST',cookie,csrf,
-   body:{provider:'openrouter',modelId:'openai/gpt-4o-mini'}});
-  assert.equal(s.status,200);assert.equal(s.data.selected.provider,'openrouter');
+   body:{provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'}});
+  assert.equal(s.status,200);assert.equal(s.data.authoritative,true);
+  assert.equal(s.data.selectedProvider,'OPENROUTER_USER_API');
+  assert.equal(s.data.selectedModelId,'openai/gpt-4o-mini');
+  assert.equal(s.data.secureCredentialStorage,false);
+  assert.equal(s.data.models.some(m=>m.provider==='OPENROUTER_USER_API'&&m.modelId==='openai/gpt-4o-mini'&&m.available&&m.configured),true);
+  assert.equal(s.data.models.some(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available),false);
   assert.equal(s.data.canSend,false);
   assert.equal(JSON.stringify(s.data).includes('sk-test'),false);
-  assert.equal((await x.req('/api/v2/private-brain/model-config',{cookie})).data.selected.modelId,'openai/gpt-4o-mini');
+  assert.equal(JSON.stringify(s.data).includes('apiKey'),false);
+  assert.equal(s.data.canSend,false);
+  assert.equal(s.data.credentialsExposed,false);
+  assert.equal((await x.req('/api/v2/private-brain/model-config',{cookie})).data.selectedModelId,'openai/gpt-4o-mini');
+  // A W46 browser cannot store paid API keys by a plaintext HTTP route.
+  assert.equal((await x.req('/api/v2/private-brain/credentials',{method:'POST',cookie,csrf,
+    body:{provider:'OPENROUTER_USER_API',apiKey:'FAKE_TEST_ONLY'}})).status,404);
   assert.equal((await x.req('/api/v2/private-brain/model-selection',{method:'POST',cookie,csrf,
-   body:{provider:'openai',modelId:'gpt-4o-mini'}})).status,409);
+   body:{provider:'OPENAI_USER_API',modelId:'gpt-4o-mini'}})).status,409);
   assert.equal((await x.req('/api/v2/private-brain/model-selection',{method:'POST',cookie,csrf,
-   body:{provider:'local',modelId:'qwen3:8b'}})).status,403);
+   body:{provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',modelId:'qwen3:8b'}})).status,403);
   assert.equal(x.stats().stores,1);
   assert.equal(x.stats().selections,2);
  }finally{await x.close()}
@@ -118,7 +129,7 @@ test('cross-site, forged cookie and missing CSRF cannot change user-selected mod
  const x=await fixture({trustedLaunch:async()=>true,modelPorts:true});
  try{
   const a=await x.bootstrap(),cookie=a.cookie.split(';')[0],csrf=a.data.csrfToken;
-  const body={provider:'openrouter',modelId:'openai/gpt-4o-mini'};
+  const body={provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'};
   assert.equal((await x.req('/api/v2/private-brain/model-selection',{method:'POST',body,cookie,
     origin:'https://evil.example',csrf})).status,403);
   assert.equal((await x.req('/api/v2/private-brain/model-selection',{method:'POST',body,cookie})).status,403);
