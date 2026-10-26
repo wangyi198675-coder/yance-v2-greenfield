@@ -24,14 +24,16 @@ const k={tenant:'SYNTHETIC_TEST_ONLY',account:'fixture-channel-1',
 const act={tenant:k.tenant,principal_id:principal.principalRef,input_domain:'CONTACT'};
 const sampleAccount={platformAuthorizationVerified:true,nativeSessionCurrent:true,
  channelAccountBindingCurrent:true,authorization:'ONLINE_VERIFIED',
- accountRef:'accountref_001',channel:k.channel,ownerPrincipalRef:principal.principalRef};
+ accountRef:'accountref_001',channel:k.channel,ownerPrincipalRef:principal.principalRef,
+ tenant:k.tenant,accountId:k.account,accountAnchorPeerId:k.peer_id,
+ bindingRevision:k.binding_revision};
 const samplePeer={platformPeerVerified:true,nativeSessionCurrent:true,
  channelAccountBindingCurrent:true,accountRef:sampleAccount.accountRef,
  channel:k.channel,peerRef:k.peer_id,bindingRevision:k.binding_revision,
  tenant:k.tenant,accountId:k.account,displayName:'Sample Peer',
  ownerPrincipalRef:principal.principalRef};
 const proofAuthority={evaluate:({proof_ref})=>({approved:proof_ref?.startsWith('fake-verified-')})};
-function fixture(t){
+function fixture(t,{register=true,second=false}={}){
  const dir=mkdtempSync(join(tmpdir(),'w24-w47-owner-reads-'));
  const store=openEligibilityStore({path:join(dir,'w44.sqlite'),requireDurableIdentity:true,
   authorizeMutation:({actor})=>actor===principal.principalRef,
@@ -40,17 +42,32 @@ function fixture(t){
  t.after(()=>{store.close();rmSync(dir,{recursive:true,force:true})});
  const ids=new IdentityConsentService({requireDurableIdentity:true,
   durableAuthority:store,proofAuthority});
- assert.equal(ids.registerAccount(act,{...k,principal_id:principal.principalRef,
-  binding_proof_ref:'fake-verified-channel'}).status,'COMMITTED');
- assert.equal(ids.bindPeer(act,{...k,peer_proof_ref:'fake-verified-peer'}).status,'COMMITTED');
+ if(register){
+  assert.equal(ids.registerAccount(act,{...k,principal_id:principal.principalRef,
+   binding_proof_ref:'fake-verified-channel'}).status,'COMMITTED');
+  assert.equal(ids.bindPeer(act,{...k,peer_proof_ref:'fake-verified-peer'}).status,'COMMITTED');
+ }
+ const kB={...k,account:'fixture-channel-2'};
+ const secondAccount={...sampleAccount,accountRef:'accountref_002',accountId:kB.account};
+ const secondPeer={...samplePeer,accountRef:'accountref_002',accountId:kB.account};
+ if(second){
+  assert.equal(ids.registerAccount(act,{...kB,principal_id:principal.principalRef,
+   binding_proof_ref:'fake-verified-channel-B'}).status,'COMMITTED');
+  assert.equal(ids.bindPeer(act,{...kB,peer_proof_ref:'fake-verified-peer-B'}).status,'COMMITTED');
+ }
+ const accounts=second?[sampleAccount,secondAccount]:[sampleAccount];
  let nativeAlive=true,upstreamOnline=true;
  const readNative=async()=>nativeAlive?principal:{...principal,revocationGeneration:2};
  const bridge=()=>createW24NativeOwnerReadPorts({
   identityConsent:ids,resolveNativePrincipal:readNative,
-  listVerifiedPlatformAccounts:async()=>upstreamOnline?[sampleAccount]:[],
-  listVerifiedPlatformPeers:async()=>[samplePeer]
+  listVerifiedPlatformAccounts:async()=>upstreamOnline?accounts:[],
+  listVerifiedPlatformPeers:async({account})=>
+   [account.accountRef===sampleAccount.accountRef?samplePeer:secondPeer],
+  readW44IdentityAuthority:({actor,identity})=>store.readIdentityAuthority({actor,identity})
  });
- return {ids,bridge,principal,setNative:x=>nativeAlive=x,setOnline:x=>upstreamOnline=x};
+ return {ids,store,bridge,principal,removeAccount:x=>{
+   const i=accounts.findIndex(a=>a.accountRef===x);if(i>=0)accounts.splice(i,1);
+  },setNative:x=>nativeAlive=x,setOnline:x=>upstreamOnline=x};
 }
 test('W24 refuses legacy RAM or missing native upstream callbacks',()=>{
  assert.throws(()=>createW24NativeOwnerReadPorts(),/W24_STRICT_AND_NATIVE_OWNER_READ_PORTS_REQUIRED/);
@@ -107,8 +124,31 @@ test('provider-spoofed peer or account cannot substitute W24 durable K',async t=
  const p=createW24NativeOwnerReadPorts({
   identityConsent:f.ids,resolveNativePrincipal:async()=>principal,
   listVerifiedPlatformAccounts:async()=>[sampleAccount],
-  listVerifiedPlatformPeers:async()=>[{...samplePeer,accountRef:'anotheraccount'}]
+  listVerifiedPlatformPeers:async()=>[{...samplePeer,accountRef:'anotheraccount'}],
+  readW44IdentityAuthority:({actor,identity})=>f.store.readIdentityAuthority({actor,identity})
  });
  const a=await p.readW24AuthorizedAccounts({principal,session});
  await assert.rejects(p.readW24VerifiedContacts({principal,session,accounts:a}),/PEER_NATIVE_BINDING_NOT_VERIFIED/);
+});
+
+test('official SDK ONLINE without original W44 account registration cannot show account',async t=>{
+ const f=fixture(t,{register:false});
+ const p=f.bridge();
+ await assert.rejects(p.readW24AuthorizedAccounts({principal,session}),
+  /W24_ACCOUNT_NOT_REGISTERED_OR_REVOKED/);
+});
+test('two accounts on SAME platform each retain own identical peer locator and K',async t=>{
+ const f=fixture(t,{second:true}),p=f.bridge();
+ const a=await p.readW24AuthorizedAccounts({principal,session});
+ const peers=await p.readW24VerifiedContacts({principal,session,accounts:a});
+ assert.equal(a.length,2);assert.equal(peers.length,2);
+ assert.equal(peers[0].peerRef,peers[1].peerRef);
+ assert.notEqual(peers[0].accountRef,peers[1].accountRef);
+ assert.equal(a[0].bindingRevision,1);assert.equal(a[1].bindingRevision,1);
+ assert.equal(f.ids.invalidateAccount(act,{...k,expected_revision:1}).status,'COMMITTED');
+ f.removeAccount('accountref_001');
+ const remaining=await p.readW24AuthorizedAccounts({principal,session});
+ const stillBound=await p.readW24VerifiedContacts({principal,session,accounts:remaining});
+ assert.equal(stillBound.length,1);
+ assert.equal(stillBound[0].accountRef,'accountref_002');
 });
