@@ -1,0 +1,374 @@
+{
+  "classification": "P3_1_NONPRODUCTION_CHROME_DOM_AUTO_UAT_ONLY",
+  "independentQA": false,
+  "source": {
+    "fixture": "5b9a05df788fe5fab41b6b2033fb895cd3650fb573345856650cfeb24ef9c99c",
+    "overlay": "4ed9607d0d65833ab9a5ead3513fdb3b9d03c27e85959997f0125b759071c824",
+    "sidecar": "deed37219749242ef853418103fbad902c547089e723233671ed04a7e90af4dc"
+  },
+  "chromeActual": true,
+  "arms": [
+    "CHAT-A-V25_VISUAL_NORMALIZED",
+    "CHAT-B-ADAPTIVE_INBOX",
+    "CHAT-C-PULSE_MAIN",
+    "CHAT-BC-FUSION"
+  ],
+  "rows": [
+    {
+      "case_id": "W35-UX-01-A",
+      "task_id": "UX-01",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "Search input and OSS Button selected both same-name contacts with distinct full K/channel",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-02-A",
+      "task_id": "UX-02",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "120 contact OSS Buttons, deep peers 25/30/40/120; Chrome DOM original/Chinese/MID intact",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-03-A",
+      "task_id": "UX-03",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "FAIL",
+      "proof": "DOM_INTERACTION_OR_RUNTIME_CHECK_FAILED",
+      "error": "Error: Shift+F10 did not bind quote"
+    },
+    {
+      "case_id": "W35-UX-04-A",
+      "task_id": "UX-04",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "Source-derived 0/1/2/3 cards, compact 1+2 expand when applicable; no synthetic third candidate",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-05-A",
+      "task_id": "UX-05",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "OSS Button candidate click filled public draft only; source candidate id offline-004-01; AUTO stayed unchanged",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-06-A",
+      "task_id": "UX-06",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "OSS Textarea input, key-scoped A/B drafts and quote survived contact switching without leakage",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-07-A",
+      "task_id": "UX-07",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "Click view/focus only: AUTO remains AUTO; unread unchanged; UNKNOWN visible in live DOM",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-08-A",
+      "task_id": "UX-08",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "Real Chrome textarea input simulated A鈫扝UMAN while B/C remain AUTO",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-09-A",
+      "task_id": "UX-09",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "W37 simulated revoke/UNKNOWN/budget input applied to key-isolated reducer; no provider API or retry",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-10-A",
+      "task_id": "UX-10",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "OSS private InputGroup + Button generated local MOCK trace; CONTACT draft remained isolated",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-11-A",
+      "task_id": "UX-11",
+      "arm": "CHAT-A-V25_VISUAL_NORMALIZED",
+      "result": "PASS",
+      "proof": "OSS Popover theme selection changed Ocean Electric; OSS Button toggled LIGHT; responsive widths separately screenshot",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-01-B",
+      "task_id": "UX-01",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "Search input and OSS Button selected both same-name contacts with distinct full K/channel",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-02-B",
+      "task_id": "UX-02",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "120 contact OSS Buttons, deep peers 25/30/40/120; Chrome DOM original/Chinese/MID intact",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-03-B",
+      "task_id": "UX-03",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "FAIL",
+      "proof": "DOM_INTERACTION_OR_RUNTIME_CHECK_FAILED",
+      "error": "Error: Shift+F10 did not bind quote"
+    },
+    {
+      "case_id": "W35-UX-04-B",
+      "task_id": "UX-04",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "Source-derived 0/1/2/3 cards, compact 1+2 expand when applicable; no synthetic third candidate",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-05-B",
+      "task_id": "UX-05",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "OSS Button candidate click filled public draft only; source candidate id offline-004-01; AUTO stayed unchanged",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-06-B",
+      "task_id": "UX-06",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "OSS Textarea input, key-scoped A/B drafts and quote survived contact switching without leakage",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-07-B",
+      "task_id": "UX-07",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "Click view/focus only: AUTO remains AUTO; unread unchanged; UNKNOWN visible in live DOM",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-08-B",
+      "task_id": "UX-08",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "Real Chrome textarea input simulated A鈫扝UMAN while B/C remain AUTO",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-09-B",
+      "task_id": "UX-09",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "W37 simulated revoke/UNKNOWN/budget input applied to key-isolated reducer; no provider API or retry",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-10-B",
+      "task_id": "UX-10",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "PASS",
+      "proof": "OSS private InputGroup + Button generated local MOCK trace; CONTACT draft remained isolated",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-11-B",
+      "task_id": "UX-11",
+      "arm": "CHAT-B-ADAPTIVE_INBOX",
+      "result": "FAIL",
+      "proof": "DOM_INTERACTION_OR_RUNTIME_CHECK_FAILED",
+      "error": "Error: theme popover did not open"
+    },
+    {
+      "case_id": "W35-UX-01-C",
+      "task_id": "UX-01",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "Search input and OSS Button selected both same-name contacts with distinct full K/channel",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-02-C",
+      "task_id": "UX-02",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "120 contact OSS Buttons, deep peers 25/30/40/120; Chrome DOM original/Chinese/MID intact",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-03-C",
+      "task_id": "UX-03",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "FAIL",
+      "proof": "DOM_INTERACTION_OR_RUNTIME_CHECK_FAILED",
+      "error": "Error: Shift+F10 did not bind quote"
+    },
+    {
+      "case_id": "W35-UX-04-C",
+      "task_id": "UX-04",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "Source-derived 0/1/2/3 cards, compact 1+2 expand when applicable; no synthetic third candidate",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-05-C",
+      "task_id": "UX-05",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "OSS Button candidate click filled public draft only; source candidate id offline-004-01; AUTO stayed unchanged",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-06-C",
+      "task_id": "UX-06",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "OSS Textarea input, key-scoped A/B drafts and quote survived contact switching without leakage",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-07-C",
+      "task_id": "UX-07",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "Click view/focus only: AUTO remains AUTO; unread unchanged; UNKNOWN visible in live DOM",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-08-C",
+      "task_id": "UX-08",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "Real Chrome textarea input simulated A鈫扝UMAN while B/C remain AUTO",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-09-C",
+      "task_id": "UX-09",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "W37 simulated revoke/UNKNOWN/budget input applied to key-isolated reducer; no provider API or retry",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-10-C",
+      "task_id": "UX-10",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "OSS private InputGroup + Button generated local MOCK trace; CONTACT draft remained isolated",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-11-C",
+      "task_id": "UX-11",
+      "arm": "CHAT-C-PULSE_MAIN",
+      "result": "PASS",
+      "proof": "OSS Popover theme selection changed Ocean Electric; OSS Button toggled LIGHT; responsive widths separately screenshot",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-01-BC",
+      "task_id": "UX-01",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "Search input and OSS Button selected both same-name contacts with distinct full K/channel",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-02-BC",
+      "task_id": "UX-02",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "120 contact OSS Buttons, deep peers 25/30/40/120; Chrome DOM original/Chinese/MID intact",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-03-BC",
+      "task_id": "UX-03",
+      "arm": "CHAT-BC-FUSION",
+      "result": "FAIL",
+      "proof": "DOM_INTERACTION_OR_RUNTIME_CHECK_FAILED",
+      "error": "Error: Shift+F10 did not bind quote"
+    },
+    {
+      "case_id": "W35-UX-04-BC",
+      "task_id": "UX-04",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "Source-derived 0/1/2/3 cards, compact 1+2 expand when applicable; no synthetic third candidate",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-05-BC",
+      "task_id": "UX-05",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "OSS Button candidate click filled public draft only; source candidate id offline-004-01; AUTO stayed unchanged",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-06-BC",
+      "task_id": "UX-06",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "OSS Textarea input, key-scoped A/B drafts and quote survived contact switching without leakage",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-07-BC",
+      "task_id": "UX-07",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "Click view/focus only: AUTO remains AUTO; unread unchanged; UNKNOWN visible in live DOM",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-08-BC",
+      "task_id": "UX-08",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "Real Chrome textarea input simulated A鈫扝UMAN while B/C remain AUTO",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-09-BC",
+      "task_id": "UX-09",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "W37 simulated revoke/UNKNOWN/budget input applied to key-isolated reducer; no provider API or retry",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-10-BC",
+      "task_id": "UX-10",
+      "arm": "CHAT-BC-FUSION",
+      "result": "PASS",
+      "proof": "OSS private InputGroup + Button generated local MOCK trace; CONTACT draft remained isolated",
+      "error": ""
+    },
+    {
+      "case_id": "W35-UX-11-BC",
+      "task_id": "UX-11",
+      "arm": "CHAT-BC-FUSION",
+      "result": "FAIL",
+      "proof": "DOM_INTERACTION_OR_RUNTIME_CHECK_FAILED",
+      "error": "Error: theme popover did not open"
+    }
+  ],
+  "pass": 38,
+  "fail": 6,
+  "viewportMatrix": "SEPARATE_SCREENSHOT_TEST",
+  "webview2": "NOT_RUN"
+}

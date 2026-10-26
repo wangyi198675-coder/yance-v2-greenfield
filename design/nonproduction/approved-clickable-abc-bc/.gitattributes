@@ -1,0 +1,3 @@
+# W39 hash-frozen isolated OSS, fixture, LICENSE/NOTICE and compiled bytes; never rewrite EOL on Windows checkout.
+* -text
+*.png binary

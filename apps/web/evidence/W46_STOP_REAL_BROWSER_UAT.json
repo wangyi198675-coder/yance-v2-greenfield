@@ -1,0 +1,42 @@
+{
+  "source": "REAL_WINDOWS_GOOGLE_CHROME_HEADLESS",
+  "userFlow": "ORIGINAL_BC_CONTACT_HEADER",
+  "backend": "ORIGINAL_W44_NATIVE_STRICT_SQLITE_SYNTHETIC_ONLY",
+  "w09Source": "1588975118141af0d8b6033310f410a786faf9b0",
+  "w44Owner": "66a70a15af885274b74c0124d0e914924579bebf",
+  "productionHttpAuthorizer": "HOLD_NOT_IMPLEMENTED",
+  "appScope": "W46_APPS_WEB_ONLY",
+  "zeroProviderSends": true,
+  "errors": [],
+  "checks": [
+    {
+      "step": "STOP_CONTACT",
+      "A": "COMMITTED",
+      "B": "ACTIVE",
+      "C": "ACTIVE"
+    },
+    {
+      "step": "RELOAD_COMMITTED",
+      "status": "已停止"
+    },
+    {
+      "step": "STOP_CURRENT_ACCOUNT",
+      "globalAccount1": "COMMITTED",
+      "otherAccount": "ACTIVE"
+    },
+    {
+      "step": "RELOAD_GLOBAL",
+      "status": "已停止"
+    },
+    {
+      "step": "PRE_NETWORK_ARM_PENDING",
+      "status": "PENDING",
+      "persistedRequestId": "fake-w46-stop-00200c37-74ee-4aba-96b1-292be951a3d5"
+    }
+  ],
+  "screenshots": [
+    "W46_STOP_CONTACT_COMMITTED_CHROME.png",
+    "W46_STOP_ACCOUNT_COMMITTED_CHROME.png",
+    "W46_STOP_PENDING_CHROME.png"
+  ]
+}
