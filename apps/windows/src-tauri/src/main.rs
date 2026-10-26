@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod native_cloud_keys;
+mod local_api_child;
 mod native_launch;
 mod native_profile;
 mod session;
@@ -7,6 +8,7 @@ mod user_dirs;
 mod windows_principal;
 
 use native_cloud_keys::{cloud_key_revoke, cloud_key_status, cloud_key_store};
+use local_api_child::LocalApiChild;
 use native_launch::{HostedChild, NativeChildLaunch};
 use native_profile::NativeProfileAuthority;
 use session::{PublicSessionStatus, SessionAuthority};
@@ -28,6 +30,7 @@ fn logout_session(
     state: tauri::State<'_, SessionAuthority>,
     native: tauri::State<'_, NativeProfileAuthority>,
     child: tauri::State<'_, Mutex<Option<HostedChild>>>,
+    local_api: tauri::State<'_, Mutex<Option<LocalApiChild>>>,
 ) -> Result<(), String> {
     // Revoke even if the child cannot be stopped; never report successful
     // logout while an approved API child remains alive.
@@ -36,6 +39,9 @@ fn logout_session(
         .lock()
         .map_err(|_| "NATIVE_CHILD_LOCK_POISONED".to_owned())?;
     slot.take(); // HostedChild::drop terminates/reaps the verified API child.
+    if let Ok(mut api) = local_api.lock() {
+        api.take();
+    }
     revoked
 }
 
@@ -50,7 +56,9 @@ fn main() {
     // Tauri localhost plugin. This repairs W46's existing LOOPBACK_ONLY guard
     // without accepting a browser-provided Principal or relaxing it.
     // No Tauri IPC capability is granted to arbitrary localhost pages.
-    let bc_loopback = option_env!("YANCE_W54_BC_LOOPBACK_ASSETS") == Some("1");
+    let builtin_w47 = option_env!("YANCE_W54_BUNDLED_W47_SOURCE_SHA");
+    let bc_loopback =
+        builtin_w47.is_none() && option_env!("YANCE_W54_BC_LOOPBACK_ASSETS") == Some("1");
     let bc_port = if bc_loopback {
         Some(portpicker::pick_unused_port().expect("W54_BC_LOCAL_PORT_UNAVAILABLE"))
     } else {
@@ -66,6 +74,49 @@ fn main() {
     }
     let app = builder
         .setup(move |app| {
+            let resource_root = app.path().resource_dir().map_err(std::io::Error::other)?;
+            let local_api = if let Some(source_sha) = builtin_w47 {
+                let port = portpicker::pick_unused_port()
+                    .ok_or_else(|| std::io::Error::other("LOCAL_API_PORT_UNAVAILABLE"))?;
+                Some(
+                    local_api_child::start_bundled(
+                        &resource_root,
+                        source_sha,
+                        option_env!("YANCE_W54_BUNDLED_W47_SERVER_SHA256").unwrap_or(""),
+                        option_env!("YANCE_W54_BUNDLED_W47_MANIFEST_SHA256").unwrap_or(""),
+                        port,
+                    )
+                    .map_err(std::io::Error::other)?,
+                )
+            } else {
+                None
+            };
+            let ready_url = local_api
+                .as_ref()
+                .map(|child| format!("{}/?productDraft=1", child.origin));
+            app.manage(Mutex::new(local_api));
+            if let Some(url) = ready_url {
+                if app.config().identifier != "com.yance.v2.bc-isolated-candidate" {
+                    return Err(std::io::Error::other("LOCAL_API_APP_IDENTIFIER_INVALID").into());
+                }
+                let address: tauri::Url = url
+                    .parse()
+                    .map_err(|_| std::io::Error::other("LOCAL_API_WINDOW_URL_INVALID"))?;
+                let allowed_origin = address.origin().ascii_serialization();
+                app.add_capability(
+                    CapabilityBuilder::new("w54-local-api-one-origin-window")
+                        .local(false)
+                        .remote(format!("{allowed_origin}/*"))
+                        .window("main")
+                        .permission("allow-session-status")
+                        .permission("allow-logout-session"),
+                )?;
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::External(address))
+                    .title("言策 V2 | 本机闺蜜大脑")
+                    .inner_size(1380.0, 900.0)
+                    .min_inner_size(930.0, 620.0)
+                    .build()?;
+            }
             if let Some(port) = bc_port {
                 if app.config().identifier != "com.yance.v2.bc-isolated-candidate" {
                     return Err(std::io::Error::other("W54_BC_IDENTIFIER_NOT_REVIEWED").into());
@@ -145,6 +196,11 @@ fn main() {
         .expect("construct minimal local Tauri host");
     app.run(|app_handle, event| {
         if let tauri::RunEvent::Exit = event {
+            if let Some(child) = app_handle.try_state::<Mutex<Option<LocalApiChild>>>() {
+                if let Ok(mut running) = child.lock() {
+                    running.take();
+                }
+            }
             if let Some(child) = app_handle.try_state::<Mutex<Option<HostedChild>>>() {
                 if let Ok(mut owned) = child.lock() {
                     owned.take();

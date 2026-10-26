@@ -28,6 +28,13 @@ try{
  if(forged.headers.get('set-cookie')||ordinaryIssuer)
   throw Error('UNTRUSTED_LOCALHOST_MINTED_SESSION');
  const ordinaryLocalhost={status:forged.status,sessionMinted:false,setCookie:false};
+ const healthResponse=await fetch(new URL('/api/v2/runtime/health',target.url));
+ if(!healthResponse.ok || !(healthResponse.headers.get('content-type')||'').includes('application/json'))
+   throw Error('REAL_W47_API_JSON_NOT_REACHED');
+ const realW47=await healthResponse.json();
+ if(realW47.runtimeSha!=='e352180cba665b56b35822fa2aff2c7525360016'||
+   realW47.nativeWebSameOrigin!==true||realW47.canSend!==false)
+   throw Error('REAL_W47_API_IDENTITY_OR_SAFETY_MISMATCH: '+JSON.stringify(realW47));
  ws=new WebSocket(target.webSocketDebuggerUrl);
  await new Promise((resolve,reject)=>{ws.addEventListener('open',resolve,{once:true});ws.addEventListener('error',reject,{once:true})});
  ws.addEventListener('message',ev=>{
@@ -84,5 +91,5 @@ try{
  writeFileSync(new URL('./w54_bc_actual_webview_cdp.png',import.meta.url),Buffer.from(shot.data,'base64'));
  const dom=JSON.parse(value);
  if(dom.rootChildren===0||events.some(e=>e.data.includes('LOOPBACK_ONLY')))throw Error('BC_WEBVIEW_RENDER_FAIL: '+JSON.stringify({dom,events}));
- console.log(JSON.stringify({status:'REAL_INSTALLED_TAURI_WEBVIEW_CDP',pid:app.pid,viewTarget:target.url,dom:JSON.parse(value),jsEvents:events.slice(-12),nativeSessionStatus:nativeResult,afterNativeLogout:loggedOut,ordinaryLocalhost,navChecks:nav,webviewScreenshot:'w54_bc_actual_webview_cdp.png'},null,2));
+ console.log(JSON.stringify({status:'REAL_INSTALLED_TAURI_WEBVIEW_CDP',pid:app.pid,viewTarget:target.url,dom:JSON.parse(value),jsEvents:events.slice(-12),nativeSessionStatus:nativeResult,afterNativeLogout:loggedOut,ordinaryLocalhost,realW47Health:realW47,navChecks:nav,webviewScreenshot:'w54_bc_actual_webview_cdp.png'},null,2));
 }finally{try{ws?.close()}catch{};try{app.kill()}catch{}}

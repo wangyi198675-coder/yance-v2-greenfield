@@ -31,6 +31,9 @@
                                    "nsis":  {
                                                 "installMode":  "currentUser"
                                             }
-                               }
+                               },
+                   "resources":  {
+                                     "../runtime-bundle/w47":  "w47"
+                                 }
                }
 }

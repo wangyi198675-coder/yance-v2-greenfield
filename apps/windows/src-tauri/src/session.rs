@@ -339,6 +339,15 @@ mod tests {
     }
     #[cfg(windows)]
     #[test]
+    fn persistent_private_ui_os_session_allows_normal_long_running_app() {
+        let principal = current_windows_principal().unwrap();
+        let host = SessionAuthority::new(Some(principal), Duration::from_secs(365 * 24 * 60 * 60))
+            .unwrap();
+        assert!(host.public_status().native_session_active);
+        assert!(!host.public_status().can_send);
+    }
+    #[cfg(windows)]
+    #[test]
     fn native_rotation_invalidates_old_proof() {
         let principal = current_windows_principal().unwrap();
         let host = SessionAuthority::new(Some(principal), Duration::from_secs(30)).unwrap();
