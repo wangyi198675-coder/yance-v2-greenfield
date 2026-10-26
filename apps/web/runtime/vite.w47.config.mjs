@@ -16,18 +16,19 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='c80345675c94592bbd31e6b0684d8e163364b610';
+ const expectedOwnerSha='98927b17a93a46280260f0f9880ffd5f3871185d';
  const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'14a2b6f2300162aaa8c8e115edcc6bdb53b1d12c',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'efabfa1a02d78494d4429bb2d7bf373d0c4c00ed',
   'apps/web/src/BCLiveChatWorkspace.vue':'61df3ba766ad8d0df618070a9ad1285e26164e05',
   'apps/web/src/live-chat-source.mjs':'9663d5bc6a4ac5117bd4a40097e89eca466ef2f2',
   'apps/web/src/BCChannelAccountSetup.vue':'7c7f3cd877f2dd09f3b4a93ca5f23b668afea078',
   'apps/web/src/BCNativeHostSession.vue':'613b9b761cf1b8325da03677b4051c2807d29a9b',
   'apps/web/src/channel-setup-contract.mjs':'184d2407fc07c99e4eb2316d68d20246c91a2bb1',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'19278758ee59d1a264634bec43bf94134f385101',
-  'apps/web/src/private-brain-ui-contract.mjs':'03822dcce8f2bc4b84a8a111431f87431eced794',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'6131e8df5629c8ca33a61e670f21387e7252ad11',
+  'apps/web/src/BCNativeCloudKeySettings.vue':'d0660d9621dc313117cafce81fcff91ea804264f',
+  'apps/web/src/private-brain-ui-contract.mjs':'f6ecb75cfc85938462999c5b9d63cb32d9900aea',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
   'apps/web/evidence/TO_W09_2_W47_W46_MODEL_DTO_NATIVE_JOIN_20261026.md':'c42830240483a4ac553513b7202d7d41136719c8',
   'apps/web/src/BCLocalSessionConnector.vue':'7f62421e0e3410f7e343820be2a17351c4b11139',
@@ -35,7 +36,7 @@ if(r4IsolatedPreview){
   'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md':'de158fd6c5861a88a0ffe95e2a5899077624688c',
   'apps/web/src/BCBrandIcon.vue':'d99edca93a61f0464349cd515a6fee1a0580bb11',
   'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
-  'apps/web/src/product-workspace-contract.mjs':'dcefa40ac9422cad8058da999425dcd9582f6697',
+  'apps/web/src/product-workspace-contract.mjs':'594442c0f6f1e2a249cd67423a68bbd4e0940afa',
   'apps/web/vite.w46.config.mjs':'2c9b8f0bb66dd35d7a6d76f1a57ae3847a0a4605',
   [canonicalAck]:'45893dca88309c678bc7b232f12809d879890c9e'
  };
