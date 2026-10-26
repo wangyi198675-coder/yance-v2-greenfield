@@ -113,3 +113,58 @@ test('only benign bounded UTM on public entry can be stripped; authenticated rou
     assert.equal(revokeRoute.status,422);
   });
 });
+
+test('one-time local user form POST launches fixed upstream GUI and returns visible result',async()=>{
+  let launches=0;
+  PORT++;BASE='http://127.0.0.1:'+PORT+'/api/v2/providers/fb-personal';
+  const s=createBridgeStatusServer({port:PORT,installed:()=>true,
+    launcher:async()=>{launches++;return {launched:true,foregroundVerified:true}},
+    probe:async()=>({realAccountState:'WAITING_USER_AUTH',canSend:false})});
+  await new Promise(r=>s.listen(PORT,'127.0.0.1',r));
+  try{
+    const page=await (await fetch(BASE+'/connect')).text();
+    const match=page.match(/name="ticket" value="([a-f0-9]{48})"/);
+    assert.ok(match,'page must provide a one-time unguessable launch ticket');
+    assert.match(page,/method="post" action="\/api\/v2\/providers\/fb-personal\/launch-manager"/);
+    assert.equal(launches,0,'visiting page alone must never launch the GUI');
+    const submit=()=>fetch(BASE+'/launch-manager',{method:'POST',
+      headers:{Origin:'http://127.0.0.1:'+PORT,
+        'Content-Type':'application/x-www-form-urlencoded',
+        'Sec-Fetch-Site':'same-origin'},
+      body:'ticket='+match[1]});
+    const result=await submit();assert.equal(result.status,200);
+    assert.match(await result.text(),/官方mautrix-manager已启动/);
+    assert.equal(launches,1);
+    const replay=await submit();assert.equal(replay.status,403);
+    assert.equal(launches,1);
+  }finally{await new Promise(r=>s.close(r))}
+});
+test('refuse cross-origin, missing user ticket, GET and untrusted launch requests',async()=>{
+  let launches=0;
+  PORT++;BASE='http://127.0.0.1:'+PORT+'/api/v2/providers/fb-personal';
+  const s=createBridgeStatusServer({port:PORT,installed:()=>true,
+    launcher:async()=>{launches++;return {launched:true,foregroundVerified:true}}});
+  await new Promise(r=>s.listen(PORT,'127.0.0.1',r));
+  try{
+    const page=await (await fetch(BASE+'/connect')).text();
+    const token=page.match(/name="ticket" value="([a-f0-9]{48})"/)[1];
+    const post=(origin,body,extra={})=>fetch(BASE+'/launch-manager',{
+      method:'POST',headers:{Origin:origin,'Content-Type':'application/x-www-form-urlencoded',...extra},
+      body});
+    let r=await post('https://evil.example','ticket='+token);
+    assert.equal(r.status,403);
+    r=await post('http://127.0.0.1:'+PORT,'ticket='+token,
+      {'Sec-Fetch-Site':'cross-site'});
+    assert.equal(r.status,403);
+    r=await post('http://127.0.0.1:'+PORT,'ticket=bad');
+    assert.equal(r.status,403);
+    r=await post('http://127.0.0.1:'+PORT,'ticket='+token+'&action=login');
+    assert.equal(r.status,403);
+    r=await fetch(BASE+'/launch-manager');assert.equal(r.status,404);
+    assert.equal(launches,0);
+    // A rejected cross-origin attempt must not consume a legitimate user ticket.
+    r=await post('http://127.0.0.1:'+PORT,'ticket='+token,
+      {'Sec-Fetch-Site':'same-origin'});
+    assert.equal(r.status,200);assert.equal(launches,1);
+  }finally{await new Promise(r=>s.close(r))}
+});

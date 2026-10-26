@@ -5,7 +5,7 @@
 <style>
 body{font:16px/1.7 system-ui,-apple-system,sans-serif;max-width:670px;margin:48px auto;padding:0 22px;color:#222}
 h1{font-size:25px}h2{font-size:19px;margin-top:30px}
-a.launch{display:inline-block;background:#243d76;color:white;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:600}
+button.launch{display:inline-block;background:#243d76;color:white;padding:11px 22px;border:0;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}button.launch:hover{background:#152d62}button.launch:focus-visible{outline:3px solid #a8baff;outline-offset:3px}
 code{background:#eee;padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}
 small{color:#555}section{border-top:1px solid #ddd;padding-top:10px;margin-top:24px}
 </style></head><body>
@@ -13,8 +13,12 @@ small{color:#555}section{border-top:1px solid #ddd;padding-top:10px;margin-top:2
 <p>当前页面是本机真实Bridge的独立授权入口。<strong>不会自动登录Facebook、恢复旧账号或向联系人发信。</strong></p>
 <section>
 <h2>1. 进入已安装的官方登录客户端</h2>
-<p><a class="launch" href="mautrix-manager://open/">打开官方mautrix-manager</a></p>
-<small>浏览器可能要求确认打开本机应用。请在您本人决定连接账号时确认。</small>
+<form method="post" action="/api/v2/providers/fb-personal/launch-manager">
+<input type="hidden" name="ticket" value="__W26_LAUNCH_TICKET__">
+<button class="launch" type="submit">打开官方mautrix-manager</button>
+</form>
+<p><small>该按钮由本机程序直接启动并尝试将官方窗口置于前台。不会自动登录Facebook。</small></p>
+<p><small>备用入口：<a href="mautrix-manager://open/">使用Windows应用协议打开</a>，如果浏览器允许外部协议。</small></p>
 </section>
 <section>
 <h2>2. 使用本机Matrix身份登录客户端</h2>
