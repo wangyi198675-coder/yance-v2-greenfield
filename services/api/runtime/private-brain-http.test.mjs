@@ -47,12 +47,14 @@ function ledger(){
   }
  };
 }
-async function api({enabled=true,profileProvider=null,w43Port=null,requestLedger=null}={}){
+async function api({enabled=true,profileProvider=null,w43Port=null,requestLedger=null,
+ signedModelSelection=null}={}){
  const pairingCode=mkCode();
  const authority=createLocalSessionAuthority({approvePairing:enabled?async value=>value===pairingCode:null});
  const local=createLocalSessionHttpApi({authority,webOrigin:origin});
  const privateApi=createPrivateBrainHttp({sessionAuthority:authority,webOrigin:origin,
-  resolveNativePrincipal:profileProvider,w43Port,requestLedger});
+  resolveNativePrincipal:profileProvider,w43Port,requestLedger,
+  resolveSignedModelSelection:signedModelSelection});
  const server=createServer(async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1');
   if(url.pathname.startsWith('/api/v2/local-session/'))return void(await local(req,res,url));
@@ -202,4 +204,19 @@ test('native Python bridge cannot be configured from browser or relative/unverif
  assert.throws(()=>createW43PythonPrivatePort({
   pythonExecutable:'python',w43ModuleRoot:'./fake',protectedKeyFile:'test-key'
  }),/W43_OWNER_SIGNED_PYTHON_PATHS_REQUIRED/);
+});
+test('signed cloud selection cannot execute original local-only W43 or create durable request claim',async()=>{
+ let executes=0;
+ const store=ledger();
+ const b=await api({profileProvider:async()=>profile(),requestLedger:store,
+  signedModelSelection:async()=>({provider:'openrouter',modelId:'openai/gpt-4o-mini'}),
+  w43Port:{turn:async()=>{executes++;return modelReceipt()},history:async()=>historyReceipt()}});
+ try{
+  const s=await b.pair();
+  const x=await post(b,s);
+  assert.equal(x.status,503);
+  assert.equal(x.data.error,'W43_SELECTED_MODEL_EXECUTION_NOT_SIGNED');
+  assert.equal(store.count(),0);
+  assert.equal(executes,0);
+ }finally{await b.close()}
 });

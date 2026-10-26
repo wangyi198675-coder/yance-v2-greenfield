@@ -38,8 +38,14 @@ const readJson=async req=>{
  if(!value||Array.isArray(value)||typeof value!=='object')throw Object.assign(Error('JSON_OBJECT_REQUIRED'),{status:422});
  return value;
 };
-export function createLocalSessionAuthority({approvePairing=null,now=()=>Date.now(),ttlMs=TTL_MS}={}){
+export function createLocalSessionAuthority({approvePairing=null,
+ approveNativeLaunch=null,now=()=>Date.now(),ttlMs=TTL_MS,
+ nativeTtlMs=12*60*60*1000}={}){
  if(approvePairing!==null&&typeof approvePairing!=='function')throw Error('TRUSTED_ISSUER_MUST_BE_SERVER_CALLBACK');
+ if(approveNativeLaunch!==null&&typeof approveNativeLaunch!=='function')
+  throw Error('NATIVE_START_AUTHORITY_MUST_BE_SERVER_CALLBACK');
+ if(!Number.isSafeInteger(nativeTtlMs)||nativeTtlMs<60_000||nativeTtlMs>24*60*60*1000)
+  throw Error('NATIVE_SESSION_TTL_OUT_OF_RANGE');
  if(!Number.isSafeInteger(ttlMs)||ttlMs<1000||ttlMs>15*60*1000)throw Error('SESSION_TTL_OUT_OF_RANGE');
  const sessions=new Map();
  let revision=0;
@@ -64,8 +70,25 @@ export function createLocalSessionAuthority({approvePairing=null,now=()=>Date.no
   const id=randomBytes(32).toString('hex');
   const csrf=randomBytes(32).toString('hex');
   const expiresAt=now()+ttlMs;
-  sessions.set(digest(id),{csrf,expiresAt,rev:revision});
+  sessions.set(digest(id),{csrf,expiresAt,rev:revision,kind:'PAIRING'});
   return {id,csrf,expiresAt};
+ };
+ const beginTrustedFirstParty=async req=>{
+  if(approveNativeLaunch===null)return {error:'TRUSTED_NATIVE_APP_LAUNCH_NOT_CONNECTED',status:503};
+  // A callback injected only by a W54-reviewed, authenticated native host
+  // channel. Origin, same-user files, localhost and arbitrary request headers
+  // alone MUST NOT cause it to return true.
+  let trusted=false;
+  try{trusted=(await approveNativeLaunch(req))===true}catch{
+   return {error:'TRUSTED_NATIVE_APP_LAUNCH_UNAVAILABLE',status:503};
+  }
+  if(!trusted)return {error:'TRUSTED_NATIVE_APP_LAUNCH_REQUIRED',status:401};
+  expire();
+  const id=randomBytes(32).toString('hex');
+  const csrf=randomBytes(32).toString('hex');
+  const expiresAt=now()+nativeTtlMs;
+  sessions.set(digest(id),{csrf,expiresAt,rev:revision,kind:'NATIVE_FIRST_PARTY'});
+  return {id,csrf,expiresAt,ttlMs:nativeTtlMs};
  };
  const revoke=req=>{
   const current=sessionFor(req);
@@ -74,7 +97,9 @@ export function createLocalSessionAuthority({approvePairing=null,now=()=>Date.no
   return true;
  };
  const revokeAll=()=>{sessions.clear();revision++};
- return Object.freeze({sessionFor,redeem,revoke,revokeAll,ttlMs,get issuerAvailable(){return approvePairing!==null}});
+ return Object.freeze({sessionFor,redeem,beginTrustedFirstParty,revoke,revokeAll,ttlMs,
+  get issuerAvailable(){return approvePairing!==null},
+  get nativeLaunchAvailable(){return approveNativeLaunch!==null}});
 }
 export function createLocalSessionHttpApi({authority,webOrigin}){
  if(!authority||typeof authority.sessionFor!=='function')throw Error('SESSION_AUTHORITY_REQUIRED');
@@ -84,9 +109,27 @@ export function createLocalSessionHttpApi({authority,webOrigin}){
   if(path==='/api/v2/local-session/status'&&req.method==='GET'){
    const active=authority.sessionFor(req);
    json(res,200,active?{ok:true,paired:true,expiresAt:active.record.expiresAt,
-    csrfToken:active.record.csrf,canSend:false,providerAuthorized:false}:
+    csrfToken:active.record.csrf,sessionKind:active.record.kind,
+    canSend:false,providerAuthorized:false}:
     {ok:true,paired:false,canSend:false,providerAuthorized:false,
      reason:authority.issuerAvailable?'LOCAL_SESSION_NOT_PAIRED':'TRUSTED_NATIVE_PAIRING_NOT_AVAILABLE'});
+   return true;
+  }
+  if(path==='/api/v2/local-session/first-party'&&req.method==='POST'){
+   if(headerValue(req,'origin')!==webOrigin){reject(res,403,'LOCAL_SESSION_ORIGIN_REQUIRED');return true}
+   let payload;
+   try{payload=await readJson(req)}catch(e){reject(res,e.status||422,e.message);return true}
+   if(Object.keys(payload).length!==0){reject(res,422,'NATIVE_LAUNCH_BODY_MUST_BE_EMPTY');return true}
+   const previous=authority.sessionFor(req);
+   if(previous){json(res,200,{ok:true,paired:true,sessionKind:previous.record.kind,
+     expiresAt:previous.record.expiresAt,csrfToken:previous.record.csrf,
+     canSend:false,providerAuthorized:false});return true}
+   const result=await authority.beginTrustedFirstParty(req);
+   if(result.error){reject(res,result.status,result.error);return true}
+   json(res,200,{ok:true,paired:true,sessionKind:'NATIVE_FIRST_PARTY',
+     expiresAt:result.expiresAt,csrfToken:result.csrf,
+     canSend:false,providerAuthorized:false},
+     {'set-cookie':cookieFor(result.id,result.ttlMs)});
    return true;
   }
   if(path==='/api/v2/local-session/redeem'&&req.method==='POST'){

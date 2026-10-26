@@ -27,7 +27,7 @@ export function createW43PythonPrivatePort({
   throw Error('W43_OWNER_SIGNED_PYTHON_PATHS_REQUIRED');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>300000)
   throw Error('W43_PYTHON_BRIDGE_TIMEOUT_INVALID');
- async function invoke(method,ctx,threadId,text,requestId,receipt){
+ async function invoke(method,ctx,threadId,text,requestId,receipt,modelSelection){
   if(!ctx?.checkCurrent||typeof ctx.checkCurrent!=='function')
    throw {httpStatus:503,code:'W47_VERIFIED_CONTEXT_REQUIRED'};
   return new Promise((done,fail)=>{
@@ -92,11 +92,13 @@ export function createW43PythonPrivatePort({
     }else finish({httpStatus:503,code:'W43_PYTHON_TRANSPORT_INVALID'});
    });
    send({method,threadId,...(method==='history'?{}:{text,requestId}),
-    ...(method==='finish'?{receipt}:{})});
+    ...(method==='finish'?{receipt}:{}),
+    ...(method==='turn'&&modelSelection?{modelSelection}:{})});
   });
  }
  return Object.freeze({
-  turn:(ctx,thread_id,text,request_id)=>invoke('turn',ctx,thread_id,text,request_id),
+  turn:(ctx,thread_id,text,request_id,modelSelection)=>
+   invoke('turn',ctx,thread_id,text,request_id,undefined,modelSelection),
   history:(ctx,thread_id)=>invoke('history',ctx,thread_id),
   claim:(ctx,thread_id,request_id,text)=>invoke('claim',ctx,thread_id,text,request_id),
   finish:(ctx,thread_id,request_id,text,receipt)=>invoke('finish',ctx,thread_id,text,request_id,receipt),

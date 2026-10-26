@@ -6,6 +6,7 @@ import {resolveRuntimeSource} from './runtime-provenance.mjs';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
 import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
 import {createPrivateBrainHttp} from './private-brain-http.mjs';
+import {createPrivateModelHttp} from './private-model-http.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -27,7 +28,13 @@ if(operatorMode==='console'){
   operatorIssuer=createOperatorConsoleIssuer({revokeSessions:()=>localSessionAuthority.revokeAll()});
   process.stderr.write('W47_LOCAL_OPERATOR_CONSOLE_READY (type pair, cancel or revoke in this terminal)\n');
 }
+// The native-first-party callback is intentionally absent until W54 verifies
+// the actual packaged host/app-instance over an authenticated private channel.
+// /local-session/first-party returns 503 rather than auto-approving localhost.
 const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthority,webOrigin});
+// W55 production credential vault is SEALED and original W43 is local-only.
+// Never instantiate test-only model/credential adapters in this real server.
+const privateModelHttp=createPrivateModelHttp({sessionAuthority:localSessionAuthority,webOrigin});
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.
 const privateBrainHttp=createPrivateBrainHttp({sessionAuthority:localSessionAuthority,webOrigin});
@@ -76,6 +83,15 @@ const handler=(req,res)=>{
     if(url.pathname.startsWith('/api/v2/local-session/')){
       void localSessionHttp(req,res,url).catch(()=>{
         if(!res.headersSent)deny(res,503,'LOCAL_SESSION_UNAVAILABLE');
+        else res.destroy();
+      });
+      return;
+    }
+    if(['/api/v2/private-brain/model-catalog',
+        '/api/v2/private-brain/model-config',
+        '/api/v2/private-brain/model-selection'].includes(url.pathname)){
+      void privateModelHttp(req,res,url).catch(()=>{
+        if(!res.headersSent)deny(res,503,'MODEL_CONFIG_UNAVAILABLE');
         else res.destroy();
       });
       return;

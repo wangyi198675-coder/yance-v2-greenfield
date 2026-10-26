@@ -39,10 +39,14 @@ const sessionSeal=(s,p)=>Object.freeze({
 const sameContext=(a,b)=>a.principalRef===b.principalRef&&a.installationRef===b.installationRef&&
  a.sessionRef===b.sessionRef&&a.sessionRevision===b.sessionRevision&&
  a.revocationGeneration===b.revocationGeneration&&a.appLocalDataRoot===b.appLocalDataRoot;
-const w43Turn=r=>r&&r.status==='COMPLETED'&&r.canSend===false&&r.qualityQualified===false&&
+const w43Turn=(r,selection=null)=>r&&r.status==='COMPLETED'&&r.canSend===false&&r.qualityQualified===false&&
  typeof r.assistantText==='string'&&r.assistantText.trim().length>0&&r.assistantText.length<=128000&&
  opaque(r.runId)&&opaque(r.sessionId)&&typeof r.modelProvider==='string'&&
- r.modelProvider.startsWith('LLAMACPP_LOCAL_')&&r.modelId==='qwen3:8b';
+ (selection?(r.modelId===selection.modelId&&
+   (selection.provider==='local'?r.modelProvider.startsWith('LLAMACPP_LOCAL_'):
+    selection.provider==='openrouter'?r.modelProvider.startsWith('OPENROUTER_'):
+    selection.provider==='openai'&&r.modelProvider.startsWith('OPENAI_'))):
+   r.modelProvider.startsWith('LLAMACPP_LOCAL_')&&r.modelId==='qwen3:8b');
 const w43History=r=>r&&['HISTORY_PRESENT','HISTORY_EMPTY','HISTORY_NOT_FOUND'].includes(r.status)&&
  r.canSend===false&&r.qualityQualified===false&&opaque(r.sessionId)&&
  Array.isArray(r.messages)&&r.messages.length<=2000&&
@@ -63,8 +67,11 @@ const errorMap=e=>{
  * In absence of all three signed ports the production server remains sealed.
  */
 export function createPrivateBrainHttp({sessionAuthority,webOrigin,
- resolveNativePrincipal=null,w43Port=null,requestLedger=null}={}){
+ resolveNativePrincipal=null,w43Port=null,requestLedger=null,
+ resolveSignedModelSelection=null}={}){
  if(!sessionAuthority?.sessionFor||typeof webOrigin!=='string')throw Error('PRIVATE_SESSION_REQUIRED');
+ if(resolveSignedModelSelection!==null&&typeof resolveSignedModelSelection!=='function')
+  throw Error('W43_SIGNED_MODEL_SELECTION_PORT_INVALID');
  if(resolveNativePrincipal!==null&&typeof resolveNativePrincipal!=='function')throw Error('BAD_W54_NATIVE_RESOLVER');
  if(w43Port!==null&&(!w43Port.turn||!w43Port.history))throw Error('BAD_W43_PRIVATE_PORT');
  if(requestLedger!==null&&(!requestLedger.claim||!requestLedger.finish||!requestLedger.markUnknown||!requestLedger.reconcile))
@@ -110,7 +117,21 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
    return sessionSeal(s,p);
   };
   let original;try{original=await principal()}catch(e){const f=errorMap(e);reject(res,f.status,f.code);return true}
-  const scoped={...original,threadId};
+  let signedSelection=null;
+  if(turn&&resolveSignedModelSelection){
+   try{signedSelection=await resolveSignedModelSelection({verifiedContext:original,threadId})}
+   catch{reject(res,503,'W43_SIGNED_MODEL_SELECTION_UNAVAILABLE');return true}
+   const permitted=signedSelection&&['local','openai','openrouter'].includes(signedSelection.provider)&&
+    typeof signedSelection.modelId==='string'&&signedSelection.modelId.length>1&&signedSelection.modelId.length<=128;
+   if(!permitted){reject(res,503,'MODEL_CONFIGURATION_REQUIRED');return true}
+   if(typeof w43Port.supportsSelection!=='function'||
+      await w43Port.supportsSelection(signedSelection)!==true){
+    // Current W43 3d3992c only supports local qwen3:8b. Never substitute
+    // local Qwen for a user-selected cloud model or auto-spend on fallback.
+    reject(res,503,'W43_SELECTED_MODEL_EXECUTION_NOT_SIGNED');return true;
+   }
+  }
+  const scoped={...original,threadId,...(signedSelection?{modelSelection:signedSelection}:{})};
   // One authoritative durable identity in W43 original Agno SQLite: never
   // mint a parallel Node hash/DB or trust browser-side principal fields.
   const ledgerArgs={context:{serverScope:scoped,checkCurrent:principal},threadId,requestId,text};
@@ -140,7 +161,7 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
      const again=await principal();
      if(!sameContext(original,again)){reject(res,409,'LOCAL_SESSION_REVISION_CONFLICT');return true}
     }catch(e){const f=errorMap(e);reject(res,f.status,f.code);return true}
-    if(!w43Turn(lock.receipt)){reject(res,503,'DURABLE_NATIVE_RECEIPT_UNVERIFIED');return true}
+    if(!w43Turn(lock.receipt,signedSelection)){reject(res,503,'DURABLE_NATIVE_RECEIPT_UNVERIFIED');return true}
     reply(res,200,{ok:true,status:'COMPLETED',threadId,requestId,replayed:true,
      assistantText:lock.receipt.assistantText,runId:lock.receipt.runId,sessionId:lock.receipt.sessionId,
      modelProvider:lock.receipt.modelProvider,modelId:lock.receipt.modelId,
@@ -148,12 +169,12 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
    }
    if(lock?.state!=='CLAIMED'){reject(res,503,'DURABLE_REQUEST_FENCE_INVALID');return true}
    let result;
-   try{result=await w43Port.turn({serverScope:scoped,checkCurrent:principal},threadId,text,requestId)}
+   try{result=await w43Port.turn({serverScope:scoped,checkCurrent:principal},threadId,text,requestId,signedSelection)}
    catch(e){
     try{await requestLedger.markUnknown(ledgerArgs)}catch{}
     const f=errorMap(e);reject(res,f.status,f.code);return true;
    }
-   if(!w43Turn(result)||result.threadId!==threadId){
+   if(!w43Turn(result,signedSelection)||result.threadId!==threadId){
     try{await requestLedger.markUnknown(ledgerArgs)}catch{}
     reject(res,503,'W43_NATIVE_RUN_RECEIPT_INVALID');return true;
    }
