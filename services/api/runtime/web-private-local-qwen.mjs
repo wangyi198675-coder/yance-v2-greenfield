@@ -1,7 +1,7 @@
 // W09 Web-first: local-only original W43 llama.cpp model selection.
 // No cloud key, synthetic model, provider send, new agent or sender.
 // Exactly the pre-existing 127.0.0.1:11605 auth model "qwen3:8b".
-import {readFileSync,writeFileSync,existsSync,renameSync,lstatSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync,renameSync,lstatSync,unlinkSync} from 'node:fs';
 import {join,isAbsolute} from 'node:path';
 import {randomBytes} from 'node:crypto';
 const CHOICE='web-private-local-qwen.json';
@@ -62,5 +62,6 @@ export function createWebPrivateLocalQwen({appLocalDataRoot,localKeyFile}={}){
    renameSync(tmp,file);return {ok:true,selection:v}}
   catch{return {error:'LOCAL_MODEL_CHOICE_NOT_SAVED',status:503}}
  };
- return Object.freeze({source,select,principalModel});
+ const clearSelection=()=>{if(read()){try{unlinkSync(file)}catch{}}};
+ return Object.freeze({source,select,principalModel,clearSelection});
 }
