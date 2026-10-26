@@ -13,7 +13,7 @@ const state=ref('checking'),error=ref(''),contacts=ref([]),accounts=ref(0),chose
 const timeline=ref([]),timelineState=ref('none'),timelineError=ref('');
 const search=ref(''),channel=ref('ALL'),account=ref('ALL');
 let currentRevision=0,sourceRevision=0,mounted=true;
-const selected=computed(()=>contacts.value.find(c=>c.identityKey===chosen.value?.identityKey)||null);
+const selected=computed(()=>contacts.value.find(c=>c.contactRef===chosen.value?.contactRef)||null);
 const channels=Object.freeze([
  {id:'ALL',label:'全部渠道'},
  {id:'FB_PERSONAL',label:'Facebook'},
@@ -23,11 +23,11 @@ const channels=Object.freeze([
 ]);
 const filtered=computed(()=>{
  const q=search.value.trim().toLowerCase();
- return contacts.value.filter(c=>(channel.value==='ALL'||c.identity.channel===channel.value)&&
-  (account.value==='ALL'||c.identity.account===account.value)&&
-  (!q||[c.displayName,c.identity.account,c.identity.peer_id].some(s=>String(s).toLowerCase().includes(q))));
+ return contacts.value.filter(c=>(channel.value==='ALL'||c.channel===channel.value)&&
+  (account.value==='ALL'||c.accountRef===account.value)&&
+  (!q||[c.displayName,c.accountRef,c.peerRef].some(s=>String(s).toLowerCase().includes(q))));
 });
-const accountIds=computed(()=>['ALL',...new Set(contacts.value.map(c=>c.identity.account))]);
+const accountIds=computed(()=>['ALL',...new Set(contacts.value.map(c=>c.accountRef))]);
 const canShowData=computed(()=>state.value==='ready'&&accounts.value>0);
 async function refresh(){
  const rev=++currentRevision;sourceRevision++;
@@ -41,16 +41,17 @@ async function refresh(){
    (snap.connectedAccountCount?'ready':'waiting-auth'):'waiting-session';
  }catch(e){
   if(!mounted||rev!==currentRevision)return;
-  state.value='unavailable';error.value=explainNativeFailure(e);
+  state.value=String(e?.message||e).includes('NATIVE_HTTP_401')?'waiting-session':'unavailable';error.value=explainNativeFailure(e);
  }
 }
 async function chooseContact(contact){
- if(state.value!=='ready'||!contacts.value.some(c=>c.identityKey===contact.identityKey))return;
+ if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
  chosen.value=contact;timeline.value=[];timelineState.value='checking';timelineError.value='';
+ if(!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
   const result=await readLiveTimeline({fetchImpl:api.value,contact});
-  if(!mounted||ticket!==sourceRevision||chosen.value?.identityKey!==contact.identityKey)return;
+  if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
   timeline.value=result.messages;timelineState.value='ready';
  }catch(e){
   if(!mounted||ticket!==sourceRevision)return;
@@ -102,11 +103,11 @@ onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;contacts.v
      </select>
     </label>
     <ScrollArea class="bc-real-scroll">
-     <Button v-for="c in filtered" :key="c.identityKey" variant="ghost"
-       class="bc-real-contact" :aria-pressed="chosen?.identityKey===c.identityKey"
-       :data-contact-k="c.identityKey" @click="chooseContact(c)">
+     <Button v-for="c in filtered"  :key="c.contactRef" variant="ghost"
+       class="bc-real-contact" :aria-pressed="chosen?.contactRef===c.contactRef"
+       :data-contact-ref="c.contactRef" @click="chooseContact(c)">
       <span class="avatar">{{c.displayName.slice(0,1)}}</span>
-      <span><strong>{{c.displayName}}</strong><small>{{c.identity.channel}} · {{c.identity.account}}</small></span>
+      <span><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
       <small v-if="c.unread">未读 {{c.unread}}</small>
      </Button>
      <p v-if="!filtered.length">没有匹配的当前授权联系人</p>
@@ -120,7 +121,7 @@ onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;contacts.v
    <template v-if="selected">
     <header class="chat-header"><div class="header-avatar">{{selected.displayName.slice(0,1)}}</div>
      <div class="chat-person"><h2>{{selected.displayName}}</h2>
-      <small>{{selected.identity.channel}} · {{selected.identity.account}} · 当前身份绑定 {{selected.identity.binding_revision}}</small>
+      <small>{{selected.channel}} · {{selected.accountRef}} · 绑定修订 {{selected.bindingRevision}}</small>
      </div>
      <Button size="sm" variant="outline" @click="chooseContact(selected)">从原生服务刷新消息</Button>
     </header>
@@ -137,7 +138,7 @@ onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;contacts.v
       <small>MID {{m.mid}} · {{m.providerSource}} · {{m.translationRunId?'译文来源Run '+m.translationRunId:'未验证中文译文'}}</small>
      </div>
     </ScrollArea>
-    <BCNativeComposer :identity="selected.identity" :native-message="lastNativeMessage"
+    <BCNativeComposer v-if="selected.identity&&selected.identityKey" :identity="selected.identity" :native-message="lastNativeMessage"
       :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"/>
    </template>
    <div v-else class="bc-real-no-contact" data-test="w46-empty-chat">

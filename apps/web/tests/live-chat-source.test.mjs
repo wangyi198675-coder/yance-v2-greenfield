@@ -1,130 +1,77 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readLiveContacts,readLiveTimeline,validateLiveContacts,validateNativeTimeline}
+import {validateLiveContacts,validateNativeTimeline,readLiveContacts,readLiveTimeline}
  from '../src/live-chat-source.mjs';
-import {createComposerBridge,fullK} from '../src/composer-bridge.mjs';
-const contact={tenant:'private-current',account:'acct-current-01',channel:'TELEGRAM_PERSONAL',
- peer_id:'peer-native-1234',binding_revision:4};
-const k=fullK(contact);
-const health={ok:true,runtimeSha:'w47-native-read',trustedSession:true,canSend:false};
-const publicContact={...contact,identityKey:k,accountAuthorized:true,displayName:'Signed account contact',unread:2};
-const contacts={ok:true,authoritative:true,connectedAccountCount:1,canSend:false,
- source:'VERIFIED_NATIVE_CONNECTOR',contacts:[publicContact]};
-const context={identity:contact,identityKey:k};
-test('W47 read-only current installed service yields actual safe 0 when unpaired',async()=>{
- const rows=await readLiveContacts({fetchImpl:async(path,init)=>{
-  assert.equal(init.method,'GET');assert.equal(init.credentials,'same-origin');
-  assert.equal(init.cache,'no-store');
-  if(path==='/api/v2/runtime/health')return {ok:true,json:async()=>({...health,trustedSession:false})};
-  if(path==='/api/v2/contacts')return {ok:true,json:async()=>({...contacts,contacts:[],connectedAccountCount:0})};
-  throw Error(path);
- }});
- assert.equal(rows.realContacts,0);assert.equal(rows.trustedSession,false);
+import {fullK} from '../src/composer-bridge.mjs';
+const health={ok:true,service:'Yance V2 local API',runtimeSha:'W47_NATIVE_SOURCE_PIN',
+ trustedSession:true,canSend:false};
+const c={accountRef:'W28_REAL_ACCOUNT_0001',channel:'WHATSAPP_PERSONAL',
+ peerRef:'wd_user_01333',bindingRevision:4,displayName:'Verified upstream contact'};
+const signed={ok:true,authoritative:true,canSend:false,
+ source:'W24_CURRENT_K_AND_NATIVE_CHANNEL_OWNERS',
+ connectedAccountCount:1,contacts:[c]};
+test('consume actual W47 signed Issue61 accountRef/peerRef contact list, not fake K',()=>{
+ const r=validateLiveContacts(health,signed);
+ assert.equal(r.realContacts,1);assert.equal(r.contacts[0].peerRef,c.peerRef);
+ assert.equal(r.contacts[0].contactRef,'W28_REAL_ACCOUNT_0001|WHATSAPP_PERSONAL|wd_user_01333|4');
+ assert.equal(r.contacts[0].identity,null);
+ assert.equal(r.contacts[0].identityKey,null);
+ assert.equal(r.canSend,false);
 });
-test('authoritative actual owner signed CONTACT K can be selected without POST takeover',()=>{
- const verified=validateLiveContacts(health,contacts);
- assert.equal(verified.contacts.length,1);
- const bridge=createComposerBridge();const item=verified.contacts[0];
- assert.equal(bridge.choose(item.identity).key,k);
- assert.equal(bridge.view().canSend,false);
-});
-test('never accept synthetic, untrusted session, identity swapping or duplicate real K',()=>{
- for(const broken of [
-  {...contacts,contacts:[{...publicContact,account:'fixture-a'}]},
-  {...contacts,contacts:[{...publicContact,tenant:'SYNTHETIC_TEST_ONLY'}]},
-  {...contacts,contacts:[publicContact,publicContact]},
-  {...contacts,contacts:[{...publicContact,identityKey:'wrong'}]},
-  {...contacts,contacts:[{...publicContact,accountAuthorized:false}]}
- ])assert.throws(()=>validateLiveContacts(health,broken));
- assert.throws(()=>validateLiveContacts({...health,trustedSession:false},contacts));
- assert.throws(()=>validateLiveContacts({...health,canSend:true},contacts));
-});
-test('real native timeline has verified K/MID/translation source, no fabricated candidates',async()=>{
- const source={ok:true,authoritative:true,canSend:false,identityKey:k,
-  messages:[{identityKey:k,mid:'provider-mid-001',original:'Hello',direction:'INBOUND',
-    providerSource:'TELEGRAM_TDLIB_NATIVE',translation:{identityKey:k,sourceMid:'provider-mid-001',zh:'你好',
-     runId:'run-test-source',qualityQualified:false}}]};
- const seen=[];
- const rows=await readLiveTimeline({contact:context,fetchImpl:async(path,init)=>{
-  seen.push(path);assert.equal(init.method,'GET');
-  return {ok:true,json:async()=>source};
- }});
- assert.equal(rows.messages[0].mid,'provider-mid-001');
- assert.equal(rows.messages[0].zh,'你好');
- assert.equal(rows.messages[0].translationRunId,'run-test-source');
- assert.equal(rows.messages[0].canSend,false);
- assert.equal(seen.length,1);assert.match(seen[0],/identityKey=/);
-});
-test('real-native messages reject K confusion, forged MID, translation mismatch',()=>{
- const m={identityKey:k,mid:'MID001',original:'hi',direction:'INBOUND',
-  providerSource:'NATIVE_EVENT_SOURCE'};
- const source={ok:true,authoritative:true,canSend:false,identityKey:k,messages:[m]};
- assert.equal(validateNativeTimeline(source,context).messages.length,1);
- for(const bad of [
-  {...source,identityKey:'wrong'},
-  {...source,messages:[m,m]},
-  {...source,messages:[{...m,identityKey:'wrong'}]},
-  {...source,messages:[{...m,mid:''}]},
-  {...source,messages:[{...m,providerSource:''}]},
-  {...source,messages:[{...m,translation:{zh:'fake',sourceMid:'wrong',identityKey:k,
-    runId:'run123',qualityQualified:false}}]}
- ])assert.throws(()=>validateNativeTimeline(bad,context));
-});
-test('live source never uses outgoing transport or platform sdk from browser',async()=>{
- let post=0;
- await readLiveContacts({fetchImpl:async(path,init)=>{
-  if(init.method!=='GET')post++;
-  return {ok:true,json:async()=>path.includes('/contacts')?{...contacts,contacts:[],connectedAccountCount:0}:{...health,trustedSession:false}};
- }});
- assert.equal(post,0);
-});
-
-import {createTrustedTakeoverPort} from '../src/native-takeover-port.mjs';
-test('real W47 session missing: GET/POST fail closed before W24 access',async()=>{
- const calls=[],port=createTrustedTakeoverPort({fetchImpl:async(url,init)=>{
-  calls.push({url,method:init.method});
-  return {ok:true,json:async()=>({ok:true,paired:false,canSend:false,providerAuthorized:false})};
- }});
- await assert.rejects(port.get(contact),/TRUSTED_W47_SESSION_REQUIRED/);
- await assert.rejects(port.post(contact,{}),/TRUSTED_W47_SESSION_REQUIRED/);
- assert.deepEqual(calls.map(c=>c.url),
-  ['/api/v2/local-session/status','/api/v2/local-session/status']);
-});
-test('real trusted W47 session confirms GET and signed 4-field W24 POST, no JS Actor',async()=>{
+test('read actual W47 same-origin GET only; no caller Actor or message send',async()=>{
  const logs=[];
- const session={ok:true,paired:true,canSend:false,providerAuthorized:false,
-  expiresAt:Date.now()+200000,csrfToken:'a'.repeat(64)};
- const port=createTrustedTakeoverPort({fetchImpl:async(url,init)=>{
+ const r=await readLiveContacts({fetchImpl:async(url,init)=>{
   logs.push({url,init});
-  if(url==='/api/v2/local-session/status')return {ok:true,json:async()=>session};
-  if(url.startsWith('/api/v2/identity-consent/takeover-state?'))
-   return {ok:true,json:async()=>({identityKey:k,mode:'AUTO',canSend:false})};
-  if(url==='/api/v2/identity-consent/takeover')return {ok:true,json:async()=>({accepted:true})};
-  throw Error('unknown path '+url);
+  return {ok:true,json:async()=>url.endsWith('/health')?health:signed};
  }});
- assert.equal((await port.get(contact)).mode,'AUTO');
- await port.post(contact,{
-  expectedIdentityKey:k,expectedEpoch:1,expectedAccountRevocationEpoch:0,
-  expectedConsentEpoch:1,action:'TYPE',intent:'TAKEOVER_HUMAN_COMPOSER'});
- const posted=logs.find(x=>x.init.method==='POST');
- assert.equal(posted.init.credentials,'same-origin');
- assert.equal(posted.init.headers['x-yance-csrf'],'a'.repeat(64));
- assert.equal(JSON.parse(posted.init.body).identity.peer_id,contact.peer_id);
- assert.equal(logs.filter(c=>c.url.includes('takeover')).length,2);
+ assert.equal(r.connectedAccountCount,1);
+ assert.deepEqual(logs.map(x=>x.url),['/api/v2/runtime/health','/api/v2/contacts']);
+ assert.ok(logs.every(x=>x.init.method==='GET'&&x.init.credentials==='same-origin'&&x.init.cache==='no-store'));
 });
-test('real W47 trusted port rejects synthetic K, missing CAS, HTTP 409 and expired local token',async()=>{
+test('without W54 native session real W47 401 is NOT 0 connected authority',async()=>{
+ let n=0;
+ await assert.rejects(()=>readLiveContacts({fetchImpl:async()=>{
+  n++;return n===1?{ok:true,json:async()=>({...health,trustedSession:false})}:
+   {ok:false,status:401};
+ }}),/NATIVE_HTTP_401/);
+});
+test('W47 contacts refuse duplicates, unknown account, tampered K, forged send and unauthenticated',()=>{
+ for(const v of [
+  {...signed,source:'MOCK_PROVIDER'},
+  {...signed,contacts:[c,c]},
+  {...signed,contacts:[{...c,accountRef:'fixture-account-1'}]},
+  {...signed,contacts:[{...c,identityKey:'SYNTHETIC'}]},
+  {...signed,contacts:[{...c,tenant:'SYNTHETIC_TEST_ONLY'}]},
+  {...signed,contacts:[{...c,bindingRevision:-1}]},
+  {...signed,contacts:[{...c,channel:'UNSUPPORTED'}]},
+  {...signed,connectedAccountCount:0},
+  {...signed,canSend:true}
+ ])assert.throws(()=>validateLiveContacts(health,v));
+ assert.throws(()=>validateLiveContacts({...health,trustedSession:false},signed));
+});
+test('W47 contactRef has no W24 full canonical K; no message HTTP attempted',async()=>{
+ const selected=validateLiveContacts(health,signed).contacts[0];
  let called=0;
- const good={ok:true,paired:true,canSend:false,providerAuthorized:false,
-  csrfToken:'c'.repeat(64),expiresAt:Date.now()+120000};
- const p=createTrustedTakeoverPort({fetchImpl:async(url)=>{
-  called++;
-  if(url.endsWith('/status'))return {ok:true,json:async()=>good};
-  return {ok:false,status:409};
- }});
- await assert.rejects(p.get({...contact,tenant:'SYNTHETIC_TEST_ONLY'}),/REAL_TAKEOVER_REJECTS_FIXTURE_K/);
+ await assert.rejects(()=>readLiveTimeline({contact:selected,fetchImpl:async()=>{
+  called++;return {ok:true};
+ }}),/W24_FULL_K_NOT_SIGNED/);
  assert.equal(called,0);
- await assert.rejects(p.post(contact,{expectedIdentityKey:k}),/TRUSTED_TAKEOVER_CAS_MISSING/);
- await assert.rejects(p.get(contact),/TRUSTED_TAKEOVER_HTTP_409/);
- const expire=createTrustedTakeoverPort({fetchImpl:async()=>({ok:true,json:async()=>({...good,expiresAt:Date.now()-10})})});
- await assert.rejects(expire.get(contact),/TRUSTED_W47_SESSION_REQUIRED/);
+ assert.throws(()=>validateNativeTimeline({ok:true,authoritative:true,
+  canSend:false,identityKey:'pretend',messages:[]},selected));
+});
+test('later signed full W24 K still checks exact MID, source and translation Run',()=>{
+ const identity={tenant:'real-native',account:'native_account_008',
+  channel:'TELEGRAM_PERSONAL',peer_id:'native_peer_122',binding_revision:2};
+ const identityKey=fullK(identity), selected={identity,identityKey};
+ const m={identityKey,mid:'native_mid_001',original:'Hello',
+  direction:'INBOUND',providerSource:'TDLIB_JSON_NATIVE'};
+ const base={ok:true,authoritative:true,canSend:false,identityKey,messages:[m]};
+ assert.equal(validateNativeTimeline(base,selected).messages[0].original,'Hello');
+ for(const x of [
+  {...base,messages:[m,m]},
+  {...base,messages:[{...m,mid:''}]},
+  {...base,messages:[{...m,identityKey:'OTHER'}]},
+  {...base,messages:[{...m,translation:{
+    zh:'not attested',runId:'run_001',sourceMid:'wrong',identityKey,qualityQualified:false}}]}
+ ])assert.throws(()=>validateNativeTimeline(x,selected));
 });
