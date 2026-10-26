@@ -16,6 +16,7 @@ import {readW54LocalBoot,createNativeStartupSession} from './native-private-star
 import {createWebPrivateLocalQwen} from './web-private-local-qwen.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
+import {createNativeFbPageAvatarHttp} from './native-fb-page-avatar-read.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
 import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
@@ -111,6 +112,9 @@ const privateBrainHttp=createPrivateBrainHttp({
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
 const nativeOwnerReads=createNativeOwnerReadHttp({sessionAuthority:localSessionAuthority,webOrigin});
+// Integration HOLD: inject W54 current Principal, W24 current Page+PSID and W27
+// official avatar resolver only after original Owner signoff. Absent ports deny 503.
+const nativePageAvatar=createNativeFbPageAvatarHttp({sessionAuthority:localSessionAuthority,webOrigin});
 // W26 real official bridge read is DIAGNOSTIC ONLY, never source of FB
 // user auth. Explicit W09/W54-injected native owner ports are still required
 // for actual W24 account ONLINE, SDK setup and authorized message access.
@@ -200,6 +204,13 @@ const handler=(req,res)=>{
        if(!handled&&!res.writableEnded)deny(res,404,'ROUTE_NOT_FOUND');
       }).catch(()=>{
        if(!res.headersSent)deny(res,503,'ORIGINAL_NATIVE_PROVIDER_GATEWAY_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
+    }
+    if(url.pathname==='/api/v2/contacts/avatar'){
+      void nativePageAvatar(req,res,url).catch(()=>{
+       if(!res.headersSent)deny(res,503,'NATIVE_PAGE_AVATAR_UNAVAILABLE');
        else res.destroy();
       });
       return;

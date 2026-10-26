@@ -83,6 +83,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      # Native W28 Baileys source tests import its version-locked real upstream SDK.
+      # This is dependency installation only: no login, QR or provider connection.
+      - name: Install pinned Baileys native test dependencies
+        if: ${{ hashFiles('connectors/baileys/package-lock.json') != '' }}
+        run: npm ci --prefix connectors/baileys --no-audit --no-fund
       - name: Execute committed source-domain JS tests (never fake pass)
         run: node scripts/ci/run-checks.mjs native
       - uses: actions/upload-artifact@v4
