@@ -56,18 +56,21 @@ function fixture(t,{register=true,second=false}={}){
   assert.equal(ids.bindPeer(act,{...kB,peer_proof_ref:'fake-verified-peer-B'}).status,'COMMITTED');
  }
  const accounts=second?[sampleAccount,secondAccount]:[sampleAccount];
- let nativeAlive=true,upstreamOnline=true;
+ let nativeAlive=true,upstreamOnline=true,onPeerRead=null;
  const readNative=async()=>nativeAlive?principal:{...principal,revocationGeneration:2};
  const bridge=()=>createW24NativeOwnerReadPorts({
   identityConsent:ids,resolveNativePrincipal:readNative,
   listVerifiedPlatformAccounts:async()=>upstreamOnline?accounts:[],
-  listVerifiedPlatformPeers:async({account})=>
-   [account.accountRef===sampleAccount.accountRef?samplePeer:secondPeer],
+  listVerifiedPlatformPeers:async({account})=>{
+   onPeerRead?.();
+   return [account.accountRef===sampleAccount.accountRef?samplePeer:secondPeer];
+  },
   readW44IdentityAuthority:({actor,identity})=>store.readIdentityAuthority({actor,identity})
  });
  return {ids,store,bridge,principal,removeAccount:x=>{
    const i=accounts.findIndex(a=>a.accountRef===x);if(i>=0)accounts.splice(i,1);
-  },setNative:x=>nativeAlive=x,setOnline:x=>upstreamOnline=x};
+  },setNative:x=>nativeAlive=x,setOnline:x=>upstreamOnline=x,
+  onPeerRead:fn=>onPeerRead=fn};
 }
 test('W24 refuses legacy RAM or missing native upstream callbacks',()=>{
  assert.throws(()=>createW24NativeOwnerReadPorts(),/W24_STRICT_AND_NATIVE_OWNER_READ_PORTS_REQUIRED/);
@@ -151,4 +154,12 @@ test('two accounts on SAME platform each retain own identical peer locator and K
  const stillBound=await p.readW24VerifiedContacts({principal,session,accounts:remaining});
  assert.equal(stillBound.length,1);
  assert.equal(stillBound[0].accountRef,'accountref_002');
+});
+
+test('SDK disconnect DURING contacts enumeration cannot leave stale ONLINE response',async t=>{
+ const f=fixture(t),p=f.bridge();
+ const accounts=await p.readW24AuthorizedAccounts({principal,session});
+ f.onPeerRead(()=>f.setOnline(false));
+ await assert.rejects(p.readW24VerifiedContacts({principal,session,accounts}),
+  /NATIVE_ACCOUNT_SWITCH_DURING_CONTACT_READ/);
 });
