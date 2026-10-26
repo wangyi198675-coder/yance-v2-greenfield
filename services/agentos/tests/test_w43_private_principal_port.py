@@ -17,6 +17,7 @@ from agno.session.agent import AgentSession
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from private_scope import NativePrivateScope
+from private_request_ledger import NativePrivateRequestLedger
 from private_principal_port import (
     W43NativePrivateBrainPort, W47VerifiedPrincipal, W47PrivateAccessError,
 )
@@ -145,6 +146,9 @@ def test_mid_operation_revision_rotation_no_reply_leak(tmp_path, monkeypatch):
             session_id=scope.session_id("thread-one"),
         )
     monkeypatch.setattr(runtime.agents["PRIVATE"], "run", fake_sdk_run)
+    NativePrivateRequestLedger(p).claim(
+        "A", thread_id="thread-one", text="synthetic private question",
+        request_id="request-12345")
     assert_denied("LOCAL_SESSION_CHANGED_OR_REVOKED",
                   lambda: p.turn("A", thread_id="thread-one",
                                  text="synthetic private question", request_id="request-12345"))
@@ -156,14 +160,17 @@ def test_real_model_reply_must_be_sdk_completed_and_nonempty(tmp_path, monkeypat
     p = port(tmp_path, auth)
     _, runtime = p._runtime(a)
     monkeypatch.setattr(runtime, "_authorized_llamacpp_model_matches", lambda: True)
-    for status, content in [("ERROR","irrelevant"), ("COMPLETED",""), ("PAUSED","review later")]:
+    for i, (status, content) in enumerate([("ERROR","irrelevant"), ("COMPLETED",""), ("PAUSED","review later")]):
+        req_id=f"request-12345-{i}"
+        NativePrivateRequestLedger(p).claim("A",thread_id="thread-one",
+            text="private fixture",request_id=req_id)
         monkeypatch.setattr(runtime.agents["PRIVATE"], "run",
                             lambda *x, status=status, content=content, **kw:
                                 SimpleNamespace(status=SimpleNamespace(value=status),
                                                 content=content, run_id="fake-only"))
         assert_denied("LOCAL_MODEL_RUN_NOT_COMPLETED",
                       lambda: p.turn("A", thread_id="thread-one", text="private fixture",
-                                     request_id="request-12345"))
+                                     request_id=req_id))
 
 
 @pytest.mark.parametrize("thread", ["", "../db", "bad|thread", "x"*129])
@@ -218,16 +225,19 @@ def test_sdk_completed_wrong_session_or_run_id_never_returned(tmp_path, monkeypa
     p=port(tmp_path,auth)
     _,runtime=p._runtime(a)
     monkeypatch.setattr(runtime,"_authorized_llamacpp_model_matches",lambda:True)
-    for run_id,session_id in [
+    for i, (run_id,session_id) in enumerate([
         ("fake-run","wrong-session"), ("", "valid-but-incorrect"),
-    ]:
+    ]):
+        request_id=f"request-12345-{i}"
+        NativePrivateRequestLedger(p).claim("A",thread_id="thread-one",
+            text="fake owner question",request_id=request_id)
         monkeypatch.setattr(runtime.agents["PRIVATE"],"run",lambda *args,run_id=run_id,fake_session=session_id,**kwargs:
             SimpleNamespace(status=SimpleNamespace(value="COMPLETED"),
                             content="FAKE_TEXT_NOT_REAL_MODEL",run_id=run_id,
                             session_id=fake_session))
         assert_denied("LOCAL_MODEL_RUN_NOT_COMPLETED",lambda:p.turn(
             "A",thread_id="thread-one",text="fake owner question",
-            request_id="request-12345",
+            request_id=request_id,
         ))
 
 
