@@ -1,24 +1,24 @@
 <script setup>
 import {ref,onMounted,onBeforeUnmount,computed} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
-import {PRIVATE_ROUTES,authStatus,modelCatalog,verifiedTurn,verifiedHistory,
-  privateError,jsonApi,endpointBody} from './private-brain-ui-contract.mjs';
+import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModelSelection,
+  verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody} from './private-brain-ui-contract.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
-const session=ref(null),catalog=ref(null),messages=ref([]),busy=ref(false);
-const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),text=ref(''),secret=ref('');
+const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
+const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),text=ref('');
 const chosen=ref(''),requestInFlight=ref(false);
 let revision=0,mounted=true,sessionDeadline=null;
 const threadId='personal';
 const safeCurrent=id=>mounted&&revision===id;
 const selected=computed(()=>catalog.value?.models.find(m=>m.provider+'|'+m.modelId===chosen.value)||null);
-const providers=Object.freeze([
- {id:'OPENROUTER',name:'OpenRouter',desc:'使用你本人配置的 API Key，按服务商实际费用计费'},
- {id:'OPENAI_API',name:'OpenAI API',desc:'使用独立的 API Key，ChatGPT 订阅不等于 API 额度'},
- {id:'LLAMACPP_LOCAL_QWEN3_8B_FREE',name:'本地 Qwen3',desc:'选装。不安装也不影响云端模型'}
-]);
+const providers=computed(()=>publicProviders.value.map(p=>({
+ id:p.id,name:p.name,desc:p.id==='local'?'选装。不安装也不阻止云端模型':
+ p.id==='openai'?'API Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度':
+ '用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key'
+})));
 function clearSession(){
- session.value=null;catalog.value=null;chosen.value='';secret.value='';
+ session.value=null;catalog.value=null;chosen.value='';
  if(sessionDeadline!==null){clearTimeout(sessionDeadline);sessionDeadline=null}
 }
 function ensureCurrent(){
@@ -36,14 +36,15 @@ async function refresh(){
  if(requestInFlight.value)return;
  const id=++revision;
  busy.value=true;loadState.value='checking';notice.value='';
- clearSession();messages.value=[]; // never preserve unverified history across account changes
+ clearSession();messages.value=[];publicProviders.value=[]; // never preserve unverified history across account changes
  try{
+  publicProviders.value=publicModelCatalog(await api(PRIVATE_ROUTES.catalog)); // actual W47 public metadata, not readiness
   const s=authStatus(await api(PRIVATE_ROUTES.session));
   if(!safeCurrent(id))return;
   if(!s.authorized){loadState.value='unauthorized';return}
   session.value=s;armExpiry(s.expiresAt);
   let models;
-  try{models=modelCatalog(await api(PRIVATE_ROUTES.models))}
+  try{models=modelCatalog(await api(PRIVATE_ROUTES.config),publicProviders.value)}
   catch(e){if(safeCurrent(id)){loadState.value='models-unavailable';notice.value=reason(e)};return}
   if(!safeCurrent(id))return;
   catalog.value=models;chosen.value=models.configured?
@@ -73,10 +74,9 @@ async function selectModel(){
   const m=selected.value;
   const r=await api(PRIVATE_ROUTES.selection,endpointBody(PRIVATE_ROUTES.selection,
    {provider:m.provider,modelId:m.modelId},session.value.csrf));
-  if(r?.ok!==true||r.authoritative!==true||r.selectedProvider!==m.provider||
-     r.selectedModelId!==m.modelId||r.canSend!==false)throw Error('SELECTION_NOT_CONFIRMED');
-  // POST is not final authority. Reload signed model list and native history.
-  const verified=modelCatalog(await api(PRIVATE_ROUTES.models));
+  confirmedModelSelection(r,{provider:m.provider,modelId:m.modelId});
+  // POST is not final authority. Reload the same W47 authenticated model-config.
+  const verified=modelCatalog(await api(PRIVATE_ROUTES.config),publicProviders.value);
   if(!safeCurrent(id))return;
   if(verified.selectedProvider!==m.provider||verified.selectedModelId!==m.modelId)
     throw Error('SELECTION_GET_NOT_CONFIRMED');
@@ -84,26 +84,6 @@ async function selectModel(){
   setupOpen.value=false;await loadHistory(id);
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='model-selection-unavailable'}}
  finally{if(safeCurrent(id))busy.value=false}
-}
-async function saveKey(){
- if(busy.value||!session.value||!catalog.value?.secureCredentialStorage||!selected.value?.keyRequired||
-   !secret.value||secret.value.length>4096)return;
- const id=++revision;busy.value=true;notice.value='';
- const key=secret.value;secret.value='';
- try{
-  ensureCurrent();
-  const r=await api(PRIVATE_ROUTES.credential,endpointBody(PRIVATE_ROUTES.credential,
-   {provider:selected.value.provider,apiKey:key},session.value.csrf));
-  if(!safeCurrent(id))return;
-  if(r?.ok!==true||r.storedProtected!==true||r.canSend!==false)
-    throw Error('KEY_STORAGE_NOT_VERIFIED');
-  // Never cache/echo secrets; server model catalog GET must independently confirm.
-  const next=modelCatalog(await api(PRIVATE_ROUTES.models));
-  if(!safeCurrent(id))return;
-  catalog.value=next;
-  notice.value='服务端已完成受保护保存与状态回读';
- }catch(e){if(safeCurrent(id))notice.value=reason(e)}
- finally{secret.value='';if(safeCurrent(id))busy.value=false}
 }
 async function send(){
  const prompt=text.value.trim();if(!prompt||prompt.length>4000||requestInFlight.value||busy.value||
@@ -126,7 +106,7 @@ async function send(){
  finally{if(safeCurrent(id))requestInFlight.value=false}
 }
 onMounted(refresh);
-onBeforeUnmount(()=>{mounted=false;revision++;clearSession();secret.value='';text.value=''});
+onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 </script>
 <template>
  <section class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
@@ -157,13 +137,9 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();secret.value='';tex
     <small v-if="!catalog?.models.some(m=>m.provider===provider.id)">尚无经服务端验证的可选模型</small>
    </div>
    <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy" @click="selectModel">确认使用此模型</Button>
-   <div v-if="session&&catalog?.secureCredentialStorage&&selected?.keyRequired" class="bc-credential">
-    <label>仅交给受保护本机服务的 API Key
-     <input v-model="secret" type="password" autocomplete="new-password" spellcheck="false"
-       :disabled="busy" data-test="brain-key-input"/></label>
-    <Button size="sm" data-test="brain-save-key" :disabled="!secret||busy" @click="saveKey">安全保存密钥</Button>
-    <small>不会存入浏览器、对话历史或前端文件。只有 W47 受保护服务端确认后才算已保存。</small>
-   </div>
+   <p class="bc-private-notice" data-test="brain-native-key-hold">
+    云端 API Key 仅能由原生受保护凭据设置保存或轮换。当前浏览器不接收、上传或显示明文密钥。
+   </p>
   </div>
   <div class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
    <p v-if="!messages.length">暂无经过服务端确认的历史消息</p>
