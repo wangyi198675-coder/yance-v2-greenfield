@@ -57,7 +57,7 @@ const safeConfiguration=x=>{
 export function createPrivateModelHttp({
  sessionAuthority,webOrigin,resolveNativePrincipal=null,
  modelConfigPort=null,credentialVaultPort=null,w43ModelPort=null,
- localWebModelPort=null
+ localWebModelPort=null,webCloudModelPort=null
 }={}){
  if(typeof sessionAuthority?.sessionFor!=='function'||typeof webOrigin!=='string')
   throw Error('W47_MODEL_SESSION_REQUIRED');
@@ -102,8 +102,8 @@ export function createPrivateModelHttp({
   }
   if(!session){deny(res,401,'LOCAL_SESSION_REQUIRED');return true}
   if(session.record.kind==='WEB_LOCAL_PRIVATE'){
-   // This Web-only PRIVATE session cannot select any cloud Key or model.
-   // It reuses exact local 11605 model support and W43/Agno runtime.
+   // One WEB_LOCAL_PRIVATE current-user session; W55 native WinCred is the
+   // only provider key source. Original local Qwen is still optional.
    if(req.headers.origin&&req.headers.origin!==webOrigin){
     deny(res,403,'MODEL_ORIGIN_NOT_ALLOWED');return true
    }
@@ -112,21 +112,48 @@ export function createPrivateModelHttp({
      deny(res,403,'MODEL_ORIGIN_OR_CSRF_REQUIRED');return true
     }
     let selection;
-    try{selection=await jsonOnly(req)}
-    catch(e){deny(res,e.status??422,e.code??'INVALID_REQUEST');return true}
-    if(!localWebModelPort){
-     deny(res,409,'EXISTING_LOCAL_QWEN_UNAVAILABLE');return true
+    try{
+     if(req.headers['content-type']!=='application/json')throw {status:415,code:'JSON_REQUIRED'};
+     const chunks=[];let n=0;
+     for await(const c of req){n+=c.length;if(n>2048)throw {status:413,code:'BODY_TOO_LARGE'};chunks.push(c)}
+     selection=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+     if(!selection||typeof selection!=='object'||Array.isArray(selection))throw {status:422,code:'MODEL_SELECTION_INVALID'};
+    }catch(e){deny(res,e.status??422,e.code??'MODEL_SELECTION_INVALID');return true}
+    if(selection.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'){
+     if(Object.keys(selection).sort().join('|')!=='modelId|provider'||!localWebModelPort){
+      deny(res,422,'LOCAL_QWEN_SELECTION_INVALID');return true
+     }
+     const done=await localWebModelPort.select(selection);
+     if(!done.ok){deny(res,done.status,done.error);return true}
+     webCloudModelPort?.clearSelection();
+    }else{
+     if(Object.keys(selection).sort().join('|')!=='confirmPaidCost|modelId|provider'){
+      deny(res,422,'CLOUD_MODEL_SELECTION_DTO_INVALID');return true
+     }
+     if(!webCloudModelPort){deny(res,503,'W55_WEB_NATIVE_WIN_CRED_HOST_NOT_CONNECTED');return true}
+     try{await webCloudModelPort.select(selection);localWebModelPort?.clearSelection()}
+     catch(e){deny(res,e?.status??503,e?.code??'CLOUD_MODEL_SELECTION_UNAVAILABLE');return true}
     }
-    const done=await localWebModelPort.select(selection);
-    if(!done.ok){deny(res,done.status,done.error);return true}
    }
    const state=localWebModelPort?await localWebModelPort.source():
     {models:[],ready:false,choice:null};
-   const selected=state.ready&&state.choice;
-   write(res,200,{ok:true,authoritative:true,models:state.models,
-    selectedProvider:selected?'LLAMACPP_LOCAL_QWEN3_8B_FREE':'',
-    selectedModelId:selected?'qwen3:8b':'',
-    secureCredentialStorage:false,credentialsExposed:false,
+   let cloudSources=[],cloudSelected=null;
+   if(webCloudModelPort){
+    try{
+     cloudSources=await webCloudModelPort.statuses();
+     cloudSelected=await webCloudModelPort.current();
+    }catch(e){deny(res,e?.status??503,e?.code??'W55_NATIVE_WIN_CRED_UNAVAILABLE');return true}
+   }
+   const selectedLocal=!cloudSelected&&state.ready&&state.choice;
+   const models=[...state.models];
+   if(cloudSelected)models.push({provider:cloudSelected.provider,
+    modelId:cloudSelected.modelId,configured:true,available:true,
+    keyRequired:true,billingNotice:'本机已配置本人API Key，云端调用可能产生费用；模型服务状态以实际运行回执为准'});
+   write(res,200,{ok:true,authoritative:true,models,
+    selectedProvider:cloudSelected?.provider??(selectedLocal?'LLAMACPP_LOCAL_QWEN3_8B_FREE':''),
+    selectedModelId:cloudSelected?.modelId??(selectedLocal?'qwen3:8b':''),
+    cloudSources,requiresPaidCallApproval:!!cloudSelected,
+    secureCredentialStorage:!!webCloudModelPort,credentialsExposed:false,
     canSend:false,providerAuthorized:false});
    return true;
   }

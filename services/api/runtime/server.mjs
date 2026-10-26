@@ -14,6 +14,9 @@ import {createW43PythonPrivatePort} from './private-python-port.mjs';
 import {createW43NativeLedgerAdapter} from './private-native-ledger-port.mjs';
 import {readW54LocalBoot,createNativeStartupSession} from './native-private-startup.mjs';
 import {createWebPrivateLocalQwen} from './web-private-local-qwen.mjs';
+import {createWebPrivateCloudByok} from './web-private-cloud-byok.mjs';
+import {createWebPrivateCloudHttp} from './web-private-cloud-http.mjs';
+import {createW55WebNativeStdioPort} from './w55-web-native-stdio.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
@@ -56,6 +59,15 @@ const existingLocalQwenKey=process.env.YANCE_W47_W43_LOCAL_KEY_FILE;
 const webPrivateQwen=webPrivateRoot&&existingLocalQwenKey?
  createWebPrivateLocalQwen({appLocalDataRoot:webPrivateRoot,
    localKeyFile:existingLocalQwenKey}):null;
+// W55's ORIGINAL Rust WinCred host is optional for a local-Qwen-only user.
+// W55 owns the executable, WinCred scope and OS checks, not the browser.
+let webCloudByok=null;
+if(webPrivateRoot&&process.env.YANCE_W55_WEB_NATIVE_EXE){
+ const nativeWinCred=createW55WebNativeStdioPort({
+  executable:process.env.YANCE_W55_WEB_NATIVE_EXE});
+ webCloudByok=createWebPrivateCloudByok({
+  appLocalDataRoot:webPrivateRoot,nativeKeyPort:nativeWinCred});
+}
 const webPrivatePrincipal=webPrivateRoot?Object.freeze({
  source:'WEB_LOCAL_PRIVATE',webPrivateOnly:true,verified:true,
  principalRef:'web_private_'+localId(webPrivateRoot),
@@ -72,8 +84,12 @@ const resolveNativePrincipal=nativeBoot?async({session})=>{
 }:webPrivatePrincipal?async({session})=>{
  if(session?.record?.kind!=='WEB_LOCAL_PRIVATE')
    throw {httpStatus:401,code:'WEB_PRIVATE_SESSION_REQUIRED'};
+ // WinCred can be absent/revoked/network-independent: Agno History must
+ // remain readable even when no cloud model is currently usable.
+ let cloud=null;
+ try{cloud=webCloudByok?await webCloudByok.principalModel():null}catch{}
  return {...webPrivatePrincipal,
-   ...(webPrivateQwen?webPrivateQwen.principalModel():{})};
+   ...(cloud??(webPrivateQwen?webPrivateQwen.principalModel():{}))};
 }:null;
 const w43Python=process.env.YANCE_W47_W43_PYTHON_EXECUTABLE;
 const w43Root=process.env.YANCE_W47_W43_MODULE_ROOT;
@@ -85,7 +101,8 @@ const w43Port=(nativeBoot||webPrivatePrincipal)&&w43Python&&w43Root?
  createW43PythonPrivatePort({pythonExecutable:w43Python,w43ModuleRoot:w43Root,
   protectedKeyFile:webPrivateQwen?existingLocalQwenKey:
    nativeBoot?.modelBackend==='llamacpp'?
-   process.env.YANCE_W47_W43_LOCAL_KEY_FILE:undefined}):null;
+   process.env.YANCE_W47_W43_LOCAL_KEY_FILE:undefined,
+  ...(webCloudByok?{nativeCloudKeyPort:webCloudByok}:{})}):null;
 const requestLedger=w43Port?createW43NativeLedgerAdapter(w43Port):null;
 if(operatorMode==='console'){
   operatorIssuer=createOperatorConsoleIssuer({revokeSessions:()=>localSessionAuthority.revokeAll()});
@@ -99,7 +116,10 @@ const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthorit
 // Never instantiate test-only model/credential adapters in this real server.
 const privateModelHttp=createPrivateModelHttp({
  sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,
- localWebModelPort:webPrivateQwen
+ localWebModelPort:webPrivateQwen,webCloudModelPort:webCloudByok
+});
+const privateCloudHttp=createWebPrivateCloudHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,webCloudPort:webCloudByok
 });
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.
@@ -178,6 +198,13 @@ const handler=(req,res)=>{
         '/api/v2/private-brain/model-selection'].includes(url.pathname)){
       void privateModelHttp(req,res,url).catch(()=>{
         if(!res.headersSent)deny(res,503,'MODEL_CONFIG_UNAVAILABLE');
+        else res.destroy();
+      });
+      return;
+    }
+    if(url.pathname==='/api/v2/private-brain/cloud-keys'){
+      void privateCloudHttp(req,res,url).catch(()=>{
+        if(!res.headersSent)deny(res,503,'W55_NATIVE_CLOUD_KEY_UNAVAILABLE');
         else res.destroy();
       });
       return;
