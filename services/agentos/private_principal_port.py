@@ -321,6 +321,67 @@ class W43NativePrivateBrainPort:
             "canSend": False,
         }
 
+    def _native_readback(self, context):
+        """Current W47 owner -> original Agno SqliteDb; model-free read."""
+        from agno.db.sqlite import SqliteDb
+        from native_inspection import NativeAgnoReadback
+        claim = self._verified(context, "PRIVATE_HISTORY")
+        scope, path = self._native_storage(claim)
+        try:
+            reader = NativeAgnoReadback(SqliteDb(db_file=str(path)))
+        except Exception:
+            raise W47PrivateAccessError("NATIVE_AGNO_HISTORY_UNAVAILABLE", 503) from None
+        return claim, scope, reader
+
+    @staticmethod
+    def _inspection_result(operation):
+        """Keep normal not-found/validation separate from native DB failures."""
+        from native_inspection import NativeInspectionAccessError
+        try:
+            return operation()
+        except NativeInspectionAccessError as exc:
+            code = exc.code
+            raise W47PrivateAccessError(
+                code, 404 if code == "RUN_NOT_FOUND_IN_PRIVATE_SCOPE" else 422
+            ) from None
+        except Exception:
+            raise W47PrivateAccessError("NATIVE_AGNO_READ_FAILED", 503) from None
+
+    def native_tools(self, context):
+        """Registered SDK tools vs all 252 declared, never implied executable."""
+        from native_inspection import native_tool_directory
+        claim = self._verified(context, "PRIVATE_HISTORY")
+        data = self._inspection_result(native_tool_directory)
+        self._recheck(context, "PRIVATE_HISTORY", claim)
+        return data
+
+    def native_runs(self, context, *, thread_id, limit=25):
+        """Read current user's original Agno Run statuses and real tool counts."""
+        claim, scope, reader = self._native_readback(context)
+        result = self._inspection_result(
+            lambda: reader.list_runs(scope, thread=thread_id, limit=limit)
+        )
+        self._recheck(context, "PRIVATE_HISTORY", claim)
+        return result
+
+    def native_run(self, context, *, thread_id, run_id):
+        """Read original SDK persisted Run and ToolExecution approval/result."""
+        claim, scope, reader = self._native_readback(context)
+        result = self._inspection_result(
+            lambda: reader.get_run(scope, thread=thread_id, run_id=run_id)
+        )
+        self._recheck(context, "PRIVATE_HISTORY", claim)
+        return result
+
+    def native_trace(self, context, *, thread_id, run_id):
+        """Read original SDK Trace + Spans; no prompt/secret attributes."""
+        claim, scope, reader = self._native_readback(context)
+        result = self._inspection_result(
+            lambda: reader.get_trace(scope, thread=thread_id, run_id=run_id)
+        )
+        self._recheck(context, "PRIVATE_HISTORY", claim)
+        return result
+
     def history(self, context, *, thread_id):
         try:
             valid_thread(thread_id)
