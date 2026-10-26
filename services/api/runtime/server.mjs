@@ -5,6 +5,7 @@ import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
 import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
+import {createPrivateBrainHttp} from './private-brain-http.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -27,6 +28,9 @@ if(operatorMode==='console'){
   process.stderr.write('W47_LOCAL_OPERATOR_CONSOLE_READY (type pair, cancel or revoke in this terminal)\n');
 }
 const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthority,webOrigin});
+// Do not inject a synthetic W43 runtime or a self-declared Windows profile.
+// W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.
+const privateBrainHttp=createPrivateBrainHttp({sessionAuthority:localSessionAuthority,webOrigin});
 const noStore={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store','x-content-type-options':'nosniff',
@@ -72,6 +76,13 @@ const handler=(req,res)=>{
     if(url.pathname.startsWith('/api/v2/local-session/')){
       void localSessionHttp(req,res,url).catch(()=>{
         if(!res.headersSent)deny(res,503,'LOCAL_SESSION_UNAVAILABLE');
+        else res.destroy();
+      });
+      return;
+    }
+    if(url.pathname.startsWith('/api/v2/private-brain/')){
+      void privateBrainHttp(req,res,url).catch(()=>{
+        if(!res.headersSent)deny(res,503,'PRIVATE_BRAIN_UNAVAILABLE');
         else res.destroy();
       });
       return;
