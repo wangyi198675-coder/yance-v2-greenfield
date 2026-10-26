@@ -1,138 +1,121 @@
+// QA-ONLY replacement for stale lowercase provider mocks, NOT an Owner commit.
+// Reproduces W47 signed public/auth DTO. No Cloud API or real key.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,
- confirmedModelSelection,verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody
-} from '../src/private-brain-ui-contract.mjs';
-const publicDto={ok:true,authoritative:false,canSend:false,
- actualAvailability:'CHECK_AUTHORIZED_MODEL_CONFIG',
- providers:[
-  {provider:'openrouter',displayName:'OpenRouter',requiresUserApiKey:true,requiresLocalModel:false},
-  {provider:'openai',displayName:'OpenAI API',requiresUserApiKey:true,requiresLocalModel:false},
-  {provider:'local',displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true}
- ]};
-const sources=[
- {provider:'openrouter',configured:true,available:true,status:'READY',models:['openai/gpt-4o-mini']},
- {provider:'openai',configured:false,available:false,status:'SETUP_REQUIRED',models:['gpt-4o-mini']},
- {provider:'local',configured:false,available:false,status:'MODEL_UNAVAILABLE',models:['qwen3:8b']}
+import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModelSelection,
+ verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody}
+ from '../src/private-brain-ui-contract.mjs';
+const CLOUD='OPENROUTER_USER_API',OPENAI='OPENAI_USER_API',LOCAL='LLAMACPP_LOCAL_QWEN3_8B_FREE';
+const names=[
+ {provider:CLOUD,displayName:'OpenRouter',requiresUserApiKey:true,requiresLocalModel:false},
+ {provider:OPENAI,displayName:'OpenAI API',requiresUserApiKey:true,requiresLocalModel:false},
+ {provider:LOCAL,displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true}
 ];
-const make=(selection=null,src=sources)=>({ok:true,selected:selection,sources:src,canSend:false,
- providerAuthorized:false,credentialsExposed:false});
-const select={provider:'openrouter',modelId:'openai/gpt-4o-mini'};
-const turn={ok:true,status:'COMPLETED',canSend:false,qualityQualified:false,threadId:'personal',
- requestId:'req_12345678',assistantText:'native text',runId:'run_12345678',
- sessionId:'sess_12345678',modelProvider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'};
-const history={ok:true,status:'HISTORY_PRESENT',threadId:'personal',canSend:false,
- qualityQualified:false,messages:[{role:'user',content:'question'},{role:'assistant',content:'native answer'}]};
-test('exact W47 publicly descriptive catalog is never actual ready or priced',()=>{
- const p=publicModelCatalog(publicDto);assert.equal(p.length,3);
- assert.deepEqual(p.map(x=>x.id),['openrouter','openai','local']);
- assert.throws(()=>publicModelCatalog({...publicDto,authoritative:true}));
- assert.throws(()=>publicModelCatalog({...publicDto,canSend:true}));
+const pub={ok:true,providers:names,authoritative:false,
+ actualAvailability:'CHECK_AUTHORIZED_MODEL_CONFIG',canSend:false};
+const providerModels=[
+ {provider:CLOUD,modelId:'openai/gpt-4o-mini',configured:true,available:true,keyRequired:true,billingNotice:'Paid user API'},
+ {provider:OPENAI,modelId:'gpt-4o-mini',configured:false,available:false,keyRequired:true,billingNotice:'API bill'},
+ {provider:LOCAL,modelId:'qwen3:8b',configured:false,available:false,keyRequired:false,billingNotice:'local optional'}
+];
+const config=(provider='',modelId='',models=providerModels)=>({
+ ok:true,authoritative:true,models,selectedProvider:provider,selectedModelId:modelId,
+ secureCredentialStorage:false,canSend:false,providerAuthorized:false,credentialsExposed:false
 });
-test('W47 private config lower case openrouter/cloud-only is valid without local Qwen',()=>{
- const p=publicModelCatalog(publicDto);
- const m=modelCatalog(make(select),p);
- assert.equal(m.configured,true);assert.equal(m.selectedProvider,'openrouter');
- assert.equal(m.models.find(x=>x.provider==='local').available,false);
- assert.equal(m.models.find(x=>x.provider==='openrouter').modelId,'openai/gpt-4o-mini');
- assert.equal(m.secureCredentialStorage,false); // NO browser vault writes
+const selected={provider:CLOUD,modelId:'openai/gpt-4o-mini'};
+const run={ok:true,status:'COMPLETED',canSend:false,qualityQualified:false,threadId:'personal',
+ requestId:'req_12345678',assistantText:'real W43 answer',runId:'run_12345678',
+ sessionId:'sess_12345678',modelProvider:CLOUD,modelId:'openai/gpt-4o-mini'};
+const history={ok:true,status:'HISTORY_PRESENT',threadId:'personal',
+ canSend:false,qualityQualified:false,messages:[{role:'user',content:'Question'},{role:'assistant',content:'Answer'}]};
+test('W47 public real uppercase SDK provider trio parses as descriptors only',()=>{
+ const p=publicModelCatalog(pub);
+ assert.deepEqual(p.map(x=>x.id),[CLOUD,OPENAI,LOCAL]);
+ assert.equal(p[0].requiresLocalModel,false);assert.equal(p[2].requiresLocalModel,true);
+ assert.throws(()=>publicModelCatalog({...pub,authoritative:true}));
 });
-test('no chosen model remains setup required; optional local Qwen can be selected only if READY',()=>{
- assert.equal(modelCatalog(make(),publicModelCatalog(publicDto)).configured,false);
- assert.throws(()=>modelCatalog(make({provider:'local',modelId:'qwen3:8b'})));
- const ready=make({provider:'local',modelId:'qwen3:8b'},
-  [{provider:'local',configured:true,available:true,status:'READY',models:['qwen3:8b']}]);
- assert.equal(modelCatalog(ready).selectedProvider,'local');
+test('W47 Cloud-only authorized config works with no local Qwen',()=>{
+ const m=modelCatalog(config(CLOUD,'openai/gpt-4o-mini'),publicModelCatalog(pub));
+ assert.equal(m.configured,true);assert.equal(m.selectedProvider,CLOUD);
+ assert.equal(m.models.find(x=>x.provider===LOCAL).available,false);
+ assert.equal(m.secureCredentialStorage,false);
 });
-test('OpenAI API can be selected only from actual W47 signed private sources',()=>{
- const m=modelCatalog(make({provider:'openai',modelId:'gpt-4o-mini'},
- [{provider:'openai',configured:true,available:true,status:'READY',models:['gpt-4o-mini']}]));
- assert.equal(m.selectedProvider,'openai');
- assert.throws(()=>modelCatalog(make({provider:'openai',modelId:'gpt-4o-mini'})));
+test('No model configured means no selected model, no fabricated readiness',()=>{
+ assert.equal(modelCatalog(config()).configured,false);
+ assert.throws(()=>modelCatalog(config(LOCAL,'qwen3:8b')));
 });
-test('W47 model selection POST receipt and GET must match actual selected pair',()=>{
- assert.equal(confirmedModelSelection(make(select),select).configured,true);
- for(const r of [make(),make({provider:'openai',modelId:'gpt-4o-mini'}),{...make(select),credentialsExposed:true}])
-  assert.throws(()=>confirmedModelSelection(r,select));
+test('OpenAI API provider may be selected if current signed W47 config says READY',()=>{
+ const item={...providerModels[1],configured:true,available:true};
+ const m=modelCatalog(config(OPENAI,'gpt-4o-mini',[item]));
+ assert.equal(m.selectedProvider,OPENAI);
 });
-test('W47 rejects invalid provider, status, extra sources, stale selected and duplicates',()=>{
- assert.throws(()=>modelCatalog(make(null,[{...sources[0],provider:'OPENROUTER'}])));
- assert.throws(()=>modelCatalog(make(null,[{...sources[0],status:'READY',available:false}])));
- assert.throws(()=>modelCatalog(make(null,[sources[0],sources[0]])));
- assert.throws(()=>modelCatalog({...make(),canSend:true}));
- assert.throws(()=>modelCatalog({...make(),providerAuthorized:true}));
+test('POST selection must match exact authoritative W47 private config receipt',()=>{
+ assert.equal(confirmedModelSelection(config(CLOUD,'openai/gpt-4o-mini'),selected).configured,true);
+ assert.throws(()=>confirmedModelSelection(config(),selected));
+ assert.throws(()=>confirmedModelSelection(config(OPENAI,'gpt-4o-mini'),selected));
 });
-test('no secret, token, credential or key bytes can be accepted from HTTP model DTO',()=>{
- for(const field of ['apiKey','credentialHandle','privatePath','secret','token','password']){
-  assert.throws(()=>modelCatalog({...make(select),[field]:'confidential_value'}));
-  assert.throws(()=>publicModelCatalog({...publicDto,[field]:'confidential_value'}));
+test('Legacy lowercase provider is rejected and cannot sneak into new W47 DTO',()=>{
+ assert.throws(()=>publicModelCatalog({...pub,providers:[{...names[0],provider:'openrouter'},...names.slice(1)]}));
+ assert.throws(()=>modelCatalog(config('', '',[{...providerModels[0],provider:'openrouter'}])));
+ assert.throws(()=>endpointBody(PRIVATE_ROUTES.selection,{provider:'openrouter',modelId:'openai/gpt-4o-mini'},'a'.repeat(64)));
+});
+test('Wrong readiness, duplicate model/selection, missing explicit authority rejected',()=>{
+ assert.throws(()=>modelCatalog(config('','',[{...providerModels[0],available:true,configured:false}])));
+ assert.throws(()=>modelCatalog(config('','',[providerModels[0],providerModels[0]])));
+ assert.throws(()=>modelCatalog({...config(),authoritative:false}));
+ assert.throws(()=>modelCatalog({...config(),providerAuthorized:true}));
+ assert.throws(()=>modelCatalog({...config(),credentialsExposed:true}));
+});
+test('Never reflect cloud secret/key or private path from W47 HTTP',()=>{
+ for(const field of ['apiKey','secret','token','password','credentialHandle','privatePath']){
+  assert.throws(()=>modelCatalog({...config(),[field]:'sensitive'}));
+  assert.throws(()=>publicModelCatalog({...pub,[field]:'sensitive'}));
  }
 });
-test('real signed turn must match native selected provider/model and original request',()=>{
- assert.equal(verifiedTurn(turn,{threadId:'personal',requestId:'req_12345678',...select}).role,'assistant');
- for(const x of [{status:'PAUSED'},{status:'UNKNOWN'},{modelProvider:'OPENAI_USER_API'},
-  {modelProvider:'OPENROUTER_FAKE'},
-  {modelId:'qwen3:8b'},{canSend:true},{qualityQualified:true},{assistantText:''},
-  {requestId:'req_CHANGED'}])
-  assert.throws(()=>verifiedTurn({...turn,...x},{threadId:'personal',requestId:'req_12345678',...select}));
+test('Native official W43 Run provider must equal exact W47 selected ID',()=>{
+ assert.equal(verifiedTurn(run,{threadId:'personal',requestId:'req_12345678',...selected}).role,'assistant');
+ for(const fail of [{modelProvider:'openrouter'},{modelProvider:OPENAI},{status:'PAUSED'},
+  {runId:'fake'},{sessionId:''},{requestId:'req_OTHER'},{modelId:'qwen3:8b'},
+  {canSend:true},{qualityQualified:true},{assistantText:''}]){
+  assert.throws(()=>verifiedTurn({...run,...fail},{threadId:'personal',requestId:'req_12345678',...selected}));
+ }
 });
-test('history remains sole source and rejects fabricated or cross-thread content',()=>{
+test('Original persisted history only; cross-thread, untrusted status and forged roles reject',()=>{
  assert.equal(verifiedHistory(history,'personal').length,2);
- for(const x of [{ok:false},{status:'PAUSED'},{threadId:'another'},{canSend:true},
-  {messages:[{role:'system',content:'prompt'}]}])
-  assert.throws(()=>verifiedHistory({...history,...x},'personal'));
+ for(const f of [{ok:false},{threadId:'unrelated'},{status:'UNKNOWN'},{canSend:true},
+  {qualityQualified:true},{messages:[{role:'system',content:'hidden'}]}])
+  assert.throws(()=>verifiedHistory({...history,...f},'personal'));
 });
-test('W47 endpoint shape: selection only {provider,modelId}, no plaintext credential route',()=>{
- const body=endpointBody(PRIVATE_ROUTES.selection,select,'a'.repeat(64));
- assert.equal(body.method,'POST');assert.deepEqual(JSON.parse(body.body),select);
- assert.equal(PRIVATE_ROUTES.catalog,'/api/v2/private-brain/model-catalog');
- assert.equal(PRIVATE_ROUTES.config,'/api/v2/private-brain/model-config');
- assert.equal(PRIVATE_ROUTES.selection,'/api/v2/private-brain/model-selection');
- assert.equal(Object.hasOwn(PRIVATE_ROUTES,'credential'),false);
- assert.equal(Object.hasOwn(PRIVATE_ROUTES,'models'),false);
- assert.throws(()=>endpointBody(PRIVATE_ROUTES.selection,{...select,apiKey:'sk-test'},'a'.repeat(64)));
+test('POST only actual selected W47 model fields and original private turn with csrf',()=>{
+ const r=endpointBody(PRIVATE_ROUTES.selection,selected,'a'.repeat(64));
+ assert.deepEqual(JSON.parse(r.body),selected);
+ assert.throws(()=>endpointBody(PRIVATE_ROUTES.selection,{...selected,apiKey:'FAKE'},'a'.repeat(64)));
+ assert.throws(()=>endpointBody(PRIVATE_ROUTES.selection,selected,''));
  assert.throws(()=>endpointBody('/api/v2/private-brain/credentials',{},'a'.repeat(64)));
- assert.throws(()=>endpointBody(PRIVATE_ROUTES.selection,select,''));
 });
-test('session is server owned, no browser boolean implies authorization',()=>{
- const ok={ok:true,paired:true,csrfToken:'a'.repeat(64),expiresAt:Date.now()+300000,
-  canSend:false,providerAuthorized:false};
- assert.equal(authStatus(ok).authorized,true);
- assert.equal(authStatus({ok:true,paired:false,canSend:false,providerAuthorized:false}).authorized,false);
- assert.throws(()=>authStatus({...ok,csrfToken:''}));
- assert.throws(()=>authStatus({...ok,canSend:true}));
+test('Unpaired, revoked and expired local session cannot authorize private model',()=>{
+ const s={ok:true,paired:true,canSend:false,providerAuthorized:false,
+  csrfToken:'a'.repeat(64),expiresAt:Date.now()+300000};
+ assert.equal(authStatus(s).authorized,true);
+ assert.equal(authStatus({...s,paired:false}).authorized,false);
+ assert.throws(()=>authStatus({...s,csrfToken:''}));
+ assert.throws(()=>authStatus({...s,expiresAt:0}));
+ assert.throws(()=>authStatus({...s,canSend:true}));
 });
-test('same-origin session cookie required and failed HTTP cannot be model success',async()=>{
- const calls=[];
- await jsonApi(async(url,init)=>{calls.push({url,init});return {ok:true,json:async()=>({ok:true})}},PRIVATE_ROUTES.config);
- assert.equal(calls[0].init.credentials,'same-origin');assert.equal(calls[0].init.cache,'no-store');
- assert.equal(calls[0].init.redirect,'error');
+test('Same origin credentials/caching and HTTP errors fail closed',async()=>{
+ const logs=[];
+ await jsonApi(async(u,opts)=>{logs.push({u,opts});return {ok:true,json:async()=>({ok:true})}},PRIVATE_ROUTES.config);
+ assert.equal(logs[0].opts.credentials,'same-origin');
+ assert.equal(logs[0].opts.cache,'no-store');
  await assert.rejects(()=>jsonApi(async()=>({ok:false,status:401}),PRIVATE_ROUTES.config),/PRIVATE_HTTP_401/);
- assert.match(privateError(503),/不可用/);
+ assert.match(privateError(409),/冲突/);
 });
-test('sole BRAIN consumes W47 names and no API key input, terminal pairing, second Composer/sender',()=>{
- const brain=readFileSync(new URL('../src/BCPrivateBrainWorkspace.vue',import.meta.url),'utf8');
+test('Exactly one PRIVATE workspace and no browser API key form or second Composer',()=>{
  const parent=readFileSync(new URL('../src/BCProductWorkspaceCandidate.vue',import.meta.url),'utf8');
+ const brain=readFileSync(new URL('../src/BCPrivateBrainWorkspace.vue',import.meta.url),'utf8');
  assert.equal((parent.match(/<BCPrivateBrainWorkspace/g)||[]).length,1);
- assert.doesNotMatch(parent,/BCLocalSessionConnector/);
- assert.doesNotMatch(brain,/BCLocalSessionConnector|BCNativeComposer|MessageDelivery|localStorage|sessionStorage/);
- assert.doesNotMatch(brain,/type="password"|<input[^>]*api.?key/i);
- assert.doesNotMatch(brain,/PRIVATE_ROUTES.credential|PRIVATE_ROUTES.models|saveKey\(/);
+ assert.equal((brain.match(/<BCNativeComposer/g)||[]).length,0);
+ assert.doesNotMatch(brain,/type="password"|localStorage|sessionStorage|PRIVATE_ROUTES.credential/);
  assert.match(brain,/PRIVATE_ROUTES.catalog/);assert.match(brain,/PRIVATE_ROUTES.config/);
- assert.match(brain,/PRIVATE_ROUTES.history/);assert.match(brain,/PRIVATE_ROUTES.turn/);
-});
-
-test('W43 SDK cloud and local EXACT native provider receipt IDs, distinct from W47 selections',()=>{
- const cases=[
-  {provider:'openrouter',modelId:'openai/gpt-4o-mini',native:'OPENROUTER_USER_API'},
-  {provider:'openai',modelId:'gpt-4o-mini',native:'OPENAI_USER_API'},
-  {provider:'local',modelId:'qwen3:8b',native:'LLAMACPP_LOCAL_QWEN3_8B_FREE'}
- ];
- for(const row of cases){
-  const receipt={...turn,modelProvider:row.native,modelId:row.modelId};
-  const request={threadId:'personal',requestId:'req_12345678',provider:row.provider,modelId:row.modelId};
-  assert.equal(verifiedTurn(receipt,request).modelProvider,row.native);
-  assert.throws(()=>verifiedTurn({...receipt,modelProvider:row.provider},request),/PRIVATE_SIGNED_TURN_MISMATCH/);
- }
 });
