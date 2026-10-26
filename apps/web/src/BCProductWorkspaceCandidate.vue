@@ -5,6 +5,7 @@ import BCBrandIcon from './BCBrandIcon.vue';
 import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
 import BCLiveChatWorkspace from './BCLiveChatWorkspace.vue';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
+import BCNativeHostSession from './BCNativeHostSession.vue';
 import {WORKSPACES,CHANNELS,R4_SETTINGS_CATEGORIES,R4_STOP_FAILURE_STATES,
  readWorkspaceSnapshot,explainCapability} from './product-workspace-contract.mjs';
 const props=defineProps({
@@ -149,6 +150,7 @@ defineExpose({refresh});
     </div>
    </div>
    <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">
+    <BCNativeHostSession :fetch-impl="fetchImpl"/>
     <BCPrivateBrainWorkspace :fetch-impl="fetchImpl"/>
    </div>
    <div v-else class="w46-blank">
