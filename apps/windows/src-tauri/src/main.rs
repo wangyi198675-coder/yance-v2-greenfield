@@ -1,14 +1,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-mod native_cloud_keys;
 mod local_api_child;
+mod native_cloud_keys;
 mod native_launch;
 mod native_profile;
 mod session;
 mod user_dirs;
 mod windows_principal;
 
-use native_cloud_keys::{cloud_key_revoke, cloud_key_status, cloud_key_store};
 use local_api_child::LocalApiChild;
+use native_cloud_keys::{cloud_key_revoke, cloud_key_status, cloud_key_store};
 use native_launch::{HostedChild, NativeChildLaunch};
 use native_profile::NativeProfileAuthority;
 use session::{PublicSessionStatus, SessionAuthority};
@@ -75,6 +75,17 @@ fn main() {
     let app = builder
         .setup(move |app| {
             let resource_root = app.path().resource_dir().map_err(std::io::Error::other)?;
+            // Original W54 current-OS-user authority is initialized BEFORE
+            // starting the existing W47 child. A private stdin frame provides
+            // only locally verified opaque scope; no terminal pair or browser SID.
+            let user_dirs = UserDirectories::resolve(app.path()).map_err(std::io::Error::other)?;
+            user_dirs.initialize().map_err(std::io::Error::other)?;
+            let native = NativeProfileAuthority::from_tauri(&user_dirs, &app.config().identifier)
+                .map_err(std::io::Error::other)?;
+            let proof = native
+                .verify_for_native_owner(&app.state::<SessionAuthority>())
+                .map_err(std::io::Error::other)?;
+            let (principal_ref, installation_ref, ..) = proof.native_contract_parts();
             let local_api = if let Some(source_sha) = builtin_w47 {
                 let port = portpicker::pick_unused_port()
                     .ok_or_else(|| std::io::Error::other("LOCAL_API_PORT_UNAVAILABLE"))?;
@@ -85,6 +96,7 @@ fn main() {
                         option_env!("YANCE_W54_BUNDLED_W47_SERVER_SHA256").unwrap_or(""),
                         option_env!("YANCE_W54_BUNDLED_W47_MANIFEST_SHA256").unwrap_or(""),
                         port,
+                        Some(&proof),
                     )
                     .map_err(std::io::Error::other)?,
                 )
@@ -94,6 +106,9 @@ fn main() {
             let ready_url = local_api
                 .as_ref()
                 .map(|child| format!("{}/?productDraft=1", child.origin));
+            let native_http_cookie = local_api
+                .as_ref()
+                .and_then(|child| child.first_party_cookie.clone());
             app.manage(Mutex::new(local_api));
             if let Some(url) = ready_url {
                 if app.config().identifier != "com.yance.v2.bc-isolated-candidate" {
@@ -109,13 +124,28 @@ fn main() {
                         .remote(format!("{allowed_origin}/*"))
                         .window("main")
                         .permission("allow-session-status")
-                        .permission("allow-logout-session"),
+                        .permission("allow-logout-session")
+                        .permission("allow-cloud-key-status")
+                        .permission("allow-cloud-key-store")
+                        .permission("allow-cloud-key-revoke"),
                 )?;
-                WebviewWindowBuilder::new(app, "main", WebviewUrl::External(address))
+                let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(address))
                     .title("言策 V2 | 本机闺蜜大脑")
                     .inner_size(1380.0, 900.0)
                     .min_inner_size(930.0, 620.0)
                     .build()?;
+                if let Some(source) = native_http_cookie {
+                    // Tauri's official WebView2 Cookie Manager sets HttpOnly
+                    // for THIS installed window; Node never issues it to an
+                    // ordinary localhost HTTP request or frontend JavaScript.
+                    let mut cookie = tauri::webview::Cookie::parse(source)
+                        .map_err(|_| std::io::Error::other("W54_WEBVIEW_COOKIE_INVALID"))?;
+                    cookie.set_domain("127.0.0.1");
+                    cookie.set_path("/");
+                    cookie.set_http_only(true);
+                    window.set_cookie(cookie)?;
+                    window.reload()?;
+                }
             }
             if let Some(port) = bc_port {
                 if app.config().identifier != "com.yance.v2.bc-isolated-candidate" {
@@ -144,15 +174,8 @@ fn main() {
                     .min_inner_size(930.0, 620.0)
                     .build()?;
             }
-            // Resolves current OS user's Tauri-configured application paths.
-            // Never exposes filesystem paths, SID or account claims to JavaScript.
-            let user_dirs =
-                UserDirectories::resolve(app.path()).map_err(|e| std::io::Error::other(e))?;
-            user_dirs.initialize().map_err(std::io::Error::other)?;
-            // Stable current-user/installation owner is native-only.
-            // This object is never a Tauri command result or W47 HTTP header.
-            let native = NativeProfileAuthority::from_tauri(&user_dirs, &app.config().identifier)
-                .map_err(std::io::Error::other)?;
+            // The original native OS-user authority was already verified
+            // before the W47 child boot and is reused below by W55.
             // Host-only preflight: W47 must provide a signed bundled binary
             // AND reviewed child reader before any automatic first-party
             // Session can be started. No renderer command can launch it.
@@ -164,10 +187,6 @@ fn main() {
             app.manage(Mutex::new(approved_child));
             // W55 is activated only inside the original native W54 current-user
             // application; never from a client-provided SID, HTTP header or token.
-            let proof = native
-                .verify_for_native_owner(&app.state::<SessionAuthority>())
-                .map_err(std::io::Error::other)?;
-            let (principal_ref, installation_ref, ..) = proof.native_contract_parts();
             let scope = NativeScope::from_w54_native_only(installation_ref, principal_ref)
                 .map_err(|_| std::io::Error::other("W55_NATIVE_SCOPE_INVALID"))?;
             app.manage(native);
