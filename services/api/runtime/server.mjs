@@ -4,13 +4,28 @@ import {createServer} from 'node:http';
 import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
+import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
 const {bind,port,webOrigin}=config;
-// Fail closed: W54 has not provided a signed, server-verifiable native pairing source.
-// No browser request, Origin or localhost value can enable this issuer.
-const localSessionAuthority=createLocalSessionAuthority();
+// Optional, explicitly started personal-operator terminal pairing only.
+// Never create grants from HTTP, localhost, Origin, actor or JS-supplied identity.
+const operatorMode=process.env.YANCE_W47_OPERATOR_PAIRING;
+if(operatorMode!==undefined&&operatorMode!==''&&operatorMode!=='console')
+  throw Error('W47_OPERATOR_PAIRING_MODE_INVALID');
+if(operatorMode==='console'&&config.mode!=='installed')
+  throw Error('W47_OPERATOR_PAIRING_INSTALLED_MODE_REQUIRED');
+let operatorIssuer=null;
+const customTtl=process.env.YANCE_W47_LOCAL_SESSION_TTL_MS;
+if(customTtl!==undefined&&(!/^[1-9][0-9]{3,5}$/.test(customTtl)||Number(customTtl)>300_000))
+  throw Error('W47_SESSION_TTL_INVALID');
+const localSessionAuthority=createLocalSessionAuthority({ttlMs:customTtl?Number(customTtl):300_000,approvePairing:
+  operatorMode==='console'?async code=>operatorIssuer?.approvePairing(code)??false:null});
+if(operatorMode==='console'){
+  operatorIssuer=createOperatorConsoleIssuer({revokeSessions:()=>localSessionAuthority.revokeAll()});
+  process.stderr.write('W47_LOCAL_OPERATOR_CONSOLE_READY (type pair, cancel or revoke in this terminal)\n');
+}
 const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthority,webOrigin});
 const noStore={
   'content-type':'application/json; charset=utf-8',

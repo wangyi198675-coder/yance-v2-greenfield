@@ -13,7 +13,7 @@ const json=(res,status,value,headers={})=>{
  res.end(JSON.stringify(value));
 };
 const reject=(res,status,error)=>json(res,status,{ok:false,error,canSend:false});
-const cookieFor=id=>COOKIE+'='+id+'; HttpOnly; SameSite=Strict; Path=/; Max-Age=300';
+const cookieFor=(id,ttlMs)=>COOKIE+'='+id+'; HttpOnly; SameSite=Strict; Path=/; Max-Age='+Math.ceil(ttlMs/1000);
 const eraseCookie=()=>COOKIE+'=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0';
 const cookieId=req=>{
  const hdr=req.headers.cookie;
@@ -74,7 +74,7 @@ export function createLocalSessionAuthority({approvePairing=null,now=()=>Date.no
   return true;
  };
  const revokeAll=()=>{sessions.clear();revision++};
- return Object.freeze({sessionFor,redeem,revoke,revokeAll,get issuerAvailable(){return approvePairing!==null}});
+ return Object.freeze({sessionFor,redeem,revoke,revokeAll,ttlMs,get issuerAvailable(){return approvePairing!==null}});
 }
 export function createLocalSessionHttpApi({authority,webOrigin}){
  if(!authority||typeof authority.sessionFor!=='function')throw Error('SESSION_AUTHORITY_REQUIRED');
@@ -101,7 +101,7 @@ export function createLocalSessionHttpApi({authority,webOrigin}){
    if(result.error){reject(res,result.status,result.error);return true}
    json(res,200,{ok:true,paired:true,expiresAt:result.expiresAt,
     csrfToken:result.csrf,canSend:false,providerAuthorized:false},
-    {'set-cookie':cookieFor(result.id)});
+    {'set-cookie':cookieFor(result.id,authority.ttlMs)});
    return true;
   }
   if(path==='/api/v2/local-session/logout'&&req.method==='POST'){
