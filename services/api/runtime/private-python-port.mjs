@@ -27,7 +27,7 @@ export function createW43PythonPrivatePort({
   throw Error('W43_OWNER_SIGNED_PYTHON_PATHS_REQUIRED');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>300000)
   throw Error('W43_PYTHON_BRIDGE_TIMEOUT_INVALID');
- async function invoke(method,ctx,threadId,text,requestId){
+ async function invoke(method,ctx,threadId,text,requestId,receipt){
   if(!ctx?.checkCurrent||typeof ctx.checkCurrent!=='function')
    throw {httpStatus:503,code:'W47_VERIFIED_CONTEXT_REQUIRED'};
   return new Promise((done,fail)=>{
@@ -66,7 +66,7 @@ export function createW43PythonPrivatePort({
     }
     if(msg.kind==='VERIFY'){
      if(responding||!['PRIVATE_TURN','PRIVATE_HISTORY'].includes(msg.operation)||
-        msg.operation!==(method==='turn'?'PRIVATE_TURN':'PRIVATE_HISTORY')){
+        msg.operation!==(method==='history'?'PRIVATE_HISTORY':'PRIVATE_TURN')){
       finish({httpStatus:503,code:'W43_PYTHON_VERIFIER_PROTOCOL_INVALID'});return
      }
      responding=true;
@@ -91,11 +91,16 @@ export function createW43PythonPrivatePort({
       code:'W43_NATIVE_PRIVATE_'+String(msg.error||'UNKNOWN').slice(0,100)});
     }else finish({httpStatus:503,code:'W43_PYTHON_TRANSPORT_INVALID'});
    });
-   send({method,threadId,...(method==='turn'?{text,requestId}:{})});
+   send({method,threadId,...(method==='history'?{}:{text,requestId}),
+    ...(method==='finish'?{receipt}:{})});
   });
  }
  return Object.freeze({
   turn:(ctx,thread_id,text,request_id)=>invoke('turn',ctx,thread_id,text,request_id),
-  history:(ctx,thread_id)=>invoke('history',ctx,thread_id)
+  history:(ctx,thread_id)=>invoke('history',ctx,thread_id),
+  claim:(ctx,thread_id,request_id,text)=>invoke('claim',ctx,thread_id,text,request_id),
+  finish:(ctx,thread_id,request_id,text,receipt)=>invoke('finish',ctx,thread_id,text,request_id,receipt),
+  markUnknown:(ctx,thread_id,request_id,text)=>invoke('markUnknown',ctx,thread_id,text,request_id),
+  reconcile:(ctx,thread_id,request_id,text)=>invoke('reconcile',ctx,thread_id,text,request_id)
  });
 }

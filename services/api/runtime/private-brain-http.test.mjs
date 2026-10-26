@@ -21,21 +21,30 @@ const profile=(principalRef='W54TEST-REALUSER-PRINCIPAL-A')=>({
  installationRef:'W54TEST-INSTALL-001',appLocalDataRoot:'C:\\TEST_ONLY_APPDATA\\Yance'
 });
 function ledger(){
+ // Explicit TEST-ONLY map of the W43 API, not a production durable store.
  const rows=new Map();
+ const identity=({context,threadId,requestId})=>
+  [context.serverScope.installationRef,context.serverScope.principalRef,threadId,requestId].join('|');
  return {
   count:()=>rows.size,
-  claim:async({key,payloadHash})=>{
-   let r=rows.get(key);
+  claim:async(args)=>{
+   const key=identity(args),payloadHash=args.text;
+   const r=rows.get(key);
    if(r&&r.payloadHash!==payloadHash)return {state:'CONFLICT'};
    if(r)return {state:r.state,receipt:r.receipt};
    rows.set(key,{state:'IN_PROGRESS',payloadHash});
    return {state:'CLAIMED'};
   },
-  finish:async({key,payloadHash,receipt})=>{
-   const r=rows.get(key);if(!r||r.payloadHash!==payloadHash)throw Error('NO_LEDGER_CLAIM');
-   rows.set(key,{state:'COMPLETED',payloadHash,receipt});
+  finish:async(args)=>{
+   const key=identity(args),r=rows.get(key);
+   if(!r||r.payloadHash!==args.text)throw Error('NO_LEDGER_CLAIM');
+   rows.set(key,{state:'COMPLETED',payloadHash:args.text,receipt:args.receipt});
   },
-  markUnknown:async({key,payloadHash})=>rows.set(key,{state:'UNKNOWN',payloadHash})
+  markUnknown:async(args)=>rows.set(identity(args),{state:'UNKNOWN',payloadHash:args.text}),
+  reconcile:async(args)=>{
+   const r=rows.get(identity(args));
+   return r?.state==='COMPLETED'?{state:'COMPLETED',receipt:r.receipt}:{state:'UNKNOWN'};
+  }
  };
 }
 async function api({enabled=true,profileProvider=null,w43Port=null,requestLedger=null}={}){

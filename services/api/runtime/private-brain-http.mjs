@@ -67,7 +67,7 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
  if(!sessionAuthority?.sessionFor||typeof webOrigin!=='string')throw Error('PRIVATE_SESSION_REQUIRED');
  if(resolveNativePrincipal!==null&&typeof resolveNativePrincipal!=='function')throw Error('BAD_W54_NATIVE_RESOLVER');
  if(w43Port!==null&&(!w43Port.turn||!w43Port.history))throw Error('BAD_W43_PRIVATE_PORT');
- if(requestLedger!==null&&(!requestLedger.claim||!requestLedger.finish||!requestLedger.markUnknown))
+ if(requestLedger!==null&&(!requestLedger.claim||!requestLedger.finish||!requestLedger.markUnknown||!requestLedger.reconcile))
   throw Error('BAD_PRIVATE_DURABLE_LEDGER');
  return async(req,res,url)=>{
   const turn=url.pathname==='/api/v2/private-brain/turn',hist=url.pathname==='/api/v2/private-brain/history';
@@ -111,17 +111,30 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
   };
   let original;try{original=await principal()}catch(e){const f=errorMap(e);reject(res,f.status,f.code);return true}
   const scoped={...original,threadId};
-  const ledgerKey=turn?sha([original.installationRef,original.principalRef,threadId,requestId].join('|')):null;
-  const payloadHash=turn?sha(text):null;
+  // One authoritative durable identity in W43 original Agno SQLite: never
+  // mint a parallel Node hash/DB or trust browser-side principal fields.
+  const ledgerArgs={context:{serverScope:scoped,checkCurrent:principal},threadId,requestId,text};
   if(turn){
    let lock;
-   try{lock=await requestLedger.claim({key:ledgerKey,payloadHash,context:original})}
-   catch{reject(res,503,'DURABLE_REQUEST_FENCE_UNAVAILABLE');return true}
+   try{lock=await requestLedger.claim(ledgerArgs)}
+   catch(e){
+    const f=errorMap(e);
+    reject(res,f.status===503?503:f.status,f.status===503?'DURABLE_REQUEST_FENCE_UNAVAILABLE':f.code);
+    return true;
+   }
    // Exact same requestId+text after confirmed durable finish yields cached native receipt.
    // In-progress or unknown-on-restart MUST NEVER call W43 again.
    if(lock?.state==='CONFLICT'){reject(res,409,'REQUEST_ID_PAYLOAD_CONFLICT');return true}
    if(lock?.state==='IN_PROGRESS'){reject(res,409,'REQUEST_ID_IN_PROGRESS');return true}
-   if(lock?.state==='UNKNOWN'){reject(res,409,'REQUEST_OUTCOME_UNKNOWN_RECONCILIATION_REQUIRED');return true}
+   if(lock?.state==='UNKNOWN'){
+    // Reconcile only against original persisted native Agno Run and immutable
+    // request fingerprint; no model rerun in an uncertain state.
+    try{lock=await requestLedger.reconcile(ledgerArgs)}
+    catch(e){const f=errorMap(e);reject(res,f.status,f.code);return true}
+    if(lock?.state!=='COMPLETED'){
+     reject(res,409,'REQUEST_OUTCOME_UNKNOWN_RECONCILIATION_REQUIRED');return true;
+    }
+   }
    if(lock?.state==='COMPLETED'){
     try{
      const again=await principal();
@@ -137,16 +150,20 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
    let result;
    try{result=await w43Port.turn({serverScope:scoped,checkCurrent:principal},threadId,text,requestId)}
    catch(e){
-    try{await requestLedger.markUnknown({key:ledgerKey,payloadHash})}catch{}
+    try{await requestLedger.markUnknown(ledgerArgs)}catch{}
     const f=errorMap(e);reject(res,f.status,f.code);return true;
    }
    if(!w43Turn(result)||result.threadId!==threadId){
-    try{await requestLedger.markUnknown({key:ledgerKey,payloadHash})}catch{}
+    try{await requestLedger.markUnknown(ledgerArgs)}catch{}
     reject(res,503,'W43_NATIVE_RUN_RECEIPT_INVALID');return true;
    }
    // Persistent completion must precede the HTTP acknowledgement.
-   try{await requestLedger.finish({key:ledgerKey,payloadHash,receipt:result})}
-   catch{reject(res,503,'DURABLE_COMPLETION_PERSIST_FAILED');return true}
+   try{await requestLedger.finish({...ledgerArgs,receipt:result})}
+   catch(e){
+    const f=errorMap(e);
+    reject(res,f.status===503?503:f.status,f.status===503?'DURABLE_COMPLETION_PERSIST_FAILED':f.code);
+    return true;
+   }
    let next;try{next=await principal()}catch(e){const f=errorMap(e);reject(res,f.status,f.code);return true}
    if(!sameContext(original,next)){reject(res,409,'LOCAL_SESSION_REVISION_CONFLICT');return true}
    reply(res,200,{ok:true,status:'COMPLETED',threadId,requestId,replayed:false,
