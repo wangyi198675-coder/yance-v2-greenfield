@@ -128,3 +128,31 @@ test('stop fences queued events, never auto restores deleted session',async()=>{
   await tick();assert.equal(f.receives.length,0);
   assert.equal(f.worker.getStatus().connected,false);
 });
+
+test('concurrent SDK start cannot survive a revoke while its authorization is pending',async()=>{
+  let approve, entered;
+  const waiting=new Promise(r=>{approve=r});
+  const invoked=new Promise(r=>{entered=r});
+  let sockets=0;
+  const w=createNativeBaileysWorker({
+    authorization:{
+      authorizeStart:async()=>{entered();await waiting;return {
+        authorized:true,userConsented:true,platformPermitted:true,principalVerified:true,
+        accountVerified:false,enrollmentApproved:true,
+        accountId:'account-abc',tenantId:'TEST',bindingRevision:7,accountRevocationEpoch:3,
+      }},
+      assertCurrent:async()=>true,
+    },
+    authStore:{open:async()=>{throw Error('MUST_NOT_OPEN_VAULT')},revoke:async()=>{}},
+    identity:{resolveAccount:async()=>null,resolvePeer:async()=>null},
+    inbound:{acceptInbound:async()=>({accepted:true}),recordReceipt:async()=>({accepted:true})},
+    sdk:{logger:{info:()=>{}},makeWASocket:()=>{sockets++;throw Error('MUST_NOT_OPEN_SOCKET')}},
+  });
+  const starting=w.start({userAction:'PAIR_OWN_ACCOUNT',accountLocator:'new'});
+  await invoked;
+  await w.revoke();
+  approve();
+  await assert.rejects(starting,/ACCOUNT_REVOKED/);
+  assert.equal(sockets,0);
+  assert.equal(w.getStatus().state,'REVOKED');
+});

@@ -36,12 +36,20 @@ export function createNativeBaileysWorker({
     fail('NATIVE_UI_PORTS_REQUIRED');
 
   let sock = null, current = null, secureAuth = null, seq = 0, state = 'WAITING_USER_AUTH';
+  let verifiedAccount = null, startPending = false, revoked = false, lastBinding = null;
   let self = null, lastError = null, messageCount = 0, qrGeneration = 0, qrExpiry = 0;
   const verifiedContacts = new Set();
   const safeObserve = async (name, data) => {
     try { if (name === 'state') await observed?.onState?.(data);
       else if (name === 'qr') await observed?.onQr?.(data); } catch { /* UI callback is not authority */ }
   };
+  const getAccountIdentity = () => state==='ONLINE' && verifiedAccount && self ? Object.freeze({
+    tenant:verifiedAccount.tenant,account:verifiedAccount.account,
+    channel:verifiedAccount.channel,bindingRevision:verifiedAccount.binding_revision,
+    platformJid:self.jid,platformLid:self.lid,
+    accountRevocationEpoch:current?.accountRevocationEpoch,
+    provenance:'BAILEYS_NATIVE_VERIFIED_WITH_W24',
+  }) : null;
   const getStatus = () => Object.freeze({
     installed:true, sdk:'baileys', sdkVersion:NATIVE_BAILEYS.version, nativeSocketCreated:!!sock,
     state, connected:state==='ONLINE', qrAvailable:state==='WAITING_QR_SCAN' && Date.now()<qrExpiry,
@@ -70,14 +78,17 @@ export function createNativeBaileysWorker({
       try { old.ws?.close?.(); } catch {} }
   };
   async function stop() {
-    seq++;closeSocket();self=null;secureAuth=null;current=null;
+    if(revoked)return getStatus();
+    seq++;closeSocket();self=null;verifiedAccount=null;secureAuth=null;current=null;
     verifiedContacts.clear();qrExpiry=0;qrGeneration=0;state='WAITING_USER_AUTH';notify();
     return getStatus();
   }
   async function revoke() {
-    const before=current;
+    const before=current??lastBinding;
+    revoked=true;
+    lastBinding=null;
     // Immediate in-memory fence blocks late SDK callbacks before any I/O.
-    seq++;closeSocket();self=null;secureAuth=null;current=null;
+    seq++;closeSocket();self=null;verifiedAccount=null;secureAuth=null;current=null;
     verifiedContacts.clear();qrExpiry=0;qrGeneration=0;state='REVOKED';notify();
     if(before) { await authStore.revoke({binding:before}); }
     return getStatus();
@@ -179,7 +190,7 @@ export function createNativeBaileysWorker({
              account.account!==current.accountId || account.tenant!==current.tenantId ||
              account.binding_revision!==current.bindingRevision) fail('W24_ACCOUNT_NOT_VERIFIED');
           await assertCurrent('CONNECTED',n);
-          if(n===seq){state='ONLINE';qrExpiry=0;notify();}
+          if(n===seq){verifiedAccount=Object.freeze({...account});state='ONLINE';qrExpiry=0;notify();}
         }).catch(e=>{ if(n===seq){lastError=safeError(e);state='HOLD_IDENTITY';notify();closeSocket();} });
       } else if(update?.connection==='close'){
         const errorCode=update?.lastDisconnect?.error?.output?.statusCode;
@@ -188,7 +199,7 @@ export function createNativeBaileysWorker({
         qrExpiry=0;notify();
         // No automatic recovery or auth resurrection: user/W47 must reauthorize.
         if(errorCode===DisconnectReason.loggedOut) { void revoke().catch(noop); }
-        else { seq++;closeSocket();current=null;secureAuth=null;self=null; }
+        else { seq++;closeSocket();current=null;secureAuth=null;self=null;verifiedAccount=null;verifiedContacts.clear(); }
       }
     });
     s.ev.on('creds.update', async delta => {
@@ -199,19 +210,31 @@ export function createNativeBaileysWorker({
     for(const name of eventsToSubscribe.slice(2)) s.ev.on(name,value=>processEvent(name,value));
   }
   async function start({userAction,accountLocator}={}) {
-    if(sock || current) fail('WORKER_ALREADY_STARTED');
+    if(revoked)fail('ACCOUNT_REVOKED');
+    if(sock || current || startPending) fail('WORKER_ALREADY_STARTED');
     if(userAction!=='PAIR_OWN_ACCOUNT' && userAction!=='RESUME_EXPLICITLY_APPROVED') fail('EXPLICIT_USER_ACTION_REQUIRED');
     if(!required(accountLocator)) fail('ACCOUNT_LOCATOR_REQUIRED');
     // No user-supplied boolean authorizes real contact. This trusted W47/W24
     // server-side port must verify principal, platform terms, grant and revocation.
-    const permit=await authorization.authorizeStart({userAction,accountLocator});
+    const originalSeq=seq;
+    startPending=true;
+    let permit;
+    try { permit=await authorization.authorizeStart({userAction,accountLocator}); }
+    finally { startPending=false; }
+    if(revoked)fail('ACCOUNT_REVOKED');
+    if(seq!==originalSeq)fail('WORKER_EPOCH_STALE');
     if(!object(permit)||permit.authorized!==true||permit.userConsented!==true||
       permit.platformPermitted!==true||permit.principalVerified!==true||
-      permit.accountVerified!==true||!required(permit.accountId)||!required(permit.tenantId)||
+      (permit.accountVerified!==true && permit.enrollmentApproved!==true)||
+      !required(permit.accountId)||!required(permit.tenantId)||
       !Number.isSafeInteger(permit.bindingRevision)||
       !Number.isSafeInteger(permit.accountRevocationEpoch)||
       permit.revisionRevoked===true) fail('PLATFORM_OR_USER_AUTH_HOLD');
-    if(userAction==='RESUME_EXPLICITLY_APPROVED' && permit.restoreApproved!==true)fail('RESTORE_NOT_AUTHORIZED');
+    if(userAction==='RESUME_EXPLICITLY_APPROVED' &&
+       (permit.restoreApproved!==true||permit.accountVerified!==true))
+      fail('RESTORE_NOT_AUTHORIZED');
+    if(lastBinding && (lastBinding.accountId!==permit.accountId||lastBinding.tenantId!==permit.tenantId))
+      fail('WORKER_ACCOUNT_SWITCH_FORBIDDEN');
     current=Object.freeze({...permit});const n=++seq;state='STARTING_NATIVE_SDK';notify();
     try {
       const startAllowed=await authorization.assertCurrent({binding:current,phase:'START',bindingRevision:current.bindingRevision,
@@ -225,6 +248,7 @@ export function createNativeBaileysWorker({
         fail('W55_PERSISTENT_SIGNAL_AUTH_REQUIRED');
       if(n!==seq) fail('WORKER_EPOCH_STALE');
       secureAuth=auth;
+      lastBinding=current; // non-secret W24 binding reference, enables revoke after disconnect.
       const s=sdk.makeWASocket({
         auth:auth.state, logger:sdk.logger, markOnlineOnConnect:false,
         syncFullHistory:false,
@@ -236,5 +260,5 @@ export function createNativeBaileysWorker({
       throw e;
     }
   }
-  return Object.freeze({getStatus,start,stop,revoke,upstream:NATIVE_BAILEYS});
+  return Object.freeze({getStatus,getAccountIdentity,start,stop,revoke,upstream:NATIVE_BAILEYS});
 }
