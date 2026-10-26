@@ -45,7 +45,7 @@ test('only W47 signed read endpoints requested; no POST, send, auth grant, or pr
  const snapshot=await readWorkspaceSnapshot({fetchImpl});
  assert.equal(snapshot.connectedAccountCount,0);
  assert.equal(seen.length,3);
- assert.ok(seen.every(x=>!x.method && x.credentials==='omit' && x.cache==='no-store'));
+ assert.ok(seen.every(x=>!x.method && x.credentials==='same-origin' && x.cache==='no-store'));
  assert.deepEqual(seen.map(x=>x.path).sort(),Object.keys(values).sort());
 });
 test('HTTP 401/503 is unavailable, never a local fixture success',async()=>{
@@ -79,4 +79,18 @@ test('exact signed R4 brand SVG paths and 9 settings categories are present, not
 test('R4 dangerous states are explicit REVOKED / AUTH_EXPIRED / BUDGET_INSUFFICIENT and never permit send',()=>{
  assert.deepEqual(R4_STOP_FAILURE_STATES.map(s=>s.id),['REVOKED','AUTH_EXPIRED','BUDGET_INSUFFICIENT']);
  assert.ok(R4_STOP_FAILURE_STATES.every(s=>/禁止|冻结|不能恢复/.test(s.effect)));
+});
+
+test('W47 actual GET contacts 401 is WAITING_USER_AUTH not authoritative 0 from fake store',async()=>{
+ const snapshot=await readWorkspaceSnapshot({fetchImpl:async(path)=>{
+  if(path==='/api/v2/runtime/health')return {ok:true,json:async()=>health()};
+  if(path==='/api/v2/runtime/capabilities')return {ok:true,json:async()=>caps()};
+  if(path==='/api/v2/contacts')return {ok:false,status:401};
+  throw Error(path);
+ }});
+ assert.equal(snapshot.canSend,false);
+ assert.equal(snapshot.contactsAccess,'WAITING_USER_AUTH');
+ assert.equal(snapshot.realContacts,0);
+ assert.equal(snapshot.connectedAccountCount,0);
+ assert.deepEqual(snapshot.contacts,[]);
 });
