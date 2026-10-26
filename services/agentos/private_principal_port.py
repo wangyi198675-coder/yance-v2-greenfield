@@ -192,6 +192,29 @@ class W43NativePrivateBrainPort:
                 or not result.run_id
                 or getattr(result, "session_id", None) != scope.session_id(thread_id)):
             raise W47PrivateAccessError("LOCAL_MODEL_RUN_NOT_COMPLETED", 503)
+        # Provenance is not inferred from a DTO alone. Verify the COMPLETE
+        # original Agno SDK RunOutput was persisted in the authoritative DB,
+        # with exact PRIVATE agent, user, session, run ID and answer bytes.
+        try:
+            rows = runtime.db.get_runs(
+                session_id=scope.session_id(thread_id),
+                user_id=scope.scoped_user_id,
+                agent_id=runtime.agents["PRIVATE"].id,
+            )
+            actual = [row for row in rows
+                      if row.run_id == result.run_id
+                      and row.user_id == scope.scoped_user_id
+                      and row.session_id == scope.session_id(thread_id)
+                      and row.agent_id == runtime.agents["PRIVATE"].id
+                      and getattr(getattr(row, "status", None), "value", None) == "COMPLETED"
+                      and isinstance(row.content, str) and row.content == content]
+        except Exception:
+            actual = []
+        if len(actual) != 1:
+            raise W47PrivateAccessError("AGNO_NATIVE_PERSISTED_RUN_UNVERIFIED", 503)
+        # A revocation between native database readback and return must also
+        # prevent reply disclosure. W47 must recheck before HTTP commit.
+        self._recheck(context, "PRIVATE_TURN", claim)
         return {
             "status": "COMPLETED",
             "threadId": thread_id,
