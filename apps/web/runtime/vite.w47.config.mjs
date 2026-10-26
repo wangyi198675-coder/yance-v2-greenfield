@@ -16,10 +16,12 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='6d139d4864dbaed3945f04ed3dffc29892974a70';
+ const expectedOwnerSha='3ef88aae11b5d6336b077784bacdab845e18c141';
  const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'1799320bfd5e1e40650852b5eed7caa037f785aa',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'f8a87f99ce0b1f31c9e6c61bf17b4330e93179e5',
+  'apps/web/src/BCLiveChatWorkspace.vue':'1593a5d54e87700d70f980b498a83b975ac22383',
+  'apps/web/src/live-chat-source.mjs':'f31c8ac47c046ea76570378741053b16fe33582b',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'19278758ee59d1a264634bec43bf94134f385101',
   'apps/web/src/private-brain-ui-contract.mjs':'03822dcce8f2bc4b84a8a111431f87431eced794',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
