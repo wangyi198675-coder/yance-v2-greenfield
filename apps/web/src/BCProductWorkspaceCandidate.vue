@@ -2,7 +2,7 @@
 import {ref,watch,computed,nextTick} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
-import BCLocalSessionConnector from './BCLocalSessionConnector.vue';
+import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
 import {WORKSPACES,CHANNELS,R4_SETTINGS_CATEGORIES,R4_STOP_FAILURE_STATES,
  readWorkspaceSnapshot,explainCapability} from './product-workspace-contract.mjs';
 const props=defineProps({
@@ -153,9 +153,8 @@ defineExpose({refresh});
      </div>
     </div>
    </div>
-   <div v-else-if="activeWorkspace==='BRAIN'" class="w46-blank" data-test="w46-brain-local-session">
-    <strong>唯一闺蜜大脑 · 本机连接资格</strong>
-    <BCLocalSessionConnector :fetch-impl="fetchImpl"/>
+   <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">
+    <BCPrivateBrainWorkspace :fetch-impl="fetchImpl"/>
    </div>
    <div v-else class="w46-blank">
     <strong>{{selected.label}}尚未授权</strong>
@@ -222,6 +221,7 @@ defineExpose({refresh});
 .w46-auth-summary{border:1px solid var(--w46-edge);padding:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-radius:10px}
 .w46-auth-summary span,.w46-auth-summary p{font-size:12px;opacity:.84}
 .w46-operator-grid{display:grid;gap:12px}
+.w46-brain-one{min-width:0;width:100%}
 .w46-danger-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .w46-danger{border:1px solid var(--w46-edge);border-radius:12px;padding:14px;display:grid;gap:8px}
 .w46-danger strong{font-family:ui-monospace,monospace;overflow-wrap:anywhere;color:var(--w46-accent)}
