@@ -4,6 +4,7 @@ import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/sr
 import BCBrandIcon from './BCBrandIcon.vue';
 import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
 import BCLiveChatWorkspace from './BCLiveChatWorkspace.vue';
+import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import {WORKSPACES,CHANNELS,R4_SETTINGS_CATEGORIES,R4_STOP_FAILURE_STATES,
  readWorkspaceSnapshot,explainCapability} from './product-workspace-contract.mjs';
 const props=defineProps({
@@ -83,17 +84,14 @@ defineExpose({refresh});
    </div>
    <BCLiveChatWorkspace v-if="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl"/>
    <div v-else-if="activeWorkspace==='ACCOUNTS'" class="w46-channel-grid" aria-label="四渠道真实授权回读">
-    <div v-for="channel in CHANNELS" :key="channel.id" class="w46-channel">
-     <BCBrandIcon :name="channel.id" :size="23"/>
-     <strong>{{channel.label}}</strong>
-     <small>未授权 · 0 个已验证账号</small>
-    </div>
+    <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
+     :channel="channel" :fetch-impl="fetchImpl"/>
     <p class="w46-note">R4 四平台品牌 SVG 路径来源已校验；平台连接须取得各原生渠道授权回读。</p>
     <div class="w46-account-summary" data-test="w46-multi-account">
      <strong>多账号管理 · 已验证账号 {{readonlyAccount}}</strong>
      <p>同一渠道可独立绑定多个账号，当前全部未授权。账号列表仅能由可信原生服务返回。</p>
      <p>Messenger · mautrix-meta | Page · Pancake | WhatsApp · Baileys | Telegram · TDLib JSON</p>
-     <Button size="sm" variant="outline" disabled>添加账号 · 授权接口未接入</Button>
+     <p>点击上方「准备官方授权」从 W47 正式服务获取上游步骤。没有原生签署结果时不会显示已连接。</p>
     </div>
    </div>
    <div v-else-if="activeWorkspace==='PEOPLE'" class="w46-blank">
