@@ -44,8 +44,10 @@ watch(()=>props.activeWorkspace,async()=>{
 function choose(k){if(!WORKSPACES.some(x=>x.id===k))return;emit('select',k);menuOpen.value=false}
 const status=computed(()=>{
  if(loading.value)return '连接检查中';
- if(error.value)return error.value;
- if(!snapshot.value?.trustedSession)return '未取得可信授权 · 无真实联系人 · 发送禁用';
+ if(error.value)return props.activeWorkspace==='BRAIN'?
+  '私人 AI · 选择模型来源':'本机服务尚未连接 · 真人发送禁用';
+ if(!snapshot.value?.trustedSession)return props.activeWorkspace==='BRAIN'?
+  '私人 AI · 请选择已配置的模型来源':'社交账号未连接 · 真人发送禁用';
  return '已取得服务会话，仍需权限范围验证';
 });
 const readonlyAccount=computed(()=>snapshot.value?.connectedAccountCount||0);
@@ -55,7 +57,7 @@ defineExpose({refresh});
  <div v-if="enabled" class="w46-product-candidate" :data-mode="appearance" :data-active-workspace="activeWorkspace" data-test="w46-product-candidate">
   <div class="w46-product-top">
    <div class="w46-product-heading">
-    <strong>言策 V2</strong><span class="w46-product-marker">独立候选 · 未经 R4 原件复核</span>
+    <strong>言策 V2</strong><span class="w46-product-marker">私人本机版 · B＋C</span>
    </div>
    <div class="w46-product-state" data-test="w46-trusted-status" role="status">{{status}}</div>
    <Button size="sm" variant="outline" data-test="w46-refresh" :disabled="loading" @click="refresh">检查连接</Button>
@@ -141,6 +143,7 @@ defineExpose({refresh});
       <p>ChatGPT 身份：未授权 · 套餐权益：未核验 · 模型费用资格：未核验。</p>
       <Button disabled variant="outline" size="sm">使用 ChatGPT 登录 · 未接入官方授权</Button>
      </div>
+     <BCNativeHostSession v-if="settingCategory==='diagnostics'" :fetch-impl="fetchImpl"/>
      <div v-if="settingCategory==='diagnostics'||settingCategory==='privacy'" class="w46-danger-grid" data-test="w46-diagnostics-failclosed">
       <div v-for="item in R4_STOP_FAILURE_STATES" :key="item.id" class="w46-danger">
        <strong>{{item.id}}</strong><p>{{item.effect}}</p>
@@ -150,7 +153,6 @@ defineExpose({refresh});
     </div>
    </div>
    <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">
-    <BCNativeHostSession :fetch-impl="fetchImpl"/>
     <BCPrivateBrainWorkspace :fetch-impl="fetchImpl"/>
    </div>
    <div v-else class="w46-blank">
