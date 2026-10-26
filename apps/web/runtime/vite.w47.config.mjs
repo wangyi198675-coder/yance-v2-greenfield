@@ -26,7 +26,7 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeHostSession.vue':'613b9b761cf1b8325da03677b4051c2807d29a9b',
   'apps/web/src/channel-setup-contract.mjs':'184d2407fc07c99e4eb2316d68d20246c91a2bb1',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'2655f5b17b742e457ca5e454657756d7002c7ebf'',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'2655f5b17b742e457ca5e454657756d7002c7ebf',
   'apps/web/src/BCNativeCloudKeySettings.vue':'d0660d9621dc313117cafce81fcff91ea804264f',
   'apps/web/src/private-brain-ui-contract.mjs':'674307159167361edf9f769408e0c399764aaff5',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
