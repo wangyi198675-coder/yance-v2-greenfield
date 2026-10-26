@@ -18,5 +18,9 @@ test('W47 original origin and parent authority is not weakened to fix static ass
  assert.match(api,/LOOPBACK_ONLY/);
  assert.match(api,/TRUSTED|trustedSession|NATIVE_FIRST_PARTY/);
  assert.match(vite,/w46WorkspaceEnabled/);
+ assert.match(vite,/process\.env\.W46_OFFICIAL_TAURI_BUNDLE==='1'/);
+ assert.match(vite,/connect-src 'self' ipc: http:\/\/ipc\.localhost/);
+ assert.doesNotMatch(vite,/connect-src \*/);
+ assert.doesNotMatch(vite,/http:\/\/localhost:\\d+/);
  assert.doesNotMatch(vite,/W47_FORCE_AUTHORIZED|W54_SKIP_SIGNATURE|ENABLE_REAL_SEND/);
 });
