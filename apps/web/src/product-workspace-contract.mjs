@@ -29,11 +29,12 @@ export function validateWorkspaceSnapshot(health,capabilities,contacts){
     health.canSend!==false||health.externalEffects!==false||
     capabilities?.ok!==true||capabilities.authoritative!==true||
     capabilities.canSend!==false||!capabilities.capabilities||
-    contacts?.ok!==true||contacts.authoritative!==true||
-    contacts.canSend!==false||!Array.isArray(contacts.contacts)||
-    !Number.isSafeInteger(contacts.connectedAccountCount))
+    (contacts?.denied!==true&&
+      (contacts?.ok!==true||contacts.authoritative!==true||
+       contacts.canSend!==false||!Array.isArray(contacts.contacts)||
+       !Number.isSafeInteger(contacts.connectedAccountCount))))
    fail('WORKSPACE_AUTHORITY_INVALID');
- if(health.trustedSession!==true && contacts.contacts.length)
+ if(health.trustedSession!==true && contacts.denied!==true && contacts.contacts.length)
    fail('UNAUTHENTICATED_CONTACT_LEAK');
  if(!Object.keys(CAPABILITY_KEYS).every(k=>
    typeof capabilities.capabilities[CAPABILITY_KEYS[k]]==='object'))
@@ -42,16 +43,21 @@ export function validateWorkspaceSnapshot(health,capabilities,contacts){
    status:health.trustedSession===true?'AUTHENTICATED':'NOT_AUTHENTICATED',
    trustedSession:health.trustedSession===true,
    runtimeSha:health.runtimeSha,
-   connectedAccountCount:contacts.connectedAccountCount,
-   realContacts:contacts.contacts.length,
+   connectedAccountCount:contacts.denied===true?0:contacts.connectedAccountCount,
+   realContacts:contacts.denied===true?0:contacts.contacts.length,
+   contactsAccess:contacts.denied===true?'WAITING_USER_AUTH':'SIGNED_NATIVE_READ',
    canSend:false,
    capabilities:capabilities.capabilities,
-   contacts:contacts.contacts
+   contacts:contacts.denied===true?[]:contacts.contacts
  });
 }
 const read=async(fetchImpl,path)=>{
- const response=await fetchImpl(path,{cache:'no-store',credentials:'omit',redirect:'error'});
- if(!response?.ok)fail('WORKSPACE_HTTP_'+response?.status);
+ const response=await fetchImpl(path,{cache:'no-store',credentials:'same-origin',redirect:'error'});
+ if(!response?.ok){
+  if(path==='/api/v2/contacts'&&response?.status===401)
+   return Object.freeze({denied:true,reason:'TRUSTED_LOCAL_SESSION_REQUIRED'});
+  fail('WORKSPACE_HTTP_'+response?.status);
+ }
  return response.json();
 };
 export async function readWorkspaceSnapshot({fetchImpl=globalThis.fetch}={}){
@@ -67,7 +73,7 @@ export const explainCapability=(snapshot,id)=>{
  if(id==='CHAT')return snapshot?.trustedSession?'就绪状态待联系人签署':'聊天平台尚未授权';
  if(!snapshot)return '服务端不可用，操作已禁用';
  const cap=snapshot.capabilities?.[CAPABILITY_KEYS[id]];
- if(!snapshot.trustedSession)return '尚未取得可信应用会话，功能未授权';
+ if(!snapshot.trustedSession||snapshot.contactsAccess==='WAITING_USER_AUTH')return '当前平台未授权，等待可信本机会话与账号绑定';
  if(!cap)return '原生 Owner 接口尚未接入';
  if(cap.connected===true && cap.enabled===true)return '接口已连接，仍需独立权限核验';
  return cap.reason||'当前接口未连接，操作不可用';
