@@ -34,10 +34,15 @@ struct LaunchFrame<'a> {
 pub(crate) struct HostedChild {
     child: Child,
 }
-impl Drop for HostedChild {
-    fn drop(&mut self) {
+impl HostedChild {
+    pub(crate) fn shutdown(&mut self) {
         let _ = self.child.kill();
         let _ = self.child.wait();
+    }
+}
+impl Drop for HostedChild {
+    fn drop(&mut self) {
+        self.shutdown();
     }
 }
 fn sha256_file(file: &Path) -> Result<[u8; 32], &'static str> {
@@ -102,7 +107,46 @@ fn validate_candidate(
     }
     Ok(target)
 }
+/// Build-time pin (never a runtime env, browser header or user provided path).
+/// The official release builder must audit all executable/runtime assets
+/// and provide the exact approved W47 self-contained binary SHA256.
+fn parse_embedded_w47_sha(pin: Option<&str>) -> Result<Option<[u8; 32]>, &'static str> {
+    let pin = match pin {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    if pin.len() != 64
+        || !pin
+            .bytes()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+    {
+        return Err("W54_SIGNED_W47_SHA256_PIN_INVALID");
+    }
+    let mut b = [0u8; 32];
+    for (i, pair) in pin.as_bytes().chunks_exact(2).enumerate() {
+        b[i] = u8::from_str_radix(
+            std::str::from_utf8(pair).map_err(|_| "W54_SIGNED_W47_SHA256_PIN_INVALID")?,
+            16,
+        )
+        .map_err(|_| "W54_SIGNED_W47_SHA256_PIN_INVALID")?;
+    }
+    Ok(Some(b))
+}
 impl NativeChildLaunch {
+    /// Use ONLY for official installed bundles. The binary must be the
+    /// original W47 Owner's self-contained, reviewed native entrypoint.
+    /// No pin => lab/source-only build; NO W47 child and NO first-party session.
+    /// A pin with missing/mismatched executable is a hard deny, not fallback.
+    pub(crate) fn start_approved_installed_w47(
+        &self,
+        native: &NativeProfileAuthority,
+        session: &SessionAuthority,
+    ) -> Result<Option<HostedChild>, &'static str> {
+        let pin = parse_embedded_w47_sha(option_env!("YANCE_W54_SIGNED_W47_SHA256"))?;
+        let Some(pin) = pin else { return Ok(None) };
+        let child = self.launch_reviewed(Path::new("w47/w47-native.exe"), pin, native, session)?;
+        Ok(Some(child))
+    }
     pub(crate) fn new(bundle_resources: PathBuf) -> Self {
         Self { bundle_resources }
     }
@@ -231,6 +275,30 @@ mod tests {
         let p = std::env::temp_dir().join(format!("w54-child-pin-{}-{n}", std::process::id()));
         fs::create_dir_all(&p).unwrap();
         p
+    }
+    #[test]
+    fn only_explicit_build_pinned_w47_binary_can_enable_host_launch() {
+        assert_eq!(parse_embedded_w47_sha(None).unwrap(), None);
+        assert_eq!(
+            parse_embedded_w47_sha(Some("")).unwrap_err(),
+            "W54_SIGNED_W47_SHA256_PIN_INVALID"
+        );
+        assert_eq!(
+            parse_embedded_w47_sha(Some(&"G".repeat(64))).unwrap_err(),
+            "W54_SIGNED_W47_SHA256_PIN_INVALID"
+        );
+        assert_eq!(
+            parse_embedded_w47_sha(Some(&"F".repeat(64))).unwrap_err(),
+            "W54_SIGNED_W47_SHA256_PIN_INVALID"
+        );
+        assert_eq!(
+            parse_embedded_w47_sha(Some(&"a".repeat(64))).unwrap(),
+            Some([0xaa; 32])
+        );
+        assert_eq!(
+            parse_embedded_w47_sha(Some("w54i_user_input")).unwrap_err(),
+            "W54_SIGNED_W47_SHA256_PIN_INVALID"
+        );
     }
     #[test]
     fn reject_absolute_or_parent_traversal() {

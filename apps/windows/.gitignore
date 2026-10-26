@@ -1,3 +1,8 @@
 /src-tauri/target/
-/src-tauri/gen/schemas/
+/src-tauri/gen/
 /w54_*.log
+# Generated UI bundle from exact W09-2 integrated source; source remains with W09/W46.
+/renderer-bc/
+# Actual installed WebView2 screenshots and raw debug evidence are local QA artifacts.
+/w54_*.png
+/w54_*.webp
