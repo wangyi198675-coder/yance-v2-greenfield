@@ -10,10 +10,10 @@ test('health and version are real and fail-closed',async()=>{
  assert.equal(h.body.externalEffects,false);
  const v=await request('/api/v2/runtime/version');assert.equal(v.body.apiGitSha,h.body.runtimeSha);
 });
-test('current real contacts are empty, never W37 fixtures',async()=>{
+test('unpaired owner contacts remain unauthorized rather than a fake authoritative empty list',async()=>{
  const {status,body}=await request('/api/v2/contacts');
- assert.equal(status,200);assert.equal(body.authoritative,true);
- assert.deepEqual(body.contacts,[]);assert.equal(body.connectedAccountCount,0);
+ assert.equal(status,401);assert.equal(body.canSend,false);
+ assert.equal(body.error,'TRUSTED_LOCAL_SESSION_REQUIRED');
 });
 test('W24 and W44 cannot mutate or forge an authorization',async()=>{
  for(const path of ['/api/v2/managed-stop','/api/v2/identity-consent/takeover']){

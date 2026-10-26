@@ -1,5 +1,6 @@
 // W47: single HTTP DTO for W43 PRIVATE Agno; no browser identity claims.
 import {createHash,timingSafeEqual} from 'node:crypto';
+import {win32} from 'node:path';
 const maxBody=16*1024;
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store',
   'x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer',
@@ -30,15 +31,47 @@ const principalValid=p=>p&&p.source==='W54_NATIVE_CURRENT_USER'&&p.verified===tr
  typeof p.appLocalDataRoot==='string'&&/^[a-zA-Z]:\\/.test(p.appLocalDataRoot)&&
  p.appLocalDataRoot.length<1024&&!p.appLocalDataRoot.includes('..')&&
  !/[\x00-\x1f]/.test(p.appLocalDataRoot);
+const nativeModelClaim=p=>{
+ // These fields can come ONLY from the injected W54/W55 signed server port.
+ // No browser DTO, cookie value, environment or profile text grants paid use.
+ const backend=p.modelBackend;
+ if(backend===undefined)return {};
+ if(!['llamacpp','openrouter','openai','unconfigured'].includes(backend)||
+    typeof p.modelId!=='string'||p.modelId.length>128||
+    !Number.isSafeInteger(p.modelSelectionEpoch)||p.modelSelectionEpoch<0)
+   throw {httpStatus:503};
+ const cloud=backend==='openrouter'||backend==='openai';
+ if(cloud&&(
+   p.modelSelectionEpoch<1||p.modelUserSelected!==true||
+   p.extraChargeApproved!==true||p.protectedCredentialAttested!==true||
+   typeof p.cloudKeyFile!=='string'||!win32.isAbsolute(p.cloudKeyFile)||
+   p.cloudKeyFile.includes('..')||/[\\x00-\\x1f]/.test(p.cloudKeyFile)))
+   throw {httpStatus:503};
+ return {
+  modelBackend:backend,modelId:p.modelId,
+  modelSelectionEpoch:p.modelSelectionEpoch,
+  modelUserSelected:p.modelUserSelected===true,
+  extraChargeApproved:p.extraChargeApproved===true,
+  protectedCredentialAttested:p.protectedCredentialAttested===true,
+  ...(cloud?{cloudKeyFile:p.cloudKeyFile}:{})
+ };
+};
 const sessionSeal=(s,p)=>Object.freeze({
   principalRef:p.principalRef,installationRef:p.installationRef,
   sessionRef:sha(s.id),sessionRevision:s.record.sessionRevision??1,
   revocationGeneration:s.record.rev??0,expiresAtMs:s.record.expiresAt,
-  appLocalDataRoot:p.appLocalDataRoot
+  appLocalDataRoot:p.appLocalDataRoot,
+  ...nativeModelClaim(p)
 });
 const sameContext=(a,b)=>a.principalRef===b.principalRef&&a.installationRef===b.installationRef&&
  a.sessionRef===b.sessionRef&&a.sessionRevision===b.sessionRevision&&
- a.revocationGeneration===b.revocationGeneration&&a.appLocalDataRoot===b.appLocalDataRoot;
+ a.revocationGeneration===b.revocationGeneration&&a.appLocalDataRoot===b.appLocalDataRoot&&
+ a.modelBackend===b.modelBackend&&a.modelId===b.modelId&&
+ a.modelSelectionEpoch===b.modelSelectionEpoch&&
+ a.cloudKeyFile===b.cloudKeyFile&&
+ a.modelUserSelected===b.modelUserSelected&&
+ a.extraChargeApproved===b.extraChargeApproved&&
+ a.protectedCredentialAttested===b.protectedCredentialAttested;
 const w43Turn=(r,selection=null)=>r&&r.status==='COMPLETED'&&r.canSend===false&&r.qualityQualified===false&&
  typeof r.assistantText==='string'&&r.assistantText.trim().length>0&&r.assistantText.length<=128000&&
  opaque(r.runId)&&opaque(r.sessionId)&&typeof r.modelProvider==='string'&&
@@ -124,6 +157,15 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
    const permitted=signedSelection&&['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENAI_USER_API','OPENROUTER_USER_API'].includes(signedSelection.provider)&&
     typeof signedSelection.modelId==='string'&&signedSelection.modelId.length>1&&signedSelection.modelId.length<=128;
    if(!permitted){reject(res,503,'MODEL_CONFIGURATION_REQUIRED');return true}
+   const expectedBackend={LLAMACPP_LOCAL_QWEN3_8B_FREE:'llamacpp',
+    OPENROUTER_USER_API:'openrouter',OPENAI_USER_API:'openai'}[signedSelection.provider];
+   // W54 current user + W55 credential/consent MUST bind the exact selected
+   // model and its generation BEFORE native ledger claim or a billable Run.
+   if(original.modelBackend!==expectedBackend||
+      original.modelId!==signedSelection.modelId||
+      !Number.isSafeInteger(original.modelSelectionEpoch)){
+    reject(res,409,'NATIVE_MODEL_SELECTION_OR_EPOCH_MISMATCH');return true;
+   }
    if(typeof w43Port.supportsSelection!=='function'||
       await w43Port.supportsSelection(signedSelection)!==true){
     // Current W43 3d3992c only supports local qwen3:8b. Never substitute
