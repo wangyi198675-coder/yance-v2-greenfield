@@ -8,7 +8,7 @@
 - W46 原签名基线 **`cf929000c24dc721e1008cf8459ebc9049e923a4`**；本轮从该精确 SHA 建新的独立工作树 `C:\Users\1\Documents\YanceV2\Worktrees\W46_MODEL_DTO_JOIN_20261026`、分支 `w46/p0-w47-model-dto-20261026`，只动 `apps/web/**`。
 - W47 实际 Owner 源码 **`41c9a09bdb6c4124ffc979fac3a250d1079570c1`**，已真实读取 `services/api/runtime/private-model-http.mjs`、`first-party-model.test.mjs`、`private-brain-http.mjs` 与原 Owner 签署契约，不改 W47 源。
 - W43 signed Agent 源 **`ff476587a7ffcc912551b4644ebac61155105c98`**，从 W09-2 联合源码 `services/agentos/yance_agentos.py`、`w47_private_dto.py` 验证**真正NativeRun provider**是 `OPENROUTER_USER_API`、`OPENAI_USER_API`、`LLAMACPP_LOCAL_QWEN3_8B_FREE`，不是 W47 REST 的小写名称。
-- W54 `W54_WINDOWS_NATIVE_IPC_20261026` 当前已存在改动、仍未形成本轮签署新 HEAD；W55 `W55_CREDENTIAL_CUSTODY_20261026` 同样有未提交的受保护凭据增量（分别在 apps/windows/src-tauri/**、packages/credential-custody/**）。**W46不碰这些Owner工作树、不给未签代码冒充CLEAN或已接通**。
+- **补充本轮稍后收到的真正Owner CLEAN HEAD（同日更新）**：W54 Windows `b34dc8e37d12e066a8cbad42f751757cd1f1cf1b`，新增 `apps/windows/src-tauri/src/native_launch.rs`；W54本人的Windows回执是Rust **32/32 PASS**，但没有已审核W47 child二进制/reader或WebView专属Cookie会话；依然**真实自动登录HOLD**。W55 Windows `0ae4b7542e53b6de9a127784b68e1e3fee981de5`，新增 `packages/credential-custody/src/cloud_keys.rs`；W46在独立临时CARGO_TARGET_DIR实际跨Owner执行真实 `cargo test --offline --locked` **25/25 PASS、0 FAIL**，但生产构造器仍SEALED，仅假Key测试ctor可用；真实用户密钥Enroll/native executor lease **HOLD**。两者不等于正式产品已签连通。
 
 ## 2. 双方唯一实际 HTTP/DTO 契约（W46 scoped Owner 复签，W47已签原始HTTP事实）
 
@@ -31,8 +31,8 @@ Provider双层映射准确：HTTP select `openrouter`→真正NativeRun `OPENROU
 
 ## 4. W54 / W55 两个原生Owner精确剩余阻断
 
-- **W54**：原 `9a3dc464deb97a0de69bb8ff3b43048d3805611a` 只拥有OS当前Windows用户、AppData和撤权原生能力；需**其本人**从官方Tauri/Windows安装宿主到W47 `createLocalSessionAuthority({approveNativeLaunch})` 的受信native一次性启动凭据，绑定User/Installation/Renderer/Origin、消费一次、超时撤权及应用退出清理。任何浏览器自己发localhost第一方POST不获批准；未签则W47保留503。不得使用 JS伪auth、loopback自批准、五分钟重复terminal Pair。
-- **W55**：原 `34dbb916702023ee29afd963e37d2ec6e6163bd8` 仅隔离TEST_ONLY假凭据。其本人在原Windows DPAPI/Credential Manager/OS原生Key体系完善**真实本人OpenRouter/OpenAI Key写入、轮换、撤销、签名NativeExecutor租约**，仅W43 Agno SDK原生执行器能短暂取凭据；W47 HTTP只显示 `configured/status` boolean，而不返回明文 Key/handle/路径。真实用户费用批准与Key未提供，所以不发收费请求。
+- **W54**：新 scoped source `b34dc8e37d12e066a8cbad42f751757cd1f1cf1b` 有官方Tauri resource dir/已Pin二进制Digest的native child + private pipe challenge/超时与子进程清理，Owner Rust 32/32 PASS。**其自身Owner回执明确启动时不调用launch_reviewed**：缺已审核W47 child reader/bundled SHA、持续host liveness和注册Tauri WebView2专属Cookie，无法授权真实用户自动session。须W47本人签审子进程端和WebView session，任何普通localhost调用仍拒绝、无伪JS授权。
+- **W55**：新 scoped source `0ae4b7542e53b6de9a127784b68e1e3fee981de5` 已使用原WinCred+DPAPI的假Key enclave、各Provider CAS rotation/revoke tombstone；W46独立Windows Rust 25/25测试PASS。**正式NativeKeyCustody::new()仍永久SEALED**，没有W54签出的不可复制nativeHost能力/独立secureKey dialog、W43 Agno原生Executor-only lease；不能把TEST_ONLY密钥变成真付费授权。W55 Rust JSON存储provider `OPENROUTER`/`OPENAI_API` 由受信native W47 adapter映射自 REST `openrouter`/`openai`，更不能误写成W43 Run `OPENROUTER_USER_API`/`OPENAI_USER_API`。不从浏览器传明文Key或凭据句柄。
 - W09-2已有 GitHub Issue #58 管理W54/W55最小原生接缝。W46只提交本Owner的模型DTO收敛源码及独立实测，不越权代签两个 Rust Owner。
 - W09-2下一步按精确Owner SHA接收、W47本人同契约签名、W54/W55真实Owner CLEAN +跨进程安全证据后，在原隔离stage 44760/48185做真正付费Cloud**需本人授权**的无local模型→多轮history→模型切换→冷启动恢复测试，随后独立旧C↔新版回滚和是否批准44751；目前所有真实Cloud体验和USER_DELIVERED继续HOLD。
 
