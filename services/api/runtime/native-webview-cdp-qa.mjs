@@ -84,6 +84,20 @@ export async function verifyRealInstalledW54OnW47Origin({
      health.json?.nativeWebSameOrigin!==true||
      health.json?.canSend!==false)
     throw Error('W54_ACTUAL_WEBVIEW_W47_API_NOT_VERIFIED_'+JSON.stringify(health));
+  const noModelResponse=await call('Runtime.evaluate',{
+   returnByValue:true,awaitPromise:true,
+   expression:`fetch('/api/v2/private-brain/model-config').then(async r=>({
+    status:r.status,body:await r.json()
+   }))`
+  });
+  const noModel=noModelResponse.result?.value;
+  if(noModel?.status!==200||noModel.body?.status!=='OPEN_LOCAL_MODEL_SETTINGS'||
+     noModel.body?.authoritative!==false||
+     noModel.body?.requiresTerminalPair!==false||
+     noModel.body?.providers?.length!==3||
+     noModel.body?.credentialsExposed!==false||
+     noModel.body?.canSend!==false)
+    throw Error('REAL_WEBVIEW2_NO_PAIR_MODEL_SETTINGS_UNAVAILABLE');
   const nav=[];
   for(const [label,code] of [
    ['渠道账号','ACCOUNTS'],['闺蜜大脑','BRAIN'],
@@ -104,7 +118,8 @@ export async function verifyRealInstalledW54OnW47Origin({
   }
   return Object.freeze({installedExePid:app.pid,webviewTarget:target.url,
    nativeWebView:true,domRendered:true,apiJson:true,apiSha:expectedApiSha,
-   trustedSession:false,canSend:false,nav,shotPath:shotPath||null});
+   trustedSession:false,canSend:false,noPairModelSetupApi:true,
+   nav,shotPath:shotPath||null});
  }finally{
   try{ws?.close()}catch{}
   try{app.kill()}catch{}

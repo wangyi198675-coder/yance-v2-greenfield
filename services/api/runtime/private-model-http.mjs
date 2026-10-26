@@ -80,6 +80,25 @@ export function createPrivateModelHttp({
    return true;
   }
   const session=sessionAuthority.sessionFor(req);
+  // Ordinary no-model onboarding is PUBLIC, READ ONLY and does not require a
+  // terminal pair, local model or connected social account. It never exposes
+  // WHETHER an actual user's cloud Key/model/history exists. A real model
+  // selection, charged Run and private History still require the original
+  // current-user native session, CSRF and W55/W43 provider qualifications.
+  if(!session&&isSettings&&req.headers.cookie===undefined){
+   if(req.headers.origin&&req.headers.origin!==webOrigin){
+    deny(res,403,'MODEL_ORIGIN_NOT_ALLOWED');return true
+   }
+   write(res,200,{ok:true,authoritative:false,
+    status:'OPEN_LOCAL_MODEL_SETTINGS',models:[],
+    selectedProvider:'',selectedModelId:'',
+    providers:catalog,
+    requiresTerminalPair:false,requiresSocialAccount:false,
+    localModelOptional:true,configurationState:'UNVERIFIED_UNTIL_NATIVE_APP',
+    secureCredentialStorage:false,credentialsExposed:false,
+    canSend:false,providerAuthorized:false});
+   return true;
+  }
   if(!session){deny(res,401,'LOCAL_SESSION_REQUIRED');return true}
   if(req.headers.origin&&req.headers.origin!==webOrigin){
    deny(res,403,'MODEL_ORIGIN_NOT_ALLOWED');return true;

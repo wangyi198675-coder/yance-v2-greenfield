@@ -135,7 +135,9 @@ export function createLocalSessionHttpApi({authority,webOrigin}){
     csrfToken:active.record.csrf,sessionKind:active.record.kind,
     canSend:false,providerAuthorized:false}:
     {ok:true,paired:false,canSend:false,providerAuthorized:false,
-     reason:authority.issuerAvailable?'LOCAL_SESSION_NOT_PAIRED':'TRUSTED_NATIVE_PAIRING_NOT_AVAILABLE'});
+     requiresTerminalPair:false,canConfigureModels:true,
+     reason:authority.nativeLaunchAvailable?'LOCAL_APP_SESSION_NOT_STARTED':
+       'LOCAL_APP_NATIVE_SESSION_NOT_CONNECTED'});
    return true;
   }
   if(path==='/api/v2/local-session/first-party'&&req.method==='POST'){

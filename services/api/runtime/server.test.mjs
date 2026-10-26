@@ -152,5 +152,10 @@ test('native session, original W43 and W55 missing cannot be forged from browser
   headers:{'content-type':'application/json'},body:'{}'});
  assert.equal(pair.status,503);
  assert.equal(pair.body.canSend,false);
- assert.equal((await request('/api/v2/private-brain/model-config')).status,401);
+ const setup=await request('/api/v2/private-brain/model-config');
+ assert.equal(setup.status,200);
+ assert.equal(setup.body.authoritative,false);
+ assert.equal(setup.body.status,'OPEN_LOCAL_MODEL_SETTINGS');
+ assert.equal(setup.body.requiresTerminalPair,false);
+ assert.equal(setup.body.canSend,false);
 });

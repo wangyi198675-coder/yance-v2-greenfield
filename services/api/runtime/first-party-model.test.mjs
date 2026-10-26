@@ -59,11 +59,50 @@ test('no W54 signed native launch: localhost and exact Origin never create a Ses
  try{
   const r=await x.bootstrap();
   assert.equal(r.status,503);assert.equal(r.data.error,'TRUSTED_NATIVE_APP_LAUNCH_NOT_CONNECTED');
-  assert.equal((await x.req('/api/v2/private-brain/model-config')).status,401);
+  const publicSetup=await x.req('/api/v2/private-brain/model-config');
+  assert.equal(publicSetup.status,200);
+  assert.equal(publicSetup.data.status,'OPEN_LOCAL_MODEL_SETTINGS');
+  assert.equal(publicSetup.data.authoritative,false);
+  assert.equal(publicSetup.data.configurationState,'UNVERIFIED_UNTIL_NATIVE_APP');
+  assert.equal(publicSetup.data.requiresTerminalPair,false);
+  assert.equal(publicSetup.data.requiresSocialAccount,false);
+  assert.equal(publicSetup.data.models.length,0);
+  assert.equal(publicSetup.data.credentialsExposed,false);
   assert.equal((await x.req('/api/v2/local-session/first-party',{method:'POST',body:{actor:'admin'}})).status,422);
   assert.equal((await x.req('/api/v2/local-session/first-party',{method:'POST',body:{},origin:'https://evil.example'})).status,403);
   assert.equal((await x.req('/api/v2/private-brain/model-selection',{method:'POST',
     body:{provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'}})).status,401);
+ }finally{await x.close()}
+});
+test('ordinary no-model launch shows safe setup without pair, user keys, or any charge',async()=>{
+ const x=await fixture({modelPorts:true});
+ try{
+  const status=await x.req('/api/v2/local-session/status');
+  assert.equal(status.status,200);
+  assert.equal(status.data.paired,false);
+  assert.equal(status.data.requiresTerminalPair,false);
+  assert.equal(status.data.canConfigureModels,true);
+  assert.equal(status.data.reason,'LOCAL_APP_NATIVE_SESSION_NOT_CONNECTED');
+  const setup=await x.req('/api/v2/private-brain/model-config');
+  assert.equal(setup.status,200);
+  assert.equal(setup.data.authoritative,false);
+  assert.equal(setup.data.requiresTerminalPair,false);
+  assert.equal(setup.data.requiresSocialAccount,false);
+  assert.equal(setup.data.localModelOptional,true);
+  assert.equal(setup.data.configurationState,'UNVERIFIED_UNTIL_NATIVE_APP');
+  assert.equal(setup.data.models.length,0);
+  assert.equal(setup.data.providers.length,3);
+  assert.equal(setup.data.selectedModelId,'');
+  assert.equal(setup.data.canSend,false);
+  assert.equal(setup.data.credentialsExposed,false);
+  assert.equal((await x.req('/api/v2/private-brain/model-config',{
+   origin:'https://thirdparty.invalid'})).status,403);
+  const tampered=await x.req('/api/v2/private-brain/model-config',{
+   cookie:'yance_local_session='+randomBytes(32).toString('hex')});
+  assert.equal(tampered.status,401);
+  assert.equal((await x.req('/api/v2/private-brain/model-selection',{
+   method:'POST',body:{provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'}})).status,401);
+  assert.deepEqual(x.stats(),{lookups:0,stores:0,vaultChecks:0,selections:0});
  }finally{await x.close()}
 });
 test('explicitly TEST ONLY native-launch verifier yields 2-minute session, logout and restart-grade revocation',async()=>{
@@ -93,7 +132,15 @@ test('model catalog public never exposes keys; sensitive status and selection re
   const r=await x.req('/api/v2/private-brain/model-catalog');
   assert.equal(r.status,200);assert.deepEqual(r.data.providers.map(a=>a.provider),['OPENROUTER_USER_API','OPENAI_USER_API','LLAMACPP_LOCAL_QWEN3_8B_FREE']);
   assert.equal(r.data.authoritative,false);assert.equal(r.data.canSend,false);
-  assert.equal((await x.req('/api/v2/private-brain/model-config')).status,401);
+  const publicSetup=await x.req('/api/v2/private-brain/model-config');
+  assert.equal(publicSetup.status,200);
+  assert.equal(publicSetup.data.status,'OPEN_LOCAL_MODEL_SETTINGS');
+  assert.equal(publicSetup.data.authoritative,false);
+  assert.equal(publicSetup.data.configurationState,'UNVERIFIED_UNTIL_NATIVE_APP');
+  assert.equal(publicSetup.data.requiresTerminalPair,false);
+  assert.equal(publicSetup.data.requiresSocialAccount,false);
+  assert.equal(publicSetup.data.models.length,0);
+  assert.equal(publicSetup.data.credentialsExposed,false);
  }finally{await x.close()}
 });
 test('local-first app with verified synthetic TEST port can select Cloud without any local Qwen3',async()=>{
