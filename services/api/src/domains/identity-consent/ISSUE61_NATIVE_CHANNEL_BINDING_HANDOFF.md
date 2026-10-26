@@ -25,3 +25,6 @@ W09-2 may merge independently signed W24/W25 source only into a separate integra
 
 Nonproduction actual owner tests:
 `node --test services/api/src/domains/identity-consent/*.test.mjs` on Windows Node24 with exact `YANCE_W44_ROOT/YANCE_W25_ROOT/YANCE_W46_ROOT`: **70/70 PASS** (65 prior and 5 new). Four legacy memory-audit PASS tests still document unsafe historical mode and are not production attestations.
+
+## 2026-10-26 4fc924b4 joint native W47 read API
+New native-owner-reads.mjs + native-owner-reads.test.mjs provide readW24AuthorizedAccounts/readW24VerifiedContacts using original W47 createNativeOwnerReadHttp. W54 current principal + platform-owner verified account and peer are mandatory, original W24 strict durable K, current binding and consent epoch rechecked. W47 response never gives send privilege. Synthetic SQLite+original W47 handler targeted 5/5 PASS; NOT signed live platform authorization. Real account trust remains WAITING_USER_AUTH and W44 live actor adaptation gate.
