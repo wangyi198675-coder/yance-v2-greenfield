@@ -399,6 +399,70 @@ class NativeAgnoRuntime:
             return False
         return hashlib.sha256(value.encode()).hexdigest() == digest
 
+    def read_private_chat_history(self, scope: Scope, *, thread: str = "default") -> dict:
+        """Read exact private user/assistant/tool messages from native Agno SqliteDb.
+
+        This is NOT a local-user authentication API: W47 must verify the
+        trusted current-local-user session and map it to the correct private
+        scope/db file. No contact is necessary and no HTTP server is started.
+        """
+        if not isinstance(scope, Scope) or scope.space != "PRIVATE":
+            raise ScopeError("PRIVATE_SCOPE_REQUIRED")
+        session_id = scope.session_id(thread)
+        session = self.db.get_session(session_id, user_id=scope.scoped_user_id)
+        if session is None:
+            return {
+                "status": "HISTORY_NOT_FOUND", "session_id": session_id,
+                "messages": [], "run_count": 0, "complete_turn_count": 0,
+            }
+        if session.user_id != scope.scoped_user_id or session.agent_id != self.agents["PRIVATE"].id:
+            raise ScopeError("SESSION_USER_OR_AGENT_MISMATCH")
+        # Official Agno 3.1.10 persists runs in its native agno_runs table;
+        # an upserted session may contain an empty runs array. get_runs is
+        # authoritative and sorts by native run_index, not by arrival time.
+        runs = self.db.get_runs(
+            session_id=session_id, user_id=scope.scoped_user_id,
+            agent_id=self.agents["PRIVATE"].id,
+        )
+        rows = []
+        completed = 0
+        for run in runs:
+            run_status = getattr(getattr(run, "status", None), "value", None)
+            run_id = getattr(run, "run_id", None)
+            has_user = False
+            has_assistant = False
+            for msg in getattr(run, "messages", None) or []:
+                role = getattr(msg, "role", None)
+                if role not in {"user", "assistant", "tool"}:
+                    continue
+                content = getattr(msg, "content", None)
+                if not isinstance(content, str) or not content:
+                    continue
+                rows.append({
+                    "role": role, "content": content,
+                    "run_id": run_id, "run_status": run_status,
+                })
+                has_user = has_user or role == "user"
+                has_assistant = has_assistant or role == "assistant"
+            # Native final output sometimes exists without an assistant
+            # message in run.messages; include ONLY actual SDK output.
+            final = getattr(run, "content", None)
+            if not has_assistant and isinstance(final, str) and final and run_status in {"COMPLETED", "completed"}:
+                rows.append({
+                    "role": "assistant", "content": final,
+                    "run_id": run_id, "run_status": run_status,
+                })
+                has_assistant = True
+            if has_user and has_assistant and run_status in {"COMPLETED", "completed"}:
+                completed += 1
+        return {
+            "status": "HISTORY_PRESENT" if rows else "HISTORY_EMPTY",
+            "session_id": session_id,
+            "messages": rows,
+            "run_count": len(runs),
+            "complete_turn_count": completed,
+        }
+
     def remember_synthetic(self, scope: Scope, note: str) -> dict:
         """Persist one fake user memory via Agno's native SqliteDb memory API."""
         if not isinstance(scope, Scope):
