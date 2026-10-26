@@ -19,7 +19,8 @@ from agno.agent import Agent
 from agno.approval import approval
 from agno.memory import UserMemory
 from agno.db.sqlite import SqliteDb
-from agno.models.openai import OpenAIChat  # local OpenAI-compatible llama.cpp protocol, not OpenAI cloud
+from agno.models.openai import OpenAIChat
+from agno.models.openrouter import OpenRouter
 from agno.os import AgentOS
 from agno.team import Team
 from agno.tools import tool
@@ -157,6 +158,44 @@ def _local_llamacpp_model(host: str, model_id: str, key_file: str | Path | None)
                       max_retries=0, temperature=0)
 
 
+def _cloud_model(backend, model_id, key_file, *, user_selected, extra_charge_approved,
+                 protected_credential_attested):
+    """Official Agno paid provider; no env-key fallback or automatic routing."""
+    import re
+    if backend not in {"openrouter", "openai"}:
+        raise LocalOnlyError("CLOUD_PROVIDER_NOT_SUPPORTED")
+    if not user_selected:
+        raise LocalOnlyError("CLOUD_MODEL_NOT_EXPLICITLY_SELECTED")
+    if not extra_charge_approved:
+        raise LocalOnlyError("PAID_MODEL_USER_APPROVAL_REQUIRED")
+    if not protected_credential_attested:
+        raise LocalOnlyError("W55_PROTECTED_CREDENTIAL_NOT_ATTESTED")
+    if not isinstance(model_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}", model_id):
+        raise LocalOnlyError("CLOUD_MODEL_ID_REQUIRED")
+    if key_file is None or not isinstance(key_file, (str, Path)):
+        raise LocalOnlyError("CLOUD_API_KEY_SETUP_REQUIRED")
+    path = Path(key_file)
+    try:
+        if not path.is_absolute() or path.is_symlink() or not path.is_file() or not 16 <= path.stat().st_size <= 512:
+            raise LocalOnlyError("CLOUD_PROTECTED_CREDENTIAL_INVALID")
+        key = path.read_text(encoding="utf-8-sig").strip()
+    except (OSError, UnicodeError):
+        raise LocalOnlyError("CLOUD_PROTECTED_CREDENTIAL_UNAVAILABLE") from None
+    if not 16 <= len(key) <= 400 or any(ch.isspace() for ch in key):
+        raise LocalOnlyError("CLOUD_PROTECTED_CREDENTIAL_INVALID")
+    # URL is an immutable official provider endpoint. NEVER accept client URL.
+    if backend == "openrouter":
+        return OpenRouter(
+            id=model_id, api_key=key, base_url="https://openrouter.ai/api/v1",
+            timeout=90, retries=0, max_retries=0, models=None,
+            extra_body={"provider": {"allow_fallbacks": False}},
+        )
+    return OpenAIChat(
+        id=model_id, api_key=key, base_url="https://api.openai.com/v1",
+        timeout=90, retries=0, max_retries=0,
+    )
+
+
 class NativeAgnoRuntime:
     """In-process, scope-fenced Agno runtime. Never directly serve AgentOS."""
 
@@ -169,25 +208,53 @@ class NativeAgnoRuntime:
         model_id: str | None = None,
         local_key_file: str | Path | None = None,
         purpose: str = "HEALTHCHECK",
+        cloud_key_file: str | Path | None = None,
+        user_selected: bool = False,
+        extra_charge_approved: bool = False,
+        protected_credential_attested: bool = False,
     ) -> None:
-        # SINGLE formal V2 inference interface. Historical Ollama backends remain
-        # in immutable old SHAs but are NOT selectable at this W43 new HEAD.
-        if backend != "llamacpp":
-            raise LocalOnlyError("OLLAMA_DISABLED_USE_EXISTING_LLAMACPP")
+        # ONE original AgentOS runtime, with three explicit official SDK models.
+        # A missing local Qwen model NEVER gates a signed cloud selection.
         if purpose not in {"HEALTHCHECK", "QUALITY_EVAL"}:
             raise LocalOnlyError("UNSUPPORTED_PURPOSE")
-        host = host or "http://127.0.0.1:11605"
-        model_id = model_id or "qwen3:8b"
-        if purpose == "QUALITY_EVAL" and model_id != "qwen3:8b":
-            raise LocalOnlyError("STRONG_MODEL_REQUIRED_FOR_QUALITY_EVAL")
-        self._local_key_file = local_key_file or os.getenv("YANCE_W43_LOCAL_KEY_FILE")
-        self.model = _local_llamacpp_model(host, model_id, self._local_key_file)
-        self.provider = PROVIDER_QWEN3 if model_id == "qwen3:8b" else PROVIDER
-        self.policy_provider = (
-            "LOCAL_QWEN3_8B" if model_id == "qwen3:8b" else "LOCAL_QWEN25_15B"
-        )
+        if backend == "llamacpp":
+            host = host or "http://127.0.0.1:11605"
+            model_id = model_id or "qwen3:8b"
+            if purpose == "QUALITY_EVAL" and model_id != "qwen3:8b":
+                raise LocalOnlyError("STRONG_MODEL_REQUIRED_FOR_QUALITY_EVAL")
+            self._local_key_file = local_key_file or os.getenv("YANCE_W43_LOCAL_KEY_FILE")
+            self.model = _local_llamacpp_model(host, model_id, self._local_key_file)
+            self.provider = PROVIDER_QWEN3 if model_id == "qwen3:8b" else PROVIDER
+            self.policy_provider = (
+                "LOCAL_QWEN3_8B" if model_id == "qwen3:8b" else "LOCAL_QWEN25_15B"
+            )
+        elif backend in {"openrouter", "openai"}:
+            if host is not None:
+                raise LocalOnlyError("CUSTOM_CLOUD_ENDPOINT_FORBIDDEN")
+            if purpose != "QUALITY_EVAL":
+                raise LocalOnlyError("CLOUD_HEALTHCHECK_NOT_APPROVED")
+            self._local_key_file = None
+            self._cloud_key_file = Path(cloud_key_file) if isinstance(cloud_key_file, (str, Path)) else None
+            self.model = _cloud_model(
+                backend, model_id, cloud_key_file, user_selected=user_selected,
+                extra_charge_approved=extra_charge_approved,
+                protected_credential_attested=protected_credential_attested,
+            )
+            self.provider = "OPENROUTER_USER_API" if backend == "openrouter" else "OPENAI_USER_API"
+            self.policy_provider = "OTHER_EXPLICIT"
+            # Do not let a cached Agno SDK client continue spending after
+            # its OS-protected key file disappears/changes without reapproval.
+            self._cloud_key_sha256 = hashlib.sha256(self.model.api_key.encode("utf-8")).hexdigest()
+        else:
+            raise LocalOnlyError("OLLAMA_DISABLED_USE_EXISTING_LLAMACPP")
         self.backend = backend
         self.purpose = purpose
+        self._cloud_authorized = backend in {"openrouter", "openai"} and (
+            user_selected and extra_charge_approved and protected_credential_attested
+        )
+        self._explicit_user_selected = user_selected
+        self._extra_charge_approved = extra_charge_approved
+        self._protected_credential_attested = protected_credential_attested
         self.model_id = model_id
         self._issued_w45_receipts: dict[str, str] = {}  # ephemeral in-process proof; NOT cross-service authorization
         self._issued_contact_runs: dict[str, str] = {}  # run receipts bound to exact synthetic scope+prompt+thread
@@ -285,6 +352,21 @@ class NativeAgnoRuntime:
         except Exception:
             return False
 
+    def _selected_model_ready(self) -> bool:
+        # Never query 11605 for a configured cloud model.
+        if self.backend == "llamacpp":
+            return self._authorized_llamacpp_model_matches()
+        if not self._cloud_authorized or self.provider not in {"OPENROUTER_USER_API", "OPENAI_USER_API"}:
+            return False
+        try:
+            file = self._cloud_key_file
+            if file is None or file.is_symlink() or not file.is_file():
+                return False
+            fresh = file.read_text(encoding="utf-8-sig").strip()
+            return hashlib.sha256(fresh.encode("utf-8")).hexdigest() == self._cloud_key_sha256
+        except (OSError, UnicodeError):
+            return False
+
     def run(self, scope: Scope, text: str, *, thread: str = "default", team: bool = False) -> dict:
         if not isinstance(scope, Scope):
             raise ScopeError("SCOPE_REQUIRED")
@@ -301,16 +383,19 @@ class NativeAgnoRuntime:
                         "session_id": sid, "model_id": self.model_id,
                         "suggestions": [], "outbound": "DISABLED",
                     }
-                if not self._authorized_llamacpp_model_matches():
+                if not self._selected_model_ready():
                     return {
-                        "status": "HOLD_LOCAL_MODEL_ID_AUTH_OR_SERVER_MISMATCH",
+                        "status": ("HOLD_LOCAL_MODEL_ID_AUTH_OR_SERVER_MISMATCH"
+                                   if self.backend == "llamacpp" else
+                                   "CLOUD_MODEL_SELECTION_OR_CREDENTIAL_UNAVAILABLE"),
                         "session_id": sid, "model_id": self.model_id,
                         "suggestions": [], "outbound": "DISABLED",
                     }
                 result = runner.run(text, user_id=scope.scoped_user_id, session_id=sid)
         except Exception as exc:
             return {
-                "status": "LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED",
+                "status": ("LOCAL_MODEL_UNAVAILABLE_OR_RUN_FAILED" if self.backend == "llamacpp"
+                           else "CLOUD_MODEL_SDK_RUN_FAILED"),
                 "error_type": type(exc).__name__, "session_id": sid,
                 "suggestions": [], "outbound": "DISABLED",
             }
@@ -585,12 +670,23 @@ class NativeAgnoRuntime:
             "purpose": self.purpose,
             "model_policy": classify_provider(
                 self.policy_provider, self.purpose,
-                local_model_verified=(self._native_health_run_verified if self.purpose == "HEALTHCHECK" else self._native_quality_run_verified)
+                local_model_verified=(self._native_health_run_verified if self.purpose == "HEALTHCHECK" else self._native_quality_run_verified),
+                user_explicitly_selected=self._explicit_user_selected,
+                extra_charge_approved=self._extra_charge_approved,
+                provider_native_grant_attested=self._cloud_authorized,
+                credential_source_verified=self._protected_credential_attested,
             ).as_dict(),
-            "run": "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE"
-                   if self.purpose == "QUALITY_EVAL" else ("LOCAL_AGNO_CONNECTIVITY_VERIFIED_NOT_QUALITY" if self._native_health_run_verified else "LOCAL_AGNO_CONNECTIVITY_NOT_YET_VERIFIED"),
+            "run": ("CLOUD_SELECTED_REAL_RUN_REQUIRES_EVIDENCE"
+                    if self.backend in {"openrouter", "openai"} else
+                    "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE")
+                   if self.purpose == "QUALITY_EVAL" else (
+                       "LOCAL_AGNO_CONNECTIVITY_VERIFIED_NOT_QUALITY"
+                       if self._native_health_run_verified
+                       else "LOCAL_AGNO_CONNECTIVITY_NOT_YET_VERIFIED"),
             "sessions": "NATIVE_SQLITE_TESTED_SYNTHETIC",
-            "team": "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE"
+            "team": ("CLOUD_SELECTED_TEAM_RUN_REQUIRES_EVIDENCE"
+                     if self.backend in {"openrouter", "openai"} else
+                     "QWEN3_8B_REAL_QUALITY_RUN_REQUIRES_EVIDENCE")
                     if self.purpose == "QUALITY_EVAL" else "HEALTHCHECK_ONLY",
             "tools": "SDK_REGISTERED_REAL_QWEN3_TOOL_SELECTION_HOLD",
             "memory": "NATIVE_USER_MEMORY_READ_WRITE_RESTART_TESTED_SYNTHETIC",

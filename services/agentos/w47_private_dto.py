@@ -10,8 +10,9 @@ import re
 from private_principal_port import W43NativePrivateBrainPort, W47PrivateAccessError
 
 SDK_PIN = "3.1.10"
-PROVIDER = "LLAMACPP_LOCAL_QWEN3_8B_FREE"
-MODEL = "qwen3:8b"
+ALLOWED_PROVIDERS = frozenset({
+    "LLAMACPP_LOCAL_QWEN3_8B_FREE", "OPENROUTER_USER_API", "OPENAI_USER_API"
+})
 
 
 def _thread(args):
@@ -54,10 +55,17 @@ class W43W47PrivateBridge:
         # original RunOutput in the SAME SqliteDb; never trust a model-text DTO.
         if run.get("status") != "COMPLETED":
             raise W47PrivateAccessError("AGNO_RUN_NOT_COMPLETED", 503)
-        if (run.get("modelProvider") != PROVIDER or run.get("modelId") != MODEL
+        # Use current W47-authenticated model selection + same original
+        # NativeAgnoRuntime; never believe only a client DTO's provider string.
+        claim = self._port._verified(context, "PRIVATE_TURN")
+        _, runtime = self._port._runtime(claim)
+        if (run.get("modelProvider") not in ALLOWED_PROVIDERS
+                or run.get("modelProvider") != runtime.provider
+                or run.get("modelId") != runtime.model_id
                 or run.get("qualityQualified") is not False
                 or run.get("canSend") is not False):
             raise W47PrivateAccessError("AGNO_MODEL_SOURCE_UNVERIFIED", 503)
+        self._port._recheck(context, "PRIVATE_TURN", claim)
         run_id, session_id = run["runId"], run["sessionId"]
         if (not isinstance(run_id, str) or not 6 <= len(run_id) <= 256
                 or not isinstance(session_id, str) or not 6 <= len(session_id) <= 256):
@@ -65,14 +73,14 @@ class W43W47PrivateBridge:
         provenance = {
             "type": "AGNO_RUN_RESULT", "sdk_pin": SDK_PIN,
             "run_id": run_id, "session_id": session_id,
-            "source": PROVIDER, "model_id": MODEL,
+            "source": runtime.provider, "model_id": runtime.model_id,
             "purpose": "QUALITY_EVAL", "quality_qualified": False,
         }
         return {
             "status": "AGNO_RUN_COMPLETED",
             "original_response": run["assistantText"],
             "run_id": run_id, "session_id": session_id,
-            "model_id": MODEL, "provider": PROVIDER,
+            "model_id": runtime.model_id, "provider": runtime.provider,
             "sdk_pin": SDK_PIN, "provenance": provenance,
             "quality_qualified": False, "outbound": "DISABLED",
         }

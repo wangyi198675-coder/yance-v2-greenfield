@@ -38,7 +38,11 @@ class NativePrivateRequestLedger:
         claim = self._port._verified(context, "PRIVATE_TURN")
         scope, runtime = self._port._runtime(claim)
         self._port._recheck(context, "PRIVATE_TURN", claim)
-        return claim, scope, runtime, request_identity(scope, thread_id, request_id, text)
+        return claim, scope, runtime, request_identity(
+            scope, thread_id, request_id, text,
+            model_backend=runtime.backend, model_id=runtime.model_id,
+            selection_epoch=claim.model_selection_epoch,
+        )
 
     @staticmethod
     @contextmanager
@@ -51,15 +55,26 @@ class NativePrivateRequestLedger:
             raise W47PrivateAccessError("DURABLE_REQUEST_DB_UNAVAILABLE", 503) from None
         try:
             db.execute("PRAGMA busy_timeout=5000")
+            db.execute("BEGIN IMMEDIATE")
             db.execute("""CREATE TABLE IF NOT EXISTS w43_private_request_fence (
                 fingerprint TEXT PRIMARY KEY,
                 prompt_sha256 TEXT NOT NULL,
+                model_selection_sha256 TEXT NOT NULL,
                 run_id TEXT NOT NULL UNIQUE,
                 state TEXT NOT NULL CHECK(state IN ('IN_PROGRESS','EXECUTING','UNKNOWN','COMPLETED')),
                 created_at_ms INTEGER NOT NULL,
                 updated_at_ms INTEGER NOT NULL
             )""")
-            db.execute("BEGIN IMMEDIATE")
+            # Old W43 fixture DBs had no model-selection column. Preserve
+            # rows but mark provenance UNKNOWN/NOT_ATTESTED, never allow a
+            # legacy claim to spend credits after a model change.
+            columns = {row[1] for row in db.execute("PRAGMA table_info(w43_private_request_fence)")}
+            if "model_selection_sha256" not in columns:
+                db.execute(
+                    "ALTER TABLE w43_private_request_fence "
+                    "ADD COLUMN model_selection_sha256 TEXT NOT NULL "
+                    "DEFAULT 'LEGACY_MODEL_UNATTESTED'"
+                )
             try:
                 yield db
             except Exception:
@@ -75,14 +90,16 @@ class NativePrivateRequestLedger:
     @staticmethod
     def _stored(db, identity):
         row = db.execute(
-            "SELECT prompt_sha256,run_id,state FROM w43_private_request_fence WHERE fingerprint=?",
+            "SELECT prompt_sha256,model_selection_sha256,run_id,state FROM w43_private_request_fence WHERE fingerprint=?",
             (identity["fingerprint"],),
         ).fetchone()
         if row and row[0] != identity["prompt_sha256"]:
             return ("CONFLICT", None)
-        if row and row[1] != identity["run_id"]:
+        if row and row[1] != identity["model_selection_sha256"]:
+            return ("CONFLICT", None)
+        if row and row[2] != identity["run_id"]:
             raise W47PrivateAccessError("DURABLE_RUN_ID_MISMATCH", 503)
-        return (row[2], row[1]) if row else (None, None)
+        return (row[3], row[2]) if row else (None, None)
 
     @staticmethod
     def _native_receipt(scope, runtime, thread_id, identity):
@@ -103,6 +120,11 @@ class NativePrivateRequestLedger:
                 and isinstance(r.metadata, dict)
                 and r.metadata.get("w43_private_request_fingerprint") == identity["fingerprint"]
                 and r.metadata.get("w43_private_prompt_sha256") == identity["prompt_sha256"]
+                and r.metadata.get("w43_private_model_selection_sha256") == identity["model_selection_sha256"]
+                and (not getattr(r, "model", None) or r.model == runtime.model_id)
+                and (runtime.backend not in {"openrouter", "openai"}
+                     or not getattr(r, "model_provider", None)
+                     or r.model_provider == ("OpenRouter" if runtime.backend == "openrouter" else "OpenAI"))
             ]
         except Exception:
             verified = []
@@ -128,9 +150,12 @@ class NativePrivateRequestLedger:
             if state is None:
                 stamp = int(time.time() * 1000)
                 db.execute(
-                    "INSERT INTO w43_private_request_fence VALUES (?,?,?,?,?,?)",
+                    "INSERT INTO w43_private_request_fence "
+                    "(fingerprint,prompt_sha256,model_selection_sha256,run_id,state,created_at_ms,updated_at_ms) "
+                    "VALUES (?,?,?,?,?,?,?)",
                     (identity["fingerprint"], identity["prompt_sha256"],
-                     identity["run_id"], "IN_PROGRESS", stamp, stamp),
+                     identity["model_selection_sha256"], identity["run_id"],
+                     "IN_PROGRESS", stamp, stamp),
                 )
                 state = "CLAIMED"
         self._port._recheck(context, "PRIVATE_TURN", principal)
