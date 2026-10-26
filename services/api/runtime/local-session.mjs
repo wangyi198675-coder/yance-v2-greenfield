@@ -104,6 +104,16 @@ export function createLocalSessionAuthority({approvePairing=null,
     kind:'NATIVE_FIRST_PARTY',nativeHostBinding});
   return Object.freeze({cookie:cookieFor(id,nativeTtlMs),expiresAt,csrf});
  };
+ // Single-user local Web PRIVATE-only session. Not provider/Windows authority.
+ // Server calls this only in an explicitly enabled development Web process.
+ const issueWebPrivate=()=>{
+  expire();
+  const id=randomBytes(32).toString('hex');
+  const csrf=randomBytes(32).toString('hex');
+  const expiresAt=now()+nativeTtlMs;
+  sessions.set(digest(id),{csrf,expiresAt,rev:revision,kind:'WEB_LOCAL_PRIVATE'});
+  return {id,csrf,expiresAt,ttlMs:nativeTtlMs};
+ };
  const revokeNativeHost=(nativeHostBinding)=>{
   if(typeof nativeHostBinding!=='string')return 0;
   let removed=0;
@@ -120,11 +130,11 @@ export function createLocalSessionAuthority({approvePairing=null,
  };
  const revokeAll=()=>{sessions.clear();revision++};
  return Object.freeze({sessionFor,redeem,beginTrustedFirstParty,
-  issueNativeWebView,revokeNativeHost,revoke,revokeAll,ttlMs,
+  issueNativeWebView,issueWebPrivate,revokeNativeHost,revoke,revokeAll,ttlMs,
   get issuerAvailable(){return approvePairing!==null},
   get nativeLaunchAvailable(){return approveNativeLaunch!==null}});
 }
-export function createLocalSessionHttpApi({authority,webOrigin}){
+export function createLocalSessionHttpApi({authority,webOrigin,enableWebPrivate=false}){
  if(!authority||typeof authority.sessionFor!=='function')throw Error('SESSION_AUTHORITY_REQUIRED');
  return async function handle(req,res,url){
   const path=url.pathname;
@@ -138,6 +148,31 @@ export function createLocalSessionHttpApi({authority,webOrigin}){
      requiresTerminalPair:false,canConfigureModels:true,
      reason:authority.nativeLaunchAvailable?'LOCAL_APP_SESSION_NOT_STARTED':
        'LOCAL_APP_NATIVE_SESSION_NOT_CONNECTED'});
+   return true;
+  }
+  if(path==='/api/v2/local-session/web-private-start'&&req.method==='POST'){
+   // Same-origin ONLY; no arbitrary website, iframe, terminal pairing or
+   // social provider trust. Explicitly enabled only for local Web staging.
+   if(!enableWebPrivate||req.headers.origin!==webOrigin||
+      req.headers['sec-fetch-site']!=='same-origin'){
+    reject(res,403,'WEB_PRIVATE_LOCAL_ORIGIN_REQUIRED');return true;
+   }
+   let payload;
+   try{payload=await readJson(req)}catch(e){reject(res,e.status||422,e.message);return true}
+   if(Object.keys(payload).length!==0){
+    reject(res,422,'WEB_PRIVATE_BODY_MUST_BE_EMPTY');return true;
+   }
+   const existing=authority.sessionFor(req);
+   if(existing&&existing.record.kind!=='WEB_LOCAL_PRIVATE'){
+    reject(res,403,'WEB_PRIVATE_CANNOT_UPGRADE_SESSION');return true;
+   }
+   const newSession=existing?{id:existing.id,csrf:existing.record.csrf,
+     expiresAt:existing.record.expiresAt,ttlMs:Math.max(1,existing.record.expiresAt-Date.now())}:
+     authority.issueWebPrivate();
+   json(res,200,{ok:true,paired:true,sessionKind:'WEB_LOCAL_PRIVATE',
+      expiresAt:newSession.expiresAt,csrfToken:newSession.csrf,
+      canSend:false,providerAuthorized:false},
+      {'set-cookie':cookieFor(newSession.id,newSession.ttlMs)});
    return true;
   }
   if(path==='/api/v2/local-session/first-party'&&req.method==='POST'){

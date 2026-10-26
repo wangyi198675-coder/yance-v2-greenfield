@@ -30,6 +30,7 @@ const noSecrets=obj=>{
 };
 export const PRIVATE_ROUTES=Object.freeze({
  session:'/api/v2/local-session/status',
+ webPrivateStart:'/api/v2/local-session/web-private-start',
  catalog:'/api/v2/private-brain/model-catalog',
  config:'/api/v2/private-brain/model-config',
  selection:'/api/v2/private-brain/model-selection',

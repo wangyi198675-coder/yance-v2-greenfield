@@ -36,7 +36,7 @@ export function createNativeOwnerReadHttp({
   if(url.pathname!=='/api/v2/contacts')return false;
   if(req.method!=='GET'){deny(res,405,'METHOD_NOT_ALLOWED');return true}
   const s=sessionAuthority.sessionFor(req);
-  if(!s){deny(res,401,'TRUSTED_LOCAL_SESSION_REQUIRED');return true}
+  if(!s||s.record.kind!=='NATIVE_FIRST_PARTY'){deny(res,401,'TRUSTED_LOCAL_SESSION_REQUIRED');return true}
   if(req.headers.origin&&req.headers.origin!==webOrigin){
    deny(res,403,'ORIGIN_NOT_ALLOWED');return true;
   }

@@ -100,6 +100,15 @@ export function createPrivateModelHttp({
    return true;
   }
   if(!session){deny(res,401,'LOCAL_SESSION_REQUIRED');return true}
+  if(session.record.kind==='WEB_LOCAL_PRIVATE'){
+   // This Web-only PRIVATE session has no model selected, no Key, and no
+   // charge approval. Source of truth is the server's real empty state.
+   if(isSelect){deny(res,403,'MODEL_SELECTION_REQUIRES_USER_CONFIG');return true}
+   write(res,200,{ok:true,authoritative:true,models:[],
+      selectedProvider:'',selectedModelId:'',secureCredentialStorage:false,
+      credentialsExposed:false,canSend:false,providerAuthorized:false});
+   return true;
+  }
   if(req.headers.origin&&req.headers.origin!==webOrigin){
    deny(res,403,'MODEL_ORIGIN_NOT_ALLOWED');return true;
   }
