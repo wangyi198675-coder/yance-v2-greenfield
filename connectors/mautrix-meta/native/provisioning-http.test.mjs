@@ -27,6 +27,9 @@ test('user-click route is an actual upstream-manager deep link, not external doc
   await withServer(async()=>{
     const r=await fetch(BASE+'/connect');
     assert.equal(r.status,200);
+    // Local browser form POST must carry same-origin Origin. A global
+    // no-referrer policy was making Chromium/Opera send Origin:null.
+    assert.equal(r.headers.get('referrer-policy'),'same-origin');
     const html=await r.text();
     assert.match(html,/href="mautrix-manager:\/\/open\/"/);
     assert.match(html,/127\.0\.0\.1:29319/);
@@ -152,6 +155,9 @@ test('refuse cross-origin, missing user ticket, GET and untrusted launch request
       method:'POST',headers:{Origin:origin,'Content-Type':'application/x-www-form-urlencoded',...extra},
       body});
     let r=await post('https://evil.example','ticket='+token);
+    assert.equal(r.status,403);
+    // Never solve the Opera regression by simply permitting null Origin.
+    r=await post('null','ticket='+token,{'Sec-Fetch-Site':'same-origin'});
     assert.equal(r.status,403);
     r=await post('http://127.0.0.1:'+PORT,'ticket='+token,
       {'Sec-Fetch-Site':'cross-site'});

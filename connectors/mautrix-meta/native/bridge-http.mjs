@@ -27,6 +27,10 @@ function send(res,code,obj){
 }
 function sendAuthPage(res,ticket){
   res.writeHead(200,{...jsonHeaders,'content-type':'text/html; charset=utf-8',
+    // Native same-origin POST needs a verifiable Origin on Chromium/Opera.
+    // "no-referrer" causes a null Origin on privacy-preserving browsers;
+    // same-origin still prevents referrer disclosure to external websites.
+    'referrer-policy':'same-origin',
     'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'"});
   res.end(AUTH_ENTRY_HTML.replace('__W26_LAUNCH_TICKET__',ticket));
 }
