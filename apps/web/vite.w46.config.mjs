@@ -20,7 +20,12 @@ function replaceOnlyOriginalComposer(){
    // The original offline demo blocks all network by design. Allow ONLY same-origin
    // synthetic W24/W45 test routes via Vite's explicit loopback proxy.
    if(!html.includes("connect-src 'none'"))throw Error('B_C_CSP_BASE_CHANGED');
-   return html.replace("connect-src 'none'","connect-src 'self'");
+   // Only an explicit W54 reviewed Tauri bundling operation enables the
+   // official local Tauri IPC transport. Never grant arbitrary localhost,
+   // external APIs, origin-based Actor authority, or native model privileges.
+   const installedTauriBundle=process.env.W46_OFFICIAL_TAURI_BUNDLE==='1';
+   return html.replace("connect-src 'none'",
+     installedTauriBundle?"connect-src 'self' ipc: http://ipc.localhost":"connect-src 'self'");
  },transform(code,id){
    if(!id.replaceAll('\\','/').endsWith('/design/nonproduction/approved-clickable-abc-bc/src/App.vue'))return;
    const intro='<script setup lang="ts">';
