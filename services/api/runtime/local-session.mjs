@@ -4,6 +4,7 @@
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
 
 const COOKIE='yance_local_session';
+const WEB_COOKIE='yance_web_private_session';
 const TTL_MS=5*60*1000;
 const MAX_REQUEST_BYTES=2048;
 const digest=s=>createHash('sha256').update(s).digest('hex');
@@ -13,14 +14,14 @@ const json=(res,status,value,headers={})=>{
  res.end(JSON.stringify(value));
 };
 const reject=(res,status,error)=>json(res,status,{ok:false,error,canSend:false});
-const cookieFor=(id,ttlMs)=>COOKIE+'='+id+'; HttpOnly; SameSite=Strict; Path=/; Max-Age='+Math.ceil(ttlMs/1000);
-const eraseCookie=()=>COOKIE+'=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0';
-const cookieId=req=>{
+const cookieFor=(id,ttlMs,name=COOKIE)=>name+'='+id+'; HttpOnly; SameSite=Strict; Path=/; Max-Age='+Math.ceil(ttlMs/1000);
+const eraseCookie=(name=COOKIE)=>name+'=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0';
+const cookieId=(req,name=COOKIE)=>{
  const hdr=req.headers.cookie;
  if(typeof hdr!=='string'||hdr.length>4096)return null;
- const found=hdr.split(';').map(x=>x.trim()).filter(x=>x.startsWith(COOKIE+'='));
+ const found=hdr.split(';').map(x=>x.trim()).filter(x=>x.startsWith(name+'='));
  if(found.length!==1)return null;
- const id=found[0].slice(COOKIE.length+1);
+ const id=found[0].slice(name.length+1);
  return /^[a-f0-9]{64}$/.test(id)?id:null;
 };
 const headerValue=(req,name)=>typeof req.headers[name]==='string'?req.headers[name]:null;
@@ -54,10 +55,17 @@ export function createLocalSessionAuthority({approvePairing=null,
  };
  const sessionFor=req=>{
   expire();
-  const id=cookieId(req);
-  if(!id)return null;
-  const record=sessions.get(digest(id));
-  return record&&record.rev===revision?{id,record}:null;
+  // Browser QA and native apps share hostname 127.0.0.1 but have different
+  // ports: keep their cookies separate so QA never overwrites native access.
+  for(const name of [COOKIE,WEB_COOKIE]){
+   const id=cookieId(req,name);
+   if(!id)continue;
+   const record=sessions.get(digest(id));
+   if(record&&record.rev===revision&&
+      (record.kind==='WEB_LOCAL_PRIVATE')===(name===WEB_COOKIE))
+    return {id,record};
+  }
+  return null;
  };
  const redeem=async code=>{
   if(approvePairing===null)return {error:'TRUSTED_NATIVE_PAIRING_NOT_AVAILABLE',status:503};
@@ -104,6 +112,16 @@ export function createLocalSessionAuthority({approvePairing=null,
     kind:'NATIVE_FIRST_PARTY',nativeHostBinding});
   return Object.freeze({cookie:cookieFor(id,nativeTtlMs),expiresAt,csrf});
  };
+ // Single-user local Web PRIVATE-only session. Not provider/Windows authority.
+ // Server calls this only in an explicitly enabled development Web process.
+ const issueWebPrivate=()=>{
+  expire();
+  const id=randomBytes(32).toString('hex');
+  const csrf=randomBytes(32).toString('hex');
+  const expiresAt=now()+nativeTtlMs;
+  sessions.set(digest(id),{csrf,expiresAt,rev:revision,kind:'WEB_LOCAL_PRIVATE'});
+  return {id,csrf,expiresAt,ttlMs:nativeTtlMs};
+ };
  const revokeNativeHost=(nativeHostBinding)=>{
   if(typeof nativeHostBinding!=='string')return 0;
   let removed=0;
@@ -120,11 +138,11 @@ export function createLocalSessionAuthority({approvePairing=null,
  };
  const revokeAll=()=>{sessions.clear();revision++};
  return Object.freeze({sessionFor,redeem,beginTrustedFirstParty,
-  issueNativeWebView,revokeNativeHost,revoke,revokeAll,ttlMs,
+  issueNativeWebView,issueWebPrivate,revokeNativeHost,revoke,revokeAll,ttlMs,
   get issuerAvailable(){return approvePairing!==null},
   get nativeLaunchAvailable(){return approveNativeLaunch!==null}});
 }
-export function createLocalSessionHttpApi({authority,webOrigin}){
+export function createLocalSessionHttpApi({authority,webOrigin,enableWebPrivate=false}){
  if(!authority||typeof authority.sessionFor!=='function')throw Error('SESSION_AUTHORITY_REQUIRED');
  return async function handle(req,res,url){
   const path=url.pathname;
@@ -138,6 +156,31 @@ export function createLocalSessionHttpApi({authority,webOrigin}){
      requiresTerminalPair:false,canConfigureModels:true,
      reason:authority.nativeLaunchAvailable?'LOCAL_APP_SESSION_NOT_STARTED':
        'LOCAL_APP_NATIVE_SESSION_NOT_CONNECTED'});
+   return true;
+  }
+  if(path==='/api/v2/local-session/web-private-start'&&req.method==='POST'){
+   // Same-origin ONLY; no arbitrary website, iframe, terminal pairing or
+   // social provider trust. Explicitly enabled only for local Web staging.
+   if(!enableWebPrivate||req.headers.origin!==webOrigin||
+      req.headers['sec-fetch-site']!=='same-origin'){
+    reject(res,403,'WEB_PRIVATE_LOCAL_ORIGIN_REQUIRED');return true;
+   }
+   let payload;
+   try{payload=await readJson(req)}catch(e){reject(res,e.status||422,e.message);return true}
+   if(Object.keys(payload).length!==0){
+    reject(res,422,'WEB_PRIVATE_BODY_MUST_BE_EMPTY');return true;
+   }
+   const existing=authority.sessionFor(req);
+   if(existing&&existing.record.kind!=='WEB_LOCAL_PRIVATE'){
+    reject(res,403,'WEB_PRIVATE_CANNOT_UPGRADE_SESSION');return true;
+   }
+   const newSession=existing?{id:existing.id,csrf:existing.record.csrf,
+     expiresAt:existing.record.expiresAt,ttlMs:Math.max(1,existing.record.expiresAt-Date.now())}:
+     authority.issueWebPrivate();
+   json(res,200,{ok:true,paired:true,sessionKind:'WEB_LOCAL_PRIVATE',
+      expiresAt:newSession.expiresAt,csrfToken:newSession.csrf,
+      canSend:false,providerAuthorized:false},
+      {'set-cookie':cookieFor(newSession.id,newSession.ttlMs,WEB_COOKIE)});
    return true;
   }
   if(path==='/api/v2/local-session/first-party'&&req.method==='POST'){
@@ -185,7 +228,7 @@ export function createLocalSessionHttpApi({authority,webOrigin}){
    try{payload=await readJson(req)}catch(e){reject(res,e.status||422,e.message);return true}
    if(Object.keys(payload).length!==0){reject(res,422,'LOGOUT_BODY_MUST_BE_EMPTY');return true}
    authority.revoke(req);
-   json(res,200,{ok:true,paired:false,canSend:false},{'set-cookie':eraseCookie()});
+   json(res,200,{ok:true,paired:false,canSend:false},{'set-cookie':eraseCookie(session.record.kind==='WEB_LOCAL_PRIVATE'?WEB_COOKIE:COOKIE)});
    return true;
   }
   reject(res,405,'LOCAL_SESSION_METHOD_NOT_ALLOWED');

@@ -47,7 +47,7 @@ onMounted(refresh);
  <section class="cloud-key-panel" data-test="cloud-key-native" aria-label="本机云端 AI Key 设置">
   <strong>云端 AI 密钥</strong>
   <p>在自己的电脑保存 OpenRouter 或 OpenAI API Key，无需配对码，也不要求安装本地模型。</p>
-  <p v-if="!native" role="status">当前不是言策安装版。请在桌面应用中配置；网页不会接收密钥。</p>
+  <p v-if="!native" role="status" data-test="cloud-web-provider-pending">网页版云端密钥暂未接通，当前不会接收或保存 API Key。正在复用现有本机 WinCred；无需安装新程序才能继续使用本地 Qwen3。</p>
   <template v-else>
    <label>来源
     <select v-model="provider" data-test="cloud-provider" :disabled="busy" @change="refresh">

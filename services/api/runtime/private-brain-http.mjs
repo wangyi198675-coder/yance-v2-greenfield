@@ -26,7 +26,12 @@ const csrf=(req,s)=>{
 };
 const opaque=s=>typeof s==='string'&&s.length>=8&&s.length<=256&&
  /^[\x21-\x7e]+$/.test(s)&&!/[\\\/|?&#:"<>]/.test(s);
-const principalValid=p=>p&&p.source==='W54_NATIVE_CURRENT_USER'&&p.verified===true&&
+const principalValid=p=>p&&
+ (p.source==='W54_NATIVE_CURRENT_USER'||
+  (p.source==='WEB_LOCAL_PRIVATE'&&p.webPrivateOnly===true&&
+   ['unconfigured','llamacpp'].includes(p.modelBackend)&&p.extraChargeApproved===false&&
+   (p.modelBackend==='unconfigured'||(p.modelId==='qwen3:8b'&&p.modelUserSelected===true))))&&
+ p.verified===true&&
  opaque(p.principalRef)&&opaque(p.installationRef)&&
  typeof p.appLocalDataRoot==='string'&&/^[a-zA-Z]:\\/.test(p.appLocalDataRoot)&&
  p.appLocalDataRoot.length<1024&&!p.appLocalDataRoot.includes('..')&&

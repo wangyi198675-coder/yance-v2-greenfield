@@ -1,6 +1,10 @@
 // W47 native V2 local read-only API. Endpoint selected per instance at startup.
 // Host/Origin protect the browsing surface; they never authenticate a person or provider.
 import {createServer} from 'node:http';
+import {homedir} from 'node:os';
+import {join} from 'node:path';
+import {mkdirSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
@@ -9,6 +13,7 @@ import {createPrivateBrainHttp} from './private-brain-http.mjs';
 import {createW43PythonPrivatePort} from './private-python-port.mjs';
 import {createW43NativeLedgerAdapter} from './private-native-ledger-port.mjs';
 import {readW54LocalBoot,createNativeStartupSession} from './native-private-startup.mjs';
+import {createWebPrivateLocalQwen} from './web-private-local-qwen.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
@@ -38,22 +43,48 @@ const localSessionAuthority=createLocalSessionAuthority({ttlMs:customTtl?Number(
 // child stdin. No HTTP request, localhost Origin or frontend-supplied profile
 // supplies these private current-user fields or receives the HttpOnly cookie.
 const nativeBoot=readW54LocalBoot();
+const webPrivateMode=process.env.YANCE_W47_WEB_PRIVATE_SINGLE_USER==='1';
+if(webPrivateMode&&(config.mode!=='development'||nativeBoot||
+   !/^http:\/\/127\.0\.0\.1:[0-9]{4,5}$/.test(webOrigin)))
+ throw Error('W47_WEB_PRIVATE_QA_LOOPBACK_DEVELOPMENT_ONLY');
+// Existing process-only local profile, not an HTTP/browser-owned Principal.
+const webPrivateRoot=webPrivateMode?join(process.env.LOCALAPPDATA||homedir(),
+ 'YanceV2','WebPrivate'):null;
+if(webPrivateRoot)mkdirSync(webPrivateRoot,{recursive:true,mode:0o700});
+const localId=x=>createHash('sha256').update(x).digest('hex').slice(0,32);
+const existingLocalQwenKey=process.env.YANCE_W47_W43_LOCAL_KEY_FILE;
+const webPrivateQwen=webPrivateRoot&&existingLocalQwenKey?
+ createWebPrivateLocalQwen({appLocalDataRoot:webPrivateRoot,
+   localKeyFile:existingLocalQwenKey}):null;
+const webPrivatePrincipal=webPrivateRoot?Object.freeze({
+ source:'WEB_LOCAL_PRIVATE',webPrivateOnly:true,verified:true,
+ principalRef:'web_private_'+localId(webPrivateRoot),
+ installationRef:'web_install_'+localId(webPrivateRoot+'|YanceV2'),
+ appLocalDataRoot:webPrivateRoot,modelBackend:'unconfigured',
+ modelId:'',modelSelectionEpoch:0,modelUserSelected:false,
+ extraChargeApproved:false,protectedCredentialAttested:false}):null;
 const nativeSession=createNativeStartupSession({authority:localSessionAuthority,boot:nativeBoot});
 const resolveNativePrincipal=nativeBoot?async({session})=>{
  if(session?.record?.kind!=='NATIVE_FIRST_PARTY'||
     session.record.nativeHostBinding!==nativeSession.binding)
   throw {httpStatus:401,code:'LOCAL_SESSION_REVOKED'};
  return nativeBoot;
+}:webPrivatePrincipal?async({session})=>{
+ if(session?.record?.kind!=='WEB_LOCAL_PRIVATE')
+   throw {httpStatus:401,code:'WEB_PRIVATE_SESSION_REQUIRED'};
+ return {...webPrivatePrincipal,
+   ...(webPrivateQwen?webPrivateQwen.principalModel():{})};
 }:null;
 const w43Python=process.env.YANCE_W47_W43_PYTHON_EXECUTABLE;
 const w43Root=process.env.YANCE_W47_W43_MODULE_ROOT;
-if((w43Python||w43Root)&&!nativeBoot)
+if((w43Python||w43Root)&&!nativeBoot&&!webPrivatePrincipal)
  throw Error('W43_RUNTIME_REQUIRES_INSTALLED_W54_HOST');
 // Original W43 Agno SqliteDb/Run and durable request ledger remain the SINGLE
 // authority; no additional Node memory or shadow history store is created.
-const w43Port=nativeBoot&&w43Python&&w43Root?
+const w43Port=(nativeBoot||webPrivatePrincipal)&&w43Python&&w43Root?
  createW43PythonPrivatePort({pythonExecutable:w43Python,w43ModuleRoot:w43Root,
-  protectedKeyFile:nativeBoot.modelBackend==='llamacpp'?
+  protectedKeyFile:webPrivateQwen?existingLocalQwenKey:
+   nativeBoot?.modelBackend==='llamacpp'?
    process.env.YANCE_W47_W43_LOCAL_KEY_FILE:undefined}):null;
 const requestLedger=w43Port?createW43NativeLedgerAdapter(w43Port):null;
 if(operatorMode==='console'){
@@ -63,11 +94,12 @@ if(operatorMode==='console'){
 // The native-first-party callback is intentionally absent until W54 verifies
 // the actual packaged host/app-instance over an authenticated private channel.
 // /local-session/first-party returns 503 rather than auto-approving localhost.
-const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthority,webOrigin});
+const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthority,webOrigin,enableWebPrivate:webPrivateMode});
 // W55 production credential vault is SEALED and original W43 is local-only.
 // Never instantiate test-only model/credential adapters in this real server.
 const privateModelHttp=createPrivateModelHttp({
- sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal
+ sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,
+ localWebModelPort:webPrivateQwen
 });
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.

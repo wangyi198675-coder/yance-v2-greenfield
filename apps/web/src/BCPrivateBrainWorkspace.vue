@@ -42,7 +42,17 @@ async function refresh(){
  clearSession();messages.value=[];publicProviders.value=[]; // never preserve unverified history across account changes
  try{
   publicProviders.value=publicModelCatalog(await api(PRIVATE_ROUTES.catalog)); // actual W47 public metadata, not readiness
-  const s=authStatus(await api(PRIVATE_ROUTES.session));
+  let s=authStatus(await api(PRIVATE_ROUTES.session));
+  if(!s.authorized&&typeof window!=='undefined'&&window.location.hostname==='127.0.0.1'){
+   // No pairing. Only the actual local single-user Web server may issue
+   // this PRIVATE-only session; its endpoint is absent in normal release.
+   try{
+    await api(PRIVATE_ROUTES.webPrivateStart,{
+      method:'POST',headers:{'content-type':'application/json'},body:'{}'
+    });
+    s=authStatus(await api(PRIVATE_ROUTES.session));
+   }catch{}
+  }
   if(!safeCurrent(id))return;
   if(!s.authorized){
    // Ordinary PRIVATE use never asks the person for a terminal pair code.
@@ -55,9 +65,14 @@ async function refresh(){
   catch(e){if(safeCurrent(id)){loadState.value='models-unavailable';notice.value=reason(e)};return}
   if(!safeCurrent(id))return;
   catalog.value=models;chosen.value=models.configured?
-   models.selectedProvider+'|'+models.selectedModelId:'';
-  if(!models.configured){loadState.value='no-model';setupOpen.value=true;return}
+   models.selectedProvider+'|'+models.selectedModelId:
+   (models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.provider+
+    '|'+models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.modelId
+    ||'');
+  // Existing Agno History must load with NO model configured.
   await loadHistory(id);
+  if(!safeCurrent(id))return;
+  if(!models.configured){loadState.value='no-model';setupOpen.value=true;return}
  }catch(e){if(safeCurrent(id)){
    loadState.value='service-unavailable';setupOpen.value=true;notice.value=reason(e)
   }}
