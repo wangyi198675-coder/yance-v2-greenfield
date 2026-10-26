@@ -1,8 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod native_profile;
 mod session;
 mod user_dirs;
 mod windows_principal;
 
+use native_profile::NativeProfileAuthority;
 use session::{PublicSessionStatus, SessionAuthority};
 use std::time::Duration;
 use tauri::Manager;
@@ -15,8 +17,11 @@ fn session_status(state: tauri::State<'_, SessionAuthority>) -> PublicSessionSta
 }
 
 #[tauri::command]
-fn logout_session(state: tauri::State<'_, SessionAuthority>) -> Result<(), String> {
-    state.revoke().map(|_| ()).map_err(|e| e.to_owned())
+fn logout_session(
+    state: tauri::State<'_, SessionAuthority>,
+    native: tauri::State<'_, NativeProfileAuthority>,
+) -> Result<(), String> {
+    native.revoke(&state).map_err(|e| e.to_owned())
 }
 
 fn main() {
@@ -31,6 +36,11 @@ fn main() {
             let user_dirs =
                 UserDirectories::resolve(app.path()).map_err(|e| std::io::Error::other(e))?;
             user_dirs.initialize().map_err(std::io::Error::other)?;
+            // Stable current-user/installation owner is native-only.
+            // This object is never a Tauri command result or W47 HTTP header.
+            let native = NativeProfileAuthority::from_tauri(&user_dirs, &app.config().identifier)
+                .map_err(std::io::Error::other)?;
+            app.manage(native);
             app.manage(user_dirs);
             Ok(())
         })
@@ -39,7 +49,9 @@ fn main() {
         .expect("construct minimal local Tauri host");
     app.run(|app_handle, event| {
         if let tauri::RunEvent::Exit = event {
-            let _ = app_handle.state::<SessionAuthority>().revoke();
+            let _ = app_handle
+                .state::<NativeProfileAuthority>()
+                .revoke(&app_handle.state::<SessionAuthority>());
         }
     });
 }
