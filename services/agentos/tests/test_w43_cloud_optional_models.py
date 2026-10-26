@@ -209,12 +209,95 @@ def test_cloud_without_original_local_model_and_without_cloud_setup_reports_requ
         model_backend="unconfigured",
     )
     port=W43NativePrivateBrainPort(resolve_current=lambda _,op:claim)
+    # No model installed/configured must not block the user's own history.
+    assert port.history(object(),thread_id="personal")["status"]=="HISTORY_NOT_FOUND"
     with pytest.raises(W47PrivateAccessError, match="MODEL_SETUP_REQUIRED"):
-        port.history(object(),thread_id="personal")
+        port.turn(object(),thread_id="personal",text="fixture private question",
+                  request_id="fixture-request-00001")
     selected=replace(claim,model_backend="openrouter",model_id="openai/gpt-4o-mini",
                      model_user_selected=True,extra_charge_approved=True,
                      protected_credential_attested=True,cloud_key_file=tmp_path/"not-present",
                      model_selection_epoch=1)
     port=W43NativePrivateBrainPort(resolve_current=lambda _,op:selected)
+    # Revoking the model Key does not revoke authenticated native history.
+    assert port.history(object(),thread_id="personal")["messages"]==[]
     with pytest.raises(W47PrivateAccessError, match="CLOUD"):
-        port.history(object(),thread_id="personal")
+        port.turn(object(),thread_id="personal",text="fixture private question",
+                  request_id="fixture-request-00002")
+
+
+def test_native_ephemeral_wincred_callback_openrouter_without_key_file(tmp_path, monkeypatch):
+    """W55 native-process callback supplies fictional Key bytes; no API calls."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    secret=["fixture-ephemeral-wincred-key-NOT-REAL-123456"]
+    seen=[]
+    def native_resolver():
+        seen.append("native_call")
+        return secret[0]
+    from yance_agentos import NativeAgnoRuntime
+    rt=NativeAgnoRuntime(
+        tmp_path/"original-agno-chat.sqlite",backend="openrouter",
+        model_id="openai/gpt-4o-mini",purpose="QUALITY_EVAL",
+        cloud_secret_resolver=native_resolver,
+        user_selected=True,extra_charge_approved=True,
+        protected_credential_attested=True,
+    )
+    assert rt.provider=="OPENROUTER_USER_API"
+    assert rt._selected_model_ready()
+    assert len(seen)>=2
+    secret[0]="fixture-rotated-invalid-next-key-12345678"
+    assert not rt._selected_model_ready()
+    # Rotation never authorizes the previous selected SDK client to spend.
+    secret[0]=""
+    assert not rt._selected_model_ready()
+    del secret[0]
+    assert not rt._selected_model_ready()
+
+
+def test_native_ephemeral_wincred_callback_denials_no_plaintext_on_errors(tmp_path):
+    """No global/env key fallback, no raw Key in public model receipt."""
+    from yance_agentos import NativeAgnoRuntime,LocalOnlyError
+    key="fixture-secret-should-never-be-in-error-123456"
+    for backend in ("openrouter","openai"):
+        with pytest.raises(LocalOnlyError) as exc:
+            NativeAgnoRuntime(
+                tmp_path/"no-model.sqlite",backend=backend,
+                model_id="openai/gpt-4o-mini" if backend=="openrouter" else "gpt-4o-mini",
+                purpose="QUALITY_EVAL",cloud_secret_resolver=lambda: key,
+                user_selected=True,extra_charge_approved=False,
+                protected_credential_attested=True)
+        assert key not in str(exc.value)
+    with pytest.raises(LocalOnlyError,match="CLOUD_CREDENTIAL_SOURCE_AMBIGUOUS"):
+        NativeAgnoRuntime(tmp_path/"fail.sqlite",backend="openrouter",
+                           model_id="openai/gpt-4o-mini",purpose="QUALITY_EVAL",
+                           cloud_key_file=cred(tmp_path),
+                           cloud_secret_resolver=lambda:key,
+                           user_selected=True,extra_charge_approved=True,
+                           protected_credential_attested=True)
+
+
+def test_w47_original_port_can_select_cloud_from_native_callback_without_qwen(tmp_path):
+    from private_principal_port import W43NativePrivateBrainPort,W47VerifiedPrincipal
+    root=tmp_path/"current-local-user";root.mkdir()
+    secret=["fixture-native-protected-key-never-real-123456789"]
+    claim=W47VerifiedPrincipal(
+        principal_ref="fixture-local-user-00001",
+        installation_ref="fixture-install-00001",
+        session_ref="fixture-session-00001",
+        session_revision=1,revocation_generation=1,
+        expires_at_ms=9999999999999,app_local_data_root=root,
+        model_backend="openai",model_id="gpt-4o-mini",model_selection_epoch=1,
+        cloud_secret_resolver=lambda:secret[0],
+        model_user_selected=True,extra_charge_approved=True,
+        protected_credential_attested=True,
+    )
+    port=W43NativePrivateBrainPort(resolve_current=lambda *_:claim)
+    scope,model=port._runtime(claim)
+    assert model.backend=="openai"
+    assert model._selected_model_ready()
+    assert model.db_file.is_file() is False or model.db_file.parent.is_dir()
+    # Revoked Key never prevents history GET, but disallows future AI run.
+    secret[0]=""
+    assert not model._selected_model_ready()
+    assert port.history(object(),thread_id="personal")["messages"] == []
