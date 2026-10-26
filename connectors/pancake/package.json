@@ -1,12 +1,11 @@
 {
-  "name": "@yance-v2/pancake-synthetic-adapter",
+  "name": "@yance-v2/pancake-native-service-adapter",
+  "version": "0.2.0",
   "private": true,
-  "version": "0.1.0",
   "type": "module",
+  "engines": {"node": ">=24"},
   "scripts": {
-    "test": "node --test adapter.test.mjs"
-  },
-  "engines": {
-    "node": ">=20"
+    "test": "node --test adapter.test.mjs official-service.test.mjs",
+    "preflight": "node vendor-preflight.mjs"
   }
 }
