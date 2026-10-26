@@ -1,5 +1,7 @@
 # W55｜2026-10-26｜Actual Windows test & dependency review
 
+_Historical bfc4d43 baseline test ledger. For current results and the later W09-2 single-user architecture decision, consult SECURITY_DELTA_RESULTS_20261026.md and W47_W09_LOCAL_SINGLE_USER_SEAM.md._
+
 ## Build and execution
 - Device: DESKTOP-029FH47, Windows 11, rustc 1.99.1 (58cf8f9c3, 2026-10-13), cargo 1.99.1 (5f94df478, 2026-08-27).
 - Baseline: 88ded0166ebbaa7556e347d2522efa063c19cf40. Isolated worktree W55_CREDENTIAL_CUSTODY_20261026, branch owner/credential-custody/w55-draft-20261026. Exact new source HEAD recorded in separate W09 handoff after commit.
@@ -38,9 +40,9 @@ Only synthetic disposable test materials used. Each test creates a unique opaque
 1. W54's OS principal/IPC/sessionRevision and trusted native worker gate not integrated. There is deliberately **no production unseal method**. Same-Windows-SID untrusted process is not excluded by raw OS WinCred/DPAPI alone; future W54 must provide process-specific authenticated IPC and prevent arbitrary same-user clients.
 2. W24/W44 canonical full K, live bindingRevision/Consent/Grant/accountRevocationEpoch and mutation fence not wired. No real account/Peer or provider facts. Any real provider operation = DENIED/HOLD.
 3. W25 sole outbound ADMISSION/PRE_NETWORK and late ACK/UNKNOWN not integrated.
-4. Windows **second actual OS SID**, full machine reboot, simultaneous independent worker rotate/revoke CAS, file snapshots/backup restoration, app logout/OS lock, security scans and independent source review NOT TESTED. WinCred by itself has no compare-and-swap semantics. Current in-memory Mutex only serializes within one process; cannot claim cross-process atomic rotation/revoke. Any issued test lease is a memory snapshot, not instantly invalidatable after revoke; no native worker lease issuance is permitted in production.
+4. Windows **second actual OS SID**, full machine reboot, simultaneous independent worker rotate/revoke CAS, file snapshots/backup restoration, app logout/OS lock, security scans and independent source review NOT TESTED. WinCred by itself has no compare-and-swap semantics. At the initial bfc4d43 baseline, the in-memory Mutex only serialized within one process. The later W55 isolated security delta adds a same-session OS named-mutex for cooperating synthetic worker operations; see SECURITY_DELTA_RESULTS_20261026.md. It is not a durable W44 CAS or production credential authorization. Any issued test lease is a memory snapshot, not instantly invalidatable after revoke; no native worker lease issuance is permitted in production.
 5. No large Signal/TDLib protected session file or reviewed AEAD/AAD/NTFS ACL/atomic recovery implementation. Max 512-byte fake plaintext; under W55 scope this is deliberate rather than pretending large session custody completed.
-6. `rustfmt` and `clippy` missing. Formal maintainer/GitHub ACL, independent SEC/LEGAL/provider terms review and source-grade SBOM signoff pending.
+6. At the original bfc4d43 baseline, `rustfmt` and `clippy` were missing. These local toolchain components are now installed and current scoped code passes fmt and clippy -D warnings as recorded in SECURITY_DELTA_RESULTS_20261026.md. Formal maintainer/GitHub ACL, independent SEC/LEGAL/provider terms review and source-grade SBOM signoff pending.
 7. OS credential deletion is tested only for disposable fixture targets; secure erasure from Windows backups/forensic snapshots NOT PROVEN. W44 permanent durable revocation is required before real use.
 
 Final: **W55_WINDOWS_FAKE_WIN_CRED_DPAPI_TEST_PASS / W55_NATIVE_PRODUCTION_CREDENTIAL_AUTHORITY_HOLD / NO_PROVIDER / NO_SEND**.
