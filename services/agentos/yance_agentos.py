@@ -27,6 +27,7 @@ from agno.tools import tool
 from model_policy import classify_provider, v2_chatgpt_siwc_status
 from w43_capacity import one_slot
 from private_scope import is_native_private_scope
+from capability_catalog import describe_yance_capability
 
 CHANNELS = frozenset({"FB_PERSONAL", "FB_PAGE", "WHATSAPP_PERSONAL", "TELEGRAM_PERSONAL"})
 PROVIDER = "LLAMACPP_LOCAL_NO_PAID_API"  # legacy 1.5B HEALTHCHECK
@@ -275,31 +276,20 @@ class NativeAgnoRuntime:
                     "PRIVATE space is for owner-only conversations, not a contact reply.",
                     "Do not invent sources. State uncertainty plainly.",
                 ],
-                tools=[synthetic_source_lookup, review_synthetic_draft],
+                tools=[synthetic_source_lookup, review_synthetic_draft,
+                       describe_yance_capability],
                 add_history_to_context=True,
                 num_history_runs=4,
                 add_memories_to_context=True,
                 update_memory_on_run=False,
                 telemetry=False,
             ),
-            "CONTACT": Agent(
-                id="w43-contact-brain",
-                name="Synthetic Contact Brain",
-                model=self.model,
-                db=self.db,
-                instructions=[
-                    "Only synthetic test data. Do not send, schedule, spend or approve anything.",
-                    "Draft-only context. W45 determines actual 0-3 sourced reply candidates.",
-                    "Never fabricate a translation, identity verification, or provenance.",
-                ],
-                tools=[synthetic_source_lookup, review_synthetic_draft],
-                add_history_to_context=True,
-                num_history_runs=4,
-                add_memories_to_context=True,
-                update_memory_on_run=False,
-                telemetry=False,
-            ),
+
         }
+        # ONE official PRIVATE Agno Agent, also reused for synthetic CONTACT
+        # source drafting. Scope K/user/session remains different; W25 alone
+        # controls outbound, so CONTACT does NOT acquire PRIVATE privilege.
+        self.agents["CONTACT"] = self.agents["PRIVATE"]
         self.teams = {
             space: Team(
                 id=f"w43-{space.lower()}-synthetic-team",
@@ -315,7 +305,7 @@ class NativeAgnoRuntime:
         }
         self.agent_os = AgentOS(
             id="yance-w43-synthetic-local",
-            agents=list(self.agents.values()),
+            agents=[self.agents["PRIVATE"]],
             teams=list(self.teams.values()),
             db=self.db,
             tracing=True,
