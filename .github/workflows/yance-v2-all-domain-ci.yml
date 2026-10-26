@@ -83,6 +83,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Install locked Baileys native dependencies before executing real SDK tests
+        if: ${{ hashFiles('connectors/baileys/package-lock.json') != '' }}
+        run: npm ci --prefix connectors/baileys --ignore-scripts --no-audit --no-fund
       - name: Verify immutable real-sibling source checkout guard
         if: ${{ hashFiles('scripts/ci/native-sibling-refs.test.mjs') != '' }}
         run: node --test scripts/ci/native-sibling-refs.test.mjs
