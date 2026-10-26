@@ -16,10 +16,13 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='5ad548d2a7b2e202411cb1cfa7d13118556b34ad';
+ const expectedOwnerSha='f2c9d995499e9974f8771c2832094f8ed6a4a287';
  const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'d6c026552c50a83f3429ee501f523e781189c4d9',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'e279fe0c07fbf09f31783f7125b32169f7133017',
+  'apps/web/src/BCLocalSessionConnector.vue':'7f62421e0e3410f7e343820be2a17351c4b11139',
+  'apps/web/src/local-session-ui-contract.mjs':'07ce57478fd70bc41cc6c219811d24ac9fb8771e',
+  'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md':'de158fd6c5861a88a0ffe95e2a5899077624688c',
   'apps/web/src/BCBrandIcon.vue':'d99edca93a61f0464349cd515a6fee1a0580bb11',
   'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
   'apps/web/src/product-workspace-contract.mjs':'01c9be64e4d2e8fa0a5cf3f33c29c5cda3eb235b',
@@ -35,9 +38,15 @@ if(r4IsolatedPreview){
    existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&
    git('rev-parse','HEAD:'+path)===sha);
  if(signedSha!==expectedOwnerSha||dirtySource||!receiptTracked||!validSignedBlobs||
-    !ownerAck.includes('W46 → W09-2')||!ownerAck.includes('R4 Vue'))
+    !ownerAck.includes('W46 → W09-2')||!ownerAck.includes('R4 Vue')||
+    !readFileSync(join(w46Root,'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md'),'utf8').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS'))
    throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
 }
+// This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
+// Keep 47182 as the default for unchanged signed B_88DED, never accept remote host.
+const stageApiTarget=process.env.W09_STAGE_API_TARGET||'http://127.0.0.1:47182';
+if(!/^http:\/\/127\.0\.0\.1:(?:[1-9][0-9]{3,4})$/.test(stageApiTarget))
+  throw Error('W09_LOCAL_STAGE_API_TARGET_INVALID');
 function failUnless(code,text){if(!code.includes(text))throw Error('W47_BC_CONTRACT_DRIFT: '+text)}
 function gate(){
   return {name:'w47-runtime-truth-gate',enforce:'pre',
@@ -163,8 +172,9 @@ onMounted(async()=>{
 export default {
  ...owner,
  plugins:[...owner.plugins,gate()],
- server:{...owner.server,proxy:{'/api/v2':'http://127.0.0.1:47182'}},
+ server:{...owner.server,proxy:{'/api/v2':stageApiTarget}},
+
  preview:{...owner.preview,host:'127.0.0.1',port:r4IsolatedPreview?44747:4399,strictPort:true,
-  proxy:{'/api/v2':{target:'http://127.0.0.1:47182',changeOrigin:true},
-         '/w46-native-test':{target:'http://127.0.0.1:47182',changeOrigin:true}}}
+  proxy:{'/api/v2':{target:stageApiTarget,changeOrigin:true},
+         '/w46-native-test':{target:stageApiTarget,changeOrigin:true}}}
 };
