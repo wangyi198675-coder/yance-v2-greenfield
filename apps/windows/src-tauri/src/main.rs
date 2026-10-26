@@ -1,10 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod native_cloud_keys;
 mod native_launch;
 mod native_profile;
 mod session;
 mod user_dirs;
 mod windows_principal;
 
+use native_cloud_keys::{cloud_key_revoke, cloud_key_status, cloud_key_store};
 use native_launch::{HostedChild, NativeChildLaunch};
 use native_profile::NativeProfileAuthority;
 use session::{PublicSessionStatus, SessionAuthority};
@@ -13,6 +15,8 @@ use std::time::Duration;
 use tauri::{ipc::CapabilityBuilder, Manager, WebviewUrl, WebviewWindowBuilder};
 use user_dirs::UserDirectories;
 use windows_principal::current_windows_principal;
+use yance_w55_fake_credential_custody::cloud_keys::{NativeKeyCustody, NativeScope};
+use yance_w55_fake_credential_custody::VaultError;
 
 #[tauri::command]
 fn session_status(state: tauri::State<'_, SessionAuthority>) -> PublicSessionStatus {
@@ -37,7 +41,10 @@ fn logout_session(
 
 fn main() {
     let verified_os = current_windows_principal().ok();
-    let session = SessionAuthority::new(verified_os, Duration::from_secs(15 * 60))
+    // Ordinary personal use has no periodic pairing/login. The session is
+    // still bound to this native process/current Windows user and is revoked
+    // on explicit logout or exit, not by a 15-minute user-visible timer.
+    let session = SessionAuthority::new(verified_os, Duration::from_secs(365 * 24 * 60 * 60))
         .expect("Fail closed: native OS random source must be available");
     // Build-only B+C mode: serve packaged static assets through the official
     // Tauri localhost plugin. This repairs W46's existing LOOPBACK_ONLY guard
@@ -75,7 +82,10 @@ fn main() {
                         .remote(format!("http://127.0.0.1:{port}/*"))
                         .window("main")
                         .permission("allow-session-status")
-                        .permission("allow-logout-session"),
+                        .permission("allow-logout-session")
+                        .permission("allow-cloud-key-status")
+                        .permission("allow-cloud-key-store")
+                        .permission("allow-cloud-key-revoke"),
                 )?;
                 WebviewWindowBuilder::new(app, "main", WebviewUrl::External(address))
                     .title("言策 V2 | B+C 本机候选（未授权）")
@@ -101,12 +111,36 @@ fn main() {
                 .start_approved_installed_w47(&native, &app.state::<SessionAuthority>())
                 .map_err(std::io::Error::other)?;
             app.manage(Mutex::new(approved_child));
+            // W55 is activated only inside the original native W54 current-user
+            // application; never from a client-provided SID, HTTP header or token.
+            let proof = native
+                .verify_for_native_owner(&app.state::<SessionAuthority>())
+                .map_err(std::io::Error::other)?;
+            let (principal_ref, installation_ref, ..) = proof.native_contract_parts();
+            let scope = NativeScope::from_w54_native_only(installation_ref, principal_ref)
+                .map_err(|_| std::io::Error::other("W55_NATIVE_SCOPE_INVALID"))?;
             app.manage(native);
+            let owned_app = app.handle().clone();
+            let vault = NativeKeyCustody::from_native_host(scope, move || {
+                owned_app
+                    .state::<NativeProfileAuthority>()
+                    .verify_for_native_owner(&owned_app.state::<SessionAuthority>())
+                    .map(|_| ())
+                    .map_err(|_| VaultError::Denied)
+            })
+            .map_err(|_| std::io::Error::other("W55_NATIVE_USER_NOT_ACTIVE"))?;
+            app.manage(vault);
             app.manage(launch);
             app.manage(user_dirs);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![session_status, logout_session])
+        .invoke_handler(tauri::generate_handler![
+            session_status,
+            logout_session,
+            cloud_key_status,
+            cloud_key_store,
+            cloud_key_revoke
+        ])
         .build(tauri::generate_context!())
         .expect("construct minimal local Tauri host");
     app.run(|app_handle, event| {

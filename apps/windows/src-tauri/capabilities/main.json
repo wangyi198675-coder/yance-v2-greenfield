@@ -8,6 +8,9 @@
   "permissions": [
     "core:default",
     "allow-session-status",
-    "allow-logout-session"
+    "allow-logout-session",
+    "allow-cloud-key-status",
+    "allow-cloud-key-store",
+    "allow-cloud-key-revoke"
   ]
 }

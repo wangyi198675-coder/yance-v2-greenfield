@@ -1,6 +1,7 @@
 <script setup>
 import {ref,onMounted,onBeforeUnmount,computed} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
+import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
 import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModelSelection,
   verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody} from './private-brain-ui-contract.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
@@ -135,6 +136,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
    :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">{{catalog?.configured?'切换AI模型':'设置AI模型'}}</Button>
   <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings">
    <h3>选择 AI 模型</h3>
+   <BCNativeCloudKeySettings/>
    <p>可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。</p>
    <div v-for="provider in providers" :key="provider.id" class="bc-provider">
     <strong>{{provider.name}}</strong><small>{{provider.desc}}</small>

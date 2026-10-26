@@ -1,6 +1,6 @@
 //! W55 small OpenRouter/OpenAI API-key custody, current-Windows-user only.
-//! IMPORTANT: normal builds are SEALED until W54 native host and W47 native
-//! executor callback receive an independently signed, non-renderer integration.
+//! Ordinary constructor stays SEALED. Only native host may open for this
+//! Windows user, using original W54 session+installation liveness callback.
 //! All key-access tests operate only on disposable invented key strings.
 //! This module does NOT add a login service, browser API, model runner, or sender.
 use crate::{dpapi, hex_bytes, read_cred, wide, write_cred, VaultError, MAX_WIN_CRED_BLOB};
@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     fmt, ptr,
+    sync::Arc,
     sync::{Mutex, MutexGuard},
 };
 #[cfg(test)]
@@ -96,12 +97,13 @@ impl Drop for CloudEnvelope {
     }
 }
 
-/// A native callback gate is deliberately unconstructible to external crates.
-/// W54 must supply a jointly reviewed unforgeable native authority integration
-/// in an ORIGINAL OWNER-signed change before real API-key operations are callable.
+/// WinCred/DPAPI protected by current Windows user and original W54's
+/// process-owned live-install/session verifier. No HTTP key accessor exists.
 pub struct NativeKeyCustody {
-    #[cfg(test)]
     scope: Option<NativeScope>,
+    // A host callback is evaluated on every access, not a one-time login.
+    // W54 binds it to its existing current-user installation and live epoch.
+    native_check: Option<Arc<dyn Fn() -> Result<(), VaultError> + Send + Sync>>,
     lock: Mutex<()>,
     #[cfg(test)]
     synthetic_native_enabled: bool,
@@ -115,19 +117,37 @@ impl NativeKeyCustody {
     /// Ordinary executable MUST stay sealed, including inside same-SID processes.
     pub fn new() -> Self {
         Self {
-            #[cfg(test)]
             scope: None,
+            native_check: None,
             lock: Mutex::new(()),
             #[cfg(test)]
             synthetic_native_enabled: false,
         }
+    }
+    /// Activated inside the already-running W54 Tauri process, not by an HTTP
+    /// or JavaScript constructor. The verifier must re-read current OS user,
+    /// native session and W54 revocation generation on EVERY operation.
+    pub fn from_native_host(
+        scope: NativeScope,
+        verify_live_native_owner: impl Fn() -> Result<(), VaultError> + Send + Sync + 'static,
+    ) -> Result<Self, VaultError> {
+        verify_live_native_owner()?;
+        Ok(Self {
+            scope: Some(scope),
+            native_check: Some(Arc::new(verify_live_native_owner)),
+            lock: Mutex::new(()),
+            #[cfg(test)]
+            synthetic_native_enabled: false,
+        })
     }
     fn authorized(&self) -> Result<&NativeScope, VaultError> {
         #[cfg(test)]
         if self.synthetic_native_enabled {
             return self.scope.as_ref().ok_or(VaultError::Sealed);
         }
-        Err(VaultError::Sealed)
+        let check = self.native_check.as_ref().ok_or(VaultError::Sealed)?;
+        check()?;
+        self.scope.as_ref().ok_or(VaultError::Sealed)
     }
     fn target(&self, provider: CloudProvider) -> Result<String, VaultError> {
         let scope = self.authorized()?;
@@ -191,6 +211,8 @@ impl NativeKeyCustody {
         Ok((t, env))
     }
     fn save(&self, target: &str, env: &CloudEnvelope) -> Result<(), VaultError> {
+        // Recheck current W54 native revocation epoch before any OS write.
+        self.authorized()?;
         let serialized = Zeroizing::new(serde_json::to_vec(env).map_err(|_| VaultError::Corrupt)?);
         let ciphertext = Zeroizing::new(dpapi(true, &serialized, target.as_bytes())?);
         if ciphertext.len() > MAX_WIN_CRED_BLOB {
@@ -235,6 +257,28 @@ impl NativeKeyCustody {
         };
         self.save(&target, &record)?;
         Ok(1)
+    }
+    /// Explicit user reconfiguration after a previous revoked tombstone.
+    /// Never silently resurrect an old key: requires exact last revision.
+    pub fn re_enroll_revoked(
+        &self,
+        provider: CloudProvider,
+        expected: u64,
+        secret: &[u8],
+    ) -> Result<u64, VaultError> {
+        self.authorized()?;
+        Self::validate_key(provider, secret)?;
+        let _guard = self.lock_target(provider)?;
+        let (target, mut record) = self.load(provider)?;
+        if !record.revoked || record.revision != expected {
+            return Err(VaultError::Stale);
+        }
+        record.revision = record.revision.checked_add(1).ok_or(VaultError::Stale)?;
+        record.revoked = false;
+        record.secret_b64.zeroize();
+        record.secret_b64 = STANDARD.encode(secret);
+        self.save(&target, &record)?;
+        Ok(record.revision)
     }
     /// Revision CAS must fail if a second worker revoked or rotated first.
     pub fn rotate(
@@ -314,12 +358,16 @@ impl NativeKeyCustody {
                 .map_err(|_| VaultError::Corrupt)?,
         );
         Self::validate_key(provider, &decoded).map_err(|_| VaultError::Corrupt)?;
+        // Revocation can race WinCred decryption. Re-read native epoch just
+        // before releasing transient bytes to the original private executor.
+        self.authorized()?;
         op(&decoded)
     }
     #[cfg(test)]
     fn synthetic_native_test(scope: NativeScope) -> Self {
         Self {
             scope: Some(scope),
+            native_check: None,
             lock: Mutex::new(()),
             synthetic_native_enabled: true,
         }
