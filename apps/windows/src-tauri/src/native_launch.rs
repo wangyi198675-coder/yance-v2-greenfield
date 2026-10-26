@@ -331,4 +331,81 @@ mod tests {
         fs::remove_dir_all(pkg).unwrap();
         fs::remove_dir_all(state_root).unwrap();
     }
+
+    /// Actual original W47 server.mjs test (NOT copied fake ACK child).
+    /// W47's current real entrypoint has no native pipe reader, so W54 must
+    /// fail closed and kill it. Manually run with W54_QA_REAL_W47_RUNTIME_DIR.
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "requires explicit real W47 QA runtime path and no active deployment"]
+    fn real_w47_server_must_reject_until_native_receiver_is_wired() {
+        use crate::{
+            native_profile::NativeProfileAuthority, session::SessionAuthority,
+            user_dirs::UserDirectories, windows_principal::current_windows_principal,
+        };
+        let runtime_root = PathBuf::from(
+            std::env::var_os("W54_QA_REAL_W47_RUNTIME_DIR")
+                .expect("W54_QA_REAL_W47_RUNTIME_DIR must point to original W47 runtime"),
+        );
+        let server = runtime_root
+            .join("server.mjs")
+            .canonicalize()
+            .expect("actual W47 server.mjs must exist");
+        assert!(server.is_file());
+        let node = std::env::var_os("PATH")
+            .and_then(|v| {
+                std::env::split_paths(&v)
+                    .map(|p| p.join("node.exe"))
+                    .find(|p| p.is_file())
+            })
+            .expect("real Windows Node executable required");
+        let pkg = temp_root();
+        let bin = pkg.join("w47-runtime.exe");
+        fs::copy(&node, &bin).expect("test-only pinned Node executable");
+        let exact_node_sha = sha256_file(&bin).unwrap();
+        let t = temp_root();
+        let dirs = UserDirectories {
+            data: t.join("data"),
+            config: t.join("config"),
+            cache: t.join("cache"),
+        };
+        dirs.initialize().unwrap();
+        let session = SessionAuthority::new(
+            Some(current_windows_principal().unwrap()),
+            Duration::from_secs(30),
+        )
+        .unwrap();
+        let authority = NativeProfileAuthority::new(&dirs).unwrap();
+        let launcher = NativeChildLaunch::new(pkg.clone());
+        // Reserve and release a free loopback port. Race is fail-closed.
+        let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = probe.local_addr().unwrap().port();
+        drop(probe);
+        let url = format!("file:///{}", server.to_string_lossy().replace('\\', "/"));
+        let script=format!(
+            "process.env.YANCE_W47_RUNTIME_MODE='development';process.env.YANCE_W47_API_PORT='{}';process.env.YANCE_W47_WEB_ORIGIN='http://127.0.0.1:44760';import('{}')",
+            port,url
+        );
+        let result = launcher.launch_with_args(
+            Path::new("w47-runtime.exe"),
+            exact_node_sha,
+            &authority,
+            &session,
+            &["-e", &script],
+        );
+        let err = result
+            .err()
+            .expect("unapproved W47 real entrypoint must NOT produce a trusted ACK");
+        assert!(
+            matches!(
+                err,
+                "NATIVE_CHILD_ACK_INVALID"
+                    | "NATIVE_CHILD_ACK_TIMEOUT"
+                    | "NATIVE_CHILD_PIPE_WRITE_FAILED"
+            ),
+            "actual W47 unexpected startup outcome: {err}"
+        );
+        fs::remove_dir_all(pkg).unwrap();
+        fs::remove_dir_all(t).unwrap();
+    }
 }
