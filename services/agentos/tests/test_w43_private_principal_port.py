@@ -210,12 +210,16 @@ def test_revocation_during_history_read_refuses_entire_payload(tmp_path, monkeyp
     auth=FakeW47({"A":a})
     p=port(tmp_path,auth)
     _,runtime=p._runtime(a)
-    original=runtime.read_private_chat_history
-    def read_then_revoke(*args, **kwargs):
-        value=original(*args, **kwargs)
+    # History now uses model-independent official SqliteDb and the original
+    # Agno History reader. Simulate logout just after the native DB fetch.
+    from yance_agentos import NativeAgnoRuntime
+    original=NativeAgnoRuntime.read_native_private_history
+    def read_then_revoke(db, scope, *, thread):
+        value=original(db, scope, thread=thread)
         auth.grants["A"]=replace(a,session_revision=a.session_revision+1)
         return value
-    monkeypatch.setattr(runtime, "read_private_chat_history",read_then_revoke)
+    monkeypatch.setattr(NativeAgnoRuntime, "read_native_private_history",
+                        staticmethod(read_then_revoke))
     assert_denied("LOCAL_SESSION_CHANGED_OR_REVOKED",lambda:p.history("A",thread_id="thread-one"))
 
 

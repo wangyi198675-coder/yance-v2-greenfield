@@ -44,6 +44,9 @@ class W47VerifiedPrincipal:
     model_backend: str = "llamacpp"
     model_id: str = "qwen3:8b"
     cloud_key_file: Path | None = None
+    # Only W55's nonserializable native callback in the approved Agno
+    # process may supply this. Ordinary HTTP/browser input can never mint it.
+    cloud_secret_resolver: Callable[[], str] | None = None
     model_user_selected: bool = False
     extra_charge_approved: bool = False
     protected_credential_attested: bool = False
@@ -85,13 +88,10 @@ def _check_claim(value: W47VerifiedPrincipal) -> W47VerifiedPrincipal:
         raise W47PrivateAccessError("W54_APPDATA_AUTHORITY_REQUIRED", 503)
     if value.model_backend not in {"llamacpp", "openrouter", "openai", "unconfigured"}:
         raise W47PrivateAccessError("MODEL_PROVIDER_NOT_SUPPORTED", 422)
-    if value.model_backend in {"openrouter", "openai"}:
-        if not value.model_user_selected or not value.extra_charge_approved:
-            raise W47PrivateAccessError("PAID_MODEL_SELECTION_NOT_APPROVED", 403)
-        if not value.protected_credential_attested:
-            raise W47PrivateAccessError("W55_PROTECTED_CREDENTIAL_NOT_ATTESTED", 503)
-        if not isinstance(value.cloud_key_file, Path):
-            raise W47PrivateAccessError("CLOUD_API_KEY_SETUP_REQUIRED", 503)
+    # PRIVATE_HISTORY is independent of inference configuration, billing and
+    # cloud-key availability. Never block the user's own original Agno
+    # ChatHistory because a selected model or API key was removed/revoked.
+    # Paid-model eligibility is checked only at the _runtime/turn boundary.
     return value
 
 
@@ -154,9 +154,12 @@ class W43NativePrivateBrainPort:
             raise W47PrivateAccessError("LOCAL_SESSION_CHANGED_OR_REVOKED", 409)
         return current
 
-    def _runtime(self, claim):
-        if claim.model_backend == "unconfigured":
-            raise W47PrivateAccessError("MODEL_SETUP_REQUIRED", 503)
+    def _native_storage(self, claim):
+        """Resolve exactly ONE existing per-user Agno SQLite storage path.
+
+        No local/cloud Model, Agent, browser login or paid provider is needed
+        for reading the current owner's original native ChatHistory.
+        """
         scope = _scope_from_w47_verified_claim(claim)
         root = claim.app_local_data_root.resolve(strict=True)
         # This is the EXISTING Agno SqliteDb per W54-proven user; no shadow
@@ -176,6 +179,23 @@ class W43NativePrivateBrainPort:
         file = partition / "agno-native.sqlite"
         if file.is_symlink() or (hasattr(file, "is_junction") and file.is_junction()):
             raise W47PrivateAccessError("PRIVATE_HISTORY_STORAGE_UNAVAILABLE", 503)
+        return scope, file
+
+    def _runtime(self, claim):
+        if claim.model_backend == "unconfigured":
+            raise W47PrivateAccessError("MODEL_SETUP_REQUIRED", 503)
+        if claim.model_backend in {"openrouter", "openai"}:
+            if not claim.model_user_selected or not claim.extra_charge_approved:
+                raise W47PrivateAccessError("PAID_MODEL_SELECTION_NOT_APPROVED", 403)
+            if not claim.protected_credential_attested:
+                raise W47PrivateAccessError("W55_PROTECTED_CREDENTIAL_NOT_ATTESTED", 503)
+            if claim.cloud_secret_resolver is not None:
+                if (claim.cloud_key_file is not None or
+                        not callable(claim.cloud_secret_resolver)):
+                    raise W47PrivateAccessError("CLOUD_CREDENTIAL_SOURCE_AMBIGUOUS", 503)
+            elif not isinstance(claim.cloud_key_file, Path):
+                raise W47PrivateAccessError("CLOUD_API_KEY_SETUP_REQUIRED", 503)
+        scope, file = self._native_storage(claim)
         # Cache models separately, never histories: ALL selected models keep
         # the original same Agno db_file/private Agent ID/user/session.
         cache_key = (str(file.resolve()), claim.model_backend,
@@ -188,6 +208,7 @@ class W43NativePrivateBrainPort:
                     file, backend=claim.model_backend, model_id=claim.model_id,
                     purpose="QUALITY_EVAL", local_key_file=self._key_file,
                     cloud_key_file=claim.cloud_key_file,
+                    cloud_secret_resolver=claim.cloud_secret_resolver,
                     user_selected=claim.model_user_selected,
                     extra_charge_approved=claim.extra_charge_approved,
                     protected_credential_attested=claim.protected_credential_attested,
@@ -306,9 +327,16 @@ class W43NativePrivateBrainPort:
         except ValueError:
             raise W47PrivateAccessError("THREAD_INVALID", 422) from None
         claim = self._verified(context, "PRIVATE_HISTORY")
-        scope, runtime = self._runtime(claim)
+        scope, db_file = self._native_storage(claim)
         try:
-            result = runtime.read_private_chat_history(scope, thread=thread_id)
+            from agno.db.sqlite import SqliteDb
+            from yance_agentos import NativeAgnoRuntime
+            # Read the SAME Agno SqliteDb and original persisted RunOutput,
+            # even if NO inference backend is configured on this machine.
+            native_db = SqliteDb(db_file=str(db_file))
+            result = NativeAgnoRuntime.read_native_private_history(
+                native_db, scope, thread=thread_id,
+            )
         except Exception:
             raise W47PrivateAccessError("PRIVATE_HISTORY_STORAGE_UNAVAILABLE", 503) from None
         self._recheck(context, "PRIVATE_HISTORY", claim)
