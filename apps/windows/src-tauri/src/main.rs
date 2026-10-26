@@ -10,7 +10,7 @@ use native_profile::NativeProfileAuthority;
 use session::{PublicSessionStatus, SessionAuthority};
 use std::sync::Mutex;
 use std::time::Duration;
-use tauri::Manager;
+use tauri::{ipc::CapabilityBuilder, Manager, WebviewUrl, WebviewWindowBuilder};
 use user_dirs::UserDirectories;
 use windows_principal::current_windows_principal;
 
@@ -39,9 +39,50 @@ fn main() {
     let verified_os = current_windows_principal().ok();
     let session = SessionAuthority::new(verified_os, Duration::from_secs(15 * 60))
         .expect("Fail closed: native OS random source must be available");
-    let app = tauri::Builder::default()
-        .manage(session)
-        .setup(|app| {
+    // Build-only B+C mode: serve packaged static assets through the official
+    // Tauri localhost plugin. This repairs W46's existing LOOPBACK_ONLY guard
+    // without accepting a browser-provided Principal or relaxing it.
+    // No Tauri IPC capability is granted to arbitrary localhost pages.
+    let bc_loopback = option_env!("YANCE_W54_BC_LOOPBACK_ASSETS") == Some("1");
+    let bc_port = if bc_loopback {
+        Some(portpicker::pick_unused_port().expect("W54_BC_LOCAL_PORT_UNAVAILABLE"))
+    } else {
+        None
+    };
+    let mut builder = tauri::Builder::default().manage(session);
+    if let Some(port) = bc_port {
+        builder = builder.plugin(
+            tauri_plugin_localhost::Builder::new(port)
+                .host("127.0.0.1")
+                .build(),
+        );
+    }
+    let app = builder
+        .setup(move |app| {
+            if let Some(port) = bc_port {
+                if app.config().identifier != "com.yance.v2.bc-isolated-candidate" {
+                    return Err(std::io::Error::other("W54_BC_IDENTIFIER_NOT_REVIEWED").into());
+                }
+                let address: tauri::Url = format!("http://127.0.0.1:{port}/?productDraft=1")
+                    .parse()
+                    .map_err(|_| std::io::Error::other("W54_BC_LOCAL_URL_INVALID"))?;
+                // Exact random asset origin, only this native main WebView and
+                // only the two pre-existing redacted session commands.
+                // An ordinary localhost Chrome page has no Tauri IPC bridge.
+                app.add_capability(
+                    CapabilityBuilder::new("w54-bc-localhost-session-only")
+                        .local(false)
+                        .remote(format!("http://127.0.0.1:{port}/*"))
+                        .window("main")
+                        .permission("allow-session-status")
+                        .permission("allow-logout-session"),
+                )?;
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::External(address))
+                    .title("言策 V2 | B+C 本机候选（未授权）")
+                    .inner_size(1380.0, 900.0)
+                    .min_inner_size(930.0, 620.0)
+                    .build()?;
+            }
             // Resolves current OS user's Tauri-configured application paths.
             // Never exposes filesystem paths, SID or account claims to JavaScript.
             let user_dirs =
