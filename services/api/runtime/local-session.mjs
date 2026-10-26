@@ -90,6 +90,28 @@ export function createLocalSessionAuthority({approvePairing=null,
   sessions.set(digest(id),{csrf,expiresAt,rev:revision,kind:'NATIVE_FIRST_PARTY'});
   return {id,csrf,expiresAt,ttlMs:nativeTtlMs};
  };
+ // Native-host-only composition path. NO HTTP endpoint invokes this method.
+ // The W54 signed launch/OS-parent verifier AND WebView2 cookie binder
+ // must authorize it first. Browser-submitted strings are never evidence.
+ const issueNativeWebView=(nativeHostBinding)=>{
+  if(typeof nativeHostBinding!=='string'||!/^[a-f0-9]{64}$/.test(nativeHostBinding))
+   throw Error('W54_NATIVE_HOST_BINDING_INVALID');
+  expire();
+  const id=randomBytes(32).toString('hex');
+  const csrf=randomBytes(32).toString('hex');
+  const expiresAt=now()+nativeTtlMs;
+  sessions.set(digest(id),{csrf,expiresAt,rev:revision,
+    kind:'NATIVE_FIRST_PARTY',nativeHostBinding});
+  return Object.freeze({cookie:cookieFor(id,nativeTtlMs),expiresAt,csrf});
+ };
+ const revokeNativeHost=(nativeHostBinding)=>{
+  if(typeof nativeHostBinding!=='string')return 0;
+  let removed=0;
+  for(const [k,v] of sessions)if(v.nativeHostBinding===nativeHostBinding){
+   sessions.delete(k);removed++;
+  }
+  return removed;
+ };
  const revoke=req=>{
   const current=sessionFor(req);
   if(!current)return false;
@@ -97,7 +119,8 @@ export function createLocalSessionAuthority({approvePairing=null,
   return true;
  };
  const revokeAll=()=>{sessions.clear();revision++};
- return Object.freeze({sessionFor,redeem,beginTrustedFirstParty,revoke,revokeAll,ttlMs,
+ return Object.freeze({sessionFor,redeem,beginTrustedFirstParty,
+  issueNativeWebView,revokeNativeHost,revoke,revokeAll,ttlMs,
   get issuerAvailable(){return approvePairing!==null},
   get nativeLaunchAvailable(){return approveNativeLaunch!==null}});
 }
