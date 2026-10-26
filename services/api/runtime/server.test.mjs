@@ -18,7 +18,7 @@ const files=['server.mjs','runtime-config.mjs','runtime-provenance.mjs',
  'private-python-port.mjs','private-native-ledger-port.mjs',
  'private-model-http.mjs','native-authoritative-reads.mjs',
  'native-provider-gateway.mjs','native-message-reads.mjs',
- 'native-pinned-web-assets.mjs','native-private-startup.mjs',
+ 'native-pinned-web-assets.mjs','native-private-startup.mjs','web-private-local-qwen.mjs',
  'w54-native-child-frame.mjs','w54-native-webview-session.mjs',
  'w47-w43-private-child.py'];
 let child,base,work;

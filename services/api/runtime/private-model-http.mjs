@@ -56,7 +56,8 @@ const safeConfiguration=x=>{
 };
 export function createPrivateModelHttp({
  sessionAuthority,webOrigin,resolveNativePrincipal=null,
- modelConfigPort=null,credentialVaultPort=null,w43ModelPort=null
+ modelConfigPort=null,credentialVaultPort=null,w43ModelPort=null,
+ localWebModelPort=null
 }={}){
  if(typeof sessionAuthority?.sessionFor!=='function'||typeof webOrigin!=='string')
   throw Error('W47_MODEL_SESSION_REQUIRED');
@@ -101,12 +102,32 @@ export function createPrivateModelHttp({
   }
   if(!session){deny(res,401,'LOCAL_SESSION_REQUIRED');return true}
   if(session.record.kind==='WEB_LOCAL_PRIVATE'){
-   // This Web-only PRIVATE session has no model selected, no Key, and no
-   // charge approval. Source of truth is the server's real empty state.
-   if(isSelect){deny(res,403,'MODEL_SELECTION_REQUIRES_USER_CONFIG');return true}
-   write(res,200,{ok:true,authoritative:true,models:[],
-      selectedProvider:'',selectedModelId:'',secureCredentialStorage:false,
-      credentialsExposed:false,canSend:false,providerAuthorized:false});
+   // This Web-only PRIVATE session cannot select any cloud Key or model.
+   // It reuses exact local 11605 model support and W43/Agno runtime.
+   if(req.headers.origin&&req.headers.origin!==webOrigin){
+    deny(res,403,'MODEL_ORIGIN_NOT_ALLOWED');return true
+   }
+   if(isSelect){
+    if(req.headers.origin!==webOrigin||!csrfOk(req,session)){
+     deny(res,403,'MODEL_ORIGIN_OR_CSRF_REQUIRED');return true
+    }
+    let selection;
+    try{selection=await jsonOnly(req)}
+    catch(e){deny(res,e.status??422,e.code??'INVALID_REQUEST');return true}
+    if(!localWebModelPort){
+     deny(res,409,'EXISTING_LOCAL_QWEN_UNAVAILABLE');return true
+    }
+    const done=await localWebModelPort.select(selection);
+    if(!done.ok){deny(res,done.status,done.error);return true}
+   }
+   const state=localWebModelPort?await localWebModelPort.source():
+    {models:[],ready:false,choice:null};
+   const selected=state.ready&&state.choice;
+   write(res,200,{ok:true,authoritative:true,models:state.models,
+    selectedProvider:selected?'LLAMACPP_LOCAL_QWEN3_8B_FREE':'',
+    selectedModelId:selected?'qwen3:8b':'',
+    secureCredentialStorage:false,credentialsExposed:false,
+    canSend:false,providerAuthorized:false});
    return true;
   }
   if(req.headers.origin&&req.headers.origin!==webOrigin){

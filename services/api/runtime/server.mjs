@@ -13,6 +13,7 @@ import {createPrivateBrainHttp} from './private-brain-http.mjs';
 import {createW43PythonPrivatePort} from './private-python-port.mjs';
 import {createW43NativeLedgerAdapter} from './private-native-ledger-port.mjs';
 import {readW54LocalBoot,createNativeStartupSession} from './native-private-startup.mjs';
+import {createWebPrivateLocalQwen} from './web-private-local-qwen.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
@@ -51,6 +52,10 @@ const webPrivateRoot=webPrivateMode?join(process.env.LOCALAPPDATA||homedir(),
  'YanceV2','WebPrivate'):null;
 if(webPrivateRoot)mkdirSync(webPrivateRoot,{recursive:true,mode:0o700});
 const localId=x=>createHash('sha256').update(x).digest('hex').slice(0,32);
+const existingLocalQwenKey=process.env.YANCE_W47_W43_LOCAL_KEY_FILE;
+const webPrivateQwen=webPrivateRoot&&existingLocalQwenKey?
+ createWebPrivateLocalQwen({appLocalDataRoot:webPrivateRoot,
+   localKeyFile:existingLocalQwenKey}):null;
 const webPrivatePrincipal=webPrivateRoot?Object.freeze({
  source:'WEB_LOCAL_PRIVATE',webPrivateOnly:true,verified:true,
  principalRef:'web_private_'+localId(webPrivateRoot),
@@ -67,7 +72,8 @@ const resolveNativePrincipal=nativeBoot?async({session})=>{
 }:webPrivatePrincipal?async({session})=>{
  if(session?.record?.kind!=='WEB_LOCAL_PRIVATE')
    throw {httpStatus:401,code:'WEB_PRIVATE_SESSION_REQUIRED'};
- return webPrivatePrincipal;
+ return {...webPrivatePrincipal,
+   ...(webPrivateQwen?webPrivateQwen.principalModel():{})};
 }:null;
 const w43Python=process.env.YANCE_W47_W43_PYTHON_EXECUTABLE;
 const w43Root=process.env.YANCE_W47_W43_MODULE_ROOT;
@@ -77,7 +83,8 @@ if((w43Python||w43Root)&&!nativeBoot&&!webPrivatePrincipal)
 // authority; no additional Node memory or shadow history store is created.
 const w43Port=(nativeBoot||webPrivatePrincipal)&&w43Python&&w43Root?
  createW43PythonPrivatePort({pythonExecutable:w43Python,w43ModuleRoot:w43Root,
-  protectedKeyFile:nativeBoot?.modelBackend==='llamacpp'?
+  protectedKeyFile:webPrivateQwen?existingLocalQwenKey:
+   nativeBoot?.modelBackend==='llamacpp'?
    process.env.YANCE_W47_W43_LOCAL_KEY_FILE:undefined}):null;
 const requestLedger=w43Port?createW43NativeLedgerAdapter(w43Port):null;
 if(operatorMode==='console'){
@@ -91,7 +98,8 @@ const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthorit
 // W55 production credential vault is SEALED and original W43 is local-only.
 // Never instantiate test-only model/credential adapters in this real server.
 const privateModelHttp=createPrivateModelHttp({
- sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal
+ sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,
+ localWebModelPort:webPrivateQwen
 });
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.

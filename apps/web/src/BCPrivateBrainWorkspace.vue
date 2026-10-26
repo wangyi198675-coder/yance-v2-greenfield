@@ -65,7 +65,10 @@ async function refresh(){
   catch(e){if(safeCurrent(id)){loadState.value='models-unavailable';notice.value=reason(e)};return}
   if(!safeCurrent(id))return;
   catalog.value=models;chosen.value=models.configured?
-   models.selectedProvider+'|'+models.selectedModelId:'';
+   models.selectedProvider+'|'+models.selectedModelId:
+   (models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.provider+
+    '|'+models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.modelId
+    ||'');
   // Existing Agno History must load with NO model configured.
   await loadHistory(id);
   if(!safeCurrent(id))return;
