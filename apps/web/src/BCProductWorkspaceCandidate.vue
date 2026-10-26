@@ -2,6 +2,7 @@
 import {ref,watch,computed,nextTick} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
+import BCLocalSessionConnector from './BCLocalSessionConnector.vue';
 import {WORKSPACES,CHANNELS,R4_SETTINGS_CATEGORIES,R4_STOP_FAILURE_STATES,
  readWorkspaceSnapshot,explainCapability} from './product-workspace-contract.mjs';
 const props=defineProps({
@@ -151,6 +152,10 @@ defineExpose({refresh});
       </div>
      </div>
     </div>
+   </div>
+   <div v-else-if="activeWorkspace==='BRAIN'" class="w46-blank" data-test="w46-brain-local-session">
+    <strong>唯一闺蜜大脑 · 本机连接资格</strong>
+    <BCLocalSessionConnector :fetch-impl="fetchImpl"/>
    </div>
    <div v-else class="w46-blank">
     <strong>{{selected.label}}尚未授权</strong>
