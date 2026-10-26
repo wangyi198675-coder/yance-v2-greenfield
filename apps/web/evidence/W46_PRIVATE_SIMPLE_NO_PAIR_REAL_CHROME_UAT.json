@@ -1,0 +1,224 @@
+{
+  "kind": "ACTUAL_WINDOWS_CHROME_W46_NORMAL_PRIVATE_UI_W47_SOURCE",
+  "base": "e352180cba665b56b35822fa2aff2c7525360016",
+  "actualW47StagePort": 48191,
+  "modelCalls": 0,
+  "userKeyWrites": 0,
+  "socialSends": 0,
+  "measurements": [
+    {
+      "width": 320,
+      "height": 680,
+      "title": "先设置 AI 模型；本机服务连接后即可聊天",
+      "settings": "选择 AI 模型可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。OpenRouter用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key尚无经服务端验证的可选模型OpenAI APIAPI Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度尚无经服务端验证的可选模型本地 Qwen3选装。不安装也不阻止云端模型尚无经服务端验证的可选模型确认使用此模型 使用自己的云端 API Key，请在言策本机的模型设置中保存。当前版本若尚未提供安全的密钥保存入口，会明确保持不可用；不在网页或日志中填写、显示密钥。 ",
+      "brainCount": 1,
+      "nativeHostDiagnostics": 0,
+      "fakeContacts": 0,
+      "fakeHistory": 0,
+      "sendDisabled": true,
+      "pairText": null,
+      "providerCount": 3,
+      "modelSelectedEnabled": false,
+      "widthOverflow": 0,
+      "rawKeyInputs": 0,
+      "apiReadRequests": [
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health"
+      ],
+      "deniedReadResponses": [
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        }
+      ],
+      "jsErrors": [],
+      "mutationRequests": []
+    },
+    {
+      "width": 430,
+      "height": 850,
+      "title": "先设置 AI 模型；本机服务连接后即可聊天",
+      "settings": "选择 AI 模型可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。OpenRouter用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key尚无经服务端验证的可选模型OpenAI APIAPI Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度尚无经服务端验证的可选模型本地 Qwen3选装。不安装也不阻止云端模型尚无经服务端验证的可选模型确认使用此模型 使用自己的云端 API Key，请在言策本机的模型设置中保存。当前版本若尚未提供安全的密钥保存入口，会明确保持不可用；不在网页或日志中填写、显示密钥。 ",
+      "brainCount": 1,
+      "nativeHostDiagnostics": 0,
+      "fakeContacts": 0,
+      "fakeHistory": 0,
+      "sendDisabled": true,
+      "pairText": null,
+      "providerCount": 3,
+      "modelSelectedEnabled": false,
+      "widthOverflow": 0,
+      "rawKeyInputs": 0,
+      "apiReadRequests": [
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts"
+      ],
+      "deniedReadResponses": [
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        }
+      ],
+      "jsErrors": [],
+      "mutationRequests": []
+    },
+    {
+      "width": 950,
+      "height": 620,
+      "title": "先设置 AI 模型；本机服务连接后即可聊天",
+      "settings": "选择 AI 模型可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。OpenRouter用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key尚无经服务端验证的可选模型OpenAI APIAPI Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度尚无经服务端验证的可选模型本地 Qwen3选装。不安装也不阻止云端模型尚无经服务端验证的可选模型确认使用此模型 使用自己的云端 API Key，请在言策本机的模型设置中保存。当前版本若尚未提供安全的密钥保存入口，会明确保持不可用；不在网页或日志中填写、显示密钥。 ",
+      "brainCount": 1,
+      "nativeHostDiagnostics": 0,
+      "fakeContacts": 0,
+      "fakeHistory": 0,
+      "sendDisabled": true,
+      "pairText": null,
+      "providerCount": 3,
+      "modelSelectedEnabled": false,
+      "widthOverflow": 0,
+      "rawKeyInputs": 0,
+      "apiReadRequests": [
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts"
+      ],
+      "deniedReadResponses": [
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        }
+      ],
+      "jsErrors": [],
+      "mutationRequests": []
+    },
+    {
+      "width": 1360,
+      "height": 900,
+      "title": "先设置 AI 模型；本机服务连接后即可聊天",
+      "settings": "选择 AI 模型可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。OpenRouter用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key尚无经服务端验证的可选模型OpenAI APIAPI Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度尚无经服务端验证的可选模型本地 Qwen3选装。不安装也不阻止云端模型尚无经服务端验证的可选模型确认使用此模型 使用自己的云端 API Key，请在言策本机的模型设置中保存。当前版本若尚未提供安全的密钥保存入口，会明确保持不可用；不在网页或日志中填写、显示密钥。 ",
+      "brainCount": 1,
+      "nativeHostDiagnostics": 0,
+      "fakeContacts": 0,
+      "fakeHistory": 0,
+      "sendDisabled": true,
+      "pairText": null,
+      "providerCount": 3,
+      "modelSelectedEnabled": false,
+      "widthOverflow": 0,
+      "rawKeyInputs": 0,
+      "apiReadRequests": [
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/runtime/capabilities",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/runtime/health",
+        "http://127.0.0.1:4191/api/v2/contacts",
+        "http://127.0.0.1:4191/api/v2/private-brain/model-catalog",
+        "http://127.0.0.1:4191/api/v2/local-session/status",
+        "http://127.0.0.1:4191/api/v2/runtime/health"
+      ],
+      "deniedReadResponses": [
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        },
+        {
+          "status": 401,
+          "url": "http://127.0.0.1:4191/api/v2/contacts"
+        }
+      ],
+      "jsErrors": [],
+      "mutationRequests": []
+    }
+  ]
+}

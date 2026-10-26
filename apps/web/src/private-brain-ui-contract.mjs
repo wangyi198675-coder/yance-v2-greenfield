@@ -140,11 +140,11 @@ export function verifiedHistory(d,threadId){
  return d.messages.map(m=>Object.freeze({role:m.role,content:m.content}));
 }
 export function privateError(status){
- if(status===401)return '本机可信会话不可用，请从受信任的言策程序打开';
+ if(status===401)return '本机 AI 服务尚未连接，暂时无法读取模型设置或历史';
  if(status===403)return '权限不足或尚未批准该模型费用';
  if(status===409)return '模型密钥尚未配置或请求结果存在冲突';
  if(status===422)return '服务端拒绝模型设置或消息格式';
- if(status===503)return '受信任的本机模型服务暂不可用';
+ if(status===503)return '本机 AI 服务暂不可用，请稍后重试';
  return '接口未签署或当前不可用';
 }
 export async function jsonApi(fetchImpl,url,init={}){
