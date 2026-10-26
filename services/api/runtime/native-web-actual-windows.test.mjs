@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdtempSync,mkdirSync,copyFileSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,copyFileSync,readFileSync,writeFileSync,rmSync,readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {createServer as netServer} from 'node:net';
@@ -38,7 +38,11 @@ test('real W09 compiled B+C + W47 API have one origin, API is JSON NOT HTML, ses
   const matches=[...index.matchAll(/(?:src|href)="(?:\.\/|\/)?(assets\/[A-Za-z0-9_-]+\.(?:js|css))"/g)].map(m=>m[1]);
   assert.ok(matches.some(x=>x.endsWith('.js')),'REAL_WEB_HAS_JS');
   assert.ok(matches.some(x=>x.endsWith('.css')),'REAL_WEB_HAS_CSS');
-  names.push(...new Set(matches));
+  const allAssets=readdirSync(join(dist,'assets')).filter(n=>
+   /^[A-Za-z0-9_-]+\.(?:js|css|png|svg|woff2|ico)$/.test(n));
+  assert.ok(matches.every(m=>allAssets.includes(m.slice('assets/'.length))),
+   'REAL_WEB_REFERENCES_EXIST_IN_BUILD');
+  names.push(...allAssets.map(n=>'assets/'+n));
   const entries=[];
   for(const name of names){
    const bytes=readFileSync(join(dist,...name.split('/')));
@@ -169,7 +173,7 @@ test('real W09 compiled B+C + W47 API have one origin, API is JSON NOT HTML, ses
   }
   console.log('W47_ACTUAL_ONE_ORIGIN_WEB_AND_API_ACK '+JSON.stringify({
    pid:child.pid,port,apiSha:SHA,webSha:wmeta.source_sha,
-   actualCompiledAssets:matches.length,apiJson:true,unpairedContacts401:true,
+   actualCompiledAssets:allAssets.length,apiJson:true,unpairedContacts401:true,
    sends403:true,w26Bridge:w26,chromeResult,nativeWebView,productionInstalledSession:false
   }));
  }finally{
