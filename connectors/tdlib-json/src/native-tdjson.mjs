@@ -77,10 +77,10 @@ export async function probeTDJson(runtimeDir){
 export function nativeTDJsonController({
   runtimeDir, attestUserGesture, findAuthorizedAccount,
   verifyCurrentPeerK, onAuthorizedInbound,
-  verifyW25Receipt, onW25Receipt, onNativeAccountIdentity,
+  verifyW25Receipt, onW25Receipt, onNativeAccountIdentity, onTrustedChatIndex,
 }={}){
   for(const fn of [attestUserGesture,findAuthorizedAccount,verifyCurrentPeerK,onAuthorizedInbound,
-                   verifyW25Receipt,onW25Receipt,onNativeAccountIdentity])
+                   verifyW25Receipt,onW25Receipt,onNativeAccountIdentity,onTrustedChatIndex])
     ensure(typeof fn==='function','ORIGINAL_OWNER_AUTH_PORT_MISSING');
   let proc=null,account=null,authorized=false,clientId=null;
   const nativeMeRequests=new Set();
@@ -132,6 +132,17 @@ export function nativeTDJsonController({
             platformUserIdExact:String(id),source:'OFFICIAL_TDLIB_GET_ME'});
         })();pending.add(task);
         task.catch(()=>errors.push('TRUSTED_GETME_BINDING_FAILED'))
+          .finally(()=>pending.delete(task));
+        return;
+      }
+      // Provider chat/contact enumeration is handed to W24 owner only, not
+      // shown as verified peers before the account/Peer membership proof.
+      const indexKinds=new Set(['chats','chat','users','updateNewChat','updateChatLastMessage']);
+      if(indexKinds.has(kind)){
+        const task=onTrustedChatIndex({account,clientId,
+          rawNativeEvent:packet.data,source:'OFFICIAL_TDLIB_JSON'});
+        pending.add(task);
+        Promise.resolve(task).catch(()=>errors.push('TRUSTED_CHAT_INDEX_REJECTED'))
           .finally(()=>pending.delete(task));
         return;
       }
