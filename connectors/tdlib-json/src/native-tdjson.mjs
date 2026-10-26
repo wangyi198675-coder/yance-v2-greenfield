@@ -33,7 +33,7 @@ export async function inspectInstalledTDJson(runtimeDir) {
     && manifest?.architecture==='x64','NATIVE_UPSTREAM_PIN_MISMATCH');
   const expected={ 'tdjson.dll':manifest.dllSha256,'TDJsonHost.exe':manifest.hostSha256 };
   for(const dep of manifest.dependencies ?? []){
-    ensure(['libcrypto-3-x64.dll','libssl-3-x64.dll','zlib1.dll'].includes(dep.name)
+    ensure(['libcrypto-3-x64.dll','libssl-3-x64.dll','z.dll','zlib1.dll'].includes(dep.name)
       && isSha(dep.sha256),'NATIVE_DEPENDENCY_MANIFEST_INVALID');
     expected[dep.name]=dep.sha256;
   }
@@ -66,6 +66,30 @@ export async function probeTDJson(runtimeDir){
         dllSha256:files.dllSha256,sourceCommit:files.sourceCommit,
         nativeHostPid:child.pid,nativeHostExitCode:code,
         authorized:false,connectedAccounts:0,canSend:false}));
+    });
+  });
+}
+
+/** Actual native TDLib authorization-state readiness with NO credentials/login. */
+export async function probeTDJsonAuthorizationState(runtimeDir){
+  const files=await inspectInstalledTDJson(runtimeDir);
+  return new Promise((ok,no)=>{
+    const child=runHost(files.hostExecutable,'--probe-state');
+    let observed=null;
+    createInterface({input:child.stdout}).on('line',line=>{
+      try { const v=JSON.parse(line); if(v.kind==='native_tdjson_auth_probe') observed=v; }catch{}
+    });
+    child.once('error',()=>no(new TDHold('TDJSON_AUTH_PROBE_SPAWN_FAILED')));
+    child.once('close',code=>{
+      if(code!==0 || observed?.loaded!==true ||
+        observed?.state!=='authorizationStateWaitTdlibParameters' ||
+        observed?.authorized!==false || observed?.credentialsSupplied!==false ||
+        observed?.accountConnected!==false)
+        return no(new TDHold('TDJSON_AUTH_STATE_NOT_VERIFIED'));
+      ok(Object.freeze({officialNativeState:observed.state,
+        clientId:observed.client_id,processPid:child.pid,
+        realLibrarySha256:files.dllSha256,sourceCommit:files.sourceCommit,
+        waitingUserAuth:true,connected:false,canSend:false}));
     });
   });
 }

@@ -35,7 +35,7 @@ Copy-Item $found[0].FullName (Join-Path $runtime "tdjson.dll") -Force
 # Transitive DLLs are copied beside the TDLib official native host.
 $deps = @()
 $bin = Join-Path $vcpkg "installed\x64-windows\bin"
-foreach ($filename in @("libcrypto-3-x64.dll","libssl-3-x64.dll","zlib1.dll")) {
+foreach ($filename in @("libcrypto-3-x64.dll","libssl-3-x64.dll","z.dll","zlib1.dll")) {
   $from = Join-Path $bin $filename
   if (Test-Path -LiteralPath $from) {
     Copy-Item -LiteralPath $from -Destination (Join-Path $runtime $filename) -Force
