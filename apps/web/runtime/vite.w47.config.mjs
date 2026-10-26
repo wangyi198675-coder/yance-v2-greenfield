@@ -16,10 +16,13 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='f2c9d995499e9974f8771c2832094f8ed6a4a287';
+ const expectedOwnerSha='cf929000c24dc721e1008cf8459ebc9049e923a4';
  const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'e279fe0c07fbf09f31783f7125b32169f7133017',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'1799320bfd5e1e40650852b5eed7caa037f785aa',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'ca9721f20e770471b6dac90c628ceb5a00bdb7e8',
+  'apps/web/src/private-brain-ui-contract.mjs':'fdce8a2037d7124740feaff004b34354f2fc4e95',
+  'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
   'apps/web/src/BCLocalSessionConnector.vue':'7f62421e0e3410f7e343820be2a17351c4b11139',
   'apps/web/src/local-session-ui-contract.mjs':'07ce57478fd70bc41cc6c219811d24ac9fb8771e',
   'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md':'de158fd6c5861a88a0ffe95e2a5899077624688c',
@@ -39,7 +42,8 @@ if(r4IsolatedPreview){
    git('rev-parse','HEAD:'+path)===sha);
  if(signedSha!==expectedOwnerSha||dirtySource||!receiptTracked||!validSignedBlobs||
     !ownerAck.includes('W46 → W09-2')||!ownerAck.includes('R4 Vue')||
-    !readFileSync(join(w46Root,'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md'),'utf8').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS'))
+    !readFileSync(join(w46Root,'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md'),'utf8').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
+    !readFileSync(join(w46Root,'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md'),'utf8').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
    throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
 }
 // This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
