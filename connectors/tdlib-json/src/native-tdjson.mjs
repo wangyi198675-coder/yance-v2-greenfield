@@ -100,21 +100,27 @@ export async function probeTDJsonAuthorizationState(runtimeDir){
  * No public provider sendMessage path exists; W25 retains the sole sender.
  */
 export function nativeTDJsonController({
-  runtimeDir, attestUserGesture, findAuthorizedAccount,
+  runtimeDir, attestUserGesture, attestReadSession, findAuthorizedAccount,
   verifyCurrentPeerK, onAuthorizedInbound,
   verifyW25Receipt, onW25Receipt, onNativeAccountIdentity, onTrustedChatIndex,
+  onNativeAccountRevoked=null,
 }={}){
-  for(const fn of [attestUserGesture,findAuthorizedAccount,verifyCurrentPeerK,onAuthorizedInbound,
+  for(const fn of [attestUserGesture,attestReadSession,findAuthorizedAccount,verifyCurrentPeerK,onAuthorizedInbound,
                    verifyW25Receipt,onW25Receipt,onNativeAccountIdentity,onTrustedChatIndex])
     ensure(typeof fn==='function','ORIGINAL_OWNER_AUTH_PORT_MISSING');
   let proc=null,account=null,authorized=false,identityVerified=false,clientId=null;
+  let authState='authorizationStateClosed', authDetails=null, exactSelfUserId=null;
+  let logoutPending=false,removalConfirmed=false;
   const nativeMeRequests=new Set();
   const errors=[],pending=new Set();
   const status=()=>Object.freeze({
     nativeRunning:proc!==null,telegramAuthorized:authorized,
     channelAccountBound:identityVerified,clientId,canSend:false,
-    stage:!proc?'WAITING_USER_AUTH':!authorized?'AUTH_IN_PROGRESS':
+    stage:!proc?'WAITING_USER_AUTH':logoutPending?'LOGOUT_PENDING':
+      !authorized?'AUTH_IN_PROGRESS':
       identityVerified?'READ_ONLY_READY':'GETME_OWNER_PROOF_PENDING',
+    nativeAuthorizationState:proc?authState:'authorizationStateClosed',
+    logoutPending,removalConfirmed,accountIdentityVerified:identityVerified,
   });
   const verifyGesture=async input=>{
     const proof=await attestUserGesture(input);
@@ -135,15 +141,42 @@ export function nativeTDJsonController({
     const files=await inspectInstalledTDJson(runtimeDir);
     const worker=runHost(files.hostExecutable,'--worker');
     proc=worker; account=Object.freeze(owner); authorized=false; identityVerified=false;
-    worker.once('error',()=>{errors.push('WORKER_SPAWN_FAILED');proc=null;account=null;identityVerified=false;});
-    worker.once('close',()=>{proc=null;account=null;authorized=false;identityVerified=false;clientId=null;});
+    exactSelfUserId=null; authDetails=null;authState='authorizationStateStarting';
+    logoutPending=false;removalConfirmed=false;
+    worker.once('error',()=>{errors.push('WORKER_SPAWN_FAILED');proc=null;account=null;identityVerified=false;authDetails=null;exactSelfUserId=null;});
+    worker.once('close',()=>{proc=null;account=null;authorized=false;identityVerified=false;clientId=null;
+      authState='authorizationStateClosed';authDetails=null;exactSelfUserId=null;logoutPending=false;});
     worker.stderr.on('data',()=>errors.push('NATIVE_STDERR_REDACTED'));
     createInterface({input:worker.stdout,crlfDelay:Infinity}).on('line',line=>{
       let packet;try{packet=JSON.parse(line);}catch{errors.push('INVALID_NATIVE_RESPONSE');return;}
       if(packet.kind==='native_tdjson_worker_started'){clientId=packet.client_id;return;}
       if(packet.kind==='tdlib_auth_state'){
-        authorized=packet.state==='authorizationStateReady';
-        if(!authorized) identityVerified=false; // native logout/re-auth revokes old getMe proof
+        authState=packet.state;
+        // This state is directly from the real TDLib updateAuthorizationState,
+        // NOT a synthetic URL, QR payload, or renderer-supplied account flag.
+        authDetails=packet.details && packet.details['@type']===authState?
+          packet.details:null;
+        authorized=authState==='authorizationStateReady';
+        if(!authorized){ identityVerified=false;exactSelfUserId=null; }
+        if(authState==='authorizationStateClosed'){
+          const confirmedByNative=logoutPending;
+          logoutPending=false;
+          if(confirmedByNative && typeof onNativeAccountRevoked==='function'){
+            // Only existing W24/W55 Owner can attest persisted revocation.
+            Promise.resolve(onNativeAccountRevoked({
+              channel:'TELEGRAM_PERSONAL',channelAccountId:account?.channelAccountId,
+              platformUserIdExact:identityVerified?exactSelfUserId:null,
+            })).then(v=>{removalConfirmed=v?.revoked===true;})
+              .catch(()=>errors.push('PERSISTED_ACCOUNT_REVOKE_NOT_CONFIRMED'));
+          }
+        }
+        if(authorized){
+          const extra='w29-me-'+randomUUID();
+          nativeMeRequests.add(extra);
+          // Official getMe is read-only, does not send a Telegram message.
+          worker.stdin.write(JSON.stringify({action:'tdlib',
+            query:{'@type':'getMe','@extra':extra}})+'\n');
+        }
         return;
       }
       if(packet.kind!=='tdlib_update'||!authorized||!account)return;
@@ -159,6 +192,7 @@ export function nativeTDJsonController({
           const attested=await onNativeAccountIdentity({account,clientId,
             platformUserIdExact:String(id),source:'OFFICIAL_TDLIB_GET_ME'});
           ensure(attested?.verified === true,'NATIVE_GETME_OWNER_ATTESTATION_HOLD');
+          exactSelfUserId=String(id);
           identityVerified=true;
         })();pending.add(task);
         task.catch(()=>errors.push('TRUSTED_GETME_BINDING_FAILED'))
@@ -247,10 +281,38 @@ export function nativeTDJsonController({
 
   async function disconnect({sessionHandle,gestureId,logout=false}={}){
     if(!proc)return status();
-    if(logout) await authorizeStep({sessionHandle,gestureId,request:{'@type':'logOut'}});
-    else proc.stdin.write(JSON.stringify({action:'stop'})+'\n');
-    return status(); // native closed state, not merely queued logout, is authority
+    if(logout){
+      logoutPending=true;
+      try{await authorizeStep({sessionHandle,gestureId,request:{'@type':'logOut'}});}
+      catch(e){logoutPending=false;throw e;}
+    } else proc.stdin.write(JSON.stringify({action:'stop'})+'\n');
+    return status(); // Native closed state, not merely queued logout, confirms revoke.
+  }
+  // W47 may expose this only through its already-authenticated same-user
+  // session endpoint. Never leak fresh TDLib QR link on public GET /setup.
+  async function readPrivateAccountState({sessionHandle,gestureId}={}){
+    ensure(proc!==null && account,'NO_RUNNING_TRUSTED_TDLIB_SESSION');
+    const current=await attestReadSession({sessionHandle});
+    ensure(current?.verified===true &&
+      current?.channelAccountId===account.channelAccountId &&
+      current?.channel==='TELEGRAM_PERSONAL','TRUSTED_PROVIDER_READ_SESSION_REQUIRED');
+    const result=status();
+    return Object.freeze({...result,
+      platformUserIdExact:identityVerified?exactSelfUserId:null,
+      // This login link is obtained exclusively from official TDLib update.
+      qrLoginLink:authState==='authorizationStateWaitOtherDeviceConfirmation'?
+        (authDetails?.link??null):null,
+      codeInfo:authState==='authorizationStateWaitCode'?
+        (authDetails?.code_info??null):null,
+      emailCodeInfo:authState==='authorizationStateWaitEmailCode'?
+        (authDetails?.code_info??null):null,
+      passwordHint:authState==='authorizationStateWaitPassword'?
+        (authDetails?.password_hint??null):null,
+      // Read this on W47's private, non-cached response, never log/copy to disk.
+      requiresUserAction:!authorized || !identityVerified,
+      canSend:false,
+    });
   }
   return Object.freeze({status,begin,authorizeStep,disconnect,
-    errors:()=>[...errors]});
+    readPrivateAccountState,errors:()=>[...errors]});
 }
