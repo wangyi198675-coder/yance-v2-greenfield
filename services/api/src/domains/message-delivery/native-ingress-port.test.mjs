@@ -10,7 +10,7 @@ let order=0;
 function make(channel='WHATSAPP_PERSONAL'){
  const k={tenant:'actual-local-user-1',account:'authorized-account-1',channel,
    peer_id:'confirmed-peer-1',binding_revision:4};
- let online=true,authorized=true,consent=true,version=4,sourceVerified=true,
+ let online=true,authorized=true,consent=true,privacyAllowed=true,version=4,sourceVerified=true,
      workerIdentity='pid:42',insertions=0;
  const records=new Map();
  const owner={
@@ -43,11 +43,12 @@ function make(channel='WHATSAPP_PERSONAL'){
  }};
  const port=createNativeIngressPort({identityService:identity,
    trustedContext:{principal_id:'verified-user-1'},nativeOwner:owner,
+   privacyAuthority:{async checkInbound(){return {authorized:privacyAllowed,consentEpoch:2,bindingRevision:version}}},
    messageRepository:repository});
  const event=(mid='provider-mid-1')=>({k,rawEvent:{id:'upstream-event-1',mid,text:'Hi, authorized native inbound'}});
  return {k,port,event,records,get inserts(){return insertions},
    setOnline:v=>{online=v},setAuthorized:v=>{authorized=v},
-   setConsent:v=>{consent=v},setVersion:v=>{version=v},
+   setConsent:v=>{consent=v},setPrivacy:v=>{privacyAllowed=v},setVersion:v=>{version=v},
    setSourceVerified:v=>{sourceVerified=v},
    setWorkerIdentity:v=>{workerIdentity=v}};
 }
@@ -99,6 +100,8 @@ test('binding rebind, revoked account, denied consent cannot create message',asy
  await assert.rejects(f.port.acceptInbound(f.event()),/WAITING_USER_AUTH/);
  f.setAuthorized(true);f.setConsent(false);
  await assert.rejects(f.port.acceptInbound(f.event()),/W24_INBOUND_DENIED/);
+ f.setConsent(true);f.setPrivacy(false);
+ await assert.rejects(f.port.acceptInbound(f.event()),/PRIVATE_INBOUND_CONSENT_REQUIRED/);
  assert.equal(f.inserts,0);
 });
 test('same provider MID in different account or peer remains isolated by repository full-K',async()=>{

@@ -48,7 +48,7 @@ const trustedDrivers=new Set(Object.values(channels));
  *     performs DB-atomic K+MID idempotent create and returns {stored,duplicate}
  */
 export function createNativeIngressPort({
-  identityService,trustedContext,nativeOwner,messageRepository
+  identityService,trustedContext,nativeOwner,messageRepository,privacyAuthority
 }={}){
   if(identityService?.isDurableIdentity!==true||
     typeof identityService.assertCurrent!=='function'||
@@ -57,8 +57,9 @@ export function createNativeIngressPort({
   if(!plain(trustedContext)||!str(trustedContext.principal_id)||
     typeof nativeOwner?.verifyInbound!=='function'||
     typeof nativeOwner?.connectionState!=='function'||
-    typeof messageRepository?.insertOriginalIfAbsent!=='function')
-    fail('NATIVE_OWNER_AND_PERSISTED_MESSAGE_PORTS_REQUIRED');
+    typeof messageRepository?.insertOriginalIfAbsent!=='function'||
+    typeof privacyAuthority?.checkInbound!=='function')
+    fail('NATIVE_OWNER_REPOSITORY_AND_PRIVACY_PORTS_REQUIRED');
 
   async function currentState(k){
     const state=await nativeOwner.connectionState(k);
@@ -98,6 +99,15 @@ export function createNativeIngressPort({
       k:identity,operation:'READ_INBOUND'
     });
     if(allowed?.allowed!==true)fail('W24_INBOUND_DENIED');
+    // READ_INBOUND identity alone is not a user-approved private-data grant.
+    // Recheck a separate W24/W47 user-consent authority before persisting text.
+    // It must be bound to the current account, peer and consent epoch.
+    const privacy=await privacyAuthority.checkInbound({
+      k:identity, trustedContext, providerMid:evidence.providerMid
+    });
+    if(privacy?.authorized!==true||!Number.isSafeInteger(privacy.consentEpoch)||
+       privacy.consentEpoch<1||privacy.bindingRevision!==identity.binding_revision)
+      fail('PRIVATE_INBOUND_CONSENT_REQUIRED');
     const after=await currentState(identity);
     if(after.workerIdentity!==connection.workerIdentity)
       fail('NATIVE_CONNECTION_REBOUND');
