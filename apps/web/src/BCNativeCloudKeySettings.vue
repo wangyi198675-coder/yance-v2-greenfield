@@ -1,86 +1,176 @@
 <script setup lang="ts">
-import {ref,onMounted} from 'vue';
-type Provider='OPENROUTER'|'OPENAI_API';
+import {ref,computed,onMounted,watch} from 'vue';
+type Provider='OPENROUTER_USER_API'|'OPENAI_USER_API';
 type Status={provider:Provider,configured:boolean,revoked:boolean,revision:number};
+type NativeStatus={provider:string,configured:boolean,revoked:boolean,revision:number};
+const props=defineProps<{webCsrf?:string|null}>();
+const emit=defineEmits<{changed:[]}>();
 const native=typeof window!=='undefined'&&(window as any).__TAURI__?.core?.invoke;
-const key=ref(''),provider=ref<Provider>('OPENROUTER'),current=ref<Status|null>(null);
-const busy=ref(false),message=ref('');
-const vendor=[{id:'OPENROUTER',label:'OpenRouter'},{id:'OPENAI_API',label:'OpenAI API'}] as const;
-// Exactly the original installed Tauri 2 IPC, not fetch, HTTP, URL or localStorage.
-async function command<T>(name:string,args:Record<string,unknown>):Promise<T>{
- if(typeof native!=='function')throw Error('请在已安装的言策桌面版配置密钥');
- return native(name,args);
+const path='/api/v2/private-brain/cloud-keys';
+const vendors=[{id:'OPENROUTER_USER_API',label:'OpenRouter'},
+ {id:'OPENAI_USER_API',label:'OpenAI API'}] as const;
+const provider=ref<Provider>('OPENROUTER_USER_API');
+const key=ref(''),current=ref<Status|null>(null);
+const ready=ref(!!native),busy=ref(false),message=ref('');
+const webCsrfOk=computed(()=>typeof props.webCsrf==='string'&&/^[a-f0-9]{64}$/.test(props.webCsrf));
+const webActive=computed(()=>typeof native!=='function'&&ready.value&&webCsrfOk.value);
+const canConfigure=computed(()=>typeof native==='function'||webActive.value);
+const nativeId=(p:Provider)=>p==='OPENROUTER_USER_API'?'OPENROUTER':'OPENAI_API';
+function verifiedStatus(v:unknown,p:Provider):Status{
+ if(!v||typeof v!=='object'||Array.isArray(v))throw Error('INVALID_STATUS');
+ const x=v as Record<string,unknown>;
+ if(x.configured!==true&&x.configured!==false||typeof x.revoked!=='boolean'||
+  !Number.isSafeInteger(x.revision)||(x.revision as number)<0||
+  (x.provider!==p&&x.provider!==nativeId(p))||
+  (x.configured===true&&x.revoked===true))throw Error('INVALID_STATUS');
+ return {provider:p,configured:x.configured===true,revoked:x.revoked===true,revision:x.revision as number};
+}
+function safeResult(d:unknown){
+ if(!d||typeof d!=='object'||Array.isArray(d))throw Error('INVALID_RECEIPT');
+ const x=d as Record<string,unknown>;
+ if(x.ok!==true||x.canSend!==false||x.credentialValueReturned!==false)
+  throw Error('INVALID_RECEIPT');
+ return x;
+}
+async function webRequest(method:'GET'|'POST'|'DELETE',body?:Record<string,unknown>){
+ if(typeof window==='undefined'||window.location.hostname!=='127.0.0.1'||
+  !webCsrfOk.value||typeof globalThis.fetch!=='function')throw Error('WEB_PRIVATE_SESSION_UNAVAILABLE');
+ const r=await globalThis.fetch(path,{method,credentials:'same-origin',
+  cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',
+  ...(method==='GET'?{}:{headers:{'content-type':'application/json','x-yance-csrf':props.webCsrf!},
+   body:JSON.stringify(body)})});
+ if(!r.ok)throw Error('WEB_HTTP_'+r.status);
+ return safeResult(await r.json());
+}
+async function webStatus(p:Provider):Promise<Status>{
+ const d=await webRequest('GET');
+ if(!Array.isArray(d.providers)||d.providers.length!==2)throw Error('INVALID_STATUS_LIST');
+ const ids=new Set<string>(),statuses=new Map<Provider,Status>();
+ for(const x of d.providers){
+  const id=(x as Status)?.provider;
+  if(!vendors.some(v=>v.id===id)||ids.has(id))throw Error('INVALID_STATUS_LIST');
+  ids.add(id);statuses.set(id,verifiedStatus(x,id));
+ }
+ if(ids.size!==2||!statuses.has(p))throw Error('INVALID_STATUS_LIST');
+ return statuses.get(p)!;
+}
+function userError(e:unknown){
+ const s=String((e as Error)?.message||'');
+ if(s==='WEB_HTTP_409')return '密钥版本已变化，请刷新状态后重试';
+ if(s==='WEB_HTTP_401'||s==='WEB_HTTP_403')return '本机私人会话已失效或请求被拒绝，请检查连接';
+ if(s==='WEB_HTTP_422')return 'API Key 或版本不符合服务端要求，请检查后重试';
+ if(s==='WEB_HTTP_503'||s==='WEB_HTTP_404'||s==='WEB_PRIVATE_SESSION_UNAVAILABLE')
+  return '网页版云端密钥接口暂未接通，请保留现有本地模型设置';
+ return '本机密钥操作未取得可核验的服务端确认';
+}
+async function readStatus(p:Provider){
+ if(typeof native==='function'){
+  return verifiedStatus(await native('cloud_key_status',{provider:nativeId(p)}),p);
+ }
+ return webStatus(p);
 }
 async function refresh(){
- busy.value=true;message.value='';
- try{current.value=await command<Status>('cloud_key_status',{provider:provider.value})}
- catch(e){current.value=null;message.value='无法读取本机密钥状态：'+String(e)}
+ if(busy.value)return;
+ busy.value=true;message.value='';key.value='';current.value=null;
+ const p=provider.value;
+ try{
+  const status=await readStatus(p);
+  if(provider.value===p){current.value=status;ready.value=true}
+ }catch(e){ready.value=typeof native==='function';message.value=userError(e)}
  finally{busy.value=false}
 }
 async function save(){
- if(busy.value||key.value.length<16)return;
- busy.value=true;message.value='';
+ if(busy.value||!canConfigure.value||key.value.length<16)return;
+ const p=provider.value,previous=current.value;
  let pending=key.value;key.value='';
+ busy.value=true;message.value='';
  try{
-  current.value=await command<Status>('cloud_key_store',{
-   provider:provider.value,secret:pending,
-   expectedRevision:current.value?.revision||undefined
-  });
-  message.value='密钥已保存到当前 Windows 用户的系统凭据库';
- }catch(e){message.value='保存未完成：'+String(e)}
- finally{pending='';busy.value=false}
+  if(typeof native==='function'){
+   const r=await native('cloud_key_store',{provider:nativeId(p),secret:pending,
+    ...(previous?.revision?{expectedRevision:previous.revision}:{})});
+   verifiedStatus(r,p);
+  }else{
+   const r=await webRequest('POST',{provider:p,apiKey:pending,
+    ...(previous?.revision?{expectedRevision:previous.revision}:{})});
+   const written=verifiedStatus(r,p);
+   if(!written.configured||written.revoked||written.revision<=0)throw Error('INVALID_RECEIPT');
+  }
+  const verified=await readStatus(p);
+  if(!verified.configured||verified.revoked||
+    verified.revision<=(previous?.revision||0))throw Error('STATUS_NOT_CONFIRMED');
+  if(provider.value===p){current.value=verified;message.value='服务端已确认密钥保存状态'}
+  emit('changed');
+ }catch(e){
+  current.value=null;ready.value=typeof native==='function';
+  message.value=userError(e);
+ }finally{pending='';busy.value=false}
 }
 async function revoke(){
- if(busy.value||!current.value?.configured)return;
+ if(busy.value||!canConfigure.value||!current.value?.configured)return;
+ const p=provider.value,previous=current.value;
  busy.value=true;message.value='';key.value='';
  try{
-  current.value=await command<Status>('cloud_key_revoke',{
-   provider:provider.value,expectedRevision:current.value.revision
-  });
-  message.value='已撤销该来源的密钥，不会再用于模型调用';
- }catch(e){message.value='撤销未确认：'+String(e)}
+  if(typeof native==='function'){
+   verifiedStatus(await native('cloud_key_revoke',{
+    provider:nativeId(p),expectedRevision:previous.revision}),p);
+  }else{
+   const r=await webRequest('DELETE',{provider:p,expectedRevision:previous.revision});
+   const removed=verifiedStatus(r,p);
+   if(removed.configured||!removed.revoked)throw Error('INVALID_RECEIPT');
+  }
+  const verified=await readStatus(p);
+  if(verified.configured||!verified.revoked||verified.revision<=previous.revision)
+   throw Error('STATUS_NOT_CONFIRMED');
+  if(provider.value===p){current.value=verified;message.value='服务端已确认密钥撤销'}
+  emit('changed');
+ }catch(e){current.value=null;ready.value=typeof native==='function';message.value=userError(e)}
  finally{busy.value=false}
 }
+function onProviderChange(){key.value='';void refresh()}
 onMounted(refresh);
+watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
 </script>
 <template>
- <section class="cloud-key-panel" data-test="cloud-key-native" aria-label="本机云端 AI Key 设置">
+ <section class="cloud-key-panel" data-test="cloud-key-native" aria-label="云端 AI Key 设置">
   <strong>云端 AI 密钥</strong>
-  <p>在自己的电脑保存 OpenRouter 或 OpenAI API Key，无需配对码，也不要求安装本地模型。</p>
-  <p v-if="!native" role="status" data-test="cloud-web-provider-pending">网页版云端密钥暂未接通，当前不会接收或保存 API Key。正在复用现有本机 WinCred；无需安装新程序才能继续使用本地 Qwen3。</p>
+  <p>可以使用自己的 OpenRouter 或 OpenAI API Key。本地 Qwen3 不受云端设置影响。</p>
+  <label>来源
+   <select v-model="provider" data-test="cloud-provider" :disabled="busy" @change="onProviderChange">
+    <option v-for="p in vendors" :key="p.id" :value="p.id">{{p.label}}</option>
+   </select>
+  </label>
+  <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">
+   网页版云端密钥暂未接通，当前不会接收或保存 API Key。可继续使用已配置的本地 Qwen3。
+  </p>
   <template v-else>
-   <label>来源
-    <select v-model="provider" data-test="cloud-provider" :disabled="busy" @change="refresh">
-     <option v-for="p in vendor" :key="p.id" :value="p.id">{{p.label}}</option>
-    </select>
-   </label>
    <p role="status" data-test="cloud-redacted-status">
     {{current?.configured?'已保存':current?.revoked?'已撤销':'未配置'}}
     <span v-if="current"> · 版本 {{current.revision}}</span>
    </p>
    <form @submit.prevent="save">
     <label>API Key
-     <input v-model="key" type="password" autocomplete="off" spellcheck="false"
-      aria-label="只保存到当前Windows用户的API Key" placeholder="输入自己的API Key"
+     <input v-model="key" type="password" autocomplete="off" autocapitalize="off"
+      spellcheck="false" data-lpignore="true" placeholder="输入自己的 API Key"
+      aria-label="仅提交到本机同源密钥服务的 API Key"
       data-test="cloud-secret-input" :disabled="busy"/>
     </label>
     <button type="submit" data-test="cloud-save" :disabled="busy||key.length<16">
-      {{current?.configured?'更新密钥':'保存密钥'}}
+     {{current?.configured?'更新密钥':'保存密钥'}}
     </button>
     <button type="button" data-test="cloud-revoke" :disabled="busy||!current?.configured"
-      @click="revoke">撤销</button>
+     @click="revoke">撤销</button>
     <button type="button" data-test="cloud-refresh" :disabled="busy" @click="refresh">刷新状态</button>
    </form>
-   <p>云端模型可能收费。保存密钥本身不会发起调用；实际模型选择和费用同意仍由你决定，不自动切换付费来源。</p>
-   <p v-if="message" role="status" data-test="cloud-action-result">{{message}}</p>
   </template>
+  <p>Key 不会回填到输入框。密钥设置不自动启动收费推理；选择云端模型与每次收费提问需要另行确认。</p>
+  <p v-if="message" role="status" data-test="cloud-action-result">{{message}}</p>
  </section>
 </template>
 <style scoped>
-.cloud-key-panel{display:grid;gap:10px;border:1px solid var(--w46-edge,#777);padding:14px;border-radius:10px}
+.cloud-key-panel{display:grid;gap:10px;border:1px solid var(--w46-edge,#777);padding:14px;border-radius:10px;min-width:0}
 .cloud-key-panel form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
-.cloud-key-panel label{display:grid;gap:5px}
-.cloud-key-panel input,.cloud-key-panel select{border:1px solid var(--w46-edge,#777);border-radius:6px;padding:8px;background:transparent;color:inherit;max-width:330px}
+.cloud-key-panel label{display:grid;gap:5px;min-width:0}
+.cloud-key-panel input,.cloud-key-panel select{border:1px solid var(--w46-edge,#777);border-radius:6px;padding:8px;background:transparent;color:inherit;max-width:330px;min-width:0;width:100%;box-sizing:border-box}
 .cloud-key-panel button{padding:8px 12px;border:1px solid var(--w46-edge,#777);border-radius:6px}
-.cloud-key-panel p{font-size:12px;margin:0}
+.cloud-key-panel p{font-size:12px;margin:0;overflow-wrap:anywhere}
 </style>
