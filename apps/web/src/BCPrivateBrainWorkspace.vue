@@ -13,8 +13,8 @@ const threadId='personal';
 const safeCurrent=id=>mounted&&revision===id;
 const selected=computed(()=>catalog.value?.models.find(m=>m.provider+'|'+m.modelId===chosen.value)||null);
 const providers=computed(()=>publicProviders.value.map(p=>({
- id:p.id,name:p.name,desc:p.id==='local'?'选装。不安装也不阻止云端模型':
- p.id==='openai'?'API Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度':
+ id:p.id,name:p.name,desc:p.id==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?'选装。不安装也不阻止云端模型':
+ p.id==='OPENAI_USER_API'?'API Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度':
  '用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key'
 })));
 function clearSession(){
