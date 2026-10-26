@@ -1,0 +1,314 @@
+{
+  "source": "ACTUAL_WINDOWS_CHROME_VUE_NONPROD_CURRENT_C_API_48184",
+  "originalOwnerSha": "f2c9d995499e9974f8771c2832094f8ed6a4a287",
+  "currentOfficialUrlUntouched": "http://127.0.0.1:44751/",
+  "currentApiStatus": "paired:false; no signed cloud model catalogue",
+  "widthCount": 4,
+  "noTerminalPairForm": true,
+  "noFakeSession": true,
+  "noMockAnswer": true,
+  "noActualModelInvocation": true,
+  "noMutations": true,
+  "apiWrites": [],
+  "errors": [],
+  "serverErrors": [
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/contacts",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/health",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/runtime/capabilities",
+      "status": 500
+    },
+    {
+      "url": "http://127.0.0.1:4174/api/v2/local-session/status",
+      "status": 500
+    }
+  ],
+  "loadedBundleScripts": [
+    "http://127.0.0.1:4174/assets/index-Be9eZRDi.js"
+  ],
+  "serviceWorkers": [],
+  "measures": [
+    {
+      "w": 320,
+      "h": 680,
+      "brainCount": 1,
+      "pairInputs": 0,
+      "legacyConnector": 0,
+      "terminalPairText": false,
+      "settings": 1,
+      "sendDisabled": true,
+      "history": 0,
+      "contacts": 0,
+      "horizontal": 0,
+      "sessionText": "本机可信会话尚未建立",
+      "visibleComposer": 0,
+      "threeProviderLabels": true,
+      "serverSource": "current live 48184 paired:false"
+    },
+    {
+      "w": 430,
+      "h": 850,
+      "brainCount": 1,
+      "pairInputs": 0,
+      "legacyConnector": 0,
+      "terminalPairText": false,
+      "settings": 1,
+      "sendDisabled": true,
+      "history": 0,
+      "contacts": 0,
+      "horizontal": 0,
+      "sessionText": "本机可信会话尚未建立",
+      "visibleComposer": 0,
+      "threeProviderLabels": true,
+      "serverSource": "current live 48184 paired:false"
+    },
+    {
+      "w": 950,
+      "h": 620,
+      "brainCount": 1,
+      "pairInputs": 0,
+      "legacyConnector": 0,
+      "terminalPairText": false,
+      "settings": 1,
+      "sendDisabled": true,
+      "history": 0,
+      "contacts": 0,
+      "horizontal": 0,
+      "sessionText": "本机可信会话尚未建立",
+      "visibleComposer": 0,
+      "threeProviderLabels": true,
+      "serverSource": "current live 48184 paired:false"
+    },
+    {
+      "w": 1360,
+      "h": 900,
+      "brainCount": 1,
+      "pairInputs": 0,
+      "legacyConnector": 0,
+      "terminalPairText": false,
+      "settings": 1,
+      "sendDisabled": true,
+      "history": 0,
+      "contacts": 0,
+      "horizontal": 0,
+      "sessionText": "本机可信会话尚未建立",
+      "visibleComposer": 0,
+      "threeProviderLabels": true,
+      "serverSource": "current live 48184 paired:false"
+    }
+  ]
+}

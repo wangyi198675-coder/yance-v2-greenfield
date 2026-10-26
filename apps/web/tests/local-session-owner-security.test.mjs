@@ -63,7 +63,8 @@ test('W46 local UI disables stale verification during GET and expiry',()=>{
 });
 test('W46 single BRAIN and CHAT Composer not duplicated by session connector',()=>{
  const parent=readFileSync(new URL('../src/BCProductWorkspaceCandidate.vue',import.meta.url),'utf8');
- assert.equal((parent.match(/<BCLocalSessionConnector/g)||[]).length,1);
+ assert.equal((parent.match(/<BCLocalSessionConnector/g)||[]).length,0);
+ assert.equal((parent.match(/<BCPrivateBrainWorkspace/g)||[]).length,1);
  assert.match(parent,/v-else-if="activeWorkspace==='BRAIN'"/);
  assert.ok(!parent.includes('<BCNativeComposer'));
  assert.ok(!parent.includes('<MessageDelivery'));
