@@ -214,8 +214,8 @@ test('signed cloud selection cannot execute original local-only W43 or create du
  try{
   const s=await b.pair();
   const x=await post(b,s);
-  assert.equal(x.status,503);
-  assert.equal(x.data.error,'W43_SELECTED_MODEL_EXECUTION_NOT_SIGNED');
+  assert.equal(x.status,409);
+  assert.equal(x.data.error,'NATIVE_MODEL_SELECTION_OR_EPOCH_MISMATCH');
   assert.equal(store.count(),0);
   assert.equal(executes,0);
  }finally{await b.close()}

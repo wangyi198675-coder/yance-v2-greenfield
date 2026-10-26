@@ -38,15 +38,21 @@ def main():
 
     request = read()
     method = request.get("method")
-    # Original W43 3d3992c has no signed cloud adapter. Never silently
-    # substitute local Qwen3 when user chose a cloud model.
+    # The ONE W43 Agno 3.1.10 agent now supports official cloud SDKs.
+    # This selection comes ONLY from the W47 server-private signed model port,
+    # not directly from a browser. Match it against EACH fresh W54/W55 claim.
     selected = request.get("modelSelection")
+    expected_backend = {
+        "LLAMACPP_LOCAL_QWEN3_8B_FREE": "llamacpp",
+        "OPENROUTER_USER_API": "openrouter",
+        "OPENAI_USER_API": "openai",
+    }
     if selected is not None:
-        if not isinstance(selected, dict) or set(selected) != {"provider", "modelId"}:
+        if (not isinstance(selected, dict)
+                or set(selected) != {"provider", "modelId"}
+                or selected.get("provider") not in expected_backend
+                or not isinstance(selected.get("modelId"), str)):
             emit({"kind": "W43_ERROR", "error": "MODEL_SELECTION_INVALID", "httpStatus": 422})
-            return
-        if selected != {"provider": "LLAMACPP_LOCAL_QWEN3_8B_FREE", "modelId": "qwen3:8b"}:
-            emit({"kind": "W43_ERROR", "error": "CLOUD_AGNO_OWNER_ADAPTER_NOT_SIGNED", "httpStatus": 503})
             return
     if method not in {
         "turn", "history", "claim", "finish", "markUnknown", "reconcile"
@@ -63,6 +69,11 @@ def main():
             raise W47PrivateAccessError("LOCAL_SESSION_REQUIRED", 401)
         # Constructing a Python dataclass is NEVER proof of trusted identity;
         # this is transfer of a parent server-only, live W54/W47 claim.
+        if selected is not None and (
+            verified.get("modelBackend") != expected_backend[selected["provider"]]
+            or verified.get("modelId") != selected["modelId"]
+        ):
+            raise W47PrivateAccessError("SIGNED_MODEL_SELECTION_CHANGED", 409)
         return W47VerifiedPrincipal(
             principal_ref=verified["principalRef"],
             installation_ref=verified["installationRef"],
@@ -71,6 +82,14 @@ def main():
             revocation_generation=verified["revocationGeneration"],
             expires_at_ms=verified["expiresAtMs"],
             app_local_data_root=Path(verified["appLocalDataRoot"]),
+            model_backend=verified.get("modelBackend", "llamacpp"),
+            model_id=verified.get("modelId", "qwen3:8b"),
+            cloud_key_file=(Path(verified["cloudKeyFile"])
+                            if verified.get("cloudKeyFile") else None),
+            model_user_selected=verified.get("modelUserSelected") is True,
+            extra_charge_approved=verified.get("extraChargeApproved") is True,
+            protected_credential_attested=verified.get("protectedCredentialAttested") is True,
+            model_selection_epoch=verified.get("modelSelectionEpoch", 0),
         )
 
     original = W43NativePrivateBrainPort(

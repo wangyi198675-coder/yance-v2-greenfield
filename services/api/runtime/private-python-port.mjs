@@ -34,7 +34,8 @@ export function createW43PythonPrivatePort({
    const proc=spawn(pythonExecutable,['-B',childScript,resolve(w43ModuleRoot)],{
     windowsHide:true,stdio:['pipe','pipe','ignore'],shell:false,
     env:{...process.env,AGNO_TELEMETRY:'false',
-      OPENAI_API_KEY:'',OLLAMA_API_KEY:'',YANCE_W43_LOCAL_KEY_FILE:protectedKeyFile}});
+      OPENAI_API_KEY:'',OPENROUTER_API_KEY:'',OLLAMA_API_KEY:'',
+      YANCE_W43_LOCAL_KEY_FILE:protectedKeyFile}});
    let finished=false,seen=0,responding=false;
    const clean=()=>{
     clearTimeout(timer);
@@ -97,6 +98,12 @@ export function createW43PythonPrivatePort({
   });
  }
  return Object.freeze({
+  // Capability support is NOT model readiness or billable authorization.
+  // W54/W55 native credential/consent and W43 live SDK verify separately.
+  supportsSelection:async s=>!!s&&typeof s==='object'&&
+   ['OPENROUTER_USER_API','OPENAI_USER_API','LLAMACPP_LOCAL_QWEN3_8B_FREE'].includes(s.provider)&&
+   typeof s.modelId==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}$/.test(s.modelId)&&
+   (s.provider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'||s.modelId==='qwen3:8b'),
   turn:(ctx,thread_id,text,request_id,modelSelection)=>
    invoke('turn',ctx,thread_id,text,request_id,undefined,modelSelection),
   history:(ctx,thread_id)=>invoke('history',ctx,thread_id),

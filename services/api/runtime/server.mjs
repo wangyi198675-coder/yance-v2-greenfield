@@ -7,6 +7,7 @@ import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-ses
 import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
 import {createPrivateBrainHttp} from './private-brain-http.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
+import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -38,6 +39,10 @@ const privateModelHttp=createPrivateModelHttp({sessionAuthority:localSessionAuth
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.
 const privateBrainHttp=createPrivateBrainHttp({sessionAuthority:localSessionAuthority,webOrigin});
+// W24 + W26..W29 provider SDK authority is absent, not a zero-contact
+// authoritative response. W09 may inject ORIGINAL signed native owner ports
+// only after providers are actually running, never synthetic adapter objects.
+const nativeOwnerReads=createNativeOwnerReadHttp({sessionAuthority:localSessionAuthority,webOrigin});
 const noStore={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store','x-content-type-options':'nosniff',
@@ -57,13 +62,14 @@ const endpoints=Object.freeze({
   sender:{installed:true,enabled:false,reason:'NO_AUTHORIZED_PROVIDER'}
 });
 let boundPort=null;
-const state=()=>({
+const state=req=>({
   ok:true,service:'Yance V2 local API',apiVersion:'v2',runtimeSha:sha,
   entrypoint:'services/api/runtime/server.mjs',
   runtimeMode:config.mode,apiPort:boundPort,
-  trustedSession:false,connectedAccountCount:0,
-  realContacts:0,realMessageCount:0,canSend:false,
-  mode:'LOCAL_UNAUTHORIZED_NO_PROVIDER',externalEffects:false
+  trustedSession:localSessionAuthority.sessionFor(req)?.record?.kind==='NATIVE_FIRST_PARTY',
+  connectedAccountCount:null,realContacts:null,realMessageCount:null,
+  countsAuthoritative:false,canSend:false,
+  mode:'NATIVE_PROVIDER_OWNER_PORTS_NOT_CONNECTED',externalEffects:false
 });
 const handler=(req,res)=>{
   try{
@@ -104,14 +110,18 @@ const handler=(req,res)=>{
       return;
     }
     if(req.method==='GET' && (url.pathname==='/api/v2/runtime/health'||url.pathname==='/health'))
-      return serial(res,200,state());
+      return serial(res,200,state(req));
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/version')
-      return serial(res,200,{...state(),webSource:'SEE_INSTALLED_LOCAL_WEB_VERSION',apiGitSha:sha});
+      return serial(res,200,{...state(req),webSource:'SEE_INSTALLED_LOCAL_WEB_VERSION',apiGitSha:sha});
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/capabilities')
       return serial(res,200,{ok:true,authoritative:true,canSend:false,capabilities:endpoints});
-    if(req.method==='GET' && url.pathname==='/api/v2/contacts')
-      return serial(res,200,{ok:true,authoritative:true,contacts:[],source:'NONE_CONNECTED',
-        connectedAccountCount:0,canSend:false,reason:'NO_CONNECTED_PROVIDER'});
+    if(url.pathname==='/api/v2/contacts'){
+      void nativeOwnerReads(req,res,url).catch(()=>{
+       if(!res.headersSent)deny(res,503,'NATIVE_CONTACT_SOURCE_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
+    }
     if(req.method==='GET' && url.pathname==='/api/v2/messages')
       return deny(res,401,'NO_AUTHORIZED_CONTACT');
     if(req.method==='GET' && url.pathname==='/api/v2/translations')
