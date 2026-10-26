@@ -45,3 +45,28 @@ Unit tests include scope isolation, W45 source/attestation rejection, model mism
 - \`quality_qualified=false\` at all times until separately proven by qualified W45 + independent reviewers. Chinese-character presence, actual Run ID, tools or token usage are NOT translation correctness or human naturalness scores.
 - Native Approval **resume**, real use of a 200+ tool catalog, real W45 0-3 proposals, cross-process authorized attestation, multi-worker admission limits, external GUI contention, sustained load, GPU VRAM/performance and production SLA remain HOLD.
 - W24 identity/grants/epoch/revocation, W44 budget, W25 unique MessageDelivery, W46 sole B+C Composer integration are separate Owner gates. No production deployment, live channel login, external sending or paid model calls.
+
+
+## 2026-10-26 W43 PRIVATE native ChatHistory delta — NOT WEB RELEASED
+
+W43 reuses the already registered NativeAgnoRuntime.agents["PRIVATE"] in official Agno 3.1.10 + AgentOS, the SAME native Agno SqliteDb and the existing localhost llama.cpp model adapter. No duplicate Brain, Sender, Outbox, ChatHistory DB design, model server or HTTP port is created.
+
+New interface: runtime.read_private_chat_history(scope, thread="default") requires PRIVATE-only Scope and exact derived private scoped user/session; verifies session.user_id and agent_id; uses NATIVE db.get_runs(session_id,user_id,agent_id) in run-index order. Agno keeps session metadata and run bodies in separate SQLite tables; relying only on db.get_session().runs can silently miss persisted runs. Returns status, session_id, run_count, complete_turn_count and all real user/assistant/tool role messages with Run ID/status. Excludes system instructions. A failed SDK Run containing only the user's actual text is NEVER counted as an AI reply.
+
+PRIVATE needs no Facebook, WhatsApp or contact account. But current W43 PRIVATE Scope is explicitly SYNTHETIC_TEST_ONLY, not a W47-signed local human principal. W43 must not issue a browser Session or accept arbitrary self-claimed local identity.
+
+Proposed minimal W47/W46 owner contract; NOT IMPLEMENTED in live 47182:
+1. POST /api/v2/private-brain/turn. W47 authenticates server-issued HttpOnly SameSite Session, exact Origin, CSRF, current native user and AppLocalData identity. Request JSON: {threadId,text,requestId}. No channel K or peer. Server derives canonical PRIVATE context, then calls the EXISTING Agno PRIVATE Agent.run with user_id/session_id. Only real SDK COMPLETED plus nonempty answer returns {status,threadId,runId,sessionId,modelProvider,modelId,assistantText,qualityQualified:false}. Errors use explicit MODEL_UNAVAILABLE, SESSION_REQUIRED, CAPACITY_BUSY; never fabricate answer or do outbound.
+2. GET /api/v2/private-brain/history?threadId=... after the SAME W47 server session. W47 calls read_private_chat_history; returns {sessionId,messages,runCount,completeTurnCount}, no-store. Browser cannot choose arbitrary OS SID, dbPath, account or userId. Different local user/context gets 401/403 and zero history.
+3. W46 owns the existing sole PRIVATE Brain workspace and apps/web/src/BCProductWorkspaceCandidate.vue BRAIN slot, never creates another assistant. apps/web/src/BCNativeComposer.vue remains the existing CONTACT draft-only route.
+
+This is a proposed contract requiring separate W47 and W46 OWNER ACK, not a signed route. W47 trusted pairing callback is still null. The actually running old API at 47182 returns local-session/status HTTP404, and health trustedSession=false. Fixed Web 44751 only returns static HTTP200. Origin/localhost/fake cookies are NOT authorization.
+
+Actual current live failure evidence:
+- Operator-scripted natural Chinese questions went through EXISTING Agno PRIVATE Agent twice. SDK returned ERROR Connection error for both, since existing llama.cpp 127.0.0.1:11605 is NOT listening now. Both real SDK Run IDs exist only as failed runs; no qualified model answer.
+- Native Agno SQLite persisted both user messages. A fresh Runtime read found 2 persisted Run records, 2 user messages, 0 assistant messages, complete_turn_count=0; other fixture private account gets HISTORY_NOT_FOUND. This is actual native DB input persistence, NOT successful two-turn dialogue.
+- eval_private_multiturn.py now checks 11605 before invocation. It produces HOLD_EXISTING_LOCAL_MODEL_UNREACHABLE, exit 2, 0 valid model turns; when the existing service is available it exercises two real Qwen3 responses followed by a NEW Python process cold restart and will never fake PASS.
+- tests/test_w43_private_chat_history.py uses clearly labeled FAKE RunOutput fixture messages to validate the native DB contract, tool role recovery, restart, account/thread/contact isolation and fail-closed SDK error. Fixture PASS is not model quality PASS.
+- No 200+ tool catalog/approval or real W47/46 integration signed. No new model provider, deployment, social account login or真人 sending.
+
+W47 trusted native pairing and local principal + W54 per-user AppLocalData, W46 sole UI binding, actual running Qwen3 model, qualified complete natural human conversation and independent language quality, and tool/cross-owner authorization remain HOLD. W25 remains ONLY sending owner.
