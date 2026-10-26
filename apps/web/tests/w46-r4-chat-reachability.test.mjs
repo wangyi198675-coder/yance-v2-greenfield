@@ -8,8 +8,8 @@ const A={tenant:'SYNTHETIC_TEST_ONLY',account:'fixture-account-1',
  channel:'FB_PERSONAL',peer_id:'fake-peer-001',binding_revision:1};
 const B={...A,peer_id:'fake-peer-002'};
 test('CHAT reveals original v-else B+C main, others hide with v-show and never v-if destroy it',()=>{
- assert.match(config,/v-show=/);
- assert.match(config,/!w46WorkspaceEnabled\|\|w46Workspace===/);
+ assert.match(config,/v-else-if="!w46WorkspaceEnabled"/);
+ assert.match(shell,/<BCLiveChatWorkspace v-if="activeWorkspace==='CHAT'"/);
  assert.match(config,/CHAT/);
  assert.ok(!config.includes('<main v-else v-show=\\"!w46WorkspaceEnabled\\" class='));
  assert.ok(!config.includes('<main v-else v-if='));

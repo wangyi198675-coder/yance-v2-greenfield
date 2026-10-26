@@ -3,6 +3,7 @@ import {ref,watch,computed,nextTick} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
 import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
+import BCLiveChatWorkspace from './BCLiveChatWorkspace.vue';
 import {WORKSPACES,CHANNELS,R4_SETTINGS_CATEGORIES,R4_STOP_FAILURE_STATES,
  readWorkspaceSnapshot,explainCapability} from './product-workspace-contract.mjs';
 const props=defineProps({
@@ -72,7 +73,7 @@ defineExpose({refresh});
       @click="choose(item.id)">{{item.label}}</Button>
    </div>
   </div>
-  <div v-if="activeWorkspace!=='CHAT'" ref="contentScroller" tabindex="0" role="region"
+  <div ref="contentScroller" tabindex="0" role="region"
    :aria-label="selected.label+'工作区内容（可滚动）'" class="w46-candidate-content" data-test="w46-workspace-content">
    <div class="w46-workspace-intro">
     <div><p class="w46-caption">{{selected.section}} · 原生能力权限待签署</p><h2>{{selected.label}}</h2>
@@ -80,11 +81,7 @@ defineExpose({refresh});
     <span class="w46-inactive" data-test="w46-capability-status">
      {{explainCapability(snapshot,activeWorkspace)}}</span>
    </div>
-   <div v-if="activeWorkspace==='CHAT'" class="w46-blank" data-test="w46-chat-no-authority">
-    <strong>聊天平台尚未取得可信授权</strong>
-    <p>唯一 B＋C CONTACT Composer 的原有逻辑保持不变。本非生产草稿不加载任何 W37 虚构联系人；需要 W47/W24 提供当前登录及联系人授权后由 Shell Owner 复签接入。</p>
-    <p>没有已连接账号、收件人或发送资格。当前不能发送消息。</p>
-   </div>
+   <BCLiveChatWorkspace v-if="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl"/>
    <div v-else-if="activeWorkspace==='ACCOUNTS'" class="w46-channel-grid" aria-label="四渠道真实授权回读">
     <div v-for="channel in CHANNELS" :key="channel.id" class="w46-channel">
      <BCBrandIcon :name="channel.id" :size="23"/>
@@ -222,6 +219,9 @@ defineExpose({refresh});
 .w46-auth-summary span,.w46-auth-summary p{font-size:12px;opacity:.84}
 .w46-operator-grid{display:grid;gap:12px}
 .w46-brain-one{min-width:0;width:100%}
+.w46-product-candidate[data-active-workspace='CHAT']{flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.w46-product-candidate[data-active-workspace='CHAT'] .w46-candidate-content{grid-template-rows:auto minmax(300px,1fr) auto;overflow-y:auto;gap:8px;padding:10px}
+.w46-product-candidate[data-active-workspace='CHAT'] .w46-workspace-auth{display:none}
 .w46-danger-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .w46-danger{border:1px solid var(--w46-edge);border-radius:12px;padding:14px;display:grid;gap:8px}
 .w46-danger strong{font-family:ui-monospace,monospace;overflow-wrap:anywhere;color:var(--w46-accent)}

@@ -10,6 +10,10 @@ const use=createRequire(join(root,'package.json'));
 const vue=use('@vitejs/plugin-vue').default;
 const tailwind=use('@tailwindcss/vite').default;
 const nativeBackend='http://127.0.0.1:47181';
+// Test-only same-machine bridge to the already running signed W09 staging API.
+const port=process.env.W46_NATIVE_API_PORT;
+if(port!==undefined&&!/^[1-9][0-9]{3,4}$/.test(port))throw Error('W46_INVALID_STAGE_API_PORT');
+const nativeReadApi=port?'http://127.0.0.1:'+port:'http://127.0.0.1:47182';
 function replaceOnlyOriginalComposer(){
  return {name:'w46-original-bc-sole-composer',enforce:'pre',
  transformIndexHtml(html){
@@ -105,7 +109,7 @@ watch([w46Identity,w46SourceMid],async([identity,mid],_,onCleanup)=>{
   <div v-if="!w46WorkspaceEnabled" class="lab-strip">`)
      .replace('<section v-if="isPulse"','<section v-if="!w46WorkspaceEnabled&&isPulse"')
      .replace('<main v-else class="workspace"',
-       '<main v-else v-show="!w46WorkspaceEnabled||w46Workspace===\'CHAT\'" class="workspace"');
+       '<main v-else-if="!w46WorkspaceEnabled" class="workspace"');
  }};
 }
 export default {
@@ -115,13 +119,13 @@ export default {
    {find:/^@\/lib\/utils$/,replacement:join(root,'src/lib/utils.ts').replaceAll('\\','/')},
    {find:/^@\//,replacement:join(root,'src/').replaceAll('\\','/')+'/'}]},
  server:{host:'127.0.0.1',port:4173,strictPort:true,proxy:{
-   '/api/v2/identity-consent':nativeBackend,'/w46-native-test':nativeBackend
+   '/api/v2':nativeReadApi,'/w46-native-test':nativeBackend
  }},
  preview:{host:'127.0.0.1',port:4174,strictPort:true,proxy:
    process.env.W46_R4_SAFE_PREVIEW==='1'?
    {'/api/v2':{target:'http://127.0.0.1:47182',changeOrigin:true},
     '/w46-native-test':nativeBackend}:
-   {'/api/v2/identity-consent':nativeBackend,'/w46-native-test':nativeBackend}
+   {'/api/v2':{target:nativeReadApi,changeOrigin:true},'/w46-native-test':nativeBackend}
  },
  build:{outDir:join(repo,'apps/web/.w46-test-dist'),emptyOutDir:true,sourcemap:false}
 };

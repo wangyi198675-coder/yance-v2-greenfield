@@ -11,8 +11,8 @@ test('only NON-CHAT candidate gains bounded vertical flex scrolling; old CHAT sh
  assert.match(vue,/\.w46-product-top,[\s\S]*?\.w46-small-workspaces\{flex:0 0 auto\}/);
  assert.doesNotMatch(vue,/(^|\n)\s*\.shell\s*\{\s*overflow-y:auto/m);
  assert.doesNotMatch(vue,/(^|\n)\s*main\.workspace\s*\{\s*overflow-y:auto/m);
- assert.match(vite,/v-show=/);
- assert.match(vite,/!w46WorkspaceEnabled\|\|w46Workspace===/);
+ assert.match(vite,/v-else-if="!w46WorkspaceEnabled"/);
+ assert.match(vue,/\.w46-product-candidate\[data-active-workspace='CHAT'\]/);
 });
 test('scroll region is keyboard focusable, has accessible label and resets only when workspace changes',()=>{
  assert.match(vue,/ref="contentScroller" tabindex="0" role="region"/);
