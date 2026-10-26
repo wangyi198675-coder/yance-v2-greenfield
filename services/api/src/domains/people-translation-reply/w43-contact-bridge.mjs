@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {assertFullK} from './index.mjs';
 export const LOCAL_W43_PROVIDER='LLAMACPP_LOCAL_NO_PAID_API';
 export const LANGUAGES=Object.freeze({'zh-CN':'中文',en:'English',de:'Deutsch',pl:'polski'});
-const W43_SHA='d0987e9c64b937c923b3d32bda7bd05f86a638ba';
+const W43_SHA='d0987e9c64b937c923b3d32bda7bd05f86a638ba'; // pinned historical local SDK owner evidence, NOT cloud authority
 export const LOCAL_QWEN3_PROVIDER='LLAMACPP_LOCAL_QWEN3_8B_FREE';
 const err=code=>{const e=new Error(code);e.code=code;throw e;};
 const digest=x=>createHash('sha256').update(x,'utf8').digest('hex');
@@ -80,23 +80,33 @@ export function createW43ContactBridge({service,runW43,attestNativeReceipt,threa
       try {receipt=await runW43({scope:ids.scope,prompt,thread});}
       catch{return {status:'W43_RUN_FAILED',candidates:[]};}
       if(!receipt||receipt.status!=='AGNO_RUN_COMPLETED')return {status:'W43_RUN_FAILED',candidates:[]};
-      if(!row.translation.provenance || row.translation.provenance.synthetic===false && row.translation.provenance.kind!=='LOCAL_ENGINE')err('TRANSLATION_PROVENANCE_INVALID');
+      if(!row.translation.provenance || row.translation.provenance.synthetic===false &&
+         !['LOCAL_ENGINE','AGNO_NATIVE_TRANSLATION'].includes(row.translation.provenance.kind))
+        err('TRANSLATION_PROVENANCE_INVALID');
+      const localSmall=receipt.provider===LOCAL_W43_PROVIDER&&receipt.model_id==='qwen2.5:1.5b'&&receipt.purpose!=='QUALITY_EVAL';
+      const localStrong=receipt.provider===LOCAL_QWEN3_PROVIDER&&receipt.model_id==='qwen3:8b'&&receipt.purpose==='QUALITY_EVAL';
+      const remote=!!receipt.provider&&!localSmall&&!localStrong&&!/^LLAMACPP_|^OLLAMA_/i.test(receipt.provider);
       if(receipt.engine!=='OFFICIAL_AGNO_SDK'||receipt.sdk_pin!=='3.1.10' ||
-         !((receipt.provider===LOCAL_W43_PROVIDER&&receipt.model_id==='qwen2.5:1.5b'&&receipt.purpose!=='QUALITY_EVAL')||
-           (receipt.provider===LOCAL_QWEN3_PROVIDER&&receipt.model_id==='qwen3:8b'&&receipt.purpose==='QUALITY_EVAL'))||
+         !(localSmall||localStrong||remote)||
          receipt.space!=='CONTACT'||receipt.user_id!==ids.userId||
          receipt.session_id!==ids.sessionId||!receipt.run_id||
          receipt.outbound!=='DISABLED'||receipt.provenance?.run_id!==receipt.run_id||
-         receipt.provenance?.source!==receipt.provider)err('W43_RECEIPT_IDENTITY_OR_PROVIDER_INVALID');
-      if(await attestNativeReceipt({receipt,scope:ids.scope,thread,prompt,sourceSHA:W43_SHA})!==true)err('W43_NATIVE_ATTESTATION_REQUIRED');
+         receipt.provenance?.source!==receipt.provider||
+         (remote&&receipt.provenance?.model_id!==receipt.model_id)||
+         (remote&&(!receipt.request_id||!receipt.user_id||!receipt.owner_source_sha||receipt.purpose!=='QUALITY_EVAL')))
+        err('W43_RECEIPT_IDENTITY_OR_PROVIDER_INVALID');
+      if(await attestNativeReceipt({receipt,scope:ids.scope,thread,prompt,
+        sourceSHA:remote?receipt.owner_source_sha:W43_SHA})!==true)err('W43_NATIVE_ATTESTATION_REQUIRED');
       const parsed=parseW43Candidates({receipt,mid,replyLanguage:targetLanguage,sourceOriginal:row.original.text,sourceTranslation:row.translation.text});
       if(['OUTPUT_UNSTRUCTURED','MODEL_LANGUAGE_MISMATCH','MODEL_ORIGINAL_ECHO','MODEL_TRANSLATION_ECHO','MODEL_PLACEHOLDER'].includes(parsed.status))return {...parsed,model:{provider:receipt.provider,model_id:receipt.model_id,run_id:receipt.run_id,quality_qualified:false,quality_status:receipt.model_id==='qwen3:8b'?'MODEL_QUALITY_UNREVIEWED':'HEALTHCHECK_ONLY'}};
       const mapped={
         engine:'OFFICIAL_AGNO_SDK',status:'COMPLETED',identity:row.identity,sourceMid:mid,
         originalSha256:row.original.sha256,translationRequestId:row.translation.provenance.request_id,
         runId:receipt.run_id,sessionId:receipt.session_id,agentId:'w43-contact-brain',
+        userId:receipt.user_id,requestId:receipt.request_id||null,
+        translationSha256:digest(row.translation.text),
         provider:receipt.provider,modelId:receipt.model_id,purpose:receipt.purpose||'HEALTHCHECK',
-        sdkPin:receipt.sdk_pin,sourceSHA:W43_SHA,
+        sdkPin:receipt.sdk_pin,sourceSHA:remote?receipt.owner_source_sha:W43_SHA,
         candidates:parsed.candidates,native_receipt:receipt,
       };
       const updated=service.acceptAgnoRun(identity,mid,mapped);
