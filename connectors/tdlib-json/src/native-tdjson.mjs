@@ -64,6 +64,7 @@ export async function probeTDJson(runtimeDir){
         return no(new TDHold('TDJSON_REAL_ABI_PROBE_FAILED'));
       ok(Object.freeze({nativeLoaded:true,officialAbi:x.officialAbi,
         dllSha256:files.dllSha256,sourceCommit:files.sourceCommit,
+        nativeHostPid:child.pid,nativeHostExitCode:code,
         authorized:false,connectedAccounts:0,canSend:false}));
     });
   });
@@ -82,13 +83,14 @@ export function nativeTDJsonController({
   for(const fn of [attestUserGesture,findAuthorizedAccount,verifyCurrentPeerK,onAuthorizedInbound,
                    verifyW25Receipt,onW25Receipt,onNativeAccountIdentity,onTrustedChatIndex])
     ensure(typeof fn==='function','ORIGINAL_OWNER_AUTH_PORT_MISSING');
-  let proc=null,account=null,authorized=false,clientId=null;
+  let proc=null,account=null,authorized=false,identityVerified=false,clientId=null;
   const nativeMeRequests=new Set();
   const errors=[],pending=new Set();
   const status=()=>Object.freeze({
     nativeRunning:proc!==null,telegramAuthorized:authorized,
-    channelAccountBound:Boolean(account),clientId,canSend:false,
-    stage:!proc?'WAITING_USER_AUTH':authorized?'READ_ONLY_READY':'AUTH_IN_PROGRESS',
+    channelAccountBound:identityVerified,clientId,canSend:false,
+    stage:!proc?'WAITING_USER_AUTH':!authorized?'AUTH_IN_PROGRESS':
+      identityVerified?'READ_ONLY_READY':'GETME_OWNER_PROOF_PENDING',
   });
   const verifyGesture=async input=>{
     const proof=await attestUserGesture(input);
@@ -108,15 +110,17 @@ export function nativeTDJsonController({
       'CHANNEL_ACCOUNT_PROOF_MISSING');
     const files=await inspectInstalledTDJson(runtimeDir);
     const worker=runHost(files.hostExecutable,'--worker');
-    proc=worker; account=Object.freeze(owner); authorized=false;
-    worker.once('error',()=>{errors.push('WORKER_SPAWN_FAILED');proc=null;account=null;});
-    worker.once('close',()=>{proc=null;account=null;authorized=false;clientId=null;});
+    proc=worker; account=Object.freeze(owner); authorized=false; identityVerified=false;
+    worker.once('error',()=>{errors.push('WORKER_SPAWN_FAILED');proc=null;account=null;identityVerified=false;});
+    worker.once('close',()=>{proc=null;account=null;authorized=false;identityVerified=false;clientId=null;});
     worker.stderr.on('data',()=>errors.push('NATIVE_STDERR_REDACTED'));
     createInterface({input:worker.stdout,crlfDelay:Infinity}).on('line',line=>{
       let packet;try{packet=JSON.parse(line);}catch{errors.push('INVALID_NATIVE_RESPONSE');return;}
       if(packet.kind==='native_tdjson_worker_started'){clientId=packet.client_id;return;}
       if(packet.kind==='tdlib_auth_state'){
-        authorized=packet.state==='authorizationStateReady';return;
+        authorized=packet.state==='authorizationStateReady';
+        if(!authorized) identityVerified=false; // native logout/re-auth revokes old getMe proof
+        return;
       }
       if(packet.kind!=='tdlib_update'||!authorized||!account)return;
       const kind=packet.data?.['@type'];
@@ -128,8 +132,10 @@ export function nativeTDJsonController({
           ensure((typeof id==='number'&&Number.isSafeInteger(id)) ||
             (typeof id==='string'&&/^[0-9]+$/.test(id)),
             'NATIVE_PROVIDER_USER_ID_NOT_EXACT');
-          await onNativeAccountIdentity({account,clientId,
+          const attested=await onNativeAccountIdentity({account,clientId,
             platformUserIdExact:String(id),source:'OFFICIAL_TDLIB_GET_ME'});
+          ensure(attested?.verified === true,'NATIVE_GETME_OWNER_ATTESTATION_HOLD');
+          identityVerified=true;
         })();pending.add(task);
         task.catch(()=>errors.push('TRUSTED_GETME_BINDING_FAILED'))
           .finally(()=>pending.delete(task));
@@ -139,6 +145,7 @@ export function nativeTDJsonController({
       // shown as verified peers before the account/Peer membership proof.
       const indexKinds=new Set(['chats','chat','users','updateNewChat','updateChatLastMessage']);
       if(indexKinds.has(kind)){
+        if(!identityVerified)return;
         const task=onTrustedChatIndex({account,clientId,
           rawNativeEvent:packet.data,source:'OFFICIAL_TDLIB_JSON'});
         pending.add(task);
@@ -149,6 +156,7 @@ export function nativeTDJsonController({
       const receipts=new Set(['updateMessageSendAcknowledged',
         'updateMessageSendSucceeded','updateMessageSendFailed']);
       if(receipts.has(kind) || ((kind==='message'||kind==='error') && requestExtra)){
+        if(!identityVerified)return;
         const task=(async()=>{
           const binding=await verifyW25Receipt({account,clientId,
             nativeUpdate:packet.data});
@@ -162,7 +170,7 @@ export function nativeTDJsonController({
           .finally(()=>pending.delete(task));
         return;
       }
-      if(kind!=='updateNewMessage')return;
+      if(kind!=='updateNewMessage'||!identityVerified)return;
       const m=packet.data.message;
       if(!m||m.is_outgoing!==false)return;
       const task=(async()=>{
