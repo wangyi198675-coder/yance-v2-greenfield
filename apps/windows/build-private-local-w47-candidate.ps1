@@ -24,6 +24,17 @@ Copy-Item (Join-Path $ApiSrc '*.mjs') $Runtime
 $build=('{'+ '"format":1,"product":"YanceV2","source_sha":"' + $Expected +'"}')
 [IO.File]::WriteAllText((Join-Path $Runtime 'runtime-build.json'),$build,(New-Object Text.UTF8Encoding($false)))
 Copy-Item (Join-Path $WebSrc '*') $Web -Recurse
+# Tauri's own internal session-status/logout transport; never exposed as a W47
+# API, identity header, or permission to ordinary localhost browsers.
+# Only the COPY bundled into this current-user Windows app is modified.
+$IndexFile=Join-Path $Web 'index.html'
+$IndexText=[IO.File]::ReadAllText($IndexFile)
+$ExactConnect="connect-src 'self';"
+if(([regex]::Matches($IndexText,[regex]::Escape($ExactConnect))).Count -ne 1){
+ throw 'W54_ORIGINAL_W46_SINGLE_CONNECT_CSP_REQUIRED'
+}
+$IndexText=$IndexText.Replace($ExactConnect,"connect-src 'self' http://ipc.localhost;")
+[IO.File]::WriteAllText($IndexFile,$IndexText,(New-Object Text.UTF8Encoding($false)))
 $Files=Get-ChildItem $Web -File -Recurse|Where-Object {
   $_.Name -notmatch '^BUNDLED_W09_ASSET_SHA256'
 }|Sort-Object FullName

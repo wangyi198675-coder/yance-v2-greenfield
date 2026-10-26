@@ -140,12 +140,17 @@ pub(crate) fn start_bundled(
     let root = resource_dir.join("w47/web");
     let mut child = Command::new(&exe)
         .arg(node_entry_argument(&server)?)
-        .current_dir(server.parent().ok_or("LOCAL_API_SERVER_DIR_MISSING")?)
+        .current_dir(node_entry_argument(
+            server.parent().ok_or("LOCAL_API_SERVER_DIR_MISSING")?,
+        )?)
         .env("YANCE_W47_RUNTIME_MODE", "installed")
         .env("YANCE_W47_API_PORT", port.to_string())
         .env("YANCE_W47_WEB_ORIGIN", &origin)
-        .env("YANCE_W47_NATIVE_WEB_ROOT", &root)
-        .env("YANCE_W47_NATIVE_WEB_MANIFEST", &manifest)
+        .env("YANCE_W47_NATIVE_WEB_ROOT", node_entry_argument(&root)?)
+        .env(
+            "YANCE_W47_NATIVE_WEB_MANIFEST",
+            node_entry_argument(&manifest)?,
+        )
         .env("YANCE_W47_NATIVE_WEB_MANIFEST_SHA256", web_manifest_digest)
         .env("YANCE_W47_NATIVE_WEB_SOURCE_SHA", api_source_sha)
         // terminal pairing is not required for ordinary private use.

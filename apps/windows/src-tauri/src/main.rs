@@ -195,6 +195,18 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("construct minimal local Tauri host");
     app.run(|app_handle, event| {
+        // This host creates its real B+C WebView dynamically. On Windows,
+        // closing its only window can leave the event loop alive unless the
+        // private host explicitly requests Exit. Keep using the original
+        // Exit cleanup below to reap W47 and revoke the native generation.
+        if matches!(&event, tauri::RunEvent::WindowEvent {
+            label,
+            event: tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed,
+            ..
+        } if label == "main")
+        {
+            app_handle.exit(0);
+        }
         if let tauri::RunEvent::Exit = event {
             if let Some(child) = app_handle.try_state::<Mutex<Option<LocalApiChild>>>() {
                 if let Ok(mut running) = child.lock() {
