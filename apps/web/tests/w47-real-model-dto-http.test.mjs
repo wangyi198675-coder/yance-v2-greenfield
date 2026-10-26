@@ -76,7 +76,12 @@ if(!root){
    assert.equal(p.status,200);
    const publicSources=publicModelCatalog(p.data);
    assert.deepEqual(publicSources.map(x=>x.id),[CLOUD,OPENAI,LOCAL]);
-   assert.equal((await f.call(PRIVATE_ROUTES.config)).status,401);
+   const publicSetup=await f.call(PRIVATE_ROUTES.config);
+   assert.equal(publicSetup.status,200);
+   assert.equal(publicSetup.data.authoritative,false);
+   assert.equal(publicSetup.data.status,'OPEN_LOCAL_MODEL_SETTINGS');
+   assert.equal(publicSetup.data.requiresTerminalPair,false);
+   assert.equal(publicSetup.data.credentialsExposed,false);
    const auth=await f.call('/api/v2/local-session/first-party',{method:'POST',body:{}});
    assert.equal(auth.status,200);
    const cookie=auth.cookie.split(';')[0],csrf=auth.data.csrfToken;
