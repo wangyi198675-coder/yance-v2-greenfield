@@ -23,8 +23,10 @@ export function validateLiveContacts(health,result){
   deny('LIVE_SESSION_OR_NATIVE_OWNER_NOT_QUALIFIED');
  const seen=new Set();
  const contacts=result.contacts.map(c=>{
-  if(!c||!account.test(c.accountRef)||!channels.has(c.channel)||
-     !peer.test(c.peerRef)||!Number.isSafeInteger(c.bindingRevision)||
+  if(!c||!account.test(c.accountRef)||c.accountRef.startsWith('fixture-')||
+     c.accountRef==='SYNTHETIC_TEST_ONLY'||!channels.has(c.channel)||
+     !peer.test(c.peerRef)||c.peerRef.startsWith('fake-')||
+     !Number.isSafeInteger(c.bindingRevision)||
      c.bindingRevision<1||typeof c.displayName!=='string'||
      !c.displayName.trim()||c.displayName.length>180||
      c.identityKey!==undefined||c.tenant!==undefined||
