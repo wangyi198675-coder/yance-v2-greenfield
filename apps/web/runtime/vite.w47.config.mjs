@@ -36,7 +36,7 @@ if(r4IsolatedPreview){
   'apps/web/src/BCBrandIcon.vue':'d99edca93a61f0464349cd515a6fee1a0580bb11',
   'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
   'apps/web/src/product-workspace-contract.mjs':'dcefa40ac9422cad8058da999425dcd9582f6697',
-  'apps/web/vite.w46.config.mjs':'cc618b37e5a02a3655421c14ff2fd5726f5a5fda',
+  'apps/web/vite.w46.config.mjs':'2c9b8f0bb66dd35d7a6d76f1a57ae3847a0a4605',
   [canonicalAck]:'45893dca88309c678bc7b232f12809d879890c9e'
  };
  const handoff=join(w46Root,canonicalAck);
