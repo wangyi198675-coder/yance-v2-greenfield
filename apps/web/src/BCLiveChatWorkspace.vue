@@ -6,7 +6,7 @@ import {Bubble,BubbleContent} from '../../../design/nonproduction/approved-click
 import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/message';
 import BCNativeComposer from './BCNativeComposer.vue';
 import {createTrustedTakeoverPort} from './native-takeover-port.mjs';
-import {readLiveContacts,readLiveTimeline,explainNativeFailure} from './live-chat-source.mjs';
+import {readLiveContacts,readLiveTimeline,readAuthorizedFbPageAvatar,explainNativeFailure} from './live-chat-source.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const api=computed(()=>props.fetchImpl||globalThis.fetch);
 const state=ref('checking'),error=ref(''),contacts=ref([]),accounts=ref(0),chosen=ref(null);
@@ -29,8 +29,40 @@ const filtered=computed(()=>{
 });
 const accountIds=computed(()=>['ALL',...new Set(contacts.value.map(c=>c.accountRef))]);
 const canShowData=computed(()=>state.value==='ready'&&accounts.value>0);
+// Authorized provider avatars are optional metadata, never an account or send grant.
+const avatarSources=ref({});
+let avatarRevision=0;
+const inFlightAvatars=new Set();
+async function loadPageAvatar(c,generation=avatarRevision){
+ if(c?.channel!=='FB_PAGE'||inFlightAvatars.has(c.contactRef)||
+    avatarSources.value[c.contactRef])return;
+ inFlightAvatars.add(c.contactRef);
+ try {
+  const url=await readAuthorizedFbPageAvatar({fetchImpl:api.value,contact:c});
+  if(!mounted||generation!==avatarRevision||
+     !contacts.value.some(x=>x.contactRef===c.contactRef))return;
+  if(url)avatarSources.value={...avatarSources.value,[c.contactRef]:url};
+ }catch{
+  // A rejected/stale Page avatar is never replaced with a guess.
+ }finally{inFlightAvatars.delete(c.contactRef)}
+}
+async function preloadPageAvatars(items,generation){
+ const candidates=items.filter(c=>c.channel==='FB_PAGE').slice(0,12);
+ let next=0;
+ await Promise.all(Array.from({length:Math.min(3,candidates.length)},async()=>{
+  while(next<candidates.length&&mounted&&generation===avatarRevision){
+   const i=next++;
+   await loadPageAvatar(candidates[i],generation);
+  }
+ }));
+}
+function avatarFailed(contactRef){
+ if(!avatarSources.value[contactRef])return;
+ const next={...avatarSources.value};delete next[contactRef];
+ avatarSources.value=next;
+}
 async function refresh(){
- const rev=++currentRevision;sourceRevision++;
+ const rev=++currentRevision;sourceRevision++;avatarRevision++;avatarSources.value={};inFlightAvatars.clear();
  state.value='checking';error.value='';chosen.value=null;timeline.value=[];contacts.value=[];accounts.value=0;
  try{
   const snap=await readLiveContacts({fetchImpl:api.value});
@@ -39,6 +71,7 @@ async function refresh(){
   accounts.value=snap.connectedAccountCount;
   state.value=snap.trustedSession?
    (snap.connectedAccountCount?'ready':'waiting-auth'):'waiting-session';
+  if(state.value==='ready')void preloadPageAvatars(snap.contacts,avatarRevision);
  }catch(e){
   if(!mounted||rev!==currentRevision)return;
   state.value=String(e?.message||e).includes('NATIVE_HTTP_401')?'waiting-session':'unavailable';error.value=explainNativeFailure(e);
@@ -48,6 +81,7 @@ async function chooseContact(contact){
  if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
  chosen.value=contact;timeline.value=[];timelineState.value='checking';timelineError.value='';
+ if(contact.channel==='FB_PAGE')void loadPageAvatar(contact);
  if(!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
   const result=await readLiveTimeline({fetchImpl:api.value,contact});
@@ -73,7 +107,7 @@ const lastNativeMessage=computed(()=>{
  }:null;
 });
 onMounted(refresh);
-onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;contacts.value=[];timeline.value=[]});
+onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;avatarRevision++;avatarSources.value={};contacts.value=[];timeline.value=[]});
 </script>
 <template>
  <section class="bc-real-chat" data-test="w46-real-chat" aria-label="B＋C 实际联系人与聊天工作台">
@@ -106,7 +140,9 @@ onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;contacts.v
      <Button v-for="c in filtered"  :key="c.contactRef" variant="ghost"
        class="bc-real-contact" :aria-pressed="chosen?.contactRef===c.contactRef"
        :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-      <span class="avatar">{{c.displayName.slice(0,1)}}</span>
+      <img v-if="avatarSources[c.contactRef]" class="avatar" :src="avatarSources[c.contactRef]"
+       :alt="c.displayName+' 头像'" loading="lazy" referrerpolicy="no-referrer" @error="avatarFailed(c.contactRef)"/>
+      <span v-else class="avatar">{{c.displayName.slice(0,1)}}</span>
       <span><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
       <small v-if="c.unread">未读 {{c.unread}}</small>
      </Button>
@@ -119,7 +155,10 @@ onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;contacts.v
   </aside>
   <div class="bc-real-conversation" data-test="w46-live-timeline">
    <template v-if="selected">
-    <header class="chat-header"><div class="header-avatar">{{selected.displayName.slice(0,1)}}</div>
+    <header class="chat-header">
+     <img v-if="avatarSources[selected.contactRef]" class="header-avatar" :src="avatarSources[selected.contactRef]"
+      :alt="selected.displayName+' 头像'" referrerpolicy="no-referrer" @error="avatarFailed(selected.contactRef)"/>
+     <div v-else class="header-avatar">{{selected.displayName.slice(0,1)}}</div>
      <div class="chat-person"><h2>{{selected.displayName}}</h2>
       <small>{{selected.channel}} · {{selected.accountRef}} · 绑定修订 {{selected.bindingRevision}}</small>
      </div>
@@ -163,6 +202,7 @@ onBeforeUnmount(()=>{mounted=false;currentRevision++;sourceRevision++;contacts.v
 .bc-real-no-contact{display:grid;align-content:center;justify-items:center;gap:12px;padding:25px;text-align:center;flex:1}
 .bc-real-no-contact h2{font-size:18px}.bc-real-no-contact p{max-width:410px;opacity:.78}
 .chat-header{padding:14px;border-bottom:1px solid var(--w46-edge,#777);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bc-real-chat img.avatar,.bc-real-chat img.header-avatar{object-fit:cover;flex:0 0 auto;width:40px;height:40px;border-radius:50%}
 .chat-person{min-width:0;flex:1}.chat-person h2{font-size:17px;font-weight:600}
 @media(max-width:720px){.bc-real-chat{grid-template-columns:1fr;grid-template-rows:minmax(170px,40%) minmax(240px,60%)}
 .bc-real-list{border-right:0;border-bottom:1px solid var(--w46-edge,#777)}}

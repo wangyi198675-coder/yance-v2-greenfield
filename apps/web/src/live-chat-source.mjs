@@ -95,3 +95,36 @@ export const explainNativeFailure=e=>{
  if(msg.includes('NATIVE_HTTP_503'))return 'W24／四渠道原生 Worker 尚未接线或运行';
  return '无法核实当前身份与消息来源，保持不可用';
 };
+
+
+// Only W47 can resolve a Page avatar from a currently authorized W24 Page/PSID.
+// Never construct a Pancake CDN URL from browser-supplied account or peer IDs.
+export async function readAuthorizedFbPageAvatar({fetchImpl=globalThis.fetch,contact}={}){
+ if(typeof fetchImpl!=='function')deny('W47_FETCH_REQUIRED');
+ if(!contact||contact.channel!=='FB_PAGE'||!account.test(contact.accountRef)||
+    !peer.test(contact.peerRef)||!Number.isSafeInteger(contact.bindingRevision)||
+    contact.bindingRevision<1 || typeof contact.contactRef!=='string' ||
+    contact.contactRef!==[contact.accountRef,contact.channel,contact.peerRef,
+      contact.bindingRevision].join('|'))
+  deny('W24_CURRENT_CONTACT_FOR_AVATAR_REQUIRED');
+ const args=new URLSearchParams({
+  accountRef:contact.accountRef,peerRef:contact.peerRef,
+  bindingRevision:String(contact.bindingRevision)
+ });
+ const result=await read(fetchImpl,'/api/v2/contacts/avatar?'+args);
+ if(result?.ok!==true||result.canSend!==false||
+    !['PRESENT','NO_AVATAR'].includes(result.status))
+  deny('W27_AVATAR_RESPONSE_UNVERIFIED');
+ if(result.status==='NO_AVATAR'){
+  if(result.avatarUrl!==null)deny('W27_AVATAR_RESPONSE_UNVERIFIED');
+  return null;
+ }
+ if(result.source!=='W27_PANCAKE_OFFICIAL_CURRENT_PAGE_PEER'||
+    typeof result.avatarUrl!=='string')deny('W27_AVATAR_PROVENANCE_UNVERIFIED');
+ let u;
+ try{u=new URL(result.avatarUrl);}catch{deny('W27_AVATAR_URL_INVALID')}
+ if(u.protocol!=='https:'||u.hostname!=='content.pancake.vn'||
+    u.port||u.username||u.password||u.pathname.length>1024)
+  deny('W27_AVATAR_URL_UNTRUSTED');
+ return u.toString();
+}
