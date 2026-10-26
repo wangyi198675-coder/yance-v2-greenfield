@@ -1,0 +1,16 @@
+{
+  "name": "@yance-v2/baileys-native-connector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Original Baileys SDK adapter; no automatic account connection",
+  "scripts": {
+    "test": "node --test *.test.mjs",
+    "verify:sdk": "node sdk-smoke.mjs"
+  },
+  "dependencies": {
+    "baileys": "7.0.0-rc14",
+    "pino": "9.9.5",
+    "qrcode": "1.5.4"
+  }
+}
