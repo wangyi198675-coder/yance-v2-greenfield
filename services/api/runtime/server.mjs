@@ -6,6 +6,9 @@ import {resolveRuntimeSource} from './runtime-provenance.mjs';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
 import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
 import {createPrivateBrainHttp} from './private-brain-http.mjs';
+import {createW43PythonPrivatePort} from './private-python-port.mjs';
+import {createW43NativeLedgerAdapter} from './private-native-ledger-port.mjs';
+import {readW54LocalBoot,createNativeStartupSession} from './native-private-startup.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
@@ -31,6 +34,28 @@ if(customTtl!==undefined&&(!/^[1-9][0-9]{3,5}$/.test(customTtl)||Number(customTt
   throw Error('W47_SESSION_TTL_INVALID');
 const localSessionAuthority=createLocalSessionAuthority({ttlMs:customTtl?Number(customTtl):300_000,approvePairing:
   operatorMode==='console'?async code=>operatorIssuer?.approvePairing(code)??false:null});
+// Only the original installed W54 parent can write this frame through Node
+// child stdin. No HTTP request, localhost Origin or frontend-supplied profile
+// supplies these private current-user fields or receives the HttpOnly cookie.
+const nativeBoot=readW54LocalBoot();
+const nativeSession=createNativeStartupSession({authority:localSessionAuthority,boot:nativeBoot});
+const resolveNativePrincipal=nativeBoot?async({session})=>{
+ if(session?.record?.kind!=='NATIVE_FIRST_PARTY'||
+    session.record.nativeHostBinding!==nativeSession.binding)
+  throw {httpStatus:401,code:'LOCAL_SESSION_REVOKED'};
+ return nativeBoot;
+}:null;
+const w43Python=process.env.YANCE_W47_W43_PYTHON_EXECUTABLE;
+const w43Root=process.env.YANCE_W47_W43_MODULE_ROOT;
+if((w43Python||w43Root)&&!nativeBoot)
+ throw Error('W43_RUNTIME_REQUIRES_INSTALLED_W54_HOST');
+// Original W43 Agno SqliteDb/Run and durable request ledger remain the SINGLE
+// authority; no additional Node memory or shadow history store is created.
+const w43Port=nativeBoot&&w43Python&&w43Root?
+ createW43PythonPrivatePort({pythonExecutable:w43Python,w43ModuleRoot:w43Root,
+  protectedKeyFile:nativeBoot.modelBackend==='llamacpp'?
+   process.env.YANCE_W47_W43_LOCAL_KEY_FILE:undefined}):null;
+const requestLedger=w43Port?createW43NativeLedgerAdapter(w43Port):null;
 if(operatorMode==='console'){
   operatorIssuer=createOperatorConsoleIssuer({revokeSessions:()=>localSessionAuthority.revokeAll()});
   process.stderr.write('W47_LOCAL_OPERATOR_CONSOLE_READY (type pair, cancel or revoke in this terminal)\n');
@@ -41,10 +66,15 @@ if(operatorMode==='console'){
 const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthority,webOrigin});
 // W55 production credential vault is SEALED and original W43 is local-only.
 // Never instantiate test-only model/credential adapters in this real server.
-const privateModelHttp=createPrivateModelHttp({sessionAuthority:localSessionAuthority,webOrigin});
+const privateModelHttp=createPrivateModelHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal
+});
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.
-const privateBrainHttp=createPrivateBrainHttp({sessionAuthority:localSessionAuthority,webOrigin});
+const privateBrainHttp=createPrivateBrainHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,
+ w43Port,requestLedger
+});
 // W24 + W26..W29 provider SDK authority is absent, not a zero-contact
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
@@ -176,5 +206,8 @@ server.on('clientError',(_err,socket)=>socket.end('HTTP/1.1 400 Bad Request\r\nC
 server.listen(port,bind,()=>{
   boundPort=server.address().port;
   console.log(JSON.stringify({event:'V2_API_READY',url:'http://'+bind+':'+boundPort,
-    apiGitSha:sha,mode:'NO_PROVIDER_SAFE',runtimeMode:config.mode}));
+    apiGitSha:sha,mode:'NO_PROVIDER_SAFE',runtimeMode:config.mode,
+    // This stdout stays on W54's original private inherited child handle.
+    // Never expose it through /health, HTTP Set-Cookie, browser JavaScript or logs.
+    ...(nativeSession?{nativeHttpOnlyCookie:nativeSession.privateCookie}:{})}));
 });
