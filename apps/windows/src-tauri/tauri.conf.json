@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Yance V2 Native Session Lab",
+  "version": "0.1.0",
+  "identifier": "com.yance.v2.native-session-lab",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Yance V2 | Native Session Lab",
+        "width": 570,
+        "height": 410,
+        "resizable": false,
+        "url": "index.html"
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self'",
+        "img-src": "'self' data:",
+        "connect-src": "ipc: http://ipc.localhost"
+      },
+      "capabilities": [
+        "main"
+      ]
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}
