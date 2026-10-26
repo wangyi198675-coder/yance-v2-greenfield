@@ -26,3 +26,11 @@ Tauri 2.12.0, tauri-build 2.7.0, Rust 1.99.1 pinned; transitive crates pinned by
 Native private **cross-process** verified transport W54 → W47 is not in place. Thus W47 cannot consume native session; both `REAL_CONTACT` and `REAL_STOP` are still unauthorized and 401/403. Same-Windows-SID malicious native-process client must be tested when a private transport exists; current native proof is confined to process memory with no listener. No persistent monotonic revision store across *crash*, no external Session API, no app signature/installer security, no real social accounts or messages. Same-user process injection or OS-token theft remains outside this prototype's asserted protection. Independent SEC, QA, legal, official source-maintainer and GitHub ACL/signing approvals are pending.
 
 Windows Rust tests are isolated verification of *internal* API. The Node HTTP tests use actual read-only W47 requests plus two browser-like isolated JS VM contexts; they are not two real browsers or installed app UAT. The host executable startup-and-clean-exit smoke is distinct from formal desktop visual tests.
+
+## 2026-10-26 per-user install portability delta
+
+Existing native-session code and original 14 unit cases remain unchanged. New Rust module src-tauri/src/user_dirs.rs uses official Tauri path resolver for the actual signed-in Windows OS account at runtime, creating separate data/, config/, cache/ subfolders and a fail-closed version marker. Entry is main.rs setup(); no new JS commands or platform auth. The marker is not a database and does not import V1.
+
+The SBOM generator now uses CARGO_HOME if explicitly supplied, otherwise Node's OS user home; there is no developer C:\\Users\\1 fallback, or fixed Cargo registry hash. Missing/relative Cargo registry directory fails explicitly. Inventory still contains items whose licenses require independent review.
+
+A separate tauri.installer-candidate.conf.json is an opt-in NSIS currentUser packaging overlay; production bundle remains inactive and no installer was signed or installed by this change. See USER_DATA_INSTALL_CONTRACT.md for upgrade and migration limitations. Per-user same-OS profile and debug EXE startup is different from actual dual Windows-user and independent-machine UAT.
