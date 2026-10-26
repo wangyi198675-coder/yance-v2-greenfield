@@ -11,7 +11,7 @@ if(process.env.W47_R4_ISOLATED_PREVIEW==='1')throw Error('W47_SIGNED_PRODUCTION_
 const w47=(await import(pathToFileURL(input).href)).default;
 const source=w47.plugins.find(p=>p.name==='w47-runtime-truth-gate');
 if(!source||typeof source.transform!=='function')throw Error('W47_REAL_GATE_MISSING');
-const nativeApiPort=process.env.W46_REAL_API_PORT==='48184'?'48184':'47182';
+const nativeApiPort=['48184','48185'].includes(process.env.W46_REAL_API_PORT)?process.env.W46_REAL_API_PORT:'47182';
 const nativeApiOrigin='http://127.0.0.1:'+nativeApiPort;
 const original='const w46WorkspaceEnabled=false';
 const opted="const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'";
