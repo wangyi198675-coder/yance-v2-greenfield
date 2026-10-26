@@ -1,0 +1,97 @@
+{
+  "source": "REAL_WINDOWS_CHROME_W46_P0_NEGATIVE_ONLY",
+  "baselineQAHead": "4a7ca3e34e1e724bb0a9b992d85f603de03ed2fc",
+  "realW47StatusRoute": "HTTP 404",
+  "truthfulAuth": "NO_AUTHORIZED_HUMAN_PAIRING",
+  "passedRealWindowsWidths": [
+    950,
+    430,
+    320
+  ],
+  "negativeCases": [
+    "missing-csrf",
+    "expired",
+    "can-send",
+    "provider-forged"
+  ],
+  "explicitSyntheticRejectedRedeem": true,
+  "realPairingAttempt": false,
+  "originalCHATPassiveAndVisible": true,
+  "noSignedPrivateBrainApi": true,
+  "javascriptErrors": [],
+  "requestPosts": [
+    "http://127.0.0.1:4174/api/v2/local-session/redeem"
+  ],
+  "results": [
+    {
+      "width": 950,
+      "height": 620,
+      "mode": "actual W47 47182 route absent 404",
+      "body": "接口未接通",
+      "redeem": 0,
+      "logout": 0,
+      "brainCount": 1,
+      "composerCount": 0,
+      "mainShown": false,
+      "accounts": 0
+    },
+    {
+      "width": 430,
+      "height": 850,
+      "mode": "actual W47 47182 route absent 404",
+      "body": "接口未接通",
+      "redeem": 0,
+      "logout": 0,
+      "brainCount": 1,
+      "composerCount": 0,
+      "mainShown": false,
+      "accounts": 0
+    },
+    {
+      "width": 320,
+      "height": 680,
+      "mode": "actual W47 47182 route absent 404",
+      "body": "接口未接通",
+      "redeem": 0,
+      "logout": 0,
+      "brainCount": 1,
+      "composerCount": 0,
+      "mainShown": false,
+      "accounts": 0
+    },
+    {
+      "negative": "missing-csrf",
+      "status": "接口未接通",
+      "error": "本机会话尚不可用：LOCAL_SESSION_INCOMPLETE_OR_EXPIRED",
+      "logout": 0,
+      "redeem": 0
+    },
+    {
+      "negative": "expired",
+      "status": "接口未接通",
+      "error": "本机会话尚不可用：LOCAL_SESSION_INCOMPLETE_OR_EXPIRED",
+      "logout": 0,
+      "redeem": 0
+    },
+    {
+      "negative": "can-send",
+      "status": "接口未接通",
+      "error": "本机会话尚不可用：LOCAL_SESSION_UNTRUSTED_STATUS",
+      "logout": 0,
+      "redeem": 0
+    },
+    {
+      "negative": "provider-forged",
+      "status": "接口未接通",
+      "error": "本机会话尚不可用：LOCAL_SESSION_UNTRUSTED_STATUS",
+      "logout": 0,
+      "redeem": 0
+    },
+    {
+      "negative": "synthetic_rejected_redeem",
+      "codeCleared": true,
+      "logout": 0,
+      "storage": "{\"l\":0,\"s\":0}"
+    }
+  ]
+}
