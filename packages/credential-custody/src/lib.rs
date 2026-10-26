@@ -860,5 +860,7 @@ mod tests {
     }
 }
 
+pub mod cloud_keys;
+
 #[cfg(test)]
 mod security_delta;

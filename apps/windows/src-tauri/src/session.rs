@@ -96,6 +96,17 @@ impl SessionAuthority {
             connected_account_count: 0,
         }
     }
+    /// Native-only current revision; never returns a session secret to JS.
+    pub(crate) fn native_active_revision(&self) -> Result<u64, &'static str> {
+        if !self.os_matches() {
+            return Err("OS_BINDING_MISMATCH");
+        }
+        let s = self.inner.lock().map_err(|_| "SESSION_LOCK_POISONED")?;
+        if s.revoked || Instant::now() >= s.expires_at {
+            return Err("SESSION_INACTIVE");
+        }
+        Ok(s.revision)
+    }
     /// Native-only binding issue. Must never become an invoke() command.
     #[allow(dead_code)]
     pub(crate) fn mint_for_native_bridge(&self) -> Result<NativeOnlyProof, &'static str> {
