@@ -17,6 +17,7 @@ from private_scope import (
     _scope_from_w47_verified_claim, valid_thread,
 )
 from w43_capacity import one_slot
+from private_request_identity import request_identity
 
 
 class W47PrivateAccessError(RuntimeError):
@@ -169,16 +170,26 @@ class W43NativePrivateBrainPort:
             raise W47PrivateAccessError("THREAD_INVALID", 422) from None
         claim = self._verified(context, "PRIVATE_TURN")
         scope, runtime = self._runtime(claim)
+        identity = request_identity(scope, thread_id, request_id, text)
         with one_slot() as admitted:
             if not admitted:
                 raise W47PrivateAccessError("LOCAL_MODEL_CAPACITY_BUSY", 503)
             self._recheck(context, "PRIVATE_TURN", claim)
             if not runtime._authorized_llamacpp_model_matches():
                 raise W47PrivateAccessError("LOCAL_MODEL_UNAVAILABLE", 503)
+            # Defense in depth: W47's signed durable claim MUST exist.
+            # Atomically transition it to EXECUTING before any model/tool
+            # effects. Crash/retry remains UNKNOWN; never call model twice.
+            from private_request_ledger import NativePrivateRequestLedger
+            NativePrivateRequestLedger(self).begin_execute(
+                context, thread_id=thread_id, request_id=request_id, text=text,
+            )
             try:
                 result = runtime.agents["PRIVATE"].run(
                     text, user_id=scope.scoped_user_id,
                     session_id=scope.session_id(thread_id),
+                    run_id=identity["run_id"],
+                    metadata=identity["metadata"],
                 )
             except Exception:
                 raise W47PrivateAccessError("LOCAL_MODEL_RUN_FAILED", 503) from None
@@ -189,7 +200,7 @@ class W43NativePrivateBrainPort:
         content = result.content if isinstance(result.content, str) else ""
         if (status != "COMPLETED" or not content.strip()
                 or not isinstance(getattr(result, "run_id", None), str)
-                or not result.run_id
+                or result.run_id != identity["run_id"]
                 or getattr(result, "session_id", None) != scope.session_id(thread_id)):
             raise W47PrivateAccessError("LOCAL_MODEL_RUN_NOT_COMPLETED", 503)
         # Provenance is not inferred from a DTO alone. Verify the COMPLETE
@@ -207,7 +218,10 @@ class W43NativePrivateBrainPort:
                       and row.session_id == scope.session_id(thread_id)
                       and row.agent_id == runtime.agents["PRIVATE"].id
                       and getattr(getattr(row, "status", None), "value", None) == "COMPLETED"
-                      and isinstance(row.content, str) and row.content == content]
+                      and isinstance(row.content, str) and row.content == content
+                      and isinstance(row.metadata, dict)
+                      and row.metadata.get("w43_private_request_fingerprint") == identity["fingerprint"]
+                      and row.metadata.get("w43_private_prompt_sha256") == identity["prompt_sha256"]]
         except Exception:
             actual = []
         if len(actual) != 1:

@@ -17,6 +17,7 @@ from agno.session.agent import AgentSession
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from private_principal_port import W47VerifiedPrincipal, W47PrivateAccessError, W43NativePrivateBrainPort
 from w47_private_dto import W43W47PrivateBridge
+from private_request_ledger import NativePrivateRequestLedger
 
 class VerifiedServerContext:
     pass
@@ -89,19 +90,23 @@ def test_approved_dto_is_native_run_backed_and_w47_current_fields(tmp_path,monke
     b,p,c,ctx=fixture(tmp_path)
     scope,rt=p._runtime(c[0])
     monkeypatch.setattr(rt,"_authorized_llamacpp_model_matches",lambda:True)
-    def sdk_fixture(text, *, user_id,session_id):
+    def sdk_fixture(text, *, user_id,session_id,run_id,metadata):
         assert user_id==scope.scoped_user_id
         assert session_id==scope.session_id("personal")
-        native=add_native_run(rt,scope,text)
+        native=add_native_run(rt,scope,text,run_id=run_id)
+        native.metadata=metadata
+        rt.db.upsert_run(native,session_id=session_id,user_id=user_id,run_index=0)
         return native
     monkeypatch.setattr(rt.agents["PRIVATE"],"run",sdk_fixture)
+    NativePrivateRequestLedger(p).claim(ctx,thread_id="personal",
+        text=args()["message"],request_id=args()["requestId"])
     out=b.runPrivateTurn(args(),trusted_request_context=ctx)
     assert out["status"]=="AGNO_RUN_COMPLETED"
     assert out["outbound"]=="DISABLED"
     assert out["original_response"]=="真实SDK语义示例，仅模拟回归"
     assert out["provenance"]=={
       "type":"AGNO_RUN_RESULT","sdk_pin":"3.1.10",
-      "run_id":"fixture-real-shaped-run-UUID-01",
+      "run_id":out["run_id"],
       "session_id":scope.session_id("personal"),
       "source":"LLAMACPP_LOCAL_QWEN3_8B_FREE",
       "model_id":"qwen3:8b","purpose":"QUALITY_EVAL",
@@ -120,9 +125,11 @@ def test_completed_sdk_without_native_original_run_cannot_create_provenance(tmp_
     monkeypatch.setattr(rt,"_authorized_llamacpp_model_matches",lambda:True)
     monkeypatch.setattr(rt.agents["PRIVATE"],"run",lambda text,**kw: SimpleNamespace(
       status=SimpleNamespace(value="COMPLETED"),
-      run_id="fake-sdk-no-persisted-run",
+      run_id=kw["run_id"],
       session_id=scope.session_id("personal"),
       content="NEVER_RETURN_UNVERIFIED_CONTENT"))
+    NativePrivateRequestLedger(p).claim(ctx,thread_id="personal",
+        text=args()["message"],request_id=args()["requestId"])
     with pytest.raises(W47PrivateAccessError) as e:
         b.runPrivateTurn(args(),trusted_request_context=ctx)
     assert e.value.code=="AGNO_NATIVE_PERSISTED_RUN_UNVERIFIED"
@@ -145,13 +152,15 @@ def test_w47_identity_rotation_blocks_native_reply_payload(tmp_path,monkeypatch)
     b,p,current,ctx=fixture(tmp_path)
     scope,rt=p._runtime(current[0])
     monkeypatch.setattr(rt,"_authorized_llamacpp_model_matches",lambda:True)
-    def sdk_run(text, *, user_id,session_id):
-        native=add_native_run(rt,scope,text)
+    def sdk_run(text, *, user_id,session_id,run_id,metadata):
+        native=add_native_run(rt,scope,text,run_id=run_id)
         # W47 revocation during original native model execution
         from dataclasses import replace
         current[0]=replace(current[0],revocation_generation=5)
         return native
     monkeypatch.setattr(rt.agents["PRIVATE"],"run",sdk_run)
+    NativePrivateRequestLedger(p).claim(ctx,thread_id="personal",
+        text=args()["message"],request_id=args()["requestId"])
     with pytest.raises(W47PrivateAccessError) as e:
         b.runPrivateTurn(args(),trusted_request_context=ctx)
     assert e.value.code=="LOCAL_SESSION_CHANGED_OR_REVOKED"
