@@ -46,6 +46,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   const readReservation=db.prepare('SELECT * FROM reservations WHERE intent_key=?');
   const readLease=db.prepare('SELECT * FROM boundary_leases WHERE k=?');
   const readBarrier=db.prepare('SELECT * FROM mutation_barriers WHERE scope_key=?');
+
   const globalBarrier=k=>readBarrier.get(scopeKey(k,'GLOBAL'))?.pending===1;
   const peerBarrier=k=>readBarrier.get(scopeKey(k,'CONTACT'))?.pending===1;
   const anyBarrier=k=>globalBarrier(k)||peerBarrier(k);
@@ -66,6 +67,8 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   }
   const durable=attachDurableAuthority({db,transaction,canonicalK,admin,
     hasLease,readBarrier,now,verifyOwnerMutation,verifyOwnerCancellation});
+  // Same W44 SQLite after the additive native-schema initialization.
+  const readPause=db.prepare('SELECT paused,epoch FROM grant_pauses WHERE scope_key=?');
   function currentIdentity(k){
     canonicalK(k);
     const native=durable.readNativeCurrent(k);
@@ -76,6 +79,10 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       pos(s.identity_epoch)&&pos(s.consent_epoch)?s:null;
   }
   function effective(k){
+    const global=readPause.get(scopeKey(k,'GLOBAL'));
+    const contact=readPause.get(scopeKey(k,'CONTACT'));
+    if(global?.paused===1)return {reason:'GLOBAL_PAUSED'};
+    if(contact?.paused===1)return {reason:'CONTACT_PAUSED'};
     const g=readGrant.get(scopeKey(k,'GLOBAL'));
     const c=readGrant.get(scopeKey(k,'CONTACT'));
     if(g&&(!g.enabled||g.expires_at<=time()))
@@ -355,6 +362,91 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     return {ok:true,active:!!active,mutationPending:anyBarrier(k),
       intentKey:active?.intent_key??null};
   }
+  // W09 management interface: authoritative readback, never synthetic=real.
+  // Browser caller must NOT use a local toggle or its own principal as proof.
+  function readGrantState({identity:k,actor,scope}={}){
+    const key=scopeKey(k,scope);
+    admin(actor,'READ_GRANT_'+scope,k);
+    const native=durable.readIdentityAuthority({identity:k,actor});
+    const grantRow=readGrant.get(key);
+    const global=readPause.get(scopeKey(k,'GLOBAL'));
+    const contact=readPause.get(scopeKey(k,'CONTACT'));
+    const pause=readPause.get(key);
+    const fence=durable.readMutationFence({identity:k,scope,actor});
+    const globalFence=scope==='GLOBAL'?fence:
+      durable.readMutationFence({identity:k,scope:'GLOBAL',actor});
+    const current=effective(k);
+    const mode=readCustody.get(canonicalK(k))?.mode??'AUTO';
+    const reason=(!native.account)?'ACCOUNT_NOT_CONFIGURED':
+      (!native.valid)?'ACCOUNT_OR_PEER_UNBOUND':
+      anyBarrier(k)?'AUTHORITY_MUTATION_PENDING':
+      mode==='HUMAN'?'HUMAN_CUSTODY':
+      current.reason??(
+        current.grant&&current.grant.spent+current.grant.reserved>=current.grant.budget_limit
+          ?'BUDGET_EXHAUSTED':null);
+    const limits=grantRow?{budgetLimit:grantRow.budget_limit,
+      spent:grantRow.spent,reserved:grantRow.reserved,
+      available:Math.max(0,grantRow.budget_limit-grantRow.spent-grantRow.reserved)}:null;
+    return {ok:true,status:reason?'DENIED':'ELIGIBLE_SYNTHETIC',
+      reason,scope,fullK:canonicalK(k),
+      // Never confuse a test fixture or a recorded grant with user consent.
+      realUserAuthorized:false,realAccountVerified:false,
+      authorityClass:'SYNTHETIC_FIXTURE_ONLY',
+      identityValid:native.valid,custodyMode:mode,
+      grant:grantRow?{enabled:!!grantRow.enabled,epoch:grantRow.epoch,
+        expiresAt:grantRow.expires_at,...limits}:null,
+      paused:pause?.paused===1,pauseEpoch:pause?.epoch??0,
+      globalPaused:global?.paused===1,contactPaused:contact?.paused===1,
+      effectiveScope:current.grant?.scope??null,
+      scopeConfigured:!!grantRow,
+      effectiveBudget:current.grant?{budgetLimit:current.grant.budget_limit,
+        spent:current.grant.spent,reserved:current.grant.reserved,
+        available:Math.max(0,current.grant.budget_limit-current.grant.spent-current.grant.reserved)}:null,
+      budget:limits,barrier:{generation:fence.generation,pending:fence.pending,
+        globalPending:globalFence.pending,activeLease:fence.activeLease,
+        requestId:fence.requestId,status:fence.status,
+        blockingRequestId:globalFence.pending?globalFence.requestId:
+          fence.pending?fence.requestId:null},
+      identityEpochs:{bindingRevision:native.bindingRevision,
+        accountEpoch:native.accountEpoch,consentEpoch:native.consentEpoch,
+        custodyEpoch:native.custodyEpoch}};
+  }
+  function grantAction({identity:k,actor,scope,action,idempotencyKey,
+    expectedGeneration,expectedBindingRevision,expectedAccountEpoch,
+    expectedConsentEpoch,expectedCustodyEpoch,payload}={}){
+    if(!requireDurableIdentity)return {ok:false,status:'DENIED',reason:'NATIVE_IDENTITY_REQUIRED'};
+    const kinds={ISSUE:'ISSUE_GRANT',PAUSE:'PAUSE_GRANT',
+      RESUME:'RESUME_GRANT',REVOKE:'REVOKE_GRANT'};
+    if(!kinds[action])return {ok:false,status:'DENIED',reason:'UNKNOWN_GRANT_ACTION'};
+    if(!payload||payload.grantScope!==scope)
+      return {ok:false,status:'CONFLICT',reason:'GRANT_SCOPE_MISMATCH'};
+    const native=durable.readIdentityAuthority({identity:k,actor});
+    if(!native.valid)return {ok:false,status:'DENIED',reason:'ACCOUNT_OR_PEER_UNBOUND'};
+    // The user authorization proof is a typed W24-owned immutable reference,
+    // independently validated again inside native finalizeMutationFence.
+    if(typeof payload.approvalRef!=='string'||!payload.approvalRef)
+      return {ok:false,status:'DENIED',reason:'USER_APPROVAL_PROOF_REQUIRED'};
+    const req=durable.requestMutationFence({identity:k,actor,scope,
+      kind:kinds[action],idempotencyKey,payload,expectedGeneration,
+      expectedBindingRevision,expectedAccountEpoch,expectedConsentEpoch,
+      expectedCustodyEpoch});
+    if(!req.ok)return {...req,action};
+    if(req.status==='COMMITTED')return {ok:true,status:'COMMITTED',
+      requestId:req.requestId,generation:req.generation,replayed:true,
+      readback:readGrantState({identity:k,actor,scope})};
+    const finished=durable.finalizeMutationFence({requestId:req.requestId,
+      generation:req.generation,actor,ownerValidatedMutation:payload});
+    if(finished.status==='PENDING')return {ok:true,status:'PENDING',
+      requestId:req.requestId,generation:req.generation,
+      reason:finished.reason??'ARMED_SEND_PENDING',
+      readback:readGrantState({identity:k,actor,scope})};
+    if(finished.status!=='COMMITTED')return {...finished,action,
+      requestId:req.requestId,generation:req.generation};
+    const stored=durable.mutationResult({requestId:req.requestId,actor});
+    if(stored.status!=='COMMITTED')throw Error('W44_GRANT_POSTCOMMIT_READBACK_FAILED');
+    return {ok:true,status:'COMMITTED',requestId:req.requestId,
+      generation:req.generation,readback:readGrantState({identity:k,actor,scope})};
+  }
   function inspection(k){
     const key=canonicalK(k);
     if(!currentIdentity(k))return deny('W24_IDENTITY_OR_CONSENT_INVALID');
@@ -368,7 +460,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     enterBoundary,armSend,leaseStatus,
     requestMutationFence:requireDurableIdentity?durable.requestMutationFence:requestMutationFence,
     finalizeMutationFence:requireDurableIdentity?durable.finalizeMutationFence:finalizeMutationFence,
-    settleBoundary,finish,inspection,
+    settleBoundary,finish,inspection,readGrantState,grantAction,
     readIdentityAuthority:durable.readIdentityAuthority,
     readMutationFence:durable.readMutationFence,
     requestNativeMutationFence:durable.requestMutationFence,
