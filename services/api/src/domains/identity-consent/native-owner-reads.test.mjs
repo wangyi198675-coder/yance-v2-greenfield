@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,rmSync} from 'node:fs';
+import {mkdtempSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -10,10 +10,12 @@ import {createW24NativeOwnerReadPorts} from './native-owner-reads.mjs';
 const w44root=process.env.YANCE_W44_ROOT||process.env.YANCE_PR32_ROOT;
 const w47root=process.env.YANCE_W47_ROOT||process.env.YANCE_PR32_ROOT;
 if(!w44root||!w47root)throw Error('OWNER_REAL_SOURCE_PATHS_REQUIRED');
-const [{openEligibilityStore},{createNativeOwnerReadHttp}]=await Promise.all([
+const w47File=resolve(w47root,'services/api/runtime/native-authoritative-reads.mjs');
+const [{openEligibilityStore},w47Owner]=await Promise.all([
  import(pathToFileURL(resolve(w44root,'services/api/src/domains/grant-custody-budget/index.mjs')).href),
- import(pathToFileURL(resolve(w47root,'services/api/runtime/native-authoritative-reads.mjs')).href)
+ existsSync(w47File)?import(pathToFileURL(w47File).href):Promise.resolve(null)
 ]);
+const createNativeOwnerReadHttp=w47Owner?.createNativeOwnerReadHttp??null;
 const principal=Object.freeze({verified:true,source:'W54_NATIVE_CURRENT_USER',
  principalRef:'fake-owner-1',installationRef:'fake-install-1',revocationGeneration:1});
 const session={id:'session-fixture',record:{rev:1}};
@@ -64,8 +66,17 @@ test('W24 exact W47 read callback shape from current durable K, never canSend',a
  assert.equal(contacts.length,1);assert.equal(contacts[0].w24CurrentKVerified,true);
  assert.equal(contacts[0].w24ConsentCurrent,true);
 });
-test('existing W47 original GET /contacts accepts authoritative owner read ports but reports canSend=false',async t=>{
+test('W24 W47 callback contract; actual W47 GET is exercised when joined source is available',async t=>{
  const f=fixture(t),ports=f.bridge();
+ if(!createNativeOwnerReadHttp) {
+  // PR32 CI's exact sibling SHA predates W47's native GET adapter. Test W24's
+  // public owner-reader contract without inventing a W47 implementation.
+  const accounts=await ports.readW24AuthorizedAccounts({principal,session});
+  const contacts=await ports.readW24VerifiedContacts({principal,session,accounts});
+  assert.equal(contacts[0].w24CurrentKVerified,true);
+  assert.equal(contacts[0].w24ConsentCurrent,true);
+  return;
+ }
  const handler=createNativeOwnerReadHttp({
   sessionAuthority:{sessionFor:()=>session},webOrigin:'http://127.0.0.1:49001',
   resolveW54CurrentUser:async()=>principal,...ports
