@@ -35,7 +35,7 @@ if(r4IsolatedPreview){
   'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md':'de158fd6c5861a88a0ffe95e2a5899077624688c',
   'apps/web/src/BCBrandIcon.vue':'d99edca93a61f0464349cd515a6fee1a0580bb11',
   'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
-  'apps/web/src/product-workspace-contract.mjs':'01c9be64e4d2e8fa0a5cf3f33c29c5cda3eb235b',
+  'apps/web/src/product-workspace-contract.mjs':'dcefa40ac9422cad8058da999425dcd9582f6697',
   'apps/web/vite.w46.config.mjs':'cc618b37e5a02a3655421c14ff2fd5726f5a5fda',
   [canonicalAck]:'45893dca88309c678bc7b232f12809d879890c9e'
  };
