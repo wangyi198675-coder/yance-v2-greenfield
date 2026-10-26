@@ -28,7 +28,7 @@ async function fixture({trustedLaunch=null,modelPorts=false,now=()=>Date.now()}=
  const app=createPrivateModelHttp({sessionAuthority:authority,webOrigin,
   resolveNativePrincipal:modelPorts?async()=>profile:null,
   modelConfigPort:modelPorts?config:null,
-  credentialVaultPort:modelPorts?{status:async({provider})=>{vaultChecks++;return {configured:provider==='OPENROUTER_USER_API'}}}:null,
+  credentialVaultPort:modelPorts?{status:async({provider})=>{vaultChecks++;return {configured:provider==='OPENROUTER'}}}:null,
   w43ModelPort:modelPorts?{capabilities:async()=>models,authorizeSelection:async({selection})=>{
    selections++;return selection.provider==='OPENROUTER_USER_API';
   }}:null});

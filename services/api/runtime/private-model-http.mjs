@@ -21,6 +21,10 @@ const isProvider=v=>['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENROUTER_USER_API','OPENA
 const validModel=v=>typeof v==='string'&&v.length>=2&&v.length<=128&&
  /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(v);
 const validSelection=s=>s&&isProvider(s.provider)&&validModel(s.modelId);
+// W43 public SDK provenance is canonical. W55 intentionally retains its
+// separate OS Credential Manager target names, never exposed as HTTP DTO.
+const nativeKeyProvider=provider=>provider==='OPENROUTER_USER_API'?'OPENROUTER':
+ provider==='OPENAI_USER_API'?'OPENAI_API':null;
 const csrfOk=(req,s)=>{
  const k=s?.record?.csrf,v=req.headers['x-yance-csrf'];
  return typeof k==='string'&&typeof v==='string'&&/^[a-f0-9]{64}$/.test(v)&&
@@ -115,7 +119,7 @@ export function createPrivateModelHttp({
   }
   const vaultState=async provider=>{
    if(provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE')return {configured:true,status:'READY'};
-   const v=await credentialVaultPort.status({profile,provider});
+   const v=await credentialVaultPort.status({profile,provider:nativeKeyProvider(provider)});
    if(!v||typeof v.configured!=='boolean')throw Error('W55_VAULT_STATE_UNVERIFIED');
    return {configured:v.configured,status:v.status??(v.configured?'READY':'SETUP_REQUIRED')};
   };
