@@ -143,3 +143,18 @@ Old w47_private_dto.py compatibility layer now verifies original runtime selecte
 Native tests run official Agno 3.1.10 OpenRouter and OpenAIChat classes. New two-turn provider-switch history continuity test runs actual Agno Agent.run but uses httpx.MockTransport with explicitly FAKE test API keys, FAKE model replies and zero network cloud calls. It is source compatibility and historical recovery proof, NEVER a paid-model quality PASS. Real OpenRouter/OpenAI provider API usage needs user-owned key, protected W55 store and paid-credit authorization, which do not currently exist in W43 and are HOLD.
 
 No second Agent, alternate history DB, provider auto-fallback, producer of W55 trusted identities, external sender, or production service.
+
+
+## W43 Issue #61 — one original Agno Agent, truthful native StableID tool
+
+Original W43 AgentOS now registers ONLY ONE Agno Agent, ID w43-private-brain. The old synthetic CONTACT entry is an alias of the SAME object, not a second Agent; CONTACT K, user ID and session ID remain strictly isolated, and outbound remains W25 only. Official Agno3.1.10 SqliteDb/History/Team/Workflow/model selection and the existing durable requestId fence are reused.
+
+New capability_catalog.py loads actual 252 distinct V2 StableIDs from contracts/source/10_authority252.csv, including A01, LR01 and UIE-100. ONE official Agno @tool, describe_yance_capability(stable_id), exposes only declared capability metadata with DECLARED_NOT_AUTHORIZED_FOR_EXECUTION. The catalogue is not 252 implemented business modules, and a missing real upstream owner/grant cannot emit tool execution SUCCESS. Legacy V1 business source code is not used.
+
+Real local Qwen3 8B original llama.cpp port11605, official Agno SDK and PRIVATE two natural Chinese model turns: Run d20aa622-64de-46de-a5ac-921f8f677506 and Run 4f748ea5-a137-4e2c-9e8e-12b233b923a4 both COMPLETED. A second Python process cold-restored two user and two assistant records from original SQLite; alternate fake user/thread denied, zero real platform accounts/sends and quality_qualified=false.
+
+Actual Agno tool calling, not mock: Qwen3 8B made a real function call to describe_yance_capability(A01), SDK Run c5be45a1-921b-431e-9b3b-d1453691e0dc COMPLETED, one native tool-role message read from original SqliteDb, status DECLARED_NOT_AUTHORIZED_FOR_EXECUTION. Model correctly reported the real upstream execution is not authorized. The separate httpx.MockTransport test exercises Agno Tool Calling DTO offline; no actual paid cloud use or real business action claimed.
+
+W47 actual combined baseline bb1be7bf070ceff39681b081b04754a4b4e34cc3 still constructs PRIVATE HTTP without a genuine W54 resolver, W43 port or native request ledger; data stats/contacts are hardcoded safe zero. Existing W47 modules private-python-port.mjs, w47-w43-private-child.py, private-native-ledger-port.mjs and W54 WebView session interface must be wired by original W47/W54 Owners with native signed user session. No synthetic JSON may enable it. Four native channel upstream/authorized provider workers are not operating in the integrated baseline, so realContacts remains zero until real authorized data exists.
+
+W43 source-only Owner ACK, not a signed 44751 user-visible app, genuine trusted W47 HTTP, real paid cloud or genuine social channel success. No other Owner tree, main or fixed Web changed, no second Agent/db/sender/Vault, no live social data or paid API call.
