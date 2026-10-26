@@ -1,4 +1,7 @@
 # YANCE V2 — P3-0 isolated Greenfield bootstrap
+
+> **PROJECT EXECUTION POLICY UPDATE (2026-10-26):** User-approved highest product and execution rule is [docs/PROJECT_HIGHEST_EXECUTION_RULE.md](docs/PROJECT_HIGHEST_EXECUTION_RULE.md). All contributors and AI work windows must read that policy before planning/implementing. The remainder of this README describes **historical P3-0 bootstrap state**, not current GitHub/main integration or delivery status. Current status must be independently checked against fresh refs/running versions; do not infer no remote or no CI from this old record.
+
 STATUS: CONTRACT_ONLY_GIT_BASELINE; NOT IMPLEMENTATION; NOT PRODUCTION.
 User authorized isolated Greenfield bootstrap and nonproduction UI prototype PREPARATION on 2026-10-24.
 This repository includes copied P2 contracts and empty directories only; no old application/business source, API, AI runtime, provider connectors, logins, user data, sends or deployment.
