@@ -168,7 +168,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
  </section>
 </template>
 <style scoped>
-.bc-private-brain{display:grid;gap:14px;max-width:850px;width:100%;min-width:0;border:1px solid var(--w46-edge,#777);border-radius:12px;padding:clamp(12px,3vw,24px)}
+.bc-private-brain{display:grid;gap:14px;width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--w46-edge,#777);border-radius:12px;padding:clamp(12px,3vw,24px)}
 .bc-private-brain-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .bc-private-brain-head strong{font-size:20px}.bc-private-brain-head p,.bc-provider small{font-size:12px;opacity:.75}
 .bc-private-brain-state{color:var(--w46-accent,currentColor)}
