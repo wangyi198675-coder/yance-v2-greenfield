@@ -18,7 +18,8 @@ const historyReceipt=(threadId='personal')=>({status:'HISTORY_PRESENT',threadId,
  qualityQualified:false,canSend:false});
 const profile=(principalRef='W54TEST-REALUSER-PRINCIPAL-A')=>({
  source:'W54_NATIVE_CURRENT_USER',verified:true,principalRef,
- installationRef:'W54TEST-INSTALL-001',appLocalDataRoot:'C:\\TEST_ONLY_APPDATA\\Yance'
+ installationRef:'W54TEST-INSTALL-001',appLocalDataRoot:'C:\\TEST_ONLY_APPDATA\\Yance',
+ modelBackend:'llamacpp',modelId:'qwen3:8b',modelSelectionEpoch:1
 });
 function ledger(){
  // Explicit TEST-ONLY map of the W43 API, not a production durable store.

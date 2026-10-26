@@ -35,7 +35,11 @@ const nativeModelClaim=p=>{
  // These fields can come ONLY from the injected W54/W55 signed server port.
  // No browser DTO, cookie value, environment or profile text grants paid use.
  const backend=p.modelBackend;
- if(backend===undefined)return {};
+ if(backend===undefined)return {
+  modelBackend:'unconfigured',modelId:'',modelSelectionEpoch:0,
+  modelUserSelected:false,extraChargeApproved:false,
+  protectedCredentialAttested:false
+ };
  if(!['llamacpp','openrouter','openai','unconfigured'].includes(backend)||
     typeof p.modelId!=='string'||p.modelId.length>128||
     !Number.isSafeInteger(p.modelSelectionEpoch)||p.modelSelectionEpoch<0)
@@ -44,8 +48,10 @@ const nativeModelClaim=p=>{
  if(cloud&&(
    p.modelSelectionEpoch<1||p.modelUserSelected!==true||
    p.extraChargeApproved!==true||p.protectedCredentialAttested!==true||
-   typeof p.cloudKeyFile!=='string'||!win32.isAbsolute(p.cloudKeyFile)||
-   p.cloudKeyFile.includes('..')||/[\\x00-\\x1f]/.test(p.cloudKeyFile)))
+   !((p.cloudSecretMode==='W55_NATIVE_CALLBACK'&&p.cloudKeyFile===undefined)||
+      (p.cloudSecretMode===undefined&&typeof p.cloudKeyFile==='string'&&
+        win32.isAbsolute(p.cloudKeyFile)&&!p.cloudKeyFile.includes('..')&&
+        !/[\\x00-\\x1f]/.test(p.cloudKeyFile)))))
    throw {httpStatus:503};
  return {
   modelBackend:backend,modelId:p.modelId,
@@ -53,7 +59,8 @@ const nativeModelClaim=p=>{
   modelUserSelected:p.modelUserSelected===true,
   extraChargeApproved:p.extraChargeApproved===true,
   protectedCredentialAttested:p.protectedCredentialAttested===true,
-  ...(cloud?{cloudKeyFile:p.cloudKeyFile}:{})
+  ...(cloud?(p.cloudSecretMode==='W55_NATIVE_CALLBACK'?{
+    cloudSecretMode:'W55_NATIVE_CALLBACK'}:{cloudKeyFile:p.cloudKeyFile}):{})
  };
 };
 const sessionSeal=(s,p)=>Object.freeze({
@@ -68,7 +75,7 @@ const sameContext=(a,b)=>a.principalRef===b.principalRef&&a.installationRef===b.
  a.revocationGeneration===b.revocationGeneration&&a.appLocalDataRoot===b.appLocalDataRoot&&
  a.modelBackend===b.modelBackend&&a.modelId===b.modelId&&
  a.modelSelectionEpoch===b.modelSelectionEpoch&&
- a.cloudKeyFile===b.cloudKeyFile&&
+ a.cloudKeyFile===b.cloudKeyFile&&a.cloudSecretMode===b.cloudSecretMode&&
  a.modelUserSelected===b.modelUserSelected&&
  a.extraChargeApproved===b.extraChargeApproved&&
  a.protectedCredentialAttested===b.protectedCredentialAttested;
@@ -88,6 +95,14 @@ const w43History=r=>r&&['HISTORY_PRESENT','HISTORY_EMPTY','HISTORY_NOT_FOUND'].i
  r.messages.every(m=>m&&['user','assistant','tool'].includes(m.role)&&
  typeof m.content==='string'&&m.content.length<=128000);
 const errorMap=e=>{
+ // The W43 original Agno port reports safe machine-readable model setup
+ // statuses. Do not turn ordinary no-model usage into an opaque IPC failure.
+ const native=typeof e?.code==='string'?e.code.replace(/^W43_NATIVE_PRIVATE_/, ''):'';
+ if(['MODEL_SETUP_REQUIRED','LOCAL_MODEL_UNAVAILABLE',
+     'CLOUD_API_KEY_SETUP_REQUIRED','CLOUD_PROTECTED_CREDENTIAL_UNAVAILABLE',
+     'CLOUD_MODEL_SELECTION_OR_CREDENTIAL_UNAVAILABLE',
+     'W55_PROTECTED_CREDENTIAL_NOT_ATTESTED'].includes(native))
+  return {status:503,code:native};
  if(e?.http_status===401||e?.httpStatus===401)return {status:401,code:'LOCAL_SESSION_REVOKED_OR_EXPIRED'};
  if(e?.http_status===409||e?.httpStatus===409)return {status:409,code:'LOCAL_SESSION_REVISION_CONFLICT'};
  if(e?.http_status===422||e?.httpStatus===422)return {status:422,code:'W43_REQUEST_INVALID'};
@@ -150,9 +165,21 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
    return sessionSeal(s,p);
   };
   let original;try{original=await principal()}catch(e){const f=errorMap(e);reject(res,f.status,f.code);return true}
+  // PRIVATE History works with no configured inference model. An ordinary
+  // new question must prompt model setup BEFORE legacy model-select/ledger.
+  if(turn&&original.modelBackend==='unconfigured'){
+   reject(res,503,'MODEL_SETUP_REQUIRED');return true;
+  }
   let signedSelection=null;
-  if(turn&&resolveSignedModelSelection){
-   try{signedSelection=await resolveSignedModelSelection({verifiedContext:original,threadId})}
+  if(turn&&(resolveSignedModelSelection||
+    ['openrouter','openai'].includes(original.modelBackend))){
+   // A configured local user's own native W54/W55 model claim is sufficient;
+   // do not require a redundant selection service just to call original Agno.
+   try{signedSelection=resolveSignedModelSelection?
+    await resolveSignedModelSelection({verifiedContext:original,threadId}):{
+     provider:original.modelBackend==='openrouter'?'OPENROUTER_USER_API':'OPENAI_USER_API',
+     modelId:original.modelId
+    }}
    catch{reject(res,503,'W43_SIGNED_MODEL_SELECTION_UNAVAILABLE');return true}
    const permitted=signedSelection&&['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENAI_USER_API','OPENROUTER_USER_API'].includes(signedSelection.provider)&&
     typeof signedSelection.modelId==='string'&&signedSelection.modelId.length>1&&signedSelection.modelId.length<=128;

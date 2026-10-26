@@ -4,6 +4,43 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createW43PythonPrivatePort} from './private-python-port.mjs';
+test('W43 original Agno without ANY model or key reads native History across Python restarts',async t=>{
+ const pythonExecutable=process.env.YANCE_W43_TEST_PYTHON;
+ const w43ModuleRoot=process.env.YANCE_W43_TEST_MODULE_ROOT;
+ if(!pythonExecutable||!w43ModuleRoot){t.skip('W43 Python source missing');return}
+ const root=mkdtempSync(join(process.env.YANCE_W47_QA_TEMP_ROOT||tmpdir(),'W47_REAL_AGNO_NO_MODEL_'));
+ try{
+  const appRoot=join(root,'NATIVE_USER_AGNO_STORAGE');mkdirSync(appRoot);
+  const native=()=>({principalRef:'local-person-without-model-001',
+   installationRef:'local-one-install-001',sessionRef:'local-private-session-001',
+   sessionRevision:1,revocationGeneration:0,expiresAtMs:Date.now()+120000,
+   appLocalDataRoot:appRoot,modelBackend:'unconfigured',modelId:'',
+   modelSelectionEpoch:0,modelUserSelected:false,
+   extraChargeApproved:false,protectedCredentialAttested:false});
+  const ctx={checkCurrent:async()=>native()};
+  const port=createW43PythonPrivatePort({pythonExecutable,w43ModuleRoot,timeoutMs:45000});
+  const first=await port.history(ctx,'personal');
+  assert.equal(first.status,'HISTORY_NOT_FOUND');
+  assert.equal(first.canSend,false);
+  const second=await createW43PythonPrivatePort({
+   pythonExecutable,w43ModuleRoot,timeoutMs:45000
+  }).history(ctx,'personal');
+  assert.equal(second.sessionId,first.sessionId);
+  assert.equal(second.runCount,0);
+  await assert.rejects(()=>port.turn(ctx,'personal','hello','no_model_test_request_001'),
+   err=>String(err?.code).includes('MODEL_SETUP_REQUIRED'));
+  const after=await port.history(ctx,'personal');
+  assert.equal(after.status,'HISTORY_NOT_FOUND');
+  assert.equal(after.runCount,0);
+  console.log('W47_W43_REAL_PYTHON_NO_MODEL_HISTORY_PASS '+JSON.stringify({
+   pythonSubprocess:true,originalAgnoSQLite:true,localKeyFileRequired:false,
+   noLocalModelInitialized:true,setupRequired:true,paidCalls:0,externalMessages:0
+  }));
+ }finally{
+  await new Promise(ok=>setTimeout(ok,150));
+  rmSync(root,{recursive:true,force:true,maxRetries:8,retryDelay:150})
+ }
+});
 test('original signed W43 Python consumer via server-private IPC reads native EMPTY history; never a fake reply',async t=>{
  const pythonExecutable=process.env.YANCE_W43_TEST_PYTHON;
  const w43ModuleRoot=process.env.YANCE_W43_TEST_MODULE_ROOT;

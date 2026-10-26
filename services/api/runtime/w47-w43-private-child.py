@@ -74,6 +74,22 @@ def main():
             or verified.get("modelId") != selected["modelId"]
         ):
             raise W47PrivateAccessError("SIGNED_MODEL_SELECTION_CHANGED", 409)
+        native_secret = None
+        if verified.get("cloudSecretMode") == "W55_NATIVE_CALLBACK":
+            if (verified.get("cloudKeyFile") is not None
+                    or verified.get("modelBackend") not in {"openrouter", "openai"}):
+                raise W47PrivateAccessError("W55_NATIVE_CREDENTIAL_SOURCE_INVALID", 503)
+            def request_cloud_secret():
+                # Ephemeral original W55 WinCred/DPAPI secret through this
+                # existing private Python child stdio. No browser or file.
+                emit({"kind": "CLOUD_KEY_REQUEST",
+                      "backend": verified["modelBackend"],
+                      "modelId": verified["modelId"]})
+                answer = read()
+                if answer.get("kind") != "CLOUD_KEY_SECRET":
+                    raise W47PrivateAccessError("W55_NATIVE_CREDENTIAL_UNAVAILABLE", 503)
+                return answer.get("secret")
+            native_secret = request_cloud_secret
         return W47VerifiedPrincipal(
             principal_ref=verified["principalRef"],
             installation_ref=verified["installationRef"],
@@ -82,10 +98,11 @@ def main():
             revocation_generation=verified["revocationGeneration"],
             expires_at_ms=verified["expiresAtMs"],
             app_local_data_root=Path(verified["appLocalDataRoot"]),
-            model_backend=verified.get("modelBackend", "llamacpp"),
-            model_id=verified.get("modelId", "qwen3:8b"),
+            model_backend=verified.get("modelBackend", "unconfigured"),
+            model_id=verified.get("modelId", ""),
             cloud_key_file=(Path(verified["cloudKeyFile"])
                             if verified.get("cloudKeyFile") else None),
+            cloud_secret_resolver=native_secret,
             model_user_selected=verified.get("modelUserSelected") is True,
             extra_charge_approved=verified.get("extraChargeApproved") is True,
             protected_credential_attested=verified.get("protectedCredentialAttested") is True,

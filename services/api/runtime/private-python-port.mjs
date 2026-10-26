@@ -16,15 +16,21 @@ function acceptable(c){
  typeof c.appLocalDataRoot==='string'&&isAbsolute(c.appLocalDataRoot);
 }
 /**
- * sourceRoot/pythonExecutable/protectedKeyFile are *server install configuration*,
- * checked by W09 + W43 Owner. NEVER request fields. A missing source/key seals.
+ * Python executable and W43 module root are installed app-owned paths.
+ * No-model History or W55 native callback requires a plaintext key file.
+ * Optional local llama.cpp key stays in native configuration, never HTTP.
  */
 export function createW43PythonPrivatePort({
- pythonExecutable,w43ModuleRoot,protectedKeyFile,timeoutMs=190000
+ pythonExecutable,w43ModuleRoot,protectedKeyFile,
+ resolveNativeCloudSecret=null,timeoutMs=190000
 }={}){
- if(!pythonExecutable||!w43ModuleRoot||!protectedKeyFile||
-    !isAbsolute(pythonExecutable)||!isAbsolute(w43ModuleRoot)||!isAbsolute(protectedKeyFile))
+ if(!pythonExecutable||!w43ModuleRoot||
+    !isAbsolute(pythonExecutable)||!isAbsolute(w43ModuleRoot)||
+    (protectedKeyFile!==undefined&&protectedKeyFile!==null&&
+      (typeof protectedKeyFile!=='string'||!isAbsolute(protectedKeyFile))))
   throw Error('W43_OWNER_SIGNED_PYTHON_PATHS_REQUIRED');
+ if(resolveNativeCloudSecret!==null&&typeof resolveNativeCloudSecret!=='function')
+  throw Error('W55_NATIVE_CLOUD_CREDENTIAL_CALLBACK_REQUIRED');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>300000)
   throw Error('W43_PYTHON_BRIDGE_TIMEOUT_INVALID');
  async function invoke(method,ctx,threadId,text,requestId,receipt,modelSelection){
@@ -34,8 +40,11 @@ export function createW43PythonPrivatePort({
    const proc=spawn(pythonExecutable,['-B',childScript,resolve(w43ModuleRoot)],{
     windowsHide:true,stdio:['pipe','pipe','ignore'],shell:false,
     env:{...process.env,AGNO_TELEMETRY:'false',
+      // Windows default console encoding can reject Chinese PRIVATE prompts.
+      // Original W43 Agno IPC is UTF-8 end-to-end, never change user text.
+      PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8',
       OPENAI_API_KEY:'',OPENROUTER_API_KEY:'',OLLAMA_API_KEY:'',
-      YANCE_W43_LOCAL_KEY_FILE:protectedKeyFile}});
+      YANCE_W43_LOCAL_KEY_FILE:protectedKeyFile??''}});
    let finished=false,seen=0,responding=false;
    const clean=()=>{
     clearTimeout(timer);
@@ -81,6 +90,39 @@ export function createW43PythonPrivatePort({
       send({kind:'DENIED'});
       finish({httpStatus:e?.httpStatus===409?409:e?.httpStatus===401?401:503,
        code:'W47_CURRENT_SESSION_RECHECK_FAILED'});return;
+     }finally{responding=false}
+    }else if(msg.kind==='CLOUD_KEY_REQUEST'){
+     // The original W43 SDK consumes this transient key only in the Python
+     // executor. It NEVER becomes an HTTP DTO, logfile, environment value,
+     // persisted file, or an Agno model selected by the browser.
+     if(responding||resolveNativeCloudSecret===null||method==='history'||
+        !['openrouter','openai'].includes(msg.backend)||
+        typeof msg.modelId!=='string'||msg.modelId.length>128){
+       finish({httpStatus:503,code:'W55_NATIVE_CREDENTIAL_UNAVAILABLE'});return
+     }
+     responding=true;
+     try{
+      const claim=await ctx.checkCurrent();
+      if(!acceptable(claim)||claim.modelBackend!==msg.backend||
+         claim.modelId!==msg.modelId||claim.cloudSecretMode!=='W55_NATIVE_CALLBACK'||
+         claim.modelUserSelected!==true||claim.extraChargeApproved!==true||
+         claim.protectedCredentialAttested!==true)
+       throw Error('W55_CREDENTIAL_CURRENT_SELECTION_NOT_VERIFIED');
+      const secret=await resolveNativeCloudSecret({verifiedClaim:claim,
+       provider:msg.backend,modelId:msg.modelId});
+      if(typeof secret!=='string'||secret.length<16||secret.length>400||/\\s/.test(secret))
+       throw Error('W55_NATIVE_CREDENTIAL_INVALID');
+      const again=await ctx.checkCurrent();
+      if(!acceptable(again)||again.sessionRef!==claim.sessionRef||
+         again.sessionRevision!==claim.sessionRevision||
+         again.revocationGeneration!==claim.revocationGeneration||
+         again.modelSelectionEpoch!==claim.modelSelectionEpoch||
+         again.modelBackend!==claim.modelBackend||again.modelId!==claim.modelId)
+       throw Error('W55_NATIVE_SELECTION_REVOKED');
+      send({kind:'CLOUD_KEY_SECRET',secret});
+     }catch{
+      send({kind:'DENIED'});
+      finish({httpStatus:503,code:'W55_NATIVE_CREDENTIAL_UNAVAILABLE'});return;
      }finally{responding=false}
     }else if(msg.kind==='RESULT'){
      if(!msg.result||typeof msg.result!=='object'){

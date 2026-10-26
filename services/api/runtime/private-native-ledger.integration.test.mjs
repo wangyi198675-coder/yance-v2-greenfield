@@ -22,7 +22,8 @@ test('original W43 3d399 native Agno SQLite claim/replay/UNKNOWN survives Python
     installationRef:'fixture-install-native-01',
     sessionRef:'fixture-session-native-01',sessionRevision:rev,
     revocationGeneration:0,expiresAtMs:Date.now()+150000,
-    appLocalDataRoot:user==='A'?uA:uB
+    appLocalDataRoot:user==='A'?uA:uB,
+    modelBackend:'llamacpp',modelId:'qwen3:8b',modelSelectionEpoch:1
    })
   });
   const args={context:serverContext(),threadId:'personal',requestId:'request_ledger_native_A_0001',text:'PRIVATE TEST ONLY'};
