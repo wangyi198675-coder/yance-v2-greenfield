@@ -41,6 +41,7 @@ test('no explicit trusted OS user gesture => WAITING_USER_AUTH; no DLL loaded',a
   const controller=nativeTDJsonController({
     runtimeDir:'DOES_NOT_EXIST',
     attestUserGesture:async()=>({approved:false,userInitiated:false}),
+    attestReadSession:async()=>({verified:false}),
     findAuthorizedAccount:async()=>{throw Error('MUST_NOT_CALL');},
     verifyCurrentPeerK:async()=>true,onAuthorizedInbound:async()=>{},
     verifyW25Receipt:async()=>({verified:false}), onW25Receipt:async()=>{},
@@ -57,6 +58,7 @@ test('no explicit trusted OS user gesture => WAITING_USER_AUTH; no DLL loaded',a
 test('gesture alone without trusted W24 channel account => no worker',async()=>{
   const ctrl=nativeTDJsonController({
     runtimeDir:'DOES_NOT_EXIST',
+    attestReadSession:async()=>({verified:false}),
     attestUserGesture:async()=>({
       approved:true,userInitiated:true,provider:'TELEGRAM_PERSONAL',
       expiresAt:Date.now()+10000,
@@ -72,6 +74,7 @@ test('gesture alone without trusted W24 channel account => no worker',async()=>{
 });
 test('cannot call native authorizeStep until real trusted worker exists',async()=>{
   const ctrl=nativeTDJsonController({
+    attestReadSession:async()=>({verified:false}),
     attestUserGesture:async()=>{throw Error('NO_PERMISSION');},
     findAuthorizedAccount:async()=>null,verifyCurrentPeerK:async()=>false,
     onAuthorizedInbound:async()=>{},
