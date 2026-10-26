@@ -10,10 +10,14 @@ import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
+import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
 const {bind,port,webOrigin}=config;
+// OPTIONAL W54/W09 SHA-pinned B+C files share this exact installed API port.
+// Asset integrity does not confer Windows identity, Session or paid rights.
+const pinnedWeb=resolvePinnedNativeWebAssets({config});
 // Optional, explicitly started personal-operator terminal pairing only.
 // Never create grants from HTTP, localhost, Origin, actor or JS-supplied identity.
 const operatorMode=process.env.YANCE_W47_OPERATOR_PAIRING;
@@ -81,6 +85,8 @@ const state=req=>({
   trustedSession:localSessionAuthority.sessionFor(req)?.record?.kind==='NATIVE_FIRST_PARTY',
   connectedAccountCount:null,realContacts:null,realMessageCount:null,
   countsAuthoritative:false,canSend:false,
+  nativeWebSourceSha:pinnedWeb?.sourceSha??null,
+  nativeWebSameOrigin:pinnedWeb!==null,
   mode:'NATIVE_PROVIDER_OWNER_PORTS_NOT_CONNECTED',externalEffects:false
 });
 const handler=(req,res)=>{
@@ -160,6 +166,8 @@ const handler=(req,res)=>{
       return deny(res,410,'SYNTHETIC_TEST_ROUTE_NOT_AVAILABLE');
     if(['/api/v2/send','/api/v2/outbox','/api/v2/agent/run'].includes(url.pathname))
       return deny(res,403,'EFFECTS_DISABLED');
+    if(pinnedWeb?.respond(req,res,url))return;
+    // Never fall back to index.html for an unknown API route.
     return deny(res,404,'ROUTE_NOT_FOUND');
   }catch{return deny(res,503,'API_RUNTIME_UNAVAILABLE')}
 };

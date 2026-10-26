@@ -16,6 +16,7 @@ const files=['server.mjs','runtime-config.mjs','runtime-provenance.mjs','local-s
  'local-operator-console.mjs','private-brain-http.mjs','private-python-port.mjs',
  'private-native-ledger-port.mjs','private-model-http.mjs',
  'native-authoritative-reads.mjs','native-provider-gateway.mjs','native-message-reads.mjs',
+ 'native-pinned-web-assets.mjs',
  'w54-native-child-frame.mjs','w54-native-webview-session.mjs','w47-w43-private-child.py'];
 test('real W26 bridge RUNNING but account WAITING_USER_AUTH through actual isolated W47 HTTP',async t=>{
  const externalPort=process.env.YANCE_W47_TEST_REAL_W26_PORT;
