@@ -1,15 +1,12 @@
-// W47 native V2 local read-only API composition. No synthetic authority or provider effects.
-// No V1 dependencies, second agent, sender, database, or login account platform.
+// W47 native V2 local read-only API. Endpoint selected per instance at startup.
+// Host/Origin protect the browsing surface; they never authenticate a person or provider.
 import {createServer} from 'node:http';
-import {execFileSync} from 'node:child_process';
-import {fileURLToPath} from 'node:url';
-import {resolve} from 'node:path';
+import {resolveRuntimeConfig} from './runtime-config.mjs';
+import {resolveRuntimeSource} from './runtime-provenance.mjs';
 
-const root=resolve(fileURLToPath(new URL('.', import.meta.url)), '../../..');
-const sha=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
-const bind='127.0.0.1';
-const port=47182;
-const webOrigin='http://127.0.0.1:4399';
+const config=resolveRuntimeConfig();
+const sha=resolveRuntimeSource(config);
+const {bind,port,webOrigin}=config;
 const noStore={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store','x-content-type-options':'nosniff',
@@ -28,9 +25,11 @@ const endpoints=Object.freeze({
   inbound:{installed:false,reason:'NO_CONNECTED_PROVIDER'},
   sender:{installed:true,enabled:false,reason:'NO_AUTHORIZED_PROVIDER'}
 });
+let boundPort=null;
 const state=()=>({
   ok:true,service:'Yance V2 local API',apiVersion:'v2',runtimeSha:sha,
   entrypoint:'services/api/runtime/server.mjs',
+  runtimeMode:config.mode,apiPort:boundPort,
   trustedSession:false,connectedAccountCount:0,
   realContacts:0,realMessageCount:0,canSend:false,
   mode:'LOCAL_UNAUTHORIZED_NO_PROVIDER',externalEffects:false
@@ -40,7 +39,8 @@ const handler=(req,res)=>{
     const remote=req.socket?.remoteAddress;
     if(!['127.0.0.1','::ffff:127.0.0.1','::1'].includes(remote))
       return deny(res,403,'LOOPBACK_ONLY');
-    if(req.headers.host!==bind+':'+port && req.headers.host!==bind+':4399')
+    // A per-install ephemeral port is checked against the actual listening socket.
+    if(!new Set([bind+':'+req.socket.localPort,config.webOriginHost]).has(req.headers.host))
       return deny(res,403,'HOST_NOT_ALLOWED');
     const origin=req.headers.origin;
     if(origin && origin!==webOrigin)
@@ -48,11 +48,11 @@ const handler=(req,res)=>{
     if(['cross-site','same-site'].includes(req.headers['sec-fetch-site']))
       return deny(res,403,'CROSS_SITE_BLOCKED');
     if(req.method==='OPTIONS')return deny(res,403,'CORS_DISABLED');
-    const url=new URL(req.url||'/', 'http://'+bind+':'+port);
+    const url=new URL(req.url||'/', 'http://'+bind+':'+req.socket.localPort);
     if(req.method==='GET' && (url.pathname==='/api/v2/runtime/health'||url.pathname==='/health'))
       return serial(res,200,state());
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/version')
-      return serial(res,200,{...state(),webSource:'SEE_4399_VERSION_JSON',apiGitSha:sha});
+      return serial(res,200,{...state(),webSource:'SEE_INSTALLED_LOCAL_WEB_VERSION',apiGitSha:sha});
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/capabilities')
       return serial(res,200,{ok:true,authoritative:true,canSend:false,capabilities:endpoints});
     if(req.method==='GET' && url.pathname==='/api/v2/contacts')
@@ -75,4 +75,8 @@ const handler=(req,res)=>{
 };
 const server=createServer(handler);
 server.on('clientError',(_err,socket)=>socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'));
-server.listen(port,bind,()=>console.log(JSON.stringify({event:'V2_API_READY',url:'http://'+bind+':'+port,apiGitSha:sha,mode:'NO_PROVIDER_SAFE'})));
+server.listen(port,bind,()=>{
+  boundPort=server.address().port;
+  console.log(JSON.stringify({event:'V2_API_READY',url:'http://'+bind+':'+boundPort,
+    apiGitSha:sha,mode:'NO_PROVIDER_SAFE',runtimeMode:config.mode}));
+});
