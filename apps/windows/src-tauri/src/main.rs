@@ -1,10 +1,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod session;
+mod user_dirs;
 mod windows_principal;
 
 use session::{PublicSessionStatus, SessionAuthority};
 use std::time::Duration;
 use tauri::Manager;
+use user_dirs::UserDirectories;
 use windows_principal::current_windows_principal;
 
 #[tauri::command]
@@ -23,6 +25,15 @@ fn main() {
         .expect("Fail closed: native OS random source must be available");
     let app = tauri::Builder::default()
         .manage(session)
+        .setup(|app| {
+            // Resolves current OS user's Tauri-configured application paths.
+            // Never exposes filesystem paths, SID or account claims to JavaScript.
+            let user_dirs =
+                UserDirectories::resolve(app.path()).map_err(|e| std::io::Error::other(e))?;
+            user_dirs.initialize().map_err(std::io::Error::other)?;
+            app.manage(user_dirs);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![session_status, logout_session])
         .build(tauri::generate_context!())
         .expect("construct minimal local Tauri host");
