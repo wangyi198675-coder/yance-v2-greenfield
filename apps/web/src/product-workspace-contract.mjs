@@ -2,7 +2,7 @@
 // No login, W24/W44 mutations, Agno Run, W25 delivery, or local fixture success.
 export const WORKSPACES=Object.freeze([
  Object.freeze({id:'CHAT',label:'聊天',section:'CONTACT',hint:'唯一 B+C CONTACT Composer'}),
- Object.freeze({id:'BRAIN',label:'闺蜜大脑',section:'SELF_PRIVATE',hint:'唯一 Agno，授权后才能执行'}),
+ Object.freeze({id:'BRAIN',label:'闺蜜大脑',section:'SELF_PRIVATE',hint:'唯一 Agno · 本地或云端模型任选'}),
  Object.freeze({id:'AUTOPILOT',label:'托管中心',section:'CUSTODY',hint:'授权、预算、撤销与回执'}),
  Object.freeze({id:'ACCOUNTS',label:'渠道账号',section:'CHANNELS',hint:'四渠道与多账号绑定'}),
  Object.freeze({id:'PEOPLE',label:'联系人',section:'PEOPLE',hint:'身份 K 与账户隔离'}),

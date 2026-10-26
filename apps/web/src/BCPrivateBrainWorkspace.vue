@@ -29,7 +29,9 @@ function ensureCurrent(){
 function armExpiry(expiresAt){
  if(sessionDeadline!==null)clearTimeout(sessionDeadline);
  sessionDeadline=setTimeout(()=>{
-  clearSession();loadState.value='unauthorized';notice.value='本机会话已过期，请从言策程序重新打开';
+  // PRIVATE remains automatic: on expiry re-read the same local W47 source,
+  // never ask a person for a pair code or fabricate a renewed Session.
+  clearSession();void refresh();
  },Math.max(0,expiresAt-Date.now()));
 }
 async function refresh(){
@@ -41,7 +43,11 @@ async function refresh(){
   publicProviders.value=publicModelCatalog(await api(PRIVATE_ROUTES.catalog)); // actual W47 public metadata, not readiness
   const s=authStatus(await api(PRIVATE_ROUTES.session));
   if(!safeCurrent(id))return;
-  if(!s.authorized){loadState.value='unauthorized';return}
+  if(!s.authorized){
+   // Ordinary PRIVATE use never asks the person for a terminal pair code.
+   // The original W47 process/session owner must establish local access on app startup.
+   loadState.value='setup-required';setupOpen.value=true;return
+  }
   session.value=s;armExpiry(s.expiresAt);
   let models;
   try{models=modelCatalog(await api(PRIVATE_ROUTES.config),publicProviders.value)}
@@ -51,7 +57,9 @@ async function refresh(){
    models.selectedProvider+'|'+models.selectedModelId:'';
   if(!models.configured){loadState.value='no-model';setupOpen.value=true;return}
   await loadHistory(id);
- }catch(e){if(safeCurrent(id)){loadState.value='unauthorized';notice.value=reason(e)}}
+ }catch(e){if(safeCurrent(id)){
+   loadState.value='service-unavailable';setupOpen.value=true;notice.value=reason(e)
+  }}
  finally{if(safeCurrent(id))busy.value=false}
 }
 function reason(e){
@@ -117,7 +125,8 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
   <p class="bc-private-brain-state" role="status" data-test="brain-state">
    {{loadState==='checking'?'正在核实服务端':loadState==='ready'?'历史已由服务端恢复':
     loadState==='no-model'?'尚未配置 AI 模型':
-    loadState==='unauthorized'?'本机可信会话尚未建立':
+    loadState==='setup-required'?'先设置 AI 模型；本机服务连接后即可聊天':
+    loadState==='service-unavailable'?'AI 服务暂时不可用，仍可查看模型设置':
     loadState==='models-unavailable'?'模型服务接口尚未接通':
     loadState==='history-unavailable'?'真实对话或历史暂不可用':'模型选择尚未确认'}}
   </p>
@@ -126,7 +135,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
    :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">{{catalog?.configured?'切换AI模型':'设置AI模型'}}</Button>
   <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings">
    <h3>选择 AI 模型</h3>
-   <p>云端和本地模型均可选择，本地 Qwen3 为可选项。云端模型只有服务端确认配置与费用资格后才能调用。</p>
+   <p>可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。</p>
    <div v-for="provider in providers" :key="provider.id" class="bc-provider">
     <strong>{{provider.name}}</strong><small>{{provider.desc}}</small>
     <template v-for="m in catalog?.models.filter(x=>x.provider===provider.id)||[]" :key="m.modelId">
@@ -138,7 +147,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
    </div>
    <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy" @click="selectModel">确认使用此模型</Button>
    <p class="bc-private-notice" data-test="brain-native-key-hold">
-    云端 API Key 仅能由原生受保护凭据设置保存或轮换。当前浏览器不接收、上传或显示明文密钥。
+    使用自己的云端 API Key，请在言策本机的模型设置中保存。当前版本若尚未提供安全的密钥保存入口，会明确保持不可用；不在网页或日志中填写、显示密钥。
    </p>
   </div>
   <div class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
@@ -159,7 +168,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
  </section>
 </template>
 <style scoped>
-.bc-private-brain{display:grid;gap:14px;max-width:850px;width:100%;min-width:0;border:1px solid var(--w46-edge,#777);border-radius:12px;padding:clamp(12px,3vw,24px)}
+.bc-private-brain{display:grid;gap:14px;width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--w46-edge,#777);border-radius:12px;padding:clamp(12px,3vw,24px)}
 .bc-private-brain-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .bc-private-brain-head strong{font-size:20px}.bc-private-brain-head p,.bc-provider small{font-size:12px;opacity:.75}
 .bc-private-brain-state{color:var(--w46-accent,currentColor)}
