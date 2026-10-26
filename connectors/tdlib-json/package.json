@@ -1,0 +1,14 @@
+{
+  "name": "@yance-v2/tdlib-json-synthetic",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Nonproduction TDLib JSON protocol projection; no real login or send",
+  "scripts": {
+    "test": "node --test ./test/*.test.mjs",
+    "test:coverage": "node --test --experimental-test-coverage ./test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
