@@ -3,10 +3,15 @@
 import {createServer} from 'node:http';
 import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
+import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
 const {bind,port,webOrigin}=config;
+// Fail closed: W54 has not provided a signed, server-verifiable native pairing source.
+// No browser request, Origin or localhost value can enable this issuer.
+const localSessionAuthority=createLocalSessionAuthority();
+const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthority,webOrigin});
 const noStore={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store','x-content-type-options':'nosniff',
@@ -49,6 +54,13 @@ const handler=(req,res)=>{
       return deny(res,403,'CROSS_SITE_BLOCKED');
     if(req.method==='OPTIONS')return deny(res,403,'CORS_DISABLED');
     const url=new URL(req.url||'/', 'http://'+bind+':'+req.socket.localPort);
+    if(url.pathname.startsWith('/api/v2/local-session/')){
+      void localSessionHttp(req,res,url).catch(()=>{
+        if(!res.headersSent)deny(res,503,'LOCAL_SESSION_UNAVAILABLE');
+        else res.destroy();
+      });
+      return;
+    }
     if(req.method==='GET' && (url.pathname==='/api/v2/runtime/health'||url.pathname==='/health'))
       return serial(res,200,state());
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/version')
