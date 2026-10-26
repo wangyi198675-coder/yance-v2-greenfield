@@ -34,16 +34,23 @@ import BCManagedStop from '../../../../apps/web/src/BCManagedStop.vue'
 import BCProductWorkspaceCandidate from '../../../../apps/web/src/BCProductWorkspaceCandidate.vue'
 import {createLoopbackManagedStopPort} from '../../../../apps/web/src/managed-stop.mjs'
 import {createLoopbackTakeoverPort} from '../../../../apps/web/src/native-takeover-port.mjs'
-const w46Port=createLoopbackTakeoverPort({baseUrl:window.location.origin,enabled:true,
-  endpoints:{get:'/api/v2/identity-consent/takeover-state',post:'/api/v2/identity-consent/takeover'}})
+// Official Tauri's isolated asset scheme is a UI origin, NOT an API authority.
+// In the installed B+C app only W54/W47 native Session may authorize actions.
+// Never instantiate synthetic W24/W44 test ports on the installed renderer.
+const w46InstalledAssetHost=window.location.protocol==='http:'&&window.location.hostname==='tauri.localhost'
+const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'||w46InstalledAssetHost
+const w46LegacyLoopbackLab=!w46WorkspaceEnabled&&
+  ['localhost','127.0.0.1','::1','[::1]'].includes(window.location.hostname)
+const w46Port=w46LegacyLoopbackLab?createLoopbackTakeoverPort({baseUrl:window.location.origin,enabled:true,
+  endpoints:{get:'/api/v2/identity-consent/takeover-state',post:'/api/v2/identity-consent/takeover'}}):null
 const w46Identity=computed(()=>active.value?{
   tenant:active.value.tenant,account:active.value.account,channel:active.value.channel,
   peer_id:active.value.peer_id,binding_revision:active.value.binding_revision}:null)
 const w46SourceMid=computed(()=>active.value?.last_message?.provider_mid||'')
 // Browser synthetic laboratory only. No trusted production W09 STOP HTTP/IPC yet.
-const w46StopPort=createLoopbackManagedStopPort({baseUrl:window.location.origin,enabled:true})
-// W46 nonproduction only. W47 owns the actual runtime shell and signed routing.
-const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'
+const w46StopPort=w46LegacyLoopbackLab?
+  createLoopbackManagedStopPort({baseUrl:window.location.origin,enabled:true}):null
+// Product state defined above, before any laboratory-only capability is created.
 const w46Workspace=ref('CHAT')
 const w46StopStates=ref<Record<string,string>>({})
 const w46StopGlobalKey=(id:any)=>[id.tenant,id.account,id.channel].join('|')+'|GLOBAL'
@@ -72,7 +79,7 @@ const w46DraftCandidatePort={
 }
 watch([w46Identity,w46SourceMid],async([identity,mid],_,onCleanup)=>{
   w46NativeMessage.value=null
-  if(!identity||!mid)return
+  if(w46WorkspaceEnabled||!w46LegacyLoopbackLab||!identity||!mid)return
   let cancelled=false;onCleanup(()=>{cancelled=true})
   try{
     const request='/w46-native-test/message?k='+encodeURIComponent([
