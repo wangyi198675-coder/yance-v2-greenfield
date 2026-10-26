@@ -45,13 +45,19 @@ const nativeModelClaim=p=>{
     !Number.isSafeInteger(p.modelSelectionEpoch)||p.modelSelectionEpoch<0)
    throw {httpStatus:503};
  const cloud=backend==='openrouter'||backend==='openai';
- if(cloud&&(
-   p.modelSelectionEpoch<1||p.modelUserSelected!==true||
+ const originalProtectedFile=typeof p.cloudKeyFile==='string'&&
+   win32.isAbsolute(p.cloudKeyFile)&&!p.cloudKeyFile.includes('..')&&
+   !/[\\x00-\\x1f]/.test(p.cloudKeyFile);
+ // The normal installed personal mode uses ORIGINAL WinCred W55 with a
+ // private W47->W43 stdio Key callback, not a plaintext cloudKeyFile.
+ // This marker is supplied only by the already-verified NATIVE principal.
+ const nativeWinCred=p.cloudCredentialSource==='W55_NATIVE_WIN_CRED'&&
+   p.cloudKeyFile===undefined;
+ if(cloud&&(p.modelSelectionEpoch<1||p.modelUserSelected!==true||
    p.extraChargeApproved!==true||p.protectedCredentialAttested!==true||
-   !((p.cloudSecretMode==='W55_NATIVE_CALLBACK'&&p.cloudKeyFile===undefined)||
-      (p.cloudSecretMode===undefined&&typeof p.cloudKeyFile==='string'&&
-        win32.isAbsolute(p.cloudKeyFile)&&!p.cloudKeyFile.includes('..')&&
-        !/[\\x00-\\x1f]/.test(p.cloudKeyFile)))))
+    !((p.cloudSecretMode==='W55_NATIVE_CALLBACK'&&p.cloudCredentialSource===undefined&&p.cloudKeyFile===undefined)||
+      (p.cloudSecretMode===undefined&&nativeWinCred)||
+      (p.cloudSecretMode===undefined&&p.cloudCredentialSource===undefined&&originalProtectedFile))))
    throw {httpStatus:503};
  return {
   modelBackend:backend,modelId:p.modelId,
@@ -59,8 +65,9 @@ const nativeModelClaim=p=>{
   modelUserSelected:p.modelUserSelected===true,
   extraChargeApproved:p.extraChargeApproved===true,
   protectedCredentialAttested:p.protectedCredentialAttested===true,
-  ...(cloud?(p.cloudSecretMode==='W55_NATIVE_CALLBACK'?{
-    cloudSecretMode:'W55_NATIVE_CALLBACK'}:{cloudKeyFile:p.cloudKeyFile}):{})
+  ...(cloud&&p.cloudSecretMode==='W55_NATIVE_CALLBACK'?{cloudSecretMode:'W55_NATIVE_CALLBACK'}:{}),
+  ...(cloud&&nativeWinCred?{cloudCredentialSource:'W55_NATIVE_WIN_CRED'}:{}),
+  ...(cloud&&p.cloudSecretMode===undefined&&p.cloudCredentialSource===undefined&&originalProtectedFile?{cloudKeyFile:p.cloudKeyFile}:{})
  };
 };
 const sessionSeal=(s,p)=>Object.freeze({
@@ -75,7 +82,7 @@ const sameContext=(a,b)=>a.principalRef===b.principalRef&&a.installationRef===b.
  a.revocationGeneration===b.revocationGeneration&&a.appLocalDataRoot===b.appLocalDataRoot&&
  a.modelBackend===b.modelBackend&&a.modelId===b.modelId&&
  a.modelSelectionEpoch===b.modelSelectionEpoch&&
- a.cloudKeyFile===b.cloudKeyFile&&a.cloudSecretMode===b.cloudSecretMode&&
+ a.cloudKeyFile===b.cloudKeyFile&&a.cloudSecretMode===b.cloudSecretMode&&a.cloudCredentialSource===b.cloudCredentialSource&&
  a.modelUserSelected===b.modelUserSelected&&
  a.extraChargeApproved===b.extraChargeApproved&&
  a.protectedCredentialAttested===b.protectedCredentialAttested;

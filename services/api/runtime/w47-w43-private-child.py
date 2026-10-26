@@ -90,6 +90,29 @@ def main():
                     raise W47PrivateAccessError("W55_NATIVE_CREDENTIAL_UNAVAILABLE", 503)
                 return answer.get("secret")
             native_secret = request_cloud_secret
+        # Reuse the ORIGINAL W43 cloud_secret_resolver hook. The key is
+        # requested only from the server-private W47 -> W55 native port and
+        # passed to the official Agno SDK, never a browser/request body.
+        def native_cloud_secret():
+            backend=verified.get("modelBackend")
+            if backend not in {"openrouter","openai"}:
+                raise W47PrivateAccessError("CLOUD_MODEL_NOT_SELECTED",409)
+            if (verified.get("modelUserSelected") is not True or
+                    verified.get("extraChargeApproved") is not True or
+                    verified.get("protectedCredentialAttested") is not True):
+                raise W47PrivateAccessError("CLOUD_COST_OR_KEY_NOT_APPROVED",403)
+            provider="OPENROUTER_USER_API" if backend=="openrouter" else "OPENAI_USER_API"
+            emit({"kind":"CLOUD_SECRET_REQUEST","provider":provider,
+                  "modelId":verified["modelId"]})
+            frame=read()
+            if frame.get("kind")!="CLOUD_SECRET":
+                raise W47PrivateAccessError("CLOUD_PROTECTED_CREDENTIAL_UNAVAILABLE",503)
+            key=frame.get("value")
+            if (not isinstance(key,str) or not 16<=len(key)<=400 or
+                    any(ch.isspace() for ch in key)):
+                raise W47PrivateAccessError("CLOUD_PROTECTED_CREDENTIAL_INVALID",503)
+            return key
+
         return W47VerifiedPrincipal(
             principal_ref=verified["principalRef"],
             installation_ref=verified["installationRef"],
@@ -102,7 +125,8 @@ def main():
             model_id=verified.get("modelId", ""),
             cloud_key_file=(Path(verified["cloudKeyFile"])
                             if verified.get("cloudKeyFile") else None),
-            cloud_secret_resolver=native_secret,
+            cloud_secret_resolver=(native_secret if verified.get("cloudSecretMode") == "W55_NATIVE_CALLBACK" else
+                                   native_cloud_secret if verified.get("cloudCredentialSource") == "W55_NATIVE_WIN_CRED" else None),
             model_user_selected=verified.get("modelUserSelected") is True,
             extra_charge_approved=verified.get("extraChargeApproved") is True,
             protected_credential_attested=verified.get("protectedCredentialAttested") is True,

@@ -22,7 +22,7 @@ function acceptable(c){
  */
 export function createW43PythonPrivatePort({
  pythonExecutable,w43ModuleRoot,protectedKeyFile,
- resolveNativeCloudSecret=null,timeoutMs=190000
+ resolveNativeCloudSecret=null,nativeCloudKeyPort=null,timeoutMs=190000
 }={}){
  if(!pythonExecutable||!w43ModuleRoot||
     !isAbsolute(pythonExecutable)||!isAbsolute(w43ModuleRoot)||
@@ -31,6 +31,8 @@ export function createW43PythonPrivatePort({
   throw Error('W43_OWNER_SIGNED_PYTHON_PATHS_REQUIRED');
  if(resolveNativeCloudSecret!==null&&typeof resolveNativeCloudSecret!=='function')
   throw Error('W55_NATIVE_CLOUD_CREDENTIAL_CALLBACK_REQUIRED');
+  if(nativeCloudKeyPort!==null&&typeof nativeCloudKeyPort?.withSecret!=='function')
+  throw Error('W55_NATIVE_SECRET_PORT_INVALID');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>300000)
   throw Error('W43_PYTHON_BRIDGE_TIMEOUT_INVALID');
  async function invoke(method,ctx,threadId,text,requestId,receipt,modelSelection){
@@ -45,7 +47,7 @@ export function createW43PythonPrivatePort({
       PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8',
       OPENAI_API_KEY:'',OPENROUTER_API_KEY:'',OLLAMA_API_KEY:'',
       YANCE_W43_LOCAL_KEY_FILE:protectedKeyFile??''}});
-   let finished=false,seen=0,responding=false;
+   let finished=false,seen=0,responding=false,verifiedClaim=null;
    const clean=()=>{
     clearTimeout(timer);
     stream.close();proc.stdin.destroy();
@@ -85,6 +87,7 @@ export function createW43PythonPrivatePort({
       if(!acceptable(claim)){
        send({kind:'DENIED'});finish({httpStatus:503,code:'W54_CURRENT_USER_PROFILE_NOT_VERIFIED'});return;
       }
+      verifiedClaim=claim;
       send({kind:'CLAIM',...claim});
      }catch(e){
       send({kind:'DENIED'});
@@ -123,6 +126,48 @@ export function createW43PythonPrivatePort({
      }catch{
       send({kind:'DENIED'});
       finish({httpStatus:503,code:'W55_NATIVE_CREDENTIAL_UNAVAILABLE'});return;
+     }finally{responding=false}
+    }else if(msg.kind==='CLOUD_SECRET_REQUEST'){
+     // Only the original W43 child can request the chosen provider while
+     // preparing the Agno SDK model. No browser/HTTP Key endpoint exists.
+     if(method!=='turn'||responding||!verifiedClaim||!modelSelection||
+        !['OPENROUTER_USER_API','OPENAI_USER_API'].includes(modelSelection.provider)||
+        msg.provider!==modelSelection.provider||msg.modelId!==modelSelection.modelId||
+        !nativeCloudKeyPort){
+      finish({httpStatus:503,code:'W55_NATIVE_CLOUD_SECRET_PORT_UNAVAILABLE'});return;
+     }
+     responding=true;
+     try{
+      const fresh=await ctx.checkCurrent();
+      const exact=['principalRef','installationRef','sessionRef','sessionRevision',
+        'revocationGeneration','modelSelectionEpoch','modelBackend','modelId','cloudCredentialSource'];
+      if(!acceptable(fresh)||exact.some(k=>fresh[k]!==verifiedClaim[k])||
+         fresh.cloudCredentialSource!=='W55_NATIVE_WIN_CRED'||
+         fresh.modelUserSelected!==true||fresh.extraChargeApproved!==true||
+         fresh.protectedCredentialAttested!==true||
+         fresh.modelBackend!==(modelSelection.provider==='OPENAI_USER_API'?'openai':'openrouter')||
+         fresh.modelId!==modelSelection.modelId)
+        throw Error('NATIVE_SELECTION_OR_CURRENT_USER_STALE');
+      // The ONLY native port contract is callback-based: W55 keeps custody,
+      // checks live OS-user + revocation/revision, and supplies a transient
+      // key for this existing private stdin pipe, never for HTTP/renderer.
+      let handed=false;
+      await nativeCloudKeyPort.withSecret({
+       profile:fresh,
+       provider:modelSelection.provider==='OPENAI_USER_API'?'OPENAI_API':'OPENROUTER',
+       modelId:modelSelection.modelId,
+       selectionEpoch:fresh.modelSelectionEpoch
+      },async secret=>{
+       if(handed||typeof secret!=='string'||secret.length<16||
+          secret.length>400||/\s/.test(secret))throw Error('W55_SECRET_INVALID');
+       handed=true;
+       send({kind:'CLOUD_SECRET',value:secret});
+      });
+      if(!handed)throw Error('W55_NATIVE_SECRET_NOT_DELIVERED');
+     }catch{
+      // A Key revoked during the W54/W55 callback never becomes an
+      // unapproved model call. Never surface the secret/error to HTTP.
+      send({kind:'CLOUD_SECRET_DENIED'});
      }finally{responding=false}
     }else if(msg.kind==='RESULT'){
      if(!msg.result||typeof msg.result!=='object'){
