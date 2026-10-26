@@ -157,8 +157,37 @@ internal sealed class Host
         return 0;
     }
 
+    private static int ProbeUnauthorizedState()
+    {
+        // Brand-new client; NO parameters, database path, API credentials,
+        // account login, restore, phone, OTP, or network request to Telegram.
+        TD.ExecuteJson("{\"@type\":\"setLogVerbosityLevel\",\"new_verbosity_level\":0}");
+        int id = TD.CreateClientId();
+        if (id < 1) throw new InvalidDataException("INVALID_TDLIB_CLIENT_ID");
+        TD.SendJson(id, "{\"@type\":\"getOption\",\"name\":\"version\"}");
+        for (int i = 0; i < 35; i++) {
+            string received = TD.Decode(TD.Receive(0.2));
+            if (received == null) continue;
+            var evt = Parse(received);
+            if (TypeOf(evt) != "updateAuthorizationState") continue;
+            object stateRaw;
+            if (!evt.TryGetValue("authorization_state", out stateRaw)) break;
+            var state = stateRaw as Dictionary<string,object>;
+            string name = state == null ? null : TypeOf(state);
+            Emit(new {kind="native_tdjson_auth_probe",loaded=true,
+              state=name,authorized=false,credentialsSupplied=false,
+              accountConnected=false,canSend=false,
+              client_id=id});
+            return name == "authorizationStateWaitTdlibParameters" ? 0 : 36;
+        }
+        Emit(new {kind="error",code="TDLIB_AUTH_STATE_NOT_OBSERVED",
+          credentialsSupplied=false,accountConnected=false});
+        return 35;
+    }
+
     private static int Worker()
     {
+        TD.ExecuteJson("{\"@type\":\"setLogVerbosityLevel\",\"new_verbosity_level\":0}");
         clientId = TD.CreateClientId();
         if (clientId < 1) throw new InvalidDataException("INVALID_TDLIB_CLIENT_ID");
         Emit(new {kind="native_tdjson_worker_started",client_id=clientId,
@@ -196,11 +225,11 @@ internal sealed class Host
     public static int Main(string[] args)
     {
         try {
-            if (args.Length != 1 || (args[0] != "--probe" && args[0] != "--worker")) {
+            if (args.Length != 1 || (args[0] != "--probe" && args[0] != "--probe-state" && args[0] != "--worker")) {
                 Console.Error.WriteLine("TDJSON_HOST_USAGE");
                 return 2;
             }
-            return args[0] == "--probe" ? Probe() : Worker();
+            return args[0] == "--probe" ? Probe() : args[0] == "--probe-state" ? ProbeUnauthorizedState() : Worker();
         }
         catch (DllNotFoundException) {
             Emit(new {kind="error",code="OFFICIAL_TDJSON_DLL_NOT_FOUND",loaded=false});
