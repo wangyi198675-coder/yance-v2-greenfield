@@ -8,6 +8,8 @@ import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
 import {createPrivateBrainHttp} from './private-brain-http.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
+import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
+import {createNativeMessageReadHttp} from './native-message-reads.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -43,6 +45,16 @@ const privateBrainHttp=createPrivateBrainHttp({sessionAuthority:localSessionAuth
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
 const nativeOwnerReads=createNativeOwnerReadHttp({sessionAuthority:localSessionAuthority,webOrigin});
+// W26 real official bridge read is DIAGNOSTIC ONLY, never source of FB
+// user auth. Explicit W09/W54-injected native owner ports are still required
+// for actual W24 account ONLINE, SDK setup and authorized message access.
+const nativeMessages=createNativeMessageReadHttp({
+ sessionAuthority:localSessionAuthority,webOrigin
+});
+const nativeProviders=createNativeProviderGateway({
+ sessionAuthority:localSessionAuthority,
+ readW26Status:makeW26DiagnosticPort(process.env.YANCE_W47_W26_READONLY_PORT)
+});
 const noStore={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store','x-content-type-options':'nosniff',
@@ -115,6 +127,15 @@ const handler=(req,res)=>{
       return serial(res,200,{...state(req),webSource:'SEE_INSTALLED_LOCAL_WEB_VERSION',apiGitSha:sha});
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/capabilities')
       return serial(res,200,{ok:true,authoritative:true,canSend:false,capabilities:endpoints});
+    if(url.pathname.startsWith('/api/v2/providers/')){
+      void nativeProviders(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'ORIGINAL_NATIVE_PROVIDER_GATEWAY_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
+    }
     if(url.pathname==='/api/v2/contacts'){
       void nativeOwnerReads(req,res,url).catch(()=>{
        if(!res.headersSent)deny(res,503,'NATIVE_CONTACT_SOURCE_UNAVAILABLE');
@@ -122,8 +143,13 @@ const handler=(req,res)=>{
       });
       return;
     }
-    if(req.method==='GET' && url.pathname==='/api/v2/messages')
-      return deny(res,401,'NO_AUTHORIZED_CONTACT');
+    if(url.pathname==='/api/v2/messages'){
+      void nativeMessages(req,res,url).catch(()=>{
+       if(!res.headersSent)deny(res,503,'W25_NATIVE_MESSAGE_READ_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
+    }
     if(req.method==='GET' && url.pathname==='/api/v2/translations')
       return deny(res,401,'NO_AUTHORIZED_SOURCE_MESSAGE');
     if(url.pathname==='/api/v2/identity-consent/takeover-state' ||

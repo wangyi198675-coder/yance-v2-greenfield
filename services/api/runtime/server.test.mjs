@@ -17,6 +17,7 @@ const files=['server.mjs','runtime-config.mjs','runtime-provenance.mjs',
  'local-session.mjs','local-operator-console.mjs','private-brain-http.mjs',
  'private-python-port.mjs','private-native-ledger-port.mjs',
  'private-model-http.mjs','native-authoritative-reads.mjs',
+ 'native-provider-gateway.mjs','native-message-reads.mjs',
  'w54-native-child-frame.mjs','w54-native-webview-session.mjs',
  'w47-w43-private-child.py'];
 let child,base,work;
@@ -131,6 +132,19 @@ test('staged test routes, unauthorized messages and real social sends fail close
  assert.equal((await request('/api/v2/send',{method:'POST',
   headers:{'content-type':'application/json'},
   body:JSON.stringify({authorized:true})})).status,403);
+});
+test('W46 official native setup GET is operable without logging into an account',async()=>{
+ for(const ch of ['fb-personal','fb-page','whatsapp-personal','telegram-personal']){
+  const r=await request('/api/v2/providers/'+ch+'/setup');
+  assert.equal(r.status,200);
+  assert.equal(r.body.nextAction,'OFFICIAL_SETUP_REQUIRED');
+  assert.equal(r.body.userDecisionRequired,true);
+  assert.equal(r.body.canSend,false);
+  assert.equal(r.body.qrImageDataUrl,undefined);
+ }
+ assert.equal((await request('/api/v2/providers/fb-page/status')).status,401);
+ assert.equal((await request('/api/v2/providers/telegram-personal/status')).status,401);
+ assert.equal((await request('/api/v2/providers/whatsapp-personal/status')).status,401);
 });
 test('native session, original W43 and W55 missing cannot be forged from browser',async()=>{
  const pair=await request('/api/v2/local-session/first-party',{method:'POST',
