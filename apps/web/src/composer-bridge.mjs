@@ -32,12 +32,12 @@ export function createComposerBridge({takeoverPort=null}={}){
  const drafts=new Map(),states=new Map(),pending=new Map();
  let selected=null;
  function choose(id){
-   synthetic(id);selected=Object.freeze({...id});
+   fullK(id);selected=Object.freeze({...id});
    if(!drafts.has(fullK(id)))drafts.set(fullK(id),{text:'',quote:null,attachments:[],candidateId:null});
    return view();
  }
  function requireSelected(id){
-   const k=synthetic(id);
+   const k=fullK(id);
    if(!selected||fullK(selected)!==k)error('WRONG_SELECTED_K');
    return k;
  }
