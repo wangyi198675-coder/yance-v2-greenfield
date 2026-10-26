@@ -114,7 +114,24 @@ export function createW24NativeOwnerReadPorts({
       w24CurrentKVerified:true,w24ConsentCurrent:true}));
    }
   }
+  // An SDK may disconnect/rebind after the first account enumeration while
+  // the Peer list is being read. Check the live account list again before
+  // letting W47 return any ONLINE contact or account count.
+  const closing=await listVerifiedPlatformAccounts({nativePrincipal:native,session});
+  if(!Array.isArray(closing)||closing.length!==accounts.length)
+   deny('NATIVE_ACCOUNT_SWITCH_DURING_CONTACT_READ');
+  const closingMap=new Map();
+  for(const a of closing){
+   if(!verifiedAccount(a)||a.ownerPrincipalRef!==native.principalRef||
+     closingMap.has(a.accountRef))deny('NATIVE_ACCOUNT_SWITCH_DURING_CONTACT_READ');
+   closingMap.set(a.accountRef,a);
+  }
   for(const account of accounts){
+   const a=closingMap.get(account.accountRef);
+   if(!a||a.channel!==account.channel||a.tenant!==account.tenant||
+     a.accountId!==account.accountId||a.bindingRevision!==account.bindingRevision||
+     a.accountAnchorPeerId!==account.accountAnchorPeerId)
+    deny('NATIVE_ACCOUNT_SWITCH_DURING_CONTACT_READ');
    const w44=readW44IdentityAuthority({actor:native.principalRef,
     identity:{tenant:account.tenant,account:account.accountId,
      channel:account.channel,peer_id:account.accountAnchorPeerId,
