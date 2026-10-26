@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod native_launch;
 mod native_profile;
 mod session;
 mod user_dirs;
 mod windows_principal;
 
+use native_launch::NativeChildLaunch;
 use native_profile::NativeProfileAuthority;
 use session::{PublicSessionStatus, SessionAuthority};
 use std::time::Duration;
@@ -41,6 +43,12 @@ fn main() {
             let native = NativeProfileAuthority::from_tauri(&user_dirs, &app.config().identifier)
                 .map_err(std::io::Error::other)?;
             app.manage(native);
+            // Host-only preflight: W47 must provide a signed bundled binary
+            // AND reviewed child reader before any automatic first-party
+            // Session can be started. No renderer command can launch it.
+            let launch =
+                NativeChildLaunch::new(app.path().resource_dir().map_err(std::io::Error::other)?);
+            app.manage(launch);
             app.manage(user_dirs);
             Ok(())
         })
