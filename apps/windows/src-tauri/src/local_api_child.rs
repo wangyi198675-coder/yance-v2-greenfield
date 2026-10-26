@@ -1,11 +1,12 @@
 //! Normal PRIVATE chat: original W47 API is a bundled per-user localhost child.
 //! This only starts the existing upstream runtime. It grants NO social provider,
 //! W55 secret, paid model, or HTTP/browser Principal. No pairing or certificate platform.
-use serde_json::Value;
+use crate::native_profile::NativeProfileEvidence;
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     fs::{self, File},
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::mpsc,
@@ -16,6 +17,8 @@ use std::{
 pub(crate) struct LocalApiChild {
     child: Child,
     pub(crate) origin: String,
+    // Set only with the official Tauri WebView2 CookieStore, HttpOnly.
+    pub(crate) first_party_cookie: Option<String>,
 }
 impl LocalApiChild {
     pub(crate) fn shutdown(&mut self) {
@@ -106,6 +109,7 @@ pub(crate) fn start_bundled(
     server_digest: &str,
     web_manifest_digest: &str,
     port: u16,
+    native_boot: Option<&NativeProfileEvidence>,
 ) -> Result<LocalApiChild, &'static str> {
     if port == 0
         || api_source_sha.len() != 40
@@ -138,7 +142,8 @@ pub(crate) fn start_bundled(
     }
     let origin = format!("http://127.0.0.1:{port}");
     let root = resource_dir.join("w47/web");
-    let mut child = Command::new(&exe)
+    let mut command = Command::new(&exe);
+    command
         .arg(node_entry_argument(&server)?)
         .current_dir(node_entry_argument(
             server.parent().ok_or("LOCAL_API_SERVER_DIR_MISSING")?,
@@ -155,15 +160,52 @@ pub(crate) fn start_bundled(
         .env("YANCE_W47_NATIVE_WEB_SOURCE_SHA", api_source_sha)
         // terminal pairing is not required for ordinary private use.
         .env_remove("YANCE_W47_OPERATOR_PAIRING")
-        .stdin(Stdio::null())
+        .stdin(if native_boot.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::piped())
         .stderr(if cfg!(test) {
             Stdio::piped()
         } else {
             Stdio::null()
-        })
+        });
+    if native_boot.is_some() {
+        command.env("YANCE_W47_W54_LOCAL_BOOT", "1");
+    }
+    // Real W43 Python and Agno source must be separately bundled by W09.
+    // If absent, History/turn reports the truthful W43 unavailable state.
+    let packaged_python = resource_dir.join("w43/python.exe");
+    let packaged_agentos = resource_dir.join("w43/agentos");
+    if packaged_python.is_file() && packaged_agentos.join("private_principal_port.py").is_file() {
+        command.env(
+            "YANCE_W47_W43_PYTHON_EXECUTABLE",
+            node_entry_argument(&packaged_python)?,
+        );
+        command.env(
+            "YANCE_W47_W43_MODULE_ROOT",
+            node_entry_argument(&packaged_agentos)?,
+        );
+    }
+    let mut child = command
         .spawn()
         .map_err(|_| "LOCAL_API_CHILD_START_FAILED")?;
+    if let Some(profile) = native_boot {
+        let (principal, installation, _session, revision, generation, appdata) =
+            profile.native_contract_parts();
+        let frame = json!({"version":1,"source":"W54_NATIVE_CURRENT_USER",
+            "principalRef":principal,"installationRef":installation,
+            "sessionRevision":revision,"nativeRevocationGeneration":generation,
+            "appLocalDataRoot":node_entry_argument(appdata)?.to_string_lossy()});
+        let bytes = serde_json::to_vec(&frame).map_err(|_| "LOCAL_API_NATIVE_FRAME_INVALID")?;
+        let mut stdin = child.stdin.take().ok_or("LOCAL_API_NATIVE_STDIN_MISSING")?;
+        stdin
+            .write_all(&bytes)
+            .map_err(|_| "LOCAL_API_NATIVE_FRAME_WRITE_FAILED")?;
+        drop(stdin);
+    }
+    let mut native_cookie = None;
     let result = (|| {
         let stdout = child
             .stdout
@@ -204,11 +246,33 @@ pub(crate) fn start_bundled(
         {
             return Err("LOCAL_API_CHILD_EXITED");
         }
+        if native_boot.is_some() {
+            let cookie = ready["nativeHttpOnlyCookie"]
+                .as_str()
+                .ok_or("LOCAL_API_NATIVE_COOKIE_REQUIRED")?;
+            let token = cookie
+                .strip_prefix("yance_local_session=")
+                .and_then(|s| s.split_once(';'))
+                .map(|(s, _)| s)
+                .ok_or("LOCAL_API_NATIVE_COOKIE_FORMAT_INVALID")?;
+            if token.len() != 64
+                || !token.as_bytes().iter().all(u8::is_ascii_hexdigit)
+                || !cookie.contains("HttpOnly")
+                || !cookie.contains("SameSite=Strict")
+            {
+                return Err("LOCAL_API_NATIVE_COOKIE_INVALID");
+            }
+            native_cookie = Some(cookie.to_owned());
+        }
         // Neither READY nor loopback alone is provider auth or paid API consent.
         Ok(())
     })();
     match result {
-        Ok(()) => Ok(LocalApiChild { child, origin }),
+        Ok(()) => Ok(LocalApiChild {
+            child,
+            origin,
+            first_party_cookie: native_cookie,
+        }),
         Err(e) => {
             let _ = child.kill();
             let _ = child.wait();
@@ -241,6 +305,7 @@ mod tests {
             "911e0a1d8fa367c5b5e61d490441d40cef129a52196bde5d89160d5db4d62457",
             "7a2c5a0e32b192f47cc6524a7cf49813386bd1e73fb3fed6d07dae25288222fa",
             port,
+            None,
         )
         .expect("original installed W47 API must start and report exact READY");
         assert_eq!(api.origin, format!("http://127.0.0.1:{port}"));
@@ -250,8 +315,8 @@ mod tests {
     #[test]
     fn reject_empty_and_malformed_bundle_metadata() {
         let z = "0".repeat(64);
-        assert!(start_bundled(Path::new("missing"), "fake", &z, &z, 20).is_err());
-        assert!(start_bundled(Path::new("missing"), &"a".repeat(40), &z, &z, 0).is_err());
+        assert!(start_bundled(Path::new("missing"), "fake", &z, &z, 20, None).is_err());
+        assert!(start_bundled(Path::new("missing"), &"a".repeat(40), &z, &z, 0, None).is_err());
         assert!(bundled(Path::new("missing"), "../w47").is_err());
     }
 }
