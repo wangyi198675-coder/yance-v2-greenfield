@@ -9,10 +9,24 @@ const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
 const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),text=ref('');
 const chosen=ref(''),requestInFlight=ref(false);
+const modelCostApproved=ref(false),turnCostApproved=ref(false);
 let revision=0,mounted=true,sessionDeadline=null;
 const threadId='personal';
 const safeCurrent=id=>mounted&&revision===id;
 const selected=computed(()=>catalog.value?.models.find(m=>m.provider+'|'+m.modelId===chosen.value)||null);
+const cloudCandidate=computed(()=>!!selected.value?.keyRequired);
+const activeCloudModel=computed(()=>catalog.value?.models.find(m=>
+ m.provider===catalog.value.selectedProvider&&m.modelId===catalog.value.selectedModelId&&m.keyRequired)||null);
+function checkedModelCatalog(dto){
+ // W47 Web PRIVATE may truthfully report protected WinCred attached.
+ // Reuse the signed W46 model schema without claiming the browser owns a vault.
+ if(dto?.secureCredentialStorage===true){
+  if(dto.authoritative!==true||dto.credentialsExposed!==false)
+   throw Error('W47_CLOUD_MODEL_AUTHORITY_INVALID');
+  return modelCatalog({...dto,secureCredentialStorage:false},publicProviders.value);
+ }
+ return modelCatalog(dto,publicProviders.value);
+}
 const providers=computed(()=>publicProviders.value.map(p=>({
  id:p.id,name:p.name,desc:p.id==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?'选装。不安装也不阻止云端模型':
  p.id==='OPENAI_USER_API'?'API Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度':
@@ -20,6 +34,7 @@ const providers=computed(()=>publicProviders.value.map(p=>({
 })));
 function clearSession(){
  session.value=null;catalog.value=null;chosen.value='';
+ modelCostApproved.value=false;turnCostApproved.value=false;
  if(sessionDeadline!==null){clearTimeout(sessionDeadline);sessionDeadline=null}
 }
 function ensureCurrent(){
@@ -61,7 +76,7 @@ async function refresh(){
   }
   session.value=s;armExpiry(s.expiresAt);
   let models;
-  try{models=modelCatalog(await api(PRIVATE_ROUTES.config),publicProviders.value)}
+  try{models=checkedModelCatalog(await api(PRIVATE_ROUTES.config))}
   catch(e){if(safeCurrent(id)){loadState.value='models-unavailable';notice.value=reason(e)};return}
   if(!safeCurrent(id))return;
   catalog.value=models;chosen.value=models.configured?
@@ -91,20 +106,28 @@ async function loadHistory(id=revision){
  }catch(e){if(safeCurrent(id)){loadState.value='history-unavailable';notice.value=reason(e)}}
 }
 async function selectModel(){
- if(busy.value||!catalog.value||!selected.value||!selected.value.available||!selected.value.configured)return;
+ if(busy.value||!catalog.value||!selected.value||!selected.value.available||!selected.value.configured||
+  (cloudCandidate.value&&!modelCostApproved.value))return;
  const id=++revision;busy.value=true;notice.value='';
  try{
   ensureCurrent();
   const m=selected.value;
-  const r=await api(PRIVATE_ROUTES.selection,endpointBody(PRIVATE_ROUTES.selection,
-   {provider:m.provider,modelId:m.modelId},session.value.csrf));
-  confirmedModelSelection(r,{provider:m.provider,modelId:m.modelId});
+  const selection={provider:m.provider,modelId:m.modelId};
+  const input=m.keyRequired?{
+   method:'POST',headers:{'content-type':'application/json','x-yance-csrf':session.value.csrf},
+   body:JSON.stringify({...selection,confirmPaidCost:true})
+  }:endpointBody(PRIVATE_ROUTES.selection,selection,session.value.csrf);
+  const r=await api(PRIVATE_ROUTES.selection,input);
+  const receipt=checkedModelCatalog(r);
+  if(!receipt.configured||receipt.selectedProvider!==m.provider||receipt.selectedModelId!==m.modelId)
+   throw Error('MODEL_SELECTION_POST_NOT_CONFIRMED');
   // POST is not final authority. Reload the same W47 authenticated model-config.
-  const verified=modelCatalog(await api(PRIVATE_ROUTES.config),publicProviders.value);
+  const verified=checkedModelCatalog(await api(PRIVATE_ROUTES.config));
   if(!safeCurrent(id))return;
   if(verified.selectedProvider!==m.provider||verified.selectedModelId!==m.modelId)
     throw Error('SELECTION_GET_NOT_CONFIRMED');
   catalog.value=verified;chosen.value=m.provider+'|'+m.modelId;
+  modelCostApproved.value=false;turnCostApproved.value=false;
   setupOpen.value=false;await loadHistory(id);
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='model-selection-unavailable'}}
  finally{if(safeCurrent(id))busy.value=false}
@@ -114,7 +137,7 @@ async function send(){
     loadState.value!=='ready'||!catalog.value?.configured)return;
  const model=catalog.value.models.find(m=>m.modelId===catalog.value.selectedModelId&&
    m.provider===catalog.value.selectedProvider&&m.available&&m.configured);
- if(!model)return;
+ if(!model||(model.keyRequired&&!turnCostApproved.value))return;
  const id=++revision;requestInFlight.value=true;notice.value='';
  try{
   ensureCurrent();
@@ -127,7 +150,7 @@ async function send(){
   text.value=''; // history is sole persisted authority
   await loadHistory(id); // if history unavailable, don't fabricate turn in timeline
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='history-unavailable'}}
- finally{if(safeCurrent(id))requestInFlight.value=false}
+ finally{if(safeCurrent(id)){requestInFlight.value=false;turnCostApproved.value=false}}
 }
 onMounted(refresh);
 onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
@@ -151,20 +174,24 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
    :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">{{catalog?.configured?'切换AI模型':'设置AI模型'}}</Button>
   <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings">
    <h3>选择 AI 模型</h3>
-   <BCNativeCloudKeySettings/>
+   <BCNativeCloudKeySettings :web-csrf="session?.csrf" @changed="refresh"/>
    <p>可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。</p>
    <div v-for="provider in providers" :key="provider.id" class="bc-provider">
     <strong>{{provider.name}}</strong><small>{{provider.desc}}</small>
     <template v-for="m in catalog?.models.filter(x=>x.provider===provider.id)||[]" :key="m.modelId">
      <label><input v-model="chosen" type="radio" name="private-model" :value="m.provider+'|'+m.modelId"
-       :disabled="!session||!m.available||busy"/>
+       :disabled="!session||!m.available||busy" @change="modelCostApproved=false"/>
        {{m.modelId}} · {{m.available&&m.configured?'已配置':'未授权或不可用'}}</label>
     </template>
     <small v-if="!catalog?.models.some(m=>m.provider===provider.id)">尚无经服务端验证的可选模型</small>
    </div>
-   <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy" @click="selectModel">确认使用此模型</Button>
+   <label v-if="cloudCandidate" class="bc-cloud-cost-confirm" data-test="cloud-model-cost-confirm">
+    <input v-model="modelCostApproved" type="checkbox" :disabled="busy"/>
+    <span>{{selected?.billingNotice||'该云端模型可能按调用收费。'}}我确认选择此云端模型并了解可能产生的费用。</span>
+   </label>
+   <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy||(cloudCandidate&&!modelCostApproved)" @click="selectModel">确认使用此模型</Button>
    <p class="bc-private-notice" data-test="brain-native-key-hold">
-    使用自己的云端 API Key，请在言策本机的模型设置中保存。当前版本若尚未提供安全的密钥保存入口，会明确保持不可用；不在网页或日志中填写、显示密钥。
+    云端 API Key 仅在服务端确认安全保存接口可用时才能提交。暂未接通时不会在浏览器内保存密钥，也不会要求安装桌面版。
    </p>
   </div>
   <div class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
@@ -176,10 +203,14 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
   </div>
   <form class="bc-private-compose" @submit.prevent="send">
    <label for="bc-private-question">给闺蜜大脑发消息</label>
+   <label v-if="activeCloudModel" class="bc-cloud-cost-confirm" data-test="cloud-turn-cost-confirm">
+    <input v-model="turnCostApproved" type="checkbox" :disabled="busy||requestInFlight"/>
+    <span>{{activeCloudModel.billingNotice||'此云端模型可能按次收费。'}}我确认授权本次可能收费的 AI 提问。</span>
+   </label>
    <textarea id="bc-private-question" v-model="text" rows="3" maxlength="4000"
      data-test="brain-question" placeholder="输入你的问题" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
    <Button type="submit" data-test="brain-send"
-     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送给闺蜜大脑'}}</Button>
+     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()||(!!activeCloudModel&&!turnCostApproved)">{{requestInFlight?'正在等待真实模型回执':'发送给闺蜜大脑'}}</Button>
   </form>
   <small>私人聊天不是 CONTACT Composer；不启用社交平台外发。没有受信任的 Agno Run 时不会生成模拟回复。</small>
  </section>
@@ -192,6 +223,8 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 .bc-private-settings{display:grid;gap:12px;border:1px solid var(--w46-edge,#777);border-radius:10px;padding:12px;min-width:0}
 .bc-provider{display:grid;gap:6px;padding:10px;border:1px solid var(--w46-edge,#777);border-radius:8px}
 .bc-provider label{display:flex;gap:9px;align-items:center;overflow-wrap:anywhere}
+.bc-cloud-cost-confirm{display:flex;align-items:start;gap:8px;max-width:100%;overflow-wrap:anywhere;font-size:12px}
+.bc-cloud-cost-confirm input{flex-shrink:0}
 .bc-credential{display:grid;gap:8px}.bc-credential input{width:100%;box-sizing:border-box}
 .bc-private-history{min-height:100px;max-height:350px;overflow-y:auto;border:1px solid var(--w46-edge,#777);padding:12px;border-radius:9px;display:grid;align-content:start;gap:12px}
 .bc-private-history article{padding:8px 10px;border:1px solid var(--w46-edge,#777);border-radius:9px}
