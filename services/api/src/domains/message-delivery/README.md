@@ -82,3 +82,20 @@ That script imports native W24 and W44 own code, uses W44's real SQLite reservat
 W44 exact native SHA 1509f4c44a49faf9a8a831d52b0a659ca6f3ddc1 interop script also PASS against this W25 code: persisted W25 attempt → W44 armSend, revoke/takeover fence, trusted settlement, UNKNOWN/late synthetic ACK preserved. PR #32 integration SHA 198d2530ba04625e4ab6ab8681ce3f6044dc78a5 is inherited; its historical 80-item suite was not redundantly rerun.
 
 **Remaining HOLD**: no independent production security release; W24 memory-based authority and multiple SQLite DBs still require full across-process mutation closure, real provider irreversible-send controls, trusted signed provider receipts and a production-grade DB/storage/secret migration. No live sending allowed.
+
+## Issue #61 W25 native upstream ingress owner delta (2026-10-26)
+
+New native-ingress-port.mjs is a fail-closed thin ingress PORT for existing owners, NOT another sender, Outbox, message database or proof of connected channels. Existing MessageDelivery remains SyntheticConnectorSink-only and never sends to personal social accounts. No second message database created.
+
+createNativeIngressPort requires (1) W24 strict durable identityService.isDurableIdentity true, assertCurrent(k), evaluate(READ_INBOUND); (2) W47 trusted local user principal, NOT caller-supplied JSON; (3) the actual W26/W27/W28/W29 SDK owner nativeOwner.connectionState(k) and nativeOwner.verifyInbound(event), which MUST authenticate signed/authoritative SDK data within the worker; (4) W47/W09 original messageRepository.insertOriginalIfAbsent(k+provider MID), atomic by full K+native MID across OS workers. No credential/token copying, no self-proclaimed provider event.
+
+acceptInbound rejects SYNTHETIC_TEST_ONLY, fake identity, offline/revoked connection, unverified upstream source, stale canonical binding, W24 denial, reconnecting worker, missing persisted repository. It passes original text and provider MID unchanged to existing native messageRepository. The return is a repository acknowledgement, NOT a provider sending ACK. readiness(k) reports WAITING_USER_AUTH unless verified W24 binding and real worker are actually ONLINE.
+
+All W25 domain tests: 34/34 PASS including 6 new ingress port contract negatives. These use controlled injected test owner functions; there is NO actually authenticated provider MID, SDK signed callback, live channel or UI claiming USER_DELIVERED.
+
+Precise cross-Owner P0 BLOCKERS:
+- W24/W44 strict existing identity still only allows SYNTHETIC_TEST_ONLY and fake-* K; must support authoritative actual local-account K before native record. Never trust raw social ID claims from Web/IPC.
+- W26-W29 actual official upstream SDK instance, authorized current binding, real connectionState/verifyInbound + provider MID remain owner work. Current W09 bb1be7bf joined connector paths were synthetic. W28 in-progress SDK node_modules observed, but not actual logged-in account.
+- W47/W09 current server returns contacts=[] and EFFECTS_DISABLED; no existing native messageRepository API was provided for W25 to call. No duplicate DB must be invented.
+- W25 original receipt path still is ACKED_SYNTHETIC, not real Provider ACK. Real W25 single sink, W44 durable ARM including Agent disable coordination, trusted SDK receipts/settlement, end-to-end app auth and independent SEC review remain P0. Do not bypass them to get a green badge.
+- No real social login, send, private content, fee or 44751 redeploy. Status for actual native vertical path: WAITING_USER_AUTH plus pending upstream owner runtime and source integration, NOT INTEGRATED_STAGING_PASS.
