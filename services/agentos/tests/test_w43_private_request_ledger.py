@@ -236,3 +236,46 @@ def test_missing_durable_claim_blocks_original_agno_model(tmp_path,monkeypatch):
                   request_id=params(ctx)["request_id"])
     assert exc.value.code=="DURABLE_RUN_ALREADY_STARTED_OR_NOT_CLAIMED"
     assert not calls
+
+
+def test_same_request_id_after_cloud_model_switch_is_conflict_not_second_paid_run(tmp_path):
+    ledger,port,live,ctx=setup(tmp_path)
+    args=params(ctx)
+    assert ledger.claim(**args)["state"]=="CLAIMED"
+    key=tmp_path/"W55_FAKE_CLOUD_KEY"
+    key.write_text("fixture-cloud-secret-never-real-123456")
+    live[0]=replace(
+        live[0],model_backend="openrouter",model_id="openai/gpt-4o-mini",
+        cloud_key_file=key,model_user_selected=True,extra_charge_approved=True,
+        protected_credential_attested=True,model_selection_epoch=2,
+    )
+    assert ledger.claim(**args)["state"]=="CONFLICT"
+    assert ledger.claim(**params(ctx,request_id="new-requestId-009"))["state"]=="CLAIMED"
+    scope_old,rt_old=port._runtime(replace(live[0],model_backend="llamacpp",
+        model_id="qwen3:8b",cloud_key_file=None,model_user_selected=False,
+        extra_charge_approved=False,protected_credential_attested=False,
+        model_selection_epoch=0))
+    scope_cloud,rt_cloud=port._runtime(live[0])
+    assert scope_old.session_id("personal")==scope_cloud.session_id("personal")
+    assert rt_old.db_file==rt_cloud.db_file
+    assert rt_cloud.provider=="OPENROUTER_USER_API"
+
+
+def test_prior_native_ledger_schema_kept_but_old_claim_unattested(tmp_path):
+    ledger,port,live,ctx=setup(tmp_path)
+    a=params(ctx)
+    scope,rt=port._runtime(live[0])
+    identity=request_identity(scope,a["thread_id"],a["request_id"],a["text"])
+    with sqlite3.connect(str(rt.db_file)) as conn:
+        conn.execute("""CREATE TABLE w43_private_request_fence (
+          fingerprint TEXT PRIMARY KEY,prompt_sha256 TEXT NOT NULL,
+          run_id TEXT NOT NULL UNIQUE,state TEXT NOT NULL,
+          created_at_ms INTEGER NOT NULL,updated_at_ms INTEGER NOT NULL
+        )""")
+        conn.execute("INSERT INTO w43_private_request_fence VALUES (?,?,?,?,?,?)",
+                     (identity["fingerprint"],identity["prompt_sha256"],
+                      identity["run_id"],"IN_PROGRESS",123,123))
+    assert ledger.claim(**a)["state"]=="CONFLICT"
+    with sqlite3.connect(str(rt.db_file)) as conn:
+        row=conn.execute("select state,model_selection_sha256 from w43_private_request_fence").fetchone()
+    assert row==("IN_PROGRESS","LEGACY_MODEL_UNATTESTED")

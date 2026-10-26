@@ -38,6 +38,16 @@ class W47VerifiedPrincipal:
     expires_at_ms: int
     app_local_data_root: Path
     status: str = "VERIFIED"
+    # These optional values MUST be supplied by W47's server-verified model
+    # selector, NEVER read from browser JSON/OS usernames or environment.
+    # Missing selection keeps legacy local-only test wiring, not cloud billing.
+    model_backend: str = "llamacpp"
+    model_id: str = "qwen3:8b"
+    cloud_key_file: Path | None = None
+    model_user_selected: bool = False
+    extra_charge_approved: bool = False
+    protected_credential_attested: bool = False
+    model_selection_epoch: int = 0
 
 
 def _check_claim(value: W47VerifiedPrincipal) -> W47VerifiedPrincipal:
@@ -62,7 +72,9 @@ def _check_claim(value: W47VerifiedPrincipal) -> W47VerifiedPrincipal:
         raise W47PrivateAccessError("W47_PRINCIPAL_INVALID", 503) from None
     if (type(value.session_revision) is not int or value.session_revision < 0
             or type(value.revocation_generation) is not int
-            or value.revocation_generation < 0):
+            or value.revocation_generation < 0
+            or type(value.model_selection_epoch) is not int
+            or value.model_selection_epoch < 0):
         raise W47PrivateAccessError("W47_SESSION_REVISION_INVALID", 503)
     if type(value.expires_at_ms) is not int or value.expires_at_ms <= int(time.time() * 1000):
         raise W47PrivateAccessError("LOCAL_SESSION_EXPIRED", 401)
@@ -71,6 +83,15 @@ def _check_claim(value: W47VerifiedPrincipal) -> W47VerifiedPrincipal:
     root = value.app_local_data_root
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
         raise W47PrivateAccessError("W54_APPDATA_AUTHORITY_REQUIRED", 503)
+    if value.model_backend not in {"llamacpp", "openrouter", "openai", "unconfigured"}:
+        raise W47PrivateAccessError("MODEL_PROVIDER_NOT_SUPPORTED", 422)
+    if value.model_backend in {"openrouter", "openai"}:
+        if not value.model_user_selected or not value.extra_charge_approved:
+            raise W47PrivateAccessError("PAID_MODEL_SELECTION_NOT_APPROVED", 403)
+        if not value.protected_credential_attested:
+            raise W47PrivateAccessError("W55_PROTECTED_CREDENTIAL_NOT_ATTESTED", 503)
+        if not isinstance(value.cloud_key_file, Path):
+            raise W47PrivateAccessError("CLOUD_API_KEY_SETUP_REQUIRED", 503)
     return value
 
 
@@ -82,6 +103,13 @@ def _same_session(a: W47VerifiedPrincipal, b: W47VerifiedPrincipal) -> bool:
         and a.session_revision == b.session_revision
         and a.revocation_generation == b.revocation_generation
         and a.app_local_data_root.resolve() == b.app_local_data_root.resolve()
+        and a.model_selection_epoch == b.model_selection_epoch
+        and a.model_backend == b.model_backend
+        and a.model_id == b.model_id
+        and a.cloud_key_file == b.cloud_key_file
+        and a.model_user_selected == b.model_user_selected
+        and a.extra_charge_approved == b.extra_charge_approved
+        and a.protected_credential_attested == b.protected_credential_attested
     )
 
 
@@ -127,6 +155,8 @@ class W43NativePrivateBrainPort:
         return current
 
     def _runtime(self, claim):
+        if claim.model_backend == "unconfigured":
+            raise W47PrivateAccessError("MODEL_SETUP_REQUIRED", 503)
         scope = _scope_from_w47_verified_claim(claim)
         root = claim.app_local_data_root.resolve(strict=True)
         # This is the EXISTING Agno SqliteDb per W54-proven user; no shadow
@@ -146,14 +176,31 @@ class W43NativePrivateBrainPort:
         file = partition / "agno-native.sqlite"
         if file.is_symlink() or (hasattr(file, "is_junction") and file.is_junction()):
             raise W47PrivateAccessError("PRIVATE_HISTORY_STORAGE_UNAVAILABLE", 503)
-        cache_key = str(file.resolve())
+        # Cache models separately, never histories: ALL selected models keep
+        # the original same Agno db_file/private Agent ID/user/session.
+        cache_key = (str(file.resolve()), claim.model_backend,
+                     claim.model_id, claim.model_selection_epoch,
+                     str(claim.cloud_key_file) if claim.cloud_key_file else None)
         if cache_key not in self._runtimes:
-            from yance_agentos import NativeAgnoRuntime
+            from yance_agentos import NativeAgnoRuntime, LocalOnlyError
             try:
                 self._runtimes[cache_key] = NativeAgnoRuntime(
-                    file, backend="llamacpp", purpose="QUALITY_EVAL",
-                    local_key_file=self._key_file,
+                    file, backend=claim.model_backend, model_id=claim.model_id,
+                    purpose="QUALITY_EVAL", local_key_file=self._key_file,
+                    cloud_key_file=claim.cloud_key_file,
+                    user_selected=claim.model_user_selected,
+                    extra_charge_approved=claim.extra_charge_approved,
+                    protected_credential_attested=claim.protected_credential_attested,
                 )
+            except LocalOnlyError as err:
+                code = str(err)
+                if code in {"CLOUD_API_KEY_SETUP_REQUIRED",
+                            "CLOUD_PROTECTED_CREDENTIAL_UNAVAILABLE",
+                            "CLOUD_PROTECTED_CREDENTIAL_INVALID",
+                            "PAID_MODEL_USER_APPROVAL_REQUIRED",
+                            "CLOUD_MODEL_NOT_EXPLICITLY_SELECTED"}:
+                    raise W47PrivateAccessError(code, 503) from None
+                raise W47PrivateAccessError("MODEL_SETUP_REQUIRED", 503) from None
             except Exception:
                 raise W47PrivateAccessError("PRIVATE_AGENT_RUNTIME_UNAVAILABLE", 503) from None
         return scope, self._runtimes[cache_key]
@@ -170,13 +217,20 @@ class W43NativePrivateBrainPort:
             raise W47PrivateAccessError("THREAD_INVALID", 422) from None
         claim = self._verified(context, "PRIVATE_TURN")
         scope, runtime = self._runtime(claim)
-        identity = request_identity(scope, thread_id, request_id, text)
+        identity = request_identity(
+            scope, thread_id, request_id, text,
+            model_backend=runtime.backend, model_id=runtime.model_id,
+            selection_epoch=claim.model_selection_epoch,
+        )
         with one_slot() as admitted:
             if not admitted:
                 raise W47PrivateAccessError("LOCAL_MODEL_CAPACITY_BUSY", 503)
             self._recheck(context, "PRIVATE_TURN", claim)
-            if not runtime._authorized_llamacpp_model_matches():
-                raise W47PrivateAccessError("LOCAL_MODEL_UNAVAILABLE", 503)
+            if not runtime._selected_model_ready():
+                raise W47PrivateAccessError(
+                    "LOCAL_MODEL_UNAVAILABLE" if runtime.backend == "llamacpp"
+                    else "CLOUD_MODEL_SELECTION_OR_CREDENTIAL_UNAVAILABLE", 503
+                )
             # Defense in depth: W47's signed durable claim MUST exist.
             # Atomically transition it to EXECUTING before any model/tool
             # effects. Crash/retry remains UNKNOWN; never call model twice.
@@ -221,7 +275,12 @@ class W43NativePrivateBrainPort:
                       and isinstance(row.content, str) and row.content == content
                       and isinstance(row.metadata, dict)
                       and row.metadata.get("w43_private_request_fingerprint") == identity["fingerprint"]
-                      and row.metadata.get("w43_private_prompt_sha256") == identity["prompt_sha256"]]
+                      and row.metadata.get("w43_private_prompt_sha256") == identity["prompt_sha256"]
+                      and row.metadata.get("w43_private_model_selection_sha256") == identity["model_selection_sha256"]
+                      and (not getattr(row, "model", None) or row.model == runtime.model_id)
+                      and (runtime.backend not in {"openrouter", "openai"}
+                           or not getattr(row, "model_provider", None)
+                           or row.model_provider == ("OpenRouter" if runtime.backend == "openrouter" else "OpenAI"))]
         except Exception:
             actual = []
         if len(actual) != 1:
