@@ -5,7 +5,9 @@ const vite=readFileSync(new URL('../vite.w46.config.mjs',import.meta.url),'utf8'
 const api=readFileSync(new URL('../../../services/api/runtime/server.mjs',import.meta.url),'utf8');
 test('exact Tauri asset origin enables B+C UI, not native API privilege',()=>{
  assert.match(vite,/window\.location\.protocol==='http:'&&window\.location\.hostname==='tauri\.localhost'/);
- assert.match(vite,/w46WorkspaceEnabled=new URLSearchParams\(window\.location\.search\)\.get\('productDraft'\)==='1'\|\|w46InstalledAssetHost/);
+ // Approved R4 Compact V1: ordinary / opens CHAT without a productDraft flag;
+ // explicit productDraft=0 keeps the old isolated nonproduction lab optional.
+ assert.match(vite,/w46WorkspaceEnabled=new URLSearchParams\(window\.location\.search\)\.get\('productDraft'\)!=='0'\|\|w46InstalledAssetHost/);
  assert.doesNotMatch(vite,/hostname\.endsWith\('localhost'\)/);
 });
 test('test-only TAKEOVER and STOP constructors cannot throw on installed Tauri origin',()=>{

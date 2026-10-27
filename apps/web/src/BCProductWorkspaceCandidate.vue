@@ -12,9 +12,11 @@ const props=defineProps({
  activeWorkspace:{type:String,default:'CHAT'},
  enabled:{type:Boolean,default:false},
  fetchImpl:{type:Function,default:null},
- appearance:{type:String,default:'dark'}
+ appearance:{type:String,default:'dark'},
+ theme:{type:String,default:'Obsidian Lime'}
 });
-const emit=defineEmits(['select']);
+const emit=defineEmits(['select','toggle-theme','cycle-theme']);
+const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
 const contentScroller=ref(null);
@@ -42,6 +44,7 @@ watch(()=>props.activeWorkspace,async()=>{
  if(contentScroller.value)contentScroller.value.scrollTop=0;
 });
 function choose(k){if(!WORKSPACES.some(x=>x.id===k))return;emit('select',k);menuOpen.value=false}
+async function openCommand(){choose('CHAT');await nextTick();document.querySelector('[data-test="w46-search"]')?.focus()}
 const status=computed(()=>{
  if(loading.value)return '连接检查中';
  if(error.value)return props.activeWorkspace==='BRAIN'?
@@ -55,27 +58,26 @@ defineExpose({refresh});
 </script>
 <template>
  <div v-if="enabled" class="w46-product-candidate" :data-mode="appearance" :data-active-workspace="activeWorkspace" data-test="w46-product-candidate">
-  <div class="w46-product-top">
-   <div class="w46-product-heading">
-    <strong>言策 V2</strong><span class="w46-product-marker">私人本机版 · B＋C</span>
+  <header class="w46-compact-global" data-test="w46-compact-nav">
+   <div class="w46-compact-brand"><span class="w46-brand-glyph">言</span><strong>言策</strong></div>
+   <nav class="w46-main-links" aria-label="R4紧凑主导航">
+    <Button size="sm" :variant="activeWorkspace==='CHAT'?'secondary':'ghost'" data-test="workspace-CHAT" @click="choose('CHAT')">聊天</Button>
+    <Button size="sm" :variant="activeWorkspace==='BRAIN'?'secondary':'ghost'" data-test="workspace-BRAIN" @click="choose('BRAIN')">闺蜜大脑</Button>
+    <Button size="sm" :variant="activeWorkspace==='AUTOPILOT'?'secondary':'ghost'" data-test="workspace-AUTOPILOT" @click="choose('AUTOPILOT')">托管</Button>
+    <Button size="sm" variant="ghost" data-test="workspace-all" :aria-expanded="menuOpen" @click="menuOpen=!menuOpen">全部⌄</Button>
+   </nav>
+   <div class="w46-global-tools">
+    <Button size="sm" variant="ghost" data-test="w46-command" aria-label="搜索联系人 Ctrl+K" @click="openCommand">⌕</Button>
+    <Button size="sm" variant="ghost" data-test="w46-theme" :title="'主题：'+theme" @click="emit('cycle-theme')">◐</Button>
+    <Button size="sm" variant="ghost" data-test="w46-appearance" :title="appearance==='dark'?'切换浅色':'切换深色'" @click="emit('toggle-theme')">{{appearance==='dark'?'☀':'☾'}}</Button>
+    <Button size="sm" variant="ghost" data-test="w46-info" aria-label="查看服务状态" @click="compactInfo=!compactInfo">ⓘ</Button>
    </div>
-   <div class="w46-product-state" data-test="w46-trusted-status" role="status">{{status}}</div>
-   <Button size="sm" variant="outline" data-test="w46-refresh" :disabled="loading" @click="refresh">检查连接</Button>
-  </div>
-  <nav class="w46-workspace-tabs" aria-label="言策 V2 工作区候选导航">
-   <Button v-for="item in WORKSPACES" :key="item.id" size="sm"
-     :data-test="'workspace-'+item.id"
-     :aria-pressed="item.id===activeWorkspace" :variant="item.id===activeWorkspace?'secondary':'ghost'"
-     @click="choose(item.id)">{{item.label}}</Button>
-  </nav>
-  <div class="w46-small-workspaces">
-   <Button size="sm" variant="outline" data-test="workspace-mobile-trigger"
-     :aria-expanded="menuOpen" @click="menuOpen=!menuOpen">{{selected.label}} · 九分类</Button>
-   <div v-if="menuOpen" class="w46-workspace-menu" role="menu" data-test="workspace-mobile-list">
-    <Button v-for="item in WORKSPACES" :key="item.id" variant="ghost" size="sm"
-      role="menuitem" :aria-current="item.id===activeWorkspace?'page':undefined"
-      @click="choose(item.id)">{{item.label}}</Button>
+   <div v-if="menuOpen" class="w46-workspace-menu" data-test="workspace-mobile-list">
+    <Button v-for="item in WORKSPACES.filter(i=>!['CHAT','BRAIN','AUTOPILOT'].includes(i.id))" :key="item.id" size="sm" variant="ghost" :data-test="'workspace-'+item.id" @click="choose(item.id)">{{item.label}}</Button>
    </div>
+  </header>
+  <div v-if="compactInfo||error" class="w46-compact-status" data-test="w46-trusted-status" role="status">
+   <span>{{status}}</span><Button size="xs" variant="outline" data-test="w46-refresh" :disabled="loading" @click="refresh">刷新状态</Button>
   </div>
   <div ref="contentScroller" tabindex="0" role="region"
    :aria-label="selected.label+'工作区内容（可滚动）'" class="w46-candidate-content" data-test="w46-workspace-content">
@@ -85,8 +87,8 @@ defineExpose({refresh});
     <span class="w46-inactive" data-test="w46-capability-status">
      {{explainCapability(snapshot,activeWorkspace)}}</span>
    </div>
-   <BCLiveChatWorkspace v-if="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl"/>
-   <div v-else-if="activeWorkspace==='ACCOUNTS'" class="w46-channel-grid" aria-label="四渠道真实授权回读">
+   <BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl" @navigate="choose"/>
+   <div v-if="activeWorkspace==='ACCOUNTS'" class="w46-channel-grid" aria-label="四渠道真实授权回读">
     <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
      :channel="channel" :fetch-impl="fetchImpl"/>
     <p class="w46-note">R4 四平台品牌 SVG 路径来源已校验；平台连接须取得各原生渠道授权回读。</p>
@@ -116,6 +118,22 @@ defineExpose({refresh});
      </article>
     </div>
     <small>安全状态说明：当前未收到真实 REVOKED / 过期 / 预算不足事件，不将演示状态冒充线上告警。</small>
+   </div>
+   <div v-else-if="activeWorkspace==='PERSONA'" class="w46-native-catalog" data-test="w46-persona-studio">
+     <header><h2>人格 Studio</h2><small>真实学习与审批待接线</small></header>
+     <div class="w46-persona-panel"><strong>规则与历史版本</strong><p>等待 W43/W45 提供原生规则、学习历史和版本状态，不显示虚构规则。</p>
+      <div class="w46-native-actions"><Button disabled size="sm">批准规则 · 暂未接通</Button><Button disabled size="sm">暂停</Button><Button disabled size="sm">撤销</Button><Button disabled size="sm">版本回滚</Button></div>
+     </div>
+   </div>
+   <div v-else-if="activeWorkspace==='TASKS'" class="w46-native-catalog" data-test="w46-tools-experts">
+    <header><h2>工具与任务</h2><small>唯一 Agno 工具、运行和专家</small></header>
+    <details class="w46-native-panel"><summary>专家中心 · 十类设计候选</summary>
+     <p>原 W43 专家注册与联系人作用域尚未返回可核验清单，当前不可调用。</p>
+     <div class="w46-experts-grid">
+      <div v-for="name in ['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家']" :key="name" class="w46-expert-item"><strong>{{name}}</strong><small>待W43核实安装与授权</small></div>
+     </div>
+    </details>
+    <details class="w46-native-panel"><summary>工具运行 / Skills / MCP / Trace</summary><p>尚无此工作区经服务端签署的任务与运行回读，不模拟执行成功。</p></details>
    </div>
    <div v-else-if="activeWorkspace==='SETTINGS'" class="w46-settings" data-test="w46-settings-nine">
     <label class="w46-settings-mobile" for="w46-settings-picker">设置分类 · 共 9 项
@@ -245,4 +263,29 @@ defineExpose({refresh});
 
 @media(max-width:720px){.w46-workspace-tabs{display:none}.w46-small-workspaces{display:block;padding:3px 9px 9px}.w46-product-state{text-align:left;order:2;width:100%}.w46-channel-grid,.w46-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.w46-channel-grid,.w46-status-grid{grid-template-columns:1fr 1fr}.w46-product-top{gap:5px;padding:7px 9px}.w46-product-marker{max-width:180px}}
+
+#yance-prototype:has(> .w46-product-candidate)>.topbar{display:none!important}
+#yance-prototype:has(> .w46-product-candidate) .lab-strip{display:none!important}
+.w46-product-candidate{--w46-panel:var(--bg2);--w46-text:var(--ink);--w46-edge:var(--border);--w46-accent:var(--accent);background:var(--bg);color:var(--ink);height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 0;border:0}
+.w46-product-candidate[data-mode=dark]{--w46-panel:var(--bg2);--w46-text:var(--ink);--w46-edge:var(--border);--w46-accent:var(--accent)}
+.w46-compact-global{position:relative;display:flex;flex:0 0 48px;align-items:center;gap:10px;padding:0 13px;min-height:48px;max-height:48px;z-index:45;background:linear-gradient(115deg,rgba(var(--accent-rgb),.095),transparent 52%),var(--bg2);border-bottom:1px solid var(--border)}
+.w46-compact-brand{display:flex;align-items:center;gap:7px;white-space:nowrap;margin-right:4px}.w46-brand-glyph{display:grid;place-items:center;width:29px;height:29px;border-radius:10px;font-size:16px;font-weight:800;color:var(--accent-ink);background:var(--accent);box-shadow:0 0 18px rgba(var(--accent-rgb),.22)}.w46-compact-brand strong{font-size:15px;letter-spacing:-.04em}
+.w46-main-links{display:flex;min-width:0;align-items:center;gap:3px;flex:1}.w46-main-links button{flex-shrink:0;border-radius:9px}.w46-global-tools{display:flex;align-items:center;gap:2px;flex:0 0 auto}.w46-global-tools button{min-width:29px;padding:6px!important}
+.w46-compact-global .w46-workspace-menu{position:absolute;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;top:calc(100% - 1px);left:135px;z-index:100;width:min(360px,calc(100vw - 22px));padding:12px;border:1px solid var(--border);border-radius:13px;background:var(--surface-raised);box-shadow:0 18px 42px #0008}
+.w46-compact-status{display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);flex-shrink:0}.w46-compact-status span{flex:1}
+.w46-candidate-content{padding:0!important;gap:0!important;display:flex!important;flex-direction:column!important;flex:1 1 0;min-height:0!important;overflow:hidden!important}
+.w46-workspace-intro{display:none!important}
+.w46-candidate-content>.bc-real-chat,.w46-candidate-content>.w46-brain-one{min-height:0;flex:1 1 0}
+.w46-brain-one{display:flex;min-height:0;padding:10px 12px}
+.w46-workspace-auth{display:none!important}
+.w46-native-catalog{display:grid;align-content:start;gap:12px;flex:1;overflow:auto;padding:16px clamp(12px,3vw,28px)}
+.w46-native-catalog header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}.w46-native-catalog h2{font-size:18px;margin:0}.w46-native-catalog small{color:var(--muted)}
+.w46-persona-panel,.w46-native-panel{display:grid;gap:12px;max-width:1100px;border:1px solid var(--border);border-radius:15px;padding:16px;background:var(--bg2)}
+.w46-native-actions{display:flex;flex-wrap:wrap;gap:8px}.w46-native-actions button:disabled{opacity:.62}
+.w46-experts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:8px}.w46-expert-item{display:grid;gap:5px;border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface)}
+.w46-native-panel summary{cursor:pointer}.w46-native-catalog p{font-size:12px;color:var(--muted);margin:0}
+.w46-candidate-content>.w46-operator-grid,.w46-candidate-content>.w46-channel-grid,.w46-candidate-content>.w46-settings,.w46-candidate-content>.w46-blank{padding:16px;overflow:auto;min-height:0}
+@media(max-width:719px){.w46-compact-global{padding:0 7px;gap:4px}.w46-compact-brand strong{display:none}.w46-brand-glyph{height:27px;width:27px}.w46-main-links{gap:0}.w46-main-links button{font-size:11px;padding:7px 6px!important}.w46-global-tools button{padding:5px!important;min-width:26px}.w46-compact-global .w46-workspace-menu{left:7px}.w46-brain-one{padding:7px}}
+@media(max-width:360px){.w46-main-links button{font-size:10px;padding:6px 4px!important}.w46-global-tools{gap:0}.w46-compact-brand{margin:0}}
+@media(prefers-reduced-motion:reduce){.w46-brand-glyph{box-shadow:none}}
 </style>
