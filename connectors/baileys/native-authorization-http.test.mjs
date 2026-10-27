@@ -5,6 +5,8 @@ import {createBaileysNativeSetupHttpHandler} from './native-authorization-http.m
 
 const controller=()=>({
   readStatus:async()=>({ok:true,state:'WAITING_USER_AUTH',account:null,canSend:false}),
+  readAvatar:async({remoteJid})=>({ok:true,available:true,imageUrl:'https://pps.whatsapp.net/avatar',
+    peerId:remoteJid,canSend:false}),
   beginPairing:async({accountLocator})=>({ok:true,state:'STARTING_NATIVE_SDK',accountLocator,canSend:false}),
   readQr:async()=>{throw Object.assign(new Error('SDK_QR_NOT_AVAILABLE'),{code:'SDK_QR_NOT_AVAILABLE'})},
   disconnect:async()=>({ok:true,state:'WAITING_USER_AUTH',canSend:false}),
@@ -91,5 +93,22 @@ test('no signed localhost session -> no authorized read or mutation',async()=>{
     assert.equal(unauthorizedQr.status,401);
     const unauthorizedRev=await call('/api/v2/providers/whatsapp-personal/native/revoke',{method:'POST',auth:false});
     assert.equal(unauthorizedRev.status,401);
+  });
+});
+
+test('verified original W47 HTTP avatar read is real Owner-routed and cannot be unauthorized',async()=>{
+  await hosted(async({call,actions})=>{
+    const uri='/api/v2/providers/whatsapp-personal/native/avatar?remoteJid=555200%40s.whatsapp.net';
+    const a=await call(uri);
+    assert.equal(a.status,200);
+    assert.equal(a.body.available,true);
+    assert.equal(a.body.imageUrl,'https://pps.whatsapp.net/avatar');
+    assert.equal(a.body.canSend,false);
+    assert.equal(actions.at(-1),'READ_WHATSAPP_AVATAR');
+    const blocked=await call(uri,{auth:false});
+    assert.equal(blocked.status,401);
+    assert.equal((await call('/api/v2/providers/whatsapp-personal/native/avatar')).status,422);
+    assert.equal((await call(uri+'&principalRef=spoofed')).status,422);
+    assert.equal((await call(uri+'&remoteJid=another')).status,422);
   });
 });
