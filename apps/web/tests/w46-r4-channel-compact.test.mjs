@@ -1,62 +1,141 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const fromSrc=(name)=>readFileSync(new URL('../src/'+name,import.meta.url),'utf8');
+import {invokeFbPageNativeAuthorization,parseChannelSetup} from '../src/channel-setup-contract.mjs';
+const fromSrc=x=>readFileSync(new URL('../src/'+x,import.meta.url),'utf8');
 const parent=fromSrc('BCProductWorkspaceCandidate.vue');
 const card=fromSrc('BCChannelAccountSetup.vue');
 const contract=fromSrc('channel-setup-contract.mjs');
-test('approved channels screen uses a compact single contextual toolbar and four native provider cards',()=>{
- assert.match(parent,/w46-r4-channel-toolbar/);
- assert.match(parent,/min-height:43px/);
- // A 34px detail toggle + 4px vertical padding + 1px border really fits 43px.
- assert.match(parent,/w46-r4-channel-toolbar\{[^}]*padding:4px 16px/);
- assert.match(parent,/w46-r4-channel-grid/);
- assert.match(parent,/repeat\(4,minmax\(0,1fr\)\)/);
- assert.match(parent,/max-width:1099px/);
- assert.match(parent,/max-width:600px/);
+test('R4 user-approved: one platform selection then exactly one channel setup, not four technical cards',()=>{
+ assert.match(parent,/data-test="w46-channel-picker"/);
+ assert.match(parent,/data-test="w46-channel-step"/);
+ assert.match(parent,/selectedChannel=channel.id/);
+ assert.match(parent,/:channel="CHANNELS.find\(c=>c.id===selectedChannel\)"/);
+ assert.doesNotMatch(parent,/<BCChannelAccountSetup v-for="channel in CHANNELS"/);
+ assert.match(parent,/data-test="w46-channel-back"/);
+ assert.match(parent,/choose\('CHAT'\)/);
+});
+test('no static Pancake official docs treated as W27 started user authorization',()=>{
+ assert.match(card,/invokeFbPageNativeAuthorization\(\{action:'start'/);
+ assert.match(card,/state.value=v.nextAction==='OFFICIAL_SETUP_REQUIRED'/);
+ assert.match(card,/'OFFICIAL_SETUP_REQUIRED':'WAITING_USER_AUTH'/);
+ assert.match(card,/v-if="!isFbPage&&receipt"/);
+ assert.doesNotMatch(card,/state.value='WAITING_USER_AUTH';[\s\S]{0,150}notice.value=v\.qr/);
+ const r=parseChannelSetup('FB_PAGE',{channel:'FB_PAGE',source:'PANCAKE_NATIVE',
+  canSend:false,userDecisionRequired:true,nextAction:'OFFICIAL_SETUP_REQUIRED',
+  officialSetup:'https://pages.fm/'});
+ assert.equal(r.nextAction,'OFFICIAL_SETUP_REQUIRED');
+ assert.equal(r.officialDocs,'https://pages.fm/');
+});
+test('R4 native Page wizard displays actual verified User step and selectable real Page',()=>{
+ assert.match(card,/data-test="fb-page-actual-started"/);
+ assert.match(card,/data-test="fb-page-read-pages"/);
+ assert.match(card,/data-test="fb-page-page-selection"/);
+ assert.match(card,/data-test="fb-page-choice"/);
+ assert.match(card,/data-test="fb-page-bind"/);
+ assert.match(card,/statusLabel/);
+ assert.match(card,/AUTHORIZED_READ_ONLY/);
+ assert.match(card,/未读取到|尚未读取到/);
+});
+test('old QR reuses original W28, no new QR service or technical workspace',()=>{
+ assert.match(card,/await setupChannel/);
+ assert.match(card,/receipt\.qr/);
+ assert.match(card,/state.value='EXPIRED'/);
+ assert.match(card,/data-test="native-provider-qr"/);
+ assert.match(card,/data-test="native-provider-details"/);
+ assert.match(card,/高级连接诊断/);
  assert.doesNotMatch(parent,/R4 四平台品牌 SVG 路径来源已校验/);
 });
-test('one clear connection CTA per card; existing native GET setup and status-check kept',()=>{
- assert.match(card,/data-test="native-provider-setup"/);
- assert.match(card,/data-test="native-provider-check"/);
- assert.match(card,/'连接账号'/);
- assert.match(card,/await setupChannel/);
- assert.match(card,/await checkChannel/);
- assert.match(card,/receipt\.officialConnectUrl/);
- assert.match(card,/receipt\.qr/);
- assert.match(card,/onBeforeUnmount/);
- // Reuse the five-theme B+C foreground token; avoid an undefined camelCase variable.
- assert.match(card,/color:var\(--accent-ink\)!important/);
- assert.doesNotMatch(card,/--accentInk/);
-});
-test('UI never displays raw SDK / WAITING_USER_AUTH as ordinary user-facing state',()=>{
- assert.match(card,/未连接/);
- assert.match(card,/暂不可用/);
- assert.match(card,/已连接/);
- assert.doesNotMatch(card,/>WAITING_USER_AUTH \//);
- assert.match(card,/data-test="native-provider-details"/);
-});
-test('unverified account count is not invented and technical details are not permanently visible',()=>{
- assert.match(parent,/snapshot\?\.trustedSession\?'已验证账号 '/);
- assert.match(parent,/账号状态待验证/);
- assert.match(parent,/v-if="channelDetailsOpen"/);
- assert.match(parent,/data-test="w46-channel-details-toggle"/);
-});
-test('same-origin native contract preserved; no provider SDK in renderer',()=>{
+test('W27 single action is same-origin session/CSRF gated and not provider SDK on renderer',()=>{
  assert.match(contract,/credentials:'same-origin'/);
- assert.match(contract,/OFFICIAL_MAUTRIX_META/);
- assert.match(contract,/BAILEYS_NATIVE_SDK/);
+ assert.match(contract,/W54_NATIVE_FIRST_PARTY_SESSION_REQUIRED/);
+ assert.match(contract,/'x-yance-csrf':s\.csrfToken/);
+ assert.match(contract,/\/api\/v2\/providers\/fb-page\/authorization\//);
+ assert.doesNotMatch(card,/pages\.fm\/api/);
+ assert.doesNotMatch(card,/getProtectedTokenLease/);
  assert.doesNotMatch(card,/fetch\(.+127\.0\.0\.1/);
- assert.doesNotMatch(card,/sock\.sendMessage/);
 });
-test('W42 P0 mobile QR card grows with verified native QR and never overlaps next card',()=>{
- assert.match(parent,/\.w46-r4-channel-grid\{[^}]*align-content:start;grid-auto-rows:max-content;flex-shrink:0/);
- assert.match(card,/\.w46-channel\{[^}]*height:auto;overflow:visible/);
- assert.match(card,/\.w46-channel-auth-result img\{width:min\(240px,100%\);height:auto/);
+test('actual W54 native session POST START and VERIFIED Page choices',async()=>{
+ const calls=[];
+ const csrf='a'.repeat(64);
+ const fetchImpl=async(url,init)=>{
+  calls.push({url,init});
+  if(url==='/api/v2/local-session/status')return {ok:true,json:async()=>({
+    authorized:true,sessionKind:'NATIVE_FIRST_PARTY',csrfToken:csrf
+  })};
+  assert.equal(init.method,'POST');assert.equal(init.headers['x-yance-csrf'],csrf);
+  if(url.endsWith('/start'))return {ok:true,json:async()=>({
+    ok:true,channel:'FB_PAGE',source:'PANCAKE_NATIVE',status:'WAITING_USER_AUTH',
+    entryAvailable:true,credentialInput:'NATIVE_PROTECTED_ONLY',canSend:false
+  })};
+  if(url.endsWith('/pages'))return {ok:true,json:async()=>({
+    ok:true,channel:'FB_PAGE',source:'PANCAKE_NATIVE',status:'PAGE_SELECTION_REQUIRED',
+    pages:[{providerPageId:'12345',name:'Owned Page'}],canSend:false
+  })};
+  throw Error('Unexpected path');
+ };
+ const start=await invokeFbPageNativeAuthorization({action:'start',fetchImpl});
+ assert.equal(start.status,'WAITING_USER_AUTH');
+ const pages=await invokeFbPageNativeAuthorization({action:'pages',fetchImpl});
+ assert.equal(pages.pages.length,1);
+ assert.equal(calls.length,4);
 });
-test('W42 P1 verified WAITING_USER_AUTH uses actionable waiting labels, not false offline',()=>{
- assert.match(card,/state\.value==='WAITING_USER_AUTH'\?\(receipt\.value\?\.qr\?'等待扫码':'等待授权'\)/);
- assert.match(card,/state==='WAITING_USER_AUTH'\?\(receipt\?\.qr\?'重新获取二维码':'重新获取授权'\)/);
- assert.match(card,/state\.value='EXPIRED'/);
- assert.match(card,/state\.value=v\.state/);
+test('untrusted browser account cannot trigger FB Page POST, or invent Page status',async()=>{
+ let posts=0;
+ const fetchImpl=async(url)=>{
+  if(url==='/api/v2/local-session/status')return {ok:true,json:async()=>({
+    authorized:true,sessionKind:'WEB_LOCAL_PRIVATE',csrfToken:'b'.repeat(64)
+  })};
+  posts++;throw Error('UNAUTHORIZED POST');
+ };
+ await assert.rejects(invokeFbPageNativeAuthorization({action:'start',fetchImpl}),
+   /W54_NATIVE_FIRST_PARTY_SESSION_REQUIRED/);
+ assert.equal(posts,0);
+});
+test('current theme and compact viewport remain touch accessible',()=>{
+ assert.match(card,/min-height:44px/);
+ assert.match(card,/color:var\(--accent-ink\)!important/);
+ assert.match(parent,/max-width:600px/);
+ assert.match(parent,/w46-r4-channel-picker/);
+ assert.match(parent,/w46-r4-channel-choice/);
+});
+
+test('Facebook Page settings shows both actual Pancake token fields without browser persistence',()=>{
+ assert.match(card,/data-test="fb-page-config"/);
+ assert.match(card,/data-test="fb-page-user-access-token"/);
+ assert.match(card,/data-test="fb-page-public-api-token"/);
+ assert.match(card,/data-test="fb-page-save-config"/);
+ assert.match(card,/https:\/\/pancake\.biz\/account/);
+ assert.match(card,/Public API access token/);
+ assert.match(card,/:disabled="!secureEnrollmentReady\|\|busy"/);
+ assert.match(card,/W55/);
+ assert.doesNotMatch(card,/localStorage\.setItem|sessionStorage\.setItem/);
+});
+test('W55 user input needs current local session and cannot fabricate success',async()=>{
+ const {saveFbPageCredentialConfiguration}=await import('../src/channel-setup-contract.mjs');
+ const userAccessToken='synthetic-token-user-12345';
+ const pagePublicApiToken='synthetic-token-page-12345';
+ const calls=[];
+ const fetchImpl=async(url,init)=>{
+  calls.push({url,method:init.method});
+  if(url==='/api/v2/local-session/status')return {ok:true,json:async()=>({
+   authorized:true,sessionKind:'WEB_LOCAL_PRIVATE',csrfToken:'d'.repeat(64)
+  })};
+  assert.equal(init.method,'POST');
+  assert.equal(init.headers['x-yance-csrf'],'d'.repeat(64));
+  assert.deepEqual(JSON.parse(init.body),{userAccessToken,pagePublicApiToken});
+  return {ok:true,json:async()=>({ok:true,
+   status:'CREDENTIALS_SAVED_NOT_PAGE_AUTHORIZED',
+   source:'W55_OS_PROTECTED_CURRENT_USER',
+   credentialValueReturned:false,canSend:false})};
+ };
+ const result=await saveFbPageCredentialConfiguration({
+  userAccessToken,pagePublicApiToken,fetchImpl
+ });
+ assert.equal(result.saved,true);
+ assert.equal(calls.length,2);
+ assert.equal(JSON.stringify(result).includes('synthetic-token'),false);
+ await assert.rejects(saveFbPageCredentialConfiguration({
+  userAccessToken,pagePublicApiToken,fetchImpl:async()=>({ok:false,status:503})
+ }),/W55_CURRENT_LOCAL_SESSION_UNAVAILABLE/);
 });
