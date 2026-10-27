@@ -5,7 +5,7 @@
   "type": "module",
   "engines": {"node": ">=24"},
   "scripts": {
-    "test": "node --test adapter.test.mjs official-service.test.mjs native-authorization.test.mjs official-avatar.test.mjs",
+    "test": "node --test adapter.test.mjs official-service.test.mjs native-authorization.test.mjs official-avatar.test.mjs r4-native-page-read.test.mjs",
     "preflight": "node vendor-preflight.mjs"
   }
 }
