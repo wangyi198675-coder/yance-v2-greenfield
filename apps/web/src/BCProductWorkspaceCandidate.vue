@@ -19,8 +19,23 @@ const emit=defineEmits(['select','toggle-theme','cycle-theme']);
 const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
+const channelDetailsOpen=ref(false);
 const contentScroller=ref(null);
 const settingCategory=ref('general');
+// Design tabs are navigation only until authoritative Persona/Expert APIs are signed.
+const personaTab=ref('pending'),expertTab=ref('experts');
+const personaModal=ref(null);
+// UI-only reference examples from the user-approved R4 design, never PersonaPolicy facts.
+const personaExamples=Object.freeze([
+ {title:'自然、成熟、简短表达',description:'建议规则 · 来源待核验',symbol:'✦'},
+ {title:'忠于用户本人事实',description:'联系人推断不能变成本人事实',symbol:'◈'},
+ {title:'跨会话表达偏好',description:'可暂停、撤销及恢复到先前版本',symbol:'↗'}
+]);
+function showPersonaDetail(kind,index=null){personaModal.value={kind,index}}
+function closePersonaDetail(){personaModal.value=null}
+const personaTabs=Object.freeze([{id:'pending',label:'待审规则'},{id:'current',label:'当前人格'},{id:'versions',label:'版本'}]);
+const expertTabs=Object.freeze([{id:'experts',label:'专家 10'},{id:'tasks',label:'任务'},{id:'skills',label:'Skills / MCP'}]);
+const designExpertCatalog=Object.freeze(['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家']);
 const category=computed(()=>R4_SETTINGS_CATEGORIES.find(c=>c.id===settingCategory.value)||R4_SETTINGS_CATEGORIES[0]);
 let epoch=0;
 const selected=computed(()=>WORKSPACES.find(x=>x.id===props.activeWorkspace)||WORKSPACES[0]);
@@ -40,6 +55,7 @@ async function refresh(){
 watch(()=>props.enabled,refresh,{immediate:true});
 watch(()=>props.activeWorkspace,async()=>{
  menuOpen.value=false;
+ closePersonaDetail();
  await nextTick();
  if(contentScroller.value)contentScroller.value.scrollTop=0;
 });
@@ -88,17 +104,27 @@ defineExpose({refresh});
      {{explainCapability(snapshot,activeWorkspace)}}</span>
    </div>
    <BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl" @navigate="choose"/>
-   <div v-if="activeWorkspace==='ACCOUNTS'" class="w46-channel-grid" aria-label="四渠道真实授权回读">
-    <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
-     :channel="channel" :fetch-impl="fetchImpl"/>
-    <p class="w46-note">R4 四平台品牌 SVG 路径来源已校验；平台连接须取得各原生渠道授权回读。</p>
-    <div class="w46-account-summary" data-test="w46-multi-account">
-     <strong>多账号管理 · 已验证账号 {{readonlyAccount}}</strong>
-     <p>同一渠道可独立绑定多个账号，当前全部未授权。账号列表仅能由可信原生服务返回。</p>
-     <p>Messenger · mautrix-meta | Page · Pancake | WhatsApp · Baileys | Telegram · TDLib JSON</p>
-     <p>点击上方「准备官方授权」从 W47 正式服务获取上游步骤。没有原生签署结果时不会显示已连接。</p>
+   <section v-if="activeWorkspace==='ACCOUNTS'" class="w46-r4-channel-workspace" data-test="w46-channel-workspace" aria-label="连接社交账号">
+    <header class="w46-r4-channel-toolbar">
+     <strong>连接社交账号</strong>
+     <div class="w46-r4-channel-actions">
+      <span class="w46-r4-channel-count" data-test="w46-authoritative-account-count">{{snapshot?.trustedSession?'已验证账号 '+readonlyAccount:'账号状态待验证'}}</span>
+      <button type="button" class="w46-r4-channel-details-toggle" data-test="w46-channel-details-toggle"
+       :aria-expanded="channelDetailsOpen" aria-controls="w46-channel-details"
+       @click="channelDetailsOpen=!channelDetailsOpen">{{channelDetailsOpen?'收起详情':'账号详情'}} <span aria-hidden="true">{{channelDetailsOpen?'⌃':'⌄'}}</span></button>
+     </div>
+    </header>
+    <div class="w46-r4-channel-grid" data-test="w46-channel-grid" aria-label="四平台原生连接入口">
+     <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
+      :channel="channel" :fetch-impl="fetchImpl"/>
     </div>
-   </div>
+    <section v-if="channelDetailsOpen" id="w46-channel-details" class="w46-r4-channel-details"
+     data-test="w46-multi-account" role="region" aria-label="账号连接详情">
+     <strong>账号连接状态</strong>
+     <p>{{snapshot?.trustedSession?'已建立本机会话，连接账号仍以每个平台原生状态回读为准。':'尚未建立可验证的本机会话。请在对应平台通过本人官方流程完成授权。'}}</p>
+     <p>多个账号及授权范围需由原生服务提供真实记录；尚无权威账号列表时不展示示例账号。</p>
+    </section>
+   </section>
    <div v-else-if="activeWorkspace==='PEOPLE'" class="w46-blank">
      <strong>联系人：{{snapshot?.trustedSession?snapshot.realContacts:0}}</strong>
      <p>仅从当前服务端取得有授权的实际身份 K。未连接时不加载演示联系人。</p>
@@ -119,22 +145,81 @@ defineExpose({refresh});
     </div>
     <small>安全状态说明：当前未收到真实 REVOKED / 过期 / 预算不足事件，不将演示状态冒充线上告警。</small>
    </div>
-   <div v-else-if="activeWorkspace==='PERSONA'" class="w46-native-catalog" data-test="w46-persona-studio">
-     <header><h2>人格 Studio</h2><small>真实学习与审批待接线</small></header>
-     <div class="w46-persona-panel"><strong>规则与历史版本</strong><p>等待 W43/W45 提供原生规则、学习历史和版本状态，不显示虚构规则。</p>
-      <div class="w46-native-actions"><Button disabled size="sm">批准规则 · 暂未接通</Button><Button disabled size="sm">暂停</Button><Button disabled size="sm">撤销</Button><Button disabled size="sm">版本回滚</Button></div>
-     </div>
-   </div>
-   <div v-else-if="activeWorkspace==='TASKS'" class="w46-native-catalog" data-test="w46-tools-experts">
-    <header><h2>工具与任务</h2><small>唯一 Agno 工具、运行和专家</small></header>
-    <details class="w46-native-panel"><summary>专家中心 · 十类设计候选</summary>
-     <p>原 W43 专家注册与联系人作用域尚未返回可核验清单，当前不可调用。</p>
-     <div class="w46-experts-grid">
-      <div v-for="name in ['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家']" :key="name" class="w46-expert-item"><strong>{{name}}</strong><small>待W43核实安装与授权</small></div>
-     </div>
-    </details>
-    <details class="w46-native-panel"><summary>工具运行 / Skills / MCP / Trace</summary><p>尚无此工作区经服务端签署的任务与运行回读，不模拟执行成功。</p></details>
-   </div>
+   <section v-else-if="activeWorkspace==='PERSONA'" class="w46-r4-feature w46-r4-persona" data-test="w46-persona-studio">
+    <header class="w46-r4-feature-toolbar" data-test="w46-persona-toolbar">
+     <div class="w46-r4-feature-title"><strong>人格与学习</strong><small>规则 · 记忆 · 版本</small></div>
+     <nav class="w46-r4-feature-tabs" aria-label="人格与学习">
+      <button v-for="tab in personaTabs" :key="tab.id" type="button" :class="{active:personaTab===tab.id}" :aria-pressed="personaTab===tab.id" :data-test="'w46-persona-tab-'+tab.id" @click="personaTab=tab.id">{{tab.label}}</button>
+      <button type="button" class="w46-persona-learning-status" data-test="w46-persona-learning-status" @click="showPersonaDetail('learning')">学习状态 <span aria-hidden="true">ⓘ</span></button>
+     </nav>
+    </header>
+    <div class="w46-r4-feature-body w46-r4-persona-layout">
+     <section class="w46-r4-feature-card" data-test="w46-persona-main-card">
+      <div class="w46-r4-card-head">
+       <strong>{{personaTab==='pending'?'待审规则 · 设计示例':personaTab==='current'?'当前人格':'版本历史'}}</strong>
+       <span class="w46-persona-approval-status">{{personaTab==='pending'?'未执行审批':'来源待核验'}}</span>
+      </div>
+      <div v-if="personaTab==='pending'" class="w46-persona-design-list" data-test="w46-persona-design-list">
+       <div v-for="(rule,index) in personaExamples" :key="rule.title" class="w46-persona-design-row" :data-test="'w46-persona-rule-example-'+index">
+        <span class="w46-persona-example-icon" aria-hidden="true">{{rule.symbol}}</span>
+        <div class="w46-persona-example-copy"><strong>{{rule.title}}</strong><small>{{rule.description}}</small></div>
+        <button type="button" class="w46-persona-small-action" :data-test="'w46-persona-rule-view-'+index" @click="showPersonaDetail('rule',index)">查看</button>
+       </div>
+       <p class="w46-persona-design-note" role="status" data-test="w46-persona-source-hold">仅展示设计中的规则入口，审批、版本与学习必须连接已有服务端并经过真实读回。</p>
+      </div>
+      <div v-else class="w46-r4-feature-empty" role="status" data-test="w46-persona-source-hold">
+       <strong>{{personaTab==='current'?'当前人格版本尚未取得权威回读':'尚无经核验的历史版本'}}</strong>
+       <p>本人事实、联系人推断和学习建议必须由原W43/W45权威来源分别核实；此处不把设计示例当作真实历史。</p>
+      </div>
+     </section>
+     <aside class="w46-r4-feature-card w46-r4-details" data-test="w46-persona-details-card">
+      <div class="w46-r4-card-head">
+       <strong>人格版本与控制</strong>
+       <button type="button" class="w46-persona-details-link" data-test="w46-persona-details-open" @click="showPersonaDetail('version')">详情</button>
+      </div>
+      <p>已生效版本、规则来源、冲突、撤回和回滚在这里按需展示。</p>
+      <p>原R4中的技术状态面板与大幅说明文字不长期占据核心操作区域。</p>
+      <button type="button" class="w46-persona-details-button" data-test="w46-persona-rule-details" @click="showPersonaDetail('version')">打开规则详情</button>
+     </aside>
+    </div>
+    <div v-if="personaModal" class="w46-persona-modal-mask" data-test="w46-persona-example-details" @click.self="closePersonaDetail">
+     <section class="w46-persona-modal" role="dialog" aria-modal="true" aria-labelledby="w46-persona-modal-title">
+      <header><strong id="w46-persona-modal-title">{{personaModal.kind==='rule'?personaExamples[personaModal.index]?.title:personaModal.kind==='learning'?'学习状态':'人格版本与规则详情'}}</strong>
+       <button type="button" data-test="w46-persona-detail-close" aria-label="关闭详情" @click="closePersonaDetail">关闭</button>
+      </header>
+      <div class="w46-persona-modal-body">
+       <span class="w46-persona-approval-status">设计示例 · 未执行审批</span>
+       <p v-if="personaModal.kind==='rule'">{{personaExamples[personaModal.index]?.description}}</p>
+       <p v-else-if="personaModal.kind==='learning'">学习状态尚未获得服务端有效版本、授权范围和历史事件回读，此处仅显示设计中的状态入口，未开启学习。</p>
+       <p v-else>已生效版本、规则来源、冲突、撤回和回滚须由原W43/W45及版本授权接口真实读回。当前没有可核验的规则详情或版本操作。</p>
+       <p class="w46-persona-modal-caution">该内容为只读界面示例，并非真实已批准规则、持久记忆或已完成的版本变更。</p>
+      </div>
+     </section>
+    </div>
+   </section>
+   <section v-else-if="activeWorkspace==='TASKS'" class="w46-r4-feature" data-test="w46-tools-experts">
+    <header class="w46-r4-feature-toolbar">
+     <div class="w46-r4-feature-title"><strong>工具与任务</strong><small>已完成 ≠ 已启用</small></div>
+     <nav class="w46-r4-feature-tabs" aria-label="工具与任务"><button v-for="tab in expertTabs" :key="tab.id" type="button" :class="{active:expertTab===tab.id}" :aria-pressed="expertTab===tab.id" :data-test="'w46-expert-tab-'+tab.id" @click="expertTab=tab.id">{{tab.label}}</button></nav>
+    </header>
+    <div class="w46-r4-feature-body w46-r4-expert-layout">
+     <section class="w46-r4-feature-card">
+      <div class="w46-r4-card-head"><strong>{{expertTab==='experts'?'专家目录 · 十类设计候选':expertTab==='tasks'?'任务与运行':'Skills / MCP'}}</strong><small>待W43核实安装与授权</small></div>
+      <div v-if="expertTab==='experts'" class="w46-r4-expert-list" data-test="w46-r4-expert-list">
+       <div v-for="(name,index) in designExpertCatalog" :key="name" class="w46-r4-expert-row">
+        <span class="w46-r4-expert-glyph" aria-hidden="true">{{index===0?'◈':index===8?'⌕':'✧'}}</span>
+        <div><strong>{{name}}</strong><small>{{index===8?'原W43本地只读源码已接入；当前Web启用与权限尚未回读':'设计目录候选，尚无真实安装与执行资格'}}</small></div>
+        <Button size="sm" variant="outline" disabled :title="'等待W43/W47原生身份及启用状态确认'">待核验</Button>
+       </div>
+      </div>
+      <div v-else class="w46-r4-feature-empty"><strong>尚无经本机服务确认的{{expertTab==='tasks'?'任务执行记录':'Skills / MCP 能力'}}</strong><p>只能由原Agno工具、运行和Trace返回真实来源，未接通时不模拟结果。</p></div>
+     </section>
+     <aside class="w46-r4-feature-card w46-r4-details"><div class="w46-r4-card-head"><strong>任务与执行详情</strong><small>按需查看</small></div>
+      <p>选择合法安装的专家或任务后，才显示Agno Run、Tool与Trace。未完成身份和能力签署前不允许调用。</p>
+      <div class="w46-r4-feature-empty" role="status">已验证执行：暂无 · 授权范围：未获得原生回读</div>
+     </aside>
+    </div>
+   </section>
    <div v-else-if="activeWorkspace==='SETTINGS'" class="w46-settings" data-test="w46-settings-nine">
     <label class="w46-settings-mobile" for="w46-settings-picker">设置分类 · 共 9 项
      <select id="w46-settings-picker" v-model="settingCategory" aria-label="选择设置分类">
@@ -173,7 +258,7 @@ defineExpose({refresh});
    <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">
     <BCPrivateBrainWorkspace :fetch-impl="fetchImpl"/>
    </div>
-   <div v-else class="w46-blank">
+   <div v-else-if="activeWorkspace!=='CHAT'" class="w46-blank">
     <strong>{{selected.label}}尚未授权</strong>
     <p>已保留单一 Agno／现有 W25 契约，不会为界面另建 Agent 或消息发送链。</p>
     <p v-if="activeWorkspace==='BRAIN'">唯一闺蜜大脑仍使用原产品右栏/工作区，未获可信 Run 前不产生模型回复。</p>
@@ -268,24 +353,110 @@ defineExpose({refresh});
 #yance-prototype:has(> .w46-product-candidate) .lab-strip{display:none!important}
 .w46-product-candidate{--w46-panel:var(--bg2);--w46-text:var(--ink);--w46-edge:var(--border);--w46-accent:var(--accent);background:var(--bg);color:var(--ink);height:100%;min-height:0;display:flex;flex-direction:column;flex:1 1 0;border:0}
 .w46-product-candidate[data-mode=dark]{--w46-panel:var(--bg2);--w46-text:var(--ink);--w46-edge:var(--border);--w46-accent:var(--accent)}
-.w46-compact-global{position:relative;display:flex;flex:0 0 48px;align-items:center;gap:10px;padding:0 13px;min-height:48px;max-height:48px;z-index:45;background:linear-gradient(115deg,rgba(var(--accent-rgb),.095),transparent 52%),var(--bg2);border-bottom:1px solid var(--border)}
+.w46-compact-global{position:relative;display:grid;grid-template-columns:minmax(130px,1fr) auto minmax(150px,1fr);flex:0 0 48px;align-items:center;gap:10px;padding:0 13px;min-height:48px;max-height:48px;z-index:45;background:linear-gradient(115deg,rgba(var(--accent-rgb),.095),transparent 52%),var(--bg2);border-bottom:1px solid var(--border)}
 .w46-compact-brand{display:flex;align-items:center;gap:7px;white-space:nowrap;margin-right:4px}.w46-brand-glyph{display:grid;place-items:center;width:29px;height:29px;border-radius:10px;font-size:16px;font-weight:800;color:var(--accent-ink);background:var(--accent);box-shadow:0 0 18px rgba(var(--accent-rgb),.22)}.w46-compact-brand strong{font-size:15px;letter-spacing:-.04em}
-.w46-main-links{display:flex;min-width:0;align-items:center;gap:3px;flex:1}.w46-main-links button{flex-shrink:0;border-radius:9px}.w46-global-tools{display:flex;align-items:center;gap:2px;flex:0 0 auto}.w46-global-tools button{min-width:29px;padding:6px!important}
-.w46-compact-global .w46-workspace-menu{position:absolute;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;top:calc(100% - 1px);left:135px;z-index:100;width:min(360px,calc(100vw - 22px));padding:12px;border:1px solid var(--border);border-radius:13px;background:var(--surface-raised);box-shadow:0 18px 42px #0008}
+.w46-main-links{display:flex;min-width:0;align-items:center;justify-content:center;gap:3px;flex:0 0 auto;justify-self:center}.w46-main-links button{flex-shrink:0;border-radius:9px}.w46-global-tools{display:flex;align-items:center;justify-self:end;gap:2px;flex:0 0 auto}.w46-global-tools button{min-width:29px;padding:6px!important}
+.w46-compact-global .w46-workspace-menu{position:absolute;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;top:calc(100% - 1px);left:50%;transform:translateX(-50%);z-index:100;width:min(360px,calc(100vw - 22px));padding:12px;border:1px solid var(--border);border-radius:13px;background:var(--surface-raised);box-shadow:0 18px 42px #0008}
 .w46-compact-status{display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);flex-shrink:0}.w46-compact-status span{flex:1}
 .w46-candidate-content{padding:0!important;gap:0!important;display:flex!important;flex-direction:column!important;flex:1 1 0;min-height:0!important;overflow:hidden!important}
 .w46-workspace-intro{display:none!important}
 .w46-candidate-content>.bc-real-chat,.w46-candidate-content>.w46-brain-one{min-height:0;flex:1 1 0}
-.w46-brain-one{display:flex;min-height:0;padding:10px 12px}
+.w46-brain-one{display:flex;min-height:0;padding:0}
 .w46-workspace-auth{display:none!important}
 .w46-native-catalog{display:grid;align-content:start;gap:12px;flex:1;overflow:auto;padding:16px clamp(12px,3vw,28px)}
 .w46-native-catalog header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}.w46-native-catalog h2{font-size:18px;margin:0}.w46-native-catalog small{color:var(--muted)}
 .w46-persona-panel,.w46-native-panel{display:grid;gap:12px;max-width:1100px;border:1px solid var(--border);border-radius:15px;padding:16px;background:var(--bg2)}
-.w46-native-actions{display:flex;flex-wrap:wrap;gap:8px}.w46-native-actions button:disabled{opacity:.62}
+.w46-native-actions{display:flex;flex-wrap:wrap;gap:8px}.w46-native-actions button:disabled{opacity:.42;filter:grayscale(.5);cursor:not-allowed}
 .w46-experts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:8px}.w46-expert-item{display:grid;gap:5px;border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface)}
 .w46-native-panel summary{cursor:pointer}.w46-native-catalog p{font-size:12px;color:var(--muted);margin:0}
+/* Approved R4 Expert and Persona structure: visible list first; no fabricated
+   installed expert, persona rule, run or grant. 43px contextual toolbar. */
+.w46-r4-feature{display:flex;min-height:0;min-width:0;flex:1;flex-direction:column;background:var(--bg)}
+.w46-r4-feature-toolbar{box-sizing:border-box;display:flex;flex:0 0 43px;min-height:43px;align-items:center;justify-content:space-between;padding:0 17px;gap:10px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.w46-r4-feature-title{display:flex;gap:9px;align-items:center;white-space:nowrap}
+.w46-r4-feature-title strong{font-size:15px}.w46-r4-feature-title small{font-size:11px;color:var(--muted)}
+.w46-r4-feature-tabs{display:flex;align-items:center;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.w46-r4-feature-tabs button{flex-shrink:0;padding:6px 9px;border:0;border-radius:8px;color:var(--muted);background:transparent;cursor:pointer;font-size:11px}
+.w46-r4-feature-tabs button.active{background:rgba(var(--accent-rgb),.13);color:var(--accent)}
+.w46-r4-feature-tabs button:focus-visible{outline:2px solid var(--accent)}
+.w46-r4-feature-body{box-sizing:border-box;display:grid;flex:1;min-height:0;min-width:0;gap:12px;padding:13px 15px;overflow:auto;align-content:start}
+.w46-r4-expert-layout{grid-template-columns:minmax(0,1fr) 315px}
+.w46-r4-persona-layout{grid-template-columns:minmax(0,1fr) 290px}
+.w46-r4-feature-card{min-width:0;border:1px solid var(--border);background:var(--bg2);border-radius:12px;overflow:hidden;align-self:start}
+.w46-r4-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px;border-bottom:1px solid var(--border)}
+.w46-r4-card-head strong{font-size:13px}.w46-r4-card-head small{color:var(--muted);font-size:10px}
+.w46-r4-expert-list{padding:3px 13px}
+.w46-r4-expert-row{display:flex;align-items:center;gap:11px;min-height:59px;padding:10px 2px;border-bottom:1px solid var(--border)}
+.w46-r4-expert-row:last-child{border:0}
+.w46-r4-expert-glyph{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border-radius:10px;color:var(--accent);background:var(--surface-soft);border:1px solid var(--border)}
+.w46-r4-expert-row>div{min-width:0;display:grid;gap:4px;flex:1}
+.w46-r4-expert-row strong{font-size:12px}.w46-r4-expert-row small{font-size:10px;color:var(--muted);line-height:1.5}
+.w46-r4-expert-row button:disabled{opacity:.56;cursor:not-allowed}
+.w46-r4-details{padding:0 0 13px}.w46-r4-details>p,.w46-r4-details>.w46-r4-feature-empty,.w46-r4-details>.w46-native-actions{margin:12px 13px}
+.w46-r4-details p{font-size:12px;line-height:1.7;color:var(--muted)}
+.w46-r4-feature-empty{padding:20px 14px;color:var(--muted);font-size:12px;line-height:1.65}
+.w46-r4-feature-empty strong{display:block;color:var(--ink);font-size:13px}.w46-r4-feature-empty p{margin-top:8px}
+/* Persona visual examples are hard-coded DESIGN samples, not approved server
+   records. Original Agno/Persona and revision writes remain unavailable. */
+.w46-r4-persona{position:relative}
+.w46-r4-persona .w46-r4-persona-layout{align-content:stretch;grid-template-rows:minmax(0,1fr)}
+.w46-r4-persona-layout>.w46-r4-feature-card{align-self:stretch}
+.w46-r4-persona .w46-r4-card-head{min-height:43px;box-sizing:border-box}
+.w46-persona-learning-status{border:1px solid var(--border)!important;background:var(--surface-soft)!important}
+.w46-persona-approval-status{font-size:10px;padding:5px 8px;border-radius:7px;background:var(--surface-soft);color:var(--muted);white-space:nowrap}
+.w46-persona-design-list{padding:0 13px}
+.w46-persona-design-row{display:flex;align-items:center;gap:11px;min-height:60px;border-bottom:1px solid var(--border);padding:8px 0}
+.w46-persona-design-row:last-of-type{border-bottom:0}
+.w46-persona-example-icon{flex:0 0 35px;width:35px;height:35px;display:grid;place-items:center;background:var(--surface-soft);border:1px solid var(--border);border-radius:10px;color:var(--accent)}
+.w46-persona-example-copy{display:grid;gap:5px;min-width:0;flex:1}
+.w46-persona-example-copy strong{font-size:12px;font-weight:650;color:var(--ink)}
+.w46-persona-example-copy small{font-size:10px;color:var(--muted);line-height:1.45}
+.w46-persona-small-action,.w46-persona-details-button{background:var(--surface-soft);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:11px;cursor:pointer}
+.w46-persona-small-action:hover,.w46-persona-details-button:hover{border-color:var(--accent)}
+.w46-persona-design-note{font-size:11px;color:var(--muted);line-height:1.7;margin:20px 0 12px}
+.w46-persona-details-link{font-size:10px;background:var(--surface-soft);border:1px solid var(--border);border-radius:7px;color:var(--muted);padding:5px 8px;cursor:pointer}
+.w46-persona-details-button{margin:0 13px 13px}
+.w46-persona-modal-mask{position:absolute;inset:43px 0 0;z-index:55;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.52)}
+.w46-persona-modal{width:min(450px,100%);max-height:min(480px,85vh);overflow:auto;background:var(--surface-raised);border:1px solid var(--border);border-radius:14px;box-shadow:0 16px 38px rgba(0,0,0,.25)}
+.w46-persona-modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);gap:14px}
+.w46-persona-modal header strong{font-size:14px}
+.w46-persona-modal header button{border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:var(--surface-soft);color:var(--ink);cursor:pointer}
+.w46-persona-modal-body{padding:15px 16px}
+.w46-persona-modal-body p{font-size:12px;line-height:1.7;color:var(--muted);margin:12px 0}
+.w46-persona-modal-body .w46-persona-modal-caution{font-size:11px;border-top:1px solid var(--border);padding-top:13px}
+@media(max-width:719px){
+ .w46-r4-persona-layout{grid-template-rows:auto auto!important}
+ .w46-r4-persona .w46-r4-details{display:block}
+ .w46-r4-persona .w46-r4-feature-toolbar{gap:5px}
+ .w46-r4-persona .w46-r4-feature-tabs{gap:1px}
+ .w46-r4-persona .w46-r4-feature-tabs button{font-size:10px;padding:6px 5px}
+ .w46-r4-persona .w46-r4-feature-title strong{font-size:12px}
+ .w46-persona-design-list{padding:0 10px}
+ .w46-persona-design-row{gap:7px}
+ .w46-persona-small-action{padding:6px 7px}
+}
+@media(prefers-reduced-motion:reduce){.w46-persona-modal,.w46-persona-modal-mask{transition:none!important;animation:none!important}}
+@media(max-width:1000px){.w46-r4-expert-layout{grid-template-columns:minmax(0,1fr) 260px}.w46-r4-persona-layout{grid-template-columns:minmax(0,1fr) clamp(215px,26.5%,250px)}}
+@media(max-width:719px){.w46-r4-feature-toolbar{padding:0 9px}.w46-r4-feature-title small{display:none}.w46-r4-feature-body{padding:8px;grid-template-columns:minmax(0,1fr)}.w46-r4-details{display:none}.w46-r4-feature-tabs button{padding:6px}.w46-r4-expert-row{gap:8px}}
 .w46-candidate-content>.w46-operator-grid,.w46-candidate-content>.w46-channel-grid,.w46-candidate-content>.w46-settings,.w46-candidate-content>.w46-blank{padding:16px;overflow:auto;min-height:0}
-@media(max-width:719px){.w46-compact-global{padding:0 7px;gap:4px}.w46-compact-brand strong{display:none}.w46-brand-glyph{height:27px;width:27px}.w46-main-links{gap:0}.w46-main-links button{font-size:11px;padding:7px 6px!important}.w46-global-tools button{padding:5px!important;min-width:26px}.w46-compact-global .w46-workspace-menu{left:7px}.w46-brain-one{padding:7px}}
+@media(min-width:720px) and (max-width:1099px){.w46-main-links button{padding:7px 9px!important}}
+@media(max-width:719px){.w46-compact-global{display:flex;padding:0 7px;gap:4px}.w46-compact-brand strong{display:none}.w46-brand-glyph{height:27px;width:27px}.w46-main-links{flex:1;justify-content:flex-start;gap:0}.w46-main-links button{font-size:11px;padding:7px 6px!important}.w46-global-tools button{padding:5px!important;min-width:26px}.w46-compact-global .w46-workspace-menu{left:7px;transform:none}.w46-brain-one{padding:0}}
 @media(max-width:360px){.w46-main-links button{font-size:10px;padding:6px 4px!important}.w46-global-tools{gap:0}.w46-compact-brand{margin:0}}
 @media(prefers-reduced-motion:reduce){.w46-brand-glyph{box-shadow:none}}
+
+/* User-approved R4 Compact: CHANNELS uses the same 43px context toolbar
+   and genuine SDK setup ports as the other workspaces. No duplicate admin shell. */
+.w46-r4-channel-workspace{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;overflow:auto;background:var(--bg)}
+.w46-r4-channel-toolbar{display:flex;flex-shrink:0;box-sizing:border-box;min-height:43px;align-items:center;justify-content:space-between;gap:12px;padding:4px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.w46-r4-channel-toolbar>strong{font-size:15px;letter-spacing:-.02em}
+.w46-r4-channel-actions{display:flex;align-items:center;gap:12px;min-width:0}
+.w46-r4-channel-count{color:var(--muted);font-size:11px}
+.w46-r4-channel-details-toggle{border:1px solid var(--border)!important;border-radius:999px;background:var(--surface-soft)!important;color:var(--ink)!important;min-height:34px;padding:5px 13px;font-size:12px;cursor:pointer;white-space:nowrap}
+.w46-r4-channel-details-toggle:hover,.w46-r4-channel-details-toggle:focus-visible{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(var(--accent-rgb),.13)}
+.w46-r4-channel-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch;padding:16px;min-height:0}
+.w46-r4-channel-details{margin:0 16px 16px;padding:15px 17px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);font-size:12px;line-height:1.7}
+.w46-r4-channel-details strong{font-size:13px}
+.w46-r4-channel-details p{color:var(--muted);margin:7px 0 0}
+@media(max-width:1099px){.w46-r4-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.w46-r4-channel-grid{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}.w46-r4-channel-details{margin:0 10px 10px}.w46-r4-channel-toolbar{padding:4px 10px}.w46-r4-channel-toolbar>strong{font-size:13px}.w46-r4-channel-count{display:none}}
 </style>
