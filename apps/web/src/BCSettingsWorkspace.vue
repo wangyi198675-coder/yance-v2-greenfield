@@ -5,7 +5,7 @@ import {mediaCapabilitiesRead} from './w23-media-browser-consumer.mjs';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
 import BCNativeHostSession from './BCNativeHostSession.vue';
-import BCLocalSessionConnector from './BCLocalSessionConnector.vue';
+
 const props=defineProps({
  active:{type:Boolean,default:false},fetchImpl:{type:Function,default:null},
  theme:{type:String,default:'Obsidian Lime'},appearance:{type:String,default:'dark'}
@@ -66,6 +66,19 @@ watch([()=>props.theme,()=>props.appearance],()=>{
  if(category.value==='theme'&&props.active)data.value={theme:props.theme,mode:props.appearance,source:'APP_THEME_TOKENS_CURRENT'};
 });
 onBeforeUnmount(()=>{alive=false;seq++});
+async function logoutCurrentPrivateSession(){
+ if(busy.value||session.value?.paired!==true||typeof session.value.csrfToken!=="string"||!/^[a-f0-9]{64}$/.test(session.value.csrfToken))return;
+ const csrfToken=session.value.csrfToken;busy.value=true;error.value="";let operationError="";
+ try{
+  const res=await request("/api/v2/local-session/logout",{method:"POST",headers:{"content-type":"application/json","x-yance-csrf":csrfToken},body:"{}"});
+  const out=await res.json().catch(()=>null);
+  if(!res.ok||out?.ok!==true||out?.paired!==false)throw Error("HTTP_"+res.status);
+  const recheck=await getJson("/api/v2/local-session/status");
+  if(recheck?.paired!==false)throw Error("LOGOUT_READBACK_NOT_CONFIRMED");
+  session.value=recheck;data.value={sessionKind:"none",authorized:false,expiresAt:null};csrf.value=null;
+ }catch(e){operationError=failure(e);}
+ finally{busy.value=false;await refresh();if(operationError)error.value=operationError}
+}
 function requestNotificationPermission(){
  // No prompt on load. Browsers alone own this interaction; notification sending is not implied.
  if(typeof window==='undefined'||!('Notification' in window)||Notification.permission!=='default')return;
@@ -104,7 +117,7 @@ function requestNotificationPermission(){
      <p>本机用户：{{data?.authorized?'已授权本机会话':'未取得有效会话'}}</p>
      <p>本机会话绝不等同于四渠道官方登录。</p>
      <div class="bc-settings-channel-grid"><BCChannelAccountSetup v-for="x in channels" :key="x.id" :channel="x" :fetch-impl="fetchImpl"/></div>
-     <BCLocalSessionConnector :fetch-impl="fetchImpl"/>
+     <p data-test="settings-accounts-no-terminal-pair">直接选择需要连接的社交平台，并按对应平台的官方步骤授权；本地聊天与私人助手无需额外验证。</p>
     </article>
    </template>
    <template v-else-if="category==='model'">
@@ -149,7 +162,9 @@ function requestNotificationPermission(){
     <article data-test="settings-panel-privacy"><h3>本机会话与隐私</h3>
      <p>当前会话：{{data?.authorized?'已由原W47确认':'未授权或不可用'}}</p>
      <p>所有联系人K、密钥、Grant撤销需以原Owner服务端权限及版本回读为准；不会将本地会话注销冒充全部渠道撤权。</p>
-     <BCLocalSessionConnector :fetch-impl="fetchImpl"/>
+     <p data-test="settings-privacy-no-terminal-pair">私人本地会话由言策应用内部管理，无需额外操作。社交账号、隐私资料和真人发送仍按现有授权进行保护。</p>
+     <p data-test="settings-local-session-state">私人本机会话：{{session?.paired===true?"已建立":"未建立；私人助手会按原有安全流程处理"}}</p>
+     <button v-if="session?.paired===true" type="button" :disabled="busy" data-test="settings-local-session-logout" @click="logoutCurrentPrivateSession">退出当前本机会话</button>
      <button type="button" disabled data-test="settings-contact-revoke">撤销联系人授权 · 等待W44真实Grant资格</button>
     </article>
    </template>

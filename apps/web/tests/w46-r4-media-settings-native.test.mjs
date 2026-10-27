@@ -27,7 +27,7 @@ test('R4 SETTINGS nine unique original categories render separate real panels an
  const categories=['general','accounts','model','translate','media','theme','notify','privacy','diagnostics'];
  assert.match(shell,/<BCSettingsWorkspace v-else-if="activeWorkspace==='SETTINGS'"/);
  for(const k of categories)assert.ok(settings.includes('settings-panel-'+k),k);
- for(const n of ['BCChannelAccountSetup','BCNativeCloudKeySettings','BCLocalSessionConnector','BCNativeHostSession'])
+ for(const n of ['BCChannelAccountSetup','BCNativeCloudKeySettings','BCNativeHostSession'])
   assert.ok(settings.includes('<'+n),n);
  assert.match(settings,/\/api\/v2\/translations/);
  assert.match(settings,/\/api\/v2\/local-session\/status/);
@@ -35,6 +35,19 @@ test('R4 SETTINGS nine unique original categories render separate real panels an
  assert.match(settings,/data-test="settings-toggle-appearance"/);
  assert.match(settings,/Notification.requestPermission\(\)/);
  assert.doesNotMatch(settings,/localStorage\.setItem|fakeSave|mockSuccess/);
+});
+test('PROJECT_HIGHEST_RULE §2: settings never asks for terminal pair, 64-digit code, or repeats native connector',()=>{
+ assert.doesNotMatch(settings,/<BCLocalSessionConnector\b|import BCLocalSessionConnector/);
+ assert.match(settings,/data-test="settings-accounts-no-terminal-pair"/);
+ assert.match(settings,/data-test="settings-privacy-no-terminal-pair"/);
+ assert.match(settings,/data-test="settings-local-session-logout"/);
+ assert.match(settings,/\/api\/v2\/local-session\/logout/);
+ assert.match(settings,/LOGOUT_READBACK_NOT_CONFIRMED/);
+ assert.match(settings,/\/api\/v2\/local-session\/status/);
+ assert.match(settings,/BCChannelAccountSetup/);
+ assert.match(settings,/BCNativeCloudKeySettings/);
+ assert.match(settings,/BCNativeHostSession/);
+ assert.doesNotMatch(settings,/\/api\/v2\/local-session\/redeem|local-session-one-use-code|64位配对码|<code>pair<\/code>/);
 });
 test('existing CONTACT composer alone forwards real File/Blob bytes, never name/size as W23 upload payload',()=>{
  assert.match(chat,/<BCNativeComposer ref="composerRef"/);
