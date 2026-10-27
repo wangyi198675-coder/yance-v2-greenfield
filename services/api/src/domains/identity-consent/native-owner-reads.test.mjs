@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
 import {IdentityConsentService} from './identity-consent.mjs';
 import {createW24DurableProofVerifier} from './durable-identity.mjs';
 import {createW24NativeOwnerReadPorts} from './native-owner-reads.mjs';
-const w44root=process.env.YANCE_W44_ROOT||process.env.YANCE_PR32_ROOT;
-const w47root=process.env.YANCE_W47_ROOT||process.env.YANCE_PR32_ROOT;
+// Combined W09 checkout contains both actual W44 and W47 native sources.
+const joinedRoot=fileURLToPath(new URL('../../../../../',import.meta.url));
+const w44root=process.env.YANCE_W44_ROOT||process.env.YANCE_PR32_ROOT||joinedRoot;
+const w47root=process.env.YANCE_W47_ROOT||process.env.YANCE_PR32_ROOT||joinedRoot;
 if(!w44root||!w47root)throw Error('OWNER_REAL_SOURCE_PATHS_REQUIRED');
 const w47File=resolve(w47root,'services/api/runtime/native-authoritative-reads.mjs');
 const [{openEligibilityStore},w47Owner]=await Promise.all([
@@ -18,7 +20,9 @@ const [{openEligibilityStore},w47Owner]=await Promise.all([
 const createNativeOwnerReadHttp=w47Owner?.createNativeOwnerReadHttp??null;
 const principal=Object.freeze({verified:true,source:'W54_NATIVE_CURRENT_USER',
  principalRef:'fake-owner-1',installationRef:'fake-install-1',revocationGeneration:1});
-const session={id:'session-fixture',record:{rev:1}};
+// Integration fixture must satisfy the existing W47 NATIVE_FIRST_PARTY gate.
+// The test identity remains synthetic; this is never actual user authorization.
+const session={id:'session-fixture',record:{rev:1,kind:'NATIVE_FIRST_PARTY'}};
 const k={tenant:'SYNTHETIC_TEST_ONLY',account:'fixture-channel-1',
  channel:'TELEGRAM_PERSONAL',peer_id:'fake-peer-A',binding_revision:1};
 const act={tenant:k.tenant,principal_id:principal.principalRef,input_domain:'CONTACT'};

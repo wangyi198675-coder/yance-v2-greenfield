@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
 import {IdentityConsentService} from './identity-consent.mjs';
 import {createW24DurableProofVerifier} from './durable-identity.mjs';
 import {createW24OfficialAccountLifecycle} from './native-account-lifecycle.mjs';
-const root=process.env.YANCE_W44_ROOT??process.env.YANCE_PR32_ROOT;
+// In the W09 combined worktree, load the real co-located W44 Owner source.
+const root=process.env.YANCE_W44_ROOT??process.env.YANCE_PR32_ROOT??fileURLToPath(new URL('../../../../../',import.meta.url));
 if(!root)throw Error('EXACT_W44_SOURCE_REQUIRED');
 const {openEligibilityStore}=await import(pathToFileURL(resolve(root,
  'services/api/src/domains/grant-custody-budget/index.mjs')).href);
