@@ -8,6 +8,8 @@ const contract=fromSrc('channel-setup-contract.mjs');
 test('approved channels screen uses a compact single contextual toolbar and four native provider cards',()=>{
  assert.match(parent,/w46-r4-channel-toolbar/);
  assert.match(parent,/min-height:43px/);
+ // A 34px detail toggle + 4px vertical padding + 1px border really fits 43px.
+ assert.match(parent,/w46-r4-channel-toolbar\{[^}]*padding:4px 16px/);
  assert.match(parent,/w46-r4-channel-grid/);
  assert.match(parent,/repeat\(4,minmax\(0,1fr\)\)/);
  assert.match(parent,/max-width:1099px/);
@@ -23,6 +25,9 @@ test('one clear connection CTA per card; existing native GET setup and status-ch
  assert.match(card,/receipt\.officialConnectUrl/);
  assert.match(card,/receipt\.qr/);
  assert.match(card,/onBeforeUnmount/);
+ // Reuse the five-theme B+C foreground token; avoid an undefined camelCase variable.
+ assert.match(card,/color:var\(--accent-ink\)!important/);
+ assert.doesNotMatch(card,/--accentInk/);
 });
 test('UI never displays raw SDK / WAITING_USER_AUTH as ordinary user-facing state',()=>{
  assert.match(card,/未连接/);

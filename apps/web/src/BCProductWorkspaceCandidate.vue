@@ -447,7 +447,7 @@ defineExpose({refresh});
 /* User-approved R4 Compact: CHANNELS uses the same 43px context toolbar
    and genuine SDK setup ports as the other workspaces. No duplicate admin shell. */
 .w46-r4-channel-workspace{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;overflow:auto;background:var(--bg)}
-.w46-r4-channel-toolbar{display:flex;flex-shrink:0;box-sizing:border-box;min-height:43px;align-items:center;justify-content:space-between;gap:12px;padding:5px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.w46-r4-channel-toolbar{display:flex;flex-shrink:0;box-sizing:border-box;min-height:43px;align-items:center;justify-content:space-between;gap:12px;padding:4px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
 .w46-r4-channel-toolbar>strong{font-size:15px;letter-spacing:-.02em}
 .w46-r4-channel-actions{display:flex;align-items:center;gap:12px;min-width:0}
 .w46-r4-channel-count{color:var(--muted);font-size:11px}
