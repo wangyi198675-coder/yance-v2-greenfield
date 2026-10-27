@@ -87,10 +87,13 @@ test('CHAT keeps exactly one original contact composer mounted even with no acco
 });
 
 const contactComposer=readFileSync(new URL('../src/BCNativeComposer.vue',import.meta.url),'utf8');
+const expertPopup=readFileSync(new URL('../src/BCNativeExpertPicker.vue',import.meta.url),'utf8');
 test('R4 one CONTACT composer uses anchored expert/model/mode menus, never a bottom expert block',()=>{
- for(const id of ['w46-composer-plus','w46-composer-model','w46-contact-mode','w46-composer-experts','w46-contact-model-popup','w46-contact-mode-popup']){
+ for(const id of ['w46-composer-plus','w46-composer-model','w46-contact-mode','w46-contact-model-popup','w46-contact-mode-popup']){
   assert.ok(contactComposer.includes('data-test="'+id+'"'),id);
  }
+ assert.match(contactComposer,/BCNativeExpertPicker/);
+ assert.match(expertPopup,/data-test="w46-composer-experts"/);
  assert.match(contactComposer,/\.bc-compose-popup\{position:absolute/);
  assert.match(contactComposer,/data-test="w46-mode-human"[^>]*disabled|disabled[^>]*data-test="w46-mode-human"/);
  assert.match(contactComposer,/data-test="w46-mode-assisted"/);
