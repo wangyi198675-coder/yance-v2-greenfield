@@ -16,27 +16,33 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='cdfea6313c0b17cb1a641f2b376f51fd586b49d2';
- const signedUnionSha='8967e106a186494df82733b39ff81080db6d41e3';
+ const expectedOwnerSha='e51375e584adf5716728fac9540ab3d61ec0dcc7';
+ const signedUnionSha='c28b8bd58260b8e0dbb5c0c01cb895e4c7ecb85a';
+ const priorExpertOwnerSha='cdfea6313c0b17cb1a641f2b376f51fd586b49d2';
  const priorVueOwnerSha='2765a7600e1562df658cad67faab371fee243ea2';
  const w47ExpertBridgeFixSha='dba877b30c56235dd849980f282701ef78817d5a';
  const previousSignedSha='376277cbc61fe8946e0d26aac163eea04cb50e05';
  // Original W42/W46 ACK files are byte-for-byte copies of their actual
  // independent MasterController receipts; their Git blobs are pinned below.
- const canonicalAck='apps/web/evidence/W46_PR102_PRIVATE_EXPERT_NATIVE_CONSUMER_REVIEW_ACK.md';
+ const canonicalAck='apps/web/evidence/W46_R4_MEDIA_SETTINGS_NATIVE_VUE_OWNER_ACK.md';
+ const priorExpertAck='apps/web/evidence/W46_PR102_PRIVATE_EXPERT_NATIVE_CONSUMER_REVIEW_ACK.md';
+ const mediaDesignAck='apps/web/evidence/W42_R4_MEDIA_SETTINGS_COMPACT_IMPLEMENTATION_ACK.md';
  const priorUiAck='apps/web/evidence/W46_PR99_2765A760_CONTEXTUAL_POPOVER_OWNER_REVIEW_ACK.md';
  const previousOwnerAck='apps/web/evidence/W46_PR97_376277C_FIVE_VUE_OWNER_REVIEW_ACK.md';
  const visualAck='apps/web/evidence/W42_PR97_376277C_QR_VISUAL_DELTA_ACK.md';
  const legacyAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'44db3a1fb7af6929543fe97a0da4312afee31e2e',
-  'apps/web/src/BCLiveChatWorkspace.vue':'9a553bb72480d516e2394d12278f40b15f0649b5',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'cdac151c5f762c6f0e45e69f7610a704ce50abb4',
+  'apps/web/src/BCMediaWorkspace.vue':'9e159e989dc3fb96a85e6c1b3fcd2426d38ff554',
+  'apps/web/src/BCSettingsWorkspace.vue':'4163cbc90869922956e35e15d1be94cca8c8fcaf',
+  'apps/web/src/w23-media-browser-consumer.mjs':'1c298ee1af52339b54a3de44141ebc4c48be9a52',
+  'apps/web/src/BCLiveChatWorkspace.vue':'bfeebb453976939b59635d01cbba9db0b3ae8dd7',
   'apps/web/src/live-chat-source.mjs':'77e1c8947371b826b5a8fc3ca00bb12764fea02c',
   'apps/web/src/BCChannelAccountSetup.vue':'f8fbfea417a9293d48fb10fc3976c0f1d38424f6',
   'apps/web/src/BCNativeHostSession.vue':'613b9b761cf1b8325da03677b4051c2807d29a9b',
   'apps/web/src/channel-setup-contract.mjs':'308400756e9363972310fc6c059fa7df96ff985a',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
-  'apps/web/src/BCNativeComposer.vue':'ba846b3f8acaa84fe4f7bccdcd75874df5dbc7fd',
+  'apps/web/src/BCNativeComposer.vue':'965a384780d8341c2a7bd9bbbdb80c92a72cc5ca',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'b89129629899dd110a1c6c9d1b0560207696f477',
   'apps/web/src/BCNativeCloudKeySettings.vue':'93788ef4abf859bfb470223dad49a8a5e57905b0',
   'apps/web/src/private-brain-ui-contract.mjs':'674307159167361edf9f769408e0c399764aaff5',
@@ -52,7 +58,9 @@ if(r4IsolatedPreview){
   [legacyAck]:'45893dca88309c678bc7b232f12809d879890c9e',
   [previousOwnerAck]:'bc95c1a2232bad01bd9f818c1d148e3aee53c5c6',
   [priorUiAck]:'495aa0ac679239f299b1aa3ae9c4f708730a0ba2',
-  [canonicalAck]:'5e5bfff0edb584a838772e671a3a501e4754c976',
+  [priorExpertAck]:'5e5bfff0edb584a838772e671a3a501e4754c976',
+  [canonicalAck]:'4f3e3a63c71abfe39efc8b3c577e0c59690b9f8d',
+  [mediaDesignAck]:'9cac61dd626dc6153305fead1aa7a7b719d7fd4d',
   [visualAck]:'08cf4de4d9229ff396c58e01bc4cdf9fcfdce472'
  };
  const git=(...args)=>execFileSync('git',args,{cwd:w46Root,encoding:'utf8'}).trim();
@@ -63,6 +71,8 @@ if(r4IsolatedPreview){
  const oldOwnerAck=readAck(legacyAck);
  const previousOwnerReview=readAck(previousOwnerAck);
  const priorUiReview=readAck(priorUiAck);
+ const priorExpertReview=readAck(priorExpertAck);
+ const mediaDesignReview=readAck(mediaDesignAck);
  // A descendant W47 config-signing commit must retain the EXACT reviewed
  // original W46 review and the merged W09 PR102; no unrelated source can reuse these ACKs.
  const signedAncestor=(()=>{
@@ -78,7 +88,7 @@ if(r4IsolatedPreview){
    }
    catch{return false}
  })();
- const receiptTracked=[canonicalAck,priorUiAck,previousOwnerAck,visualAck,legacyAck].every(path=>
+ const receiptTracked=[canonicalAck,priorExpertAck,mediaDesignAck,priorUiAck,previousOwnerAck,visualAck,legacyAck].every(path=>
    git('ls-tree','-r','--name-only','HEAD','--',path)===path);
  // Vite 7 writes a transient bundled config beside this file WHILE it
  // imports the config. It is not a source edit; its exact generated filename
@@ -90,8 +100,10 @@ if(r4IsolatedPreview){
  const validSignedBlobs=Object.entries(ownerFiles).every(([path,sha])=>
    existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&
    git('rev-parse','HEAD:'+path)===sha);
- // W46 actually approved these FIVE original Vue blobs at PR97 exact HEAD.
- // Do not accept an unrelated review or the PR95 three-file approval alone.
+ // Old five original Vue files remain protected, including ChannelSetup.
+ // W46 R4 introduced TWO Vue components and its one authentic W23 browser
+ // binary port. Exact Git content must match both the merged HEAD and W46's
+ // independent signed original commit, even when W09 cherry-picks that commit.
  const fiveW46Vue=[
   'apps/web/src/BCProductWorkspaceCandidate.vue',
   'apps/web/src/BCLiveChatWorkspace.vue',
@@ -99,21 +111,31 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeComposer.vue',
   'apps/web/src/BCPrivateBrainWorkspace.vue'
  ];
- // W46 UI source is independently signed; its earlier native HTTP E2E RED
- // has since been repaired in the original W47 bridge (required ancestor).
- // The signed W46 original commit is a cherry-pick source, not an ancestor.
- const originalW46BlobsValid=fiveW46Vue.every(path=>{
+ const mediaSourceFiles=[
+  'apps/web/src/BCMediaWorkspace.vue',
+  'apps/web/src/BCSettingsWorkspace.vue',
+  'apps/web/src/BCProductWorkspaceCandidate.vue',
+  'apps/web/src/BCLiveChatWorkspace.vue',
+  'apps/web/src/BCNativeComposer.vue',
+  'apps/web/src/BCPrivateBrainWorkspace.vue',
+  'apps/web/src/w23-media-browser-consumer.mjs'
+ ];
+ const originalW46BlobsValid=[...new Set([...fiveW46Vue,...mediaSourceFiles])].every(path=>{
    try{return git('rev-parse',expectedOwnerSha+':'+path)===ownerFiles[path]}
    catch{return false}
  });
- const w46ReviewValid=ownerAck.includes('W46_UI_NATIVE_DIRECTORY_OWNER_REVIEW_ACK_PASS')&&
+ const mediaDesignValid=mediaDesignReview.includes('DESIGN_REVIEW_ACK')&&
+   mediaDesignReview.includes('R4_MEDIA_SETTINGS_COMPACT_SPEC_READY');
+ const w46ReviewValid=ownerAck.includes('W46_OWNER_REVIEW_ACK_PASS')&&
    ownerAck.includes(expectedOwnerSha)&&
+   priorExpertReview.includes('W46_UI_NATIVE_DIRECTORY_OWNER_REVIEW_ACK_PASS')&&
+   priorExpertReview.includes(priorExpertOwnerSha)&&
    priorUiReview.includes('W46_POPOVER_UI_AND_PRIVATE_NATIVE_INSPECTION_OWNER_REVIEW_ACK_PASS')&&
    priorUiReview.includes(priorVueOwnerSha)&&
    previousOwnerReview.includes('OWNER_REVIEW_ACK_PASS')&&
    previousOwnerReview.includes(previousSignedSha)&&
    originalW46BlobsValid&&
-   fiveW46Vue.every(path=>ownerAck.includes(path.slice('apps/web/src/'.length))&&
+   mediaSourceFiles.every(path=>ownerAck.includes(path.slice('apps/web/src/'.length))&&
      ownerAck.includes(ownerFiles[path]));
  // W42 independently closed only the QR layout/status RED with actual
  // NONSCANNABLE synthetic Chrome DOM, not a real user account authorization.
@@ -122,7 +144,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
  if(signedSha!==expectedOwnerSha||!signedAncestor||dirtySource||
-    !receiptTracked||!validSignedBlobs||!w46ReviewValid||!w42VisualValid||
+    !receiptTracked||!validSignedBlobs||!w46ReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
     !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
