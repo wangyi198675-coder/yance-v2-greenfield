@@ -7,7 +7,7 @@ import {createServer} from 'node:http';
 import {createFunctionModelRoutingStore} from './function-model-routing.mjs';
 import {createFunctionModelRoutingHttp} from './function-model-routing-http.mjs';
 const local={provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',modelId:'qwen3:8b',configured:true,available:true};
-const cloud={provider:'OPENROUTER_USER_API',modelId:'anthropic/claude-sonnet-4',configured:true,available:true};
+const cloud={provider:'OPENROUTER_USER_API',modelId:'anthropic/claude-sonnet-4',configured:true,available:true,keyRevision:7};
 const root=()=>mkdtempSync(join(tmpdir(),'yance-func-model-'));
 const err=async(fn,status)=>{try{await fn();assert.fail('expected failure')}catch(e){assert.equal(e.status,status)}};
 test('function assignments persist independently; restart restores each; no keys or consent stored',async()=>{
@@ -19,15 +19,22 @@ test('function assignments persist independently; restart restores each; no keys
   const b=await init().select({functionId:'REPLY_SUGGESTIONS',provider:cloud.provider,modelId:cloud.modelId,expectedRevision:1,confirmPaidCost:true});
   assert.equal(b.revision,2);
   const again=await init().current();
-  assert.deepEqual(again.assignments.find(x=>x.functionId==='TRANSLATE').choice,{provider:local.provider,modelId:local.modelId});
-  assert.deepEqual(again.assignments.find(x=>x.functionId==='REPLY_SUGGESTIONS').choice,{provider:cloud.provider,modelId:cloud.modelId});
-  assert.equal(again.paidCallsTriggered,false);assert.equal(again.routingExecution,'NOT_WIRED_TO_W43');
+  assert.deepEqual(again.assignments.find(x=>x.functionId==='TRANSLATE').choice,{provider:local.provider,modelId:local.modelId,epoch:1});
+  assert.deepEqual(again.assignments.find(x=>x.functionId==='REPLY_SUGGESTIONS').choice,{provider:cloud.provider,modelId:cloud.modelId,epoch:2,keyRevision:7});
+  const verified=await init().resolve('TRANSLATE');
+  assert.equal(verified.modelId,'qwen3:8b');assert.equal(verified.epoch,1);
+  assert.equal(await init().matchCloudLease({provider:cloud.provider,modelId:cloud.modelId,
+   selectionEpoch:2,keyRevision:7}),false); // Reply preferences never authorize Agno cloud Key lease
+    assert.equal(again.paidCallsTriggered,false);assert.equal(again.routingExecution,'NOT_WIRED_TO_W43');
   const disk=readFileSync(join(dir,'function-ai-model-routing.json'),'utf8');
   assert.equal(disk.includes('confirmPaidCost'),false);
   assert.equal(disk.includes('apiKey'),false);
   await err(()=>store.select({functionId:'PRIVATE_BRAIN',provider:local.provider,modelId:local.modelId,expectedRevision:1}),409);
   await err(()=>store.select({functionId:'TRANSLATE',provider:cloud.provider,modelId:cloud.modelId,expectedRevision:2}),403);
-  offered=[local];const stale=await init().current();
+  offered=[local,{...cloud,keyRevision:8}];
+  const rotated=await init().current();
+  assert.equal(rotated.assignments.find(x=>x.functionId==='REPLY_SUGGESTIONS').eligible,false);
+    offered=[local];const stale=await init().current();
   assert.equal(stale.assignments.find(x=>x.functionId==='REPLY_SUGGESTIONS').status,'SOURCE_NO_LONGER_ELIGIBLE');
  }finally{rmSync(dir,{recursive:true,force:true})}
 });

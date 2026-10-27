@@ -20,6 +20,8 @@ import {createWebPrivateCloudHttp} from './web-private-cloud-http.mjs';
 import {createW55WebNativeStdioPort} from './w55-web-native-stdio.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createFunctionModelRoutingHttp} from './function-model-routing-http.mjs';
+import {createFunctionModelRoutingStore} from './function-model-routing.mjs';
+import {createOpenRouterModelCatalog} from './openrouter-model-catalog.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
@@ -65,12 +67,14 @@ const webPrivateQwen=webPrivateRoot&&existingLocalQwenKey?
    localKeyFile:existingLocalQwenKey}):null;
 // W55's ORIGINAL Rust WinCred host is optional for a local-Qwen-only user.
 // W55 owns the executable, WinCred scope and OS checks, not the browser.
+let functionStore=null;
 let webCloudByok=null;
 if(webPrivateRoot&&process.env.YANCE_W55_WEB_NATIVE_EXE){
  const nativeWinCred=createW55WebNativeStdioPort({
   executable:process.env.YANCE_W55_WEB_NATIVE_EXE});
  webCloudByok=createWebPrivateCloudByok({
-  appLocalDataRoot:webPrivateRoot,nativeKeyPort:nativeWinCred});
+  appLocalDataRoot:webPrivateRoot,nativeKeyPort:nativeWinCred,
+  resolveScopedSelection:async proof=>functionStore?await functionStore.matchCloudLease(proof):false});
 }
 const webPrivatePrincipal=webPrivateRoot?Object.freeze({
  source:'WEB_LOCAL_PRIVATE',webPrivateOnly:true,verified:true,
@@ -85,11 +89,34 @@ const resolveNativePrincipal=nativeBoot?async({session})=>{
     session.record.nativeHostBinding!==nativeSession.binding)
   throw {httpStatus:401,code:'LOCAL_SESSION_REVOKED'};
  return nativeBoot;
-}:webPrivatePrincipal?async({session})=>{
+}:webPrivatePrincipal?async({session,operation})=>{
  if(session?.record?.kind!=='WEB_LOCAL_PRIVATE')
    throw {httpStatus:401,code:'WEB_PRIVATE_SESSION_REQUIRED'};
- // WinCred can be absent/revoked/network-independent: Agno History must
- // remain readable even when no cloud model is currently usable.
+ // W43's original ONE Agno/History executor receives this server-side
+ // model selection per genuine function; no browser identity/model override.
+ if(functionStore&&['PRIVATE_TURN','EXPERT_TURN'].includes(operation)){
+  const slot=operation==='EXPERT_TURN'?'EXPERT_TASKS':'PRIVATE_BRAIN';
+  let assigned=null;
+  try{assigned=await functionStore.resolve(slot)}
+  catch(e){throw {httpStatus:e?.status===409?409:503,code:'ASSIGNED_MODEL_SOURCE_UNAVAILABLE'}}
+  if(assigned){
+   if(assigned.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE')
+    return {...webPrivatePrincipal,modelBackend:'llamacpp',
+     modelId:assigned.modelId,modelSelectionEpoch:assigned.epoch,
+     modelUserSelected:true,extraChargeApproved:false,
+     protectedCredentialAttested:false};
+   if(assigned.provider==='OPENROUTER_USER_API')
+    return {...webPrivatePrincipal,modelBackend:'openrouter',
+     modelId:assigned.modelId,modelSelectionEpoch:assigned.epoch,
+     modelUserSelected:true,extraChargeApproved:true,
+     protectedCredentialAttested:true,
+     cloudCredentialSource:'W55_NATIVE_WIN_CRED'};
+   throw {httpStatus:503,code:'FUNCTION_PROVIDER_NOT_SIGNED'};
+  }
+ }
+ // A preference is optional. Never silently fallback once a saved preference
+ // exists but its Key or model was revoked: resolve() above fails closed.
+ // PRIVATE History remains available even with no valid inference source.
  let cloud=null;
  try{cloud=webCloudByok?await webCloudByok.principalModel():null}catch{}
  return {...webPrivatePrincipal,
@@ -127,28 +154,40 @@ const privateCloudHttp=createWebPrivateCloudHttp({
 });
 // Function-level model preferences stay on the already-authorized current
 // user's original AppData. They do not replace the W43 PRIVATE runtime model.
-const functionModelRoutingHttp=createFunctionModelRoutingHttp({
- sessionAuthority:localSessionAuthority,webOrigin,
- appLocalDataRoot:webPrivateRoot||nativeBoot?.appLocalDataRoot||null,
- readEligibleModels:async()=>{
+const openRouterCatalog=createOpenRouterModelCatalog();
+const readFunctionModelCandidates=async()=>{
   const local=webPrivateQwen?await webPrivateQwen.source():{models:[]};
   const eligible=(local.models||[]).map(m=>({
    provider:m.provider,modelId:m.modelId,
-   configured:m.configured===true,available:m.available===true
+   configured:m.configured===true,available:m.available===true,
+   capabilities:{text:true,vision:false,toolCalling:false}
   }));
   if(webCloudByok){
-   // W55 original Key revision and existing user-confirmed private model
-   // are the ONLY Cloud candidate proof; never invent an OpenRouter list.
-   const current=await webCloudByok.current();
-   const statuses=await webCloudByok.statuses();
-   const key=statuses.find(k=>k.provider===current?.provider);
-   if(current&&key?.configured===true&&key?.revoked===false&&
-    key.revision===current.keyRevision)
-    eligible.push({provider:current.provider,modelId:current.modelId,
-     configured:true,available:true});
+   // W55 real Key status gates a real OpenRouter model catalog lookup.
+   // The public model list is not evidence that the user's credit is available.
+   const key=await webCloudByok.status('OPENROUTER_USER_API');
+   if(key?.configured===true&&key?.revoked===false&&key.revision>0){
+    try{
+     const all=await openRouterCatalog.all();
+     for(const m of all){
+      eligible.push({provider:'OPENROUTER_USER_API',modelId:m.modelId,
+       name:m.name,configured:true,available:true,keyRevision:key.revision,
+       capabilities:m.capabilities});
+     }
+    }catch{
+     // No static provider fallback and no imaginary online models.
+    }
+   }
   }
   return eligible;
- }
+};
+functionStore=(webPrivateRoot||nativeBoot?.appLocalDataRoot)?
+ createFunctionModelRoutingStore({
+  appLocalDataRoot:webPrivateRoot||nativeBoot?.appLocalDataRoot,
+  readEligibleModels:readFunctionModelCandidates
+ }):null;
+const functionModelRoutingHttp=createFunctionModelRoutingHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,store:functionStore
 });
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.
@@ -240,7 +279,8 @@ const handler=(req,res)=>{
       });
       return;
     }
-    if(url.pathname==='/api/v2/model-routing'){
+    if(url.pathname==='/api/v2/model-routing'||
+       url.pathname==='/api/v2/model-routing/catalog'){
       void functionModelRoutingHttp(req,res,url).catch(()=>{
         if(!res.headersSent)deny(res,503,'FUNCTION_MODEL_ROUTING_UNAVAILABLE');
         else res.destroy();
