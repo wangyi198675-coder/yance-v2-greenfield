@@ -22,6 +22,7 @@ import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
+import {createW47WhatsAppNativeRoute} from './w47-whatsapp-native-route.mjs';
 import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
 import {createW47WebMediaHttp} from './w47-w23-media-bridge.mjs';
 import {createW47NativeSettingsCatalog} from './w47-native-settings-capabilities.mjs';
@@ -158,6 +159,11 @@ const nativeOwnerReads=createNativeOwnerReadHttp({sessionAuthority:localSessionA
 const nativeMessages=createNativeMessageReadHttp({
  sessionAuthority:localSessionAuthority,webOrigin
 });
+// W28 actual Baileys QR/contacts/history lives behind the original W24/W55
+// owner ports. This one-listener mount becomes active ONLY after the original
+// W54 current user, W24 real account/peer, and W55 protected Signal creds are
+// installed in-process. Current unprovisioned QA must explicitly remain 503.
+const whatsAppNativeHttp=createW47WhatsAppNativeRoute();
 const nativeProviders=createNativeProviderGateway({
  sessionAuthority:localSessionAuthority,
  readW26Status:makeW26DiagnosticPort(process.env.YANCE_W47_W26_READONLY_PORT)
@@ -272,10 +278,16 @@ const handler=(req,res)=>{
       return serial(res,200,{...state(req),webSource:'SEE_INSTALLED_LOCAL_WEB_VERSION',apiGitSha:sha});
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/capabilities')
       return serial(res,200,{ok:true,authoritative:true,canSend:false,capabilities:endpoints});
-    if(/^\/api\/v2\/providers\/(fb-page|whatsapp-personal|telegram-personal)\/native\//.test(url.pathname)){
-      // Original W27/W28/W29 SDK owners are present in source, but the
-      // W24 account lifecycle/W55 user-approved credential consumers are
-      // not yet injected here. Do not turn an HTTP 404 into a fake QR/login.
+    if(url.pathname.startsWith('/api/v2/providers/whatsapp-personal/native/')){
+      if(!whatsAppNativeHttp)return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
+      void whatsAppNativeHttp(req,res,url).then(handled=>{
+        if(!handled&&!res.writableEnded)deny(res,404,'W28_NATIVE_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+        if(!res.headersSent)deny(res,503,'W28_NATIVE_HANDLER_UNAVAILABLE');
+        else res.destroy();
+      });return;
+    }
+    if(/^\/api\/v2\/providers\/(fb-page|telegram-personal)\/native\//.test(url.pathname)){
       return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
     }
     if(url.pathname.startsWith('/api/v2/providers/')){
