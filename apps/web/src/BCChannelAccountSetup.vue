@@ -39,17 +39,32 @@ async function setup(){
  if(busy.value)return;
  userRequested.value=true;
  const id=++revision;clearReceipt();busy.value=true;notice.value='';
+ // Only a direct user gesture may reserve a browser window. The location is
+ // assigned later ONLY after the exact W47 original owner URL is verified.
+ // A rejected/absent W47 setup closes the temporary blank tab, never invents login.
+ const loginWindow=props.channel.id==='FB_PERSONAL'&&typeof globalThis.open==='function'
+  ?globalThis.open('about:blank','_blank'):null;
  try{
   const v=await setupChannel({channel:props.channel.id,fetchImpl:fetcher()});
   if(!alive||id!==revision)return;
+  if(loginWindow){
+   if(v.officialConnectUrl){
+    try{loginWindow.location.replace(v.officialConnectUrl)}
+    catch{try{loginWindow.close()}catch{}}
+   }else{try{loginWindow.close()}catch{}}
+  }
   receipt.value=v;state.value='WAITING_USER_AUTH';
-  notice.value=v.qr?'请使用本人手机扫描当前二维码':'请在下方进入原生官方授权步骤';
+  notice.value=v.qr?'请使用本人手机扫描当前二维码':
+    v.officialConnectUrl?
+     (loginWindow?'已打开Messenger连接窗口。请本人完成登录':'点击下方继续连接Messenger'):
+     '当前平台尚未提供可操作的账号连接入口';
   if(v.qr){
    expiryTimer=setTimeout(()=>{
     if(alive&&id===revision){clearReceipt();state.value='EXPIRED';notice.value='二维码已过期，请重新连接'}
    },Math.max(0,v.qr.expiresAt-Date.now()));
   }
  }catch(e){
+  if(loginWindow)try{loginWindow.close()}catch{}
   if(alive&&id===revision){state.value='unavailable';notice.value=channelError(e)}
  }finally{if(alive&&id===revision)busy.value=false}
 }
@@ -93,12 +108,12 @@ defineExpose({setup,refresh});
   <div class="w46-channel-bottom">
    <Button class="w46-channel-connect" size="sm"
     data-test="native-provider-setup" :disabled="busy"
-    @click="setup"><span aria-hidden="true">＋</span> {{busy?'正在处理…':state==='ONLINE_VERIFIED'?'添加另一个账号':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':'重新获取授权'):'连接账号'}} </Button>
+    @click="setup"><span aria-hidden="true">＋</span> {{busy?'正在处理…':state==='ONLINE_VERIFIED'?'添加另一个账号':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':'重新连接'):channel.id==='FB_PERSONAL'?'连接 Messenger':'连接账号'}} </Button>
    <p v-if="(receipt||state==='EXPIRED'||userRequested)&&notice"
     class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{state==='unavailable'?'当前无法连接，请查看帮助':notice}}</p>
    <div v-if="receipt" class="w46-channel-auth-result" data-test="native-provider-auth-result">
     <a v-if="receipt.officialConnectUrl" :href="receipt.officialConnectUrl"
-     target="_blank" rel="noopener noreferrer" data-test="native-provider-connect-real">继续本人官方授权</a>
+     target="_blank" rel="noopener noreferrer" data-test="native-provider-connect-real">打开 Messenger 连接窗口</a>
     <a v-if="receipt.officialDocs" :href="receipt.officialDocs"
      target="_blank" rel="noopener noreferrer" data-test="native-provider-docs">查看官方连接步骤</a>
     <div v-if="receipt.qr" data-test="native-provider-qr">

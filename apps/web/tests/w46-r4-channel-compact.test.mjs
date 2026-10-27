@@ -59,7 +59,7 @@ test('W42 P0 mobile QR card grows with verified native QR and never overlaps nex
 });
 test('W42 P1 verified WAITING_USER_AUTH uses actionable waiting labels, not false offline',()=>{
  assert.match(card,/state\.value==='WAITING_USER_AUTH'\?\(receipt\.value\?\.qr\?'等待扫码':'等待授权'\)/);
- assert.match(card,/state==='WAITING_USER_AUTH'\?\(receipt\?\.qr\?'重新获取二维码':'重新获取授权'\)/);
+ assert.match(card,/state==='WAITING_USER_AUTH'\?\(receipt\?\.qr\?'重新获取二维码':'重新连接'\)/);
  assert.match(card,/state\.value='EXPIRED'/);
  assert.match(card,/state\.value=v\.state/);
 });
