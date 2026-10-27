@@ -78,7 +78,7 @@ export function createW43PythonPrivatePort({
     }
     if(msg.kind==='VERIFY'){
      if(responding||!['PRIVATE_TURN','PRIVATE_HISTORY'].includes(msg.operation)||
-        msg.operation!==(method==='history'||method.startsWith('native')?'PRIVATE_HISTORY':'PRIVATE_TURN')){
+        msg.operation!==(method==='history'||method.startsWith('native')||method==='expertDirectory'?'PRIVATE_HISTORY':'PRIVATE_TURN')){
       finish({httpStatus:503,code:'W43_PYTHON_VERIFIER_PROTOCOL_INVALID'});return
      }
      responding=true;
@@ -175,13 +175,13 @@ export function createW43PythonPrivatePort({
      }
      finish(null,msg.result);
     }else if(msg.kind==='W43_ERROR'){
-     finish({httpStatus:[401,404,409,422,503].includes(msg.httpStatus)?msg.httpStatus:503,
+     finish({httpStatus:[401,403,404,409,422,503].includes(msg.httpStatus)?msg.httpStatus:503,
       code:'W43_NATIVE_PRIVATE_'+String(msg.error||'UNKNOWN').slice(0,100)});
     }else finish({httpStatus:503,code:'W43_PYTHON_TRANSPORT_INVALID'});
    });
    send({method,threadId,...(method==='history'?{}:{text,requestId}),
     ...(method==='finish'?{receipt}:{}),
-    ...(method==='turn'&&modelSelection?{modelSelection}:{}),...inspection});
+    ...(['turn','expertTurn'].includes(method)&&modelSelection?{modelSelection}:{}),...inspection});
   });
  }
  return Object.freeze({
@@ -194,6 +194,11 @@ export function createW43PythonPrivatePort({
   turn:(ctx,thread_id,text,request_id,modelSelection)=>
    invoke('turn',ctx,thread_id,text,request_id,undefined,modelSelection),
   history:(ctx,thread_id)=>invoke('history',ctx,thread_id),
+  expertDirectory:ctx=>invoke('expertDirectory',ctx,'personal'),
+  expertSetEnabled:(ctx,expertId,enabled)=>invoke('expertSetEnabled',ctx,'personal',undefined,undefined,undefined,undefined,{expertId,enabled}),
+  expertTurn:(ctx,threadId,requestId,expertId,stableId,usageScope,modelSelection)=>
+   invoke('expertTurn',ctx,threadId,undefined,requestId,undefined,modelSelection,
+    {expertId,stableId,usageScope}),
   nativeTools:ctx=>invoke('nativeTools',ctx,'personal'),
   nativeRuns:(ctx,thread_id,limit=25)=>invoke('nativeRuns',ctx,thread_id,undefined,undefined,undefined,undefined,{limit}),
   nativeRun:(ctx,thread_id,runId)=>invoke('nativeRun',ctx,thread_id,undefined,undefined,undefined,undefined,{runId}),

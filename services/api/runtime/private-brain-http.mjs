@@ -364,3 +364,174 @@ export function createPrivateNativeInspectionHttp({
   return true;
  };
 }
+
+
+/** W47 original PRIVATE session -> one W43 Agno expert registry/ledger.
+ * No CONTACT or sender credentials are accepted by these endpoints.
+ * One registered read-only expert can be used only after original W43
+ * model/cost consent and current W54/W55 principal prove its qualification.
+ */
+export function createPrivateNativeExpertHttp({
+ sessionAuthority,webOrigin,resolveNativePrincipal=null,w43Port=null
+}={}){
+ if(typeof sessionAuthority?.sessionFor!=='function'||typeof webOrigin!=='string')
+  throw Error('PRIVATE_EXPERT_SESSION_REQUIRED');
+ return async(req,res,url)=>{
+  const match=/^\/api\/v2\/private-brain\/experts(?:\/([a-z0-9-]{3,64})(?:\/(enable|turn))?)?$/.exec(url.pathname);
+  if(!match)return false;
+  const [,expertId,verb]=match;
+  const reading=!expertId;
+  if((reading&&req.method!=='GET')||(!reading&&verb==='enable'&&req.method!=='POST')||
+     (!reading&&verb==='turn'&&req.method!=='POST')||(!reading&&!verb)){
+   reject(res,405,'EXPERT_METHOD_NOT_ALLOWED');return true
+  }
+  const s=sessionAuthority.sessionFor(req);
+  if(!s){reject(res,401,'LOCAL_SESSION_REQUIRED');return true}
+  if(req.headers.origin&&req.headers.origin!==webOrigin){
+   reject(res,403,'ORIGIN_NOT_ALLOWED');return true
+  }
+  if(!reading&&(req.headers.origin!==webOrigin||!csrf(req,s))){
+   reject(res,403,'LOCAL_SESSION_OR_CSRF_REQUIRED');return true
+  }
+  if([...url.searchParams.keys()].length){
+   reject(res,422,'EXPERT_QUERY_NOT_ALLOWED');return true
+  }
+  if(!resolveNativePrincipal||typeof w43Port?.expertDirectory!=='function'){
+   reject(res,503,'W43_NATIVE_EXPERT_OWNER_NOT_CONNECTED');return true
+  }
+  const principal=async(operation=reading?'PRIVATE_HISTORY':'PRIVATE_TURN')=>{
+   const session=sessionAuthority.sessionFor(req);
+   if(!session)throw {httpStatus:401};
+   const p=await resolveNativePrincipal({session,operation});
+   if(!principalValid(p))throw {httpStatus:503};
+   return sessionSeal(session,p);
+  };
+  let first;try{first=await principal()}catch(e){
+   const f=errorMap(e);reject(res,f.status,f.code);return true
+  }
+  const ctx={serverScope:first,checkCurrent:()=>principal()};
+  let dto;
+  if(!reading){
+   try{dto=await body(req)}catch(e){reject(res,e.status||422,e.error||'EXPERT_BODY_INVALID');return true}
+   const names=Object.keys(dto).sort().join('|');
+   if(verb==='enable'&&
+     (names!=='enabled'||typeof dto.enabled!=='boolean')){
+    reject(res,422,'EXPERT_ENABLE_DTO_INVALID');return true
+   }
+   if(verb==='turn'&&
+      (names!=='requestId|stableId|threadId|usageScope'||
+       !validRequest(dto.requestId)||!validThread(dto.threadId)||
+       !/^(?:[A-Z]{1,3}[0-9]{2,3}|UIE-[0-9]{3})$/.test(dto.stableId??'')||
+       dto.usageScope!=='THIS_TASK')){
+    reject(res,422,'EXPERT_TURN_DTO_INVALID');return true
+   }
+  }
+  let directory;try{directory=await w43Port.expertDirectory(ctx)}catch(e){
+   if(e?.httpStatus===401){reject(res,401,'LOCAL_SESSION_REVOKED_OR_EXPIRED');return true}
+   reject(res,503,'W43_EXPERT_DIRECTORY_UNAVAILABLE');return true
+  }
+  const goodDirectory=directory&&directory.status==='NATIVE_EXPERT_DIRECTORY_READ'&&
+   directory.canSend===false&&directory.registeredCount===1&&
+   directory.installedReadOnlyCount===1&&directory.cataloguedCount===10&&
+   Array.isArray(directory.experts)&&directory.experts.length===10&&
+   directory.experts.filter(e=>e.registered&&e.installed).length===1&&
+   directory.experts.filter(e=>e.canInvoke).every(e=>
+    e.expertId==='oss-discovery'&&e.installed&&e.registered&&e.enabled&&
+    e.availableMode==='READ_ONLY_STABLE252_INSPECTION');
+  if(!goodDirectory){reject(res,503,'W43_EXPERT_DIRECTORY_UNVERIFIED');return true}
+  let result=directory;
+  if(!reading){
+   const selected=directory.experts.find(x=>x.expertId===expertId);
+   if(!selected){reject(res,404,'EXPERT_NOT_REGISTERED');return true}
+   if(!selected.installed||!selected.registered){
+    reject(res,409,'EXPERT_UPSTREAM_NOT_INSTALLED');return true
+   }
+   if(verb==='turn'&&!selected.canInvoke){
+    reject(res,409,'EXPERT_NOT_ENABLED');return true
+   }
+   if(verb==='turn'&&(first.modelBackend==='unconfigured'||!first.modelUserSelected)){
+    reject(res,503,'EXPERT_MODEL_SETUP_REQUIRED');return true
+   }
+   if(verb==='turn'&&['openrouter','openai'].includes(first.modelBackend)&&
+      (!first.extraChargeApproved||!first.protectedCredentialAttested)){
+    reject(res,403,'PAID_MODEL_NOT_APPROVED');return true
+   }
+   if(verb==='turn'&&typeof w43Port.supportsSelection!=='function'){
+    reject(res,503,'W43_MODEL_EXECUTION_NOT_SIGNED');return true
+   }
+   let selectedModel=null;
+   if(verb==='turn'){
+    const provider={llamacpp:'LLAMACPP_LOCAL_QWEN3_8B_FREE',
+      openrouter:'OPENROUTER_USER_API',openai:'OPENAI_USER_API'}[first.modelBackend];
+    selectedModel={provider,modelId:first.modelId};
+    if(!provider||await w43Port.supportsSelection(selectedModel)!==true){
+     reject(res,503,'W43_MODEL_EXECUTION_NOT_SIGNED');return true
+    }
+   }
+   if(typeof w43Port[verb==='enable'?'expertSetEnabled':'expertTurn']!=='function'){
+    reject(res,503,'W43_NATIVE_EXPERT_WRITE_PORT_NOT_CONNECTED');return true
+   }
+   try{
+    result=verb==='enable'
+     ?await w43Port.expertSetEnabled(ctx,expertId,dto.enabled)
+     :await w43Port.expertTurn(ctx,dto.threadId,dto.requestId,expertId,
+       dto.stableId,dto.usageScope,selectedModel);
+   }catch(e){
+    if(e?.httpStatus===401){reject(res,401,'LOCAL_SESSION_REVOKED_OR_EXPIRED');return true}
+    if(e?.httpStatus===403){reject(res,403,'W43_EXPERT_PERMISSION_REQUIRED');return true}
+    if(e?.httpStatus===409){reject(res,409,'W43_EXPERT_REVISION_OR_REQUEST_CONFLICT');return true}
+    if(e?.httpStatus===422){reject(res,422,'W43_EXPERT_REQUEST_INVALID');return true}
+    reject(res,503,'W43_EXPERT_NATIVE_UNAVAILABLE');return true
+   }
+   const valid=verb==='enable'?
+    result?.status==='NATIVE_EXPERT_PREFERENCE_UPDATED'&&
+      result.expertId===expertId&&result.enabled===dto.enabled&&
+      Number.isSafeInteger(result.revision)&&result.revision>0&&result.canSend===false:
+    result?.status==='COMPLETED_READ_ONLY_CATALOG_INSPECTION'&&
+      result.expertId==='oss-discovery'&&result.stableId===dto.stableId&&
+      result.usageScope==='THIS_TASK'&&result.businessExecuted===false&&
+      result.canSend===false&&result.qualityQualified===false&&
+      opaque(result.runId)&&opaque(result.sessionId)&&
+      typeof result.assistantText==='string'&&result.assistantText.length>0;
+   if(!valid){reject(res,503,'W43_EXPERT_RECEIPT_UNVERIFIED');return true}
+  }
+  let after;try{after=await principal()}catch(e){
+   const f=errorMap(e);reject(res,f.status,f.code);return true
+  }
+  if(!sameContext(first,after)){
+   reject(res,409,'LOCAL_SESSION_REVISION_CONFLICT');return true
+  }
+  // Original Agno SQLite is the expert revision+Run authority, not this DTO.
+  reply(res,200,{ok:true,authoritative:true,source:'W43_NATIVE_AGNO_EXPERT',
+   ...result,canSend:false});
+  return true
+ };
+}
+
+/** CONTACT models/modes are NOT PRIVATE scopes; no W24+W44 effective
+ * contact grant/budget Owner port has been signed into this server.
+ * Expose explicit capability HOLD rather than an empty fake model/mode list.
+ */
+export function createContactNativeAuthorityHoldHttp({sessionAuthority,webOrigin}={}){
+ if(typeof sessionAuthority?.sessionFor!=='function'||typeof webOrigin!=='string')
+  throw Error('CONTACT_NATIVE_SESSION_REQUIRED');
+ return async(req,res,url)=>{
+  if(!['/api/v2/contact-context/model-config','/api/v2/contact-context/model-selection',
+      '/api/v2/contact-context/effective-mode','/api/v2/contact-context/change-mode'].includes(url.pathname))
+   return false;
+  const write=['/api/v2/contact-context/model-selection','/api/v2/contact-context/change-mode'].includes(url.pathname);
+  if(req.method!==(write?'POST':'GET')){
+   reject(res,405,'METHOD_NOT_ALLOWED');return true
+  }
+  const session=sessionAuthority.sessionFor(req);
+  if(!session){reject(res,401,'LOCAL_SESSION_REQUIRED');return true}
+  if(req.headers.origin&&req.headers.origin!==webOrigin){
+   reject(res,403,'ORIGIN_NOT_ALLOWED');return true
+  }
+  if(write&&(req.headers.origin!==webOrigin||!csrf(req,session))){
+   reject(res,403,'LOCAL_SESSION_OR_CSRF_REQUIRED');return true
+  }
+  reject(res,503,'W24_W44_SIGNED_CONTACT_GRANT_BUDGET_MODE_PORT_NOT_CONNECTED');
+  return true
+ };
+}
