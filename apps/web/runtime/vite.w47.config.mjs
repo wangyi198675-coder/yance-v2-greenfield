@@ -159,9 +159,9 @@ if(r4IsolatedPreview){
  })();
  // Preserve original R4 signed parent and the exact two review deltas for browser-only appearance.
  const themeUiFiles=Object.freeze({
-  'apps/web/src/BCSettingsWorkspace.vue':'60b2bff8621c06abcc233aeb6f2ff23703d34054',
+  'apps/web/src/BCSettingsWorkspace.vue':'77c1bcc6728fa17a548fbcbf92da710438bd2464',
   'apps/web/src/BCThemeChooser.vue':'6cfd5c572e82b9663e14d93a05af847f37180b02',
-  'apps/web/tests/w46-r4-media-settings-native.test.mjs':'628cdfa552b5574b0edafad940cd15b7d818d933'
+  'apps/web/tests/w46-r4-media-settings-native.test.mjs':'592708bc0484a4b164ddb6ad106021f7d4d53142'
  });
  const themeEvidence=new Set([
   'apps/web/evidence/THEME_WEB_FIRST_1360.png',
@@ -187,7 +187,7 @@ if(r4IsolatedPreview){
    git('merge-base','--is-ancestor',wowBase,'HEAD');
    git('merge-base','--is-ancestor',wowRelease,'HEAD');
    const delta=git('diff','--name-only',wowBase,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(wowFiles).every(([p,h])=>{
     const expected=p==='apps/web/src/BCProductWorkspaceCandidate.vue'?chatUiFiles[p]:h;
     return git('rev-parse',wowRelease+':'+p)===h&&existsSync(join(w46Root,p))&&
@@ -196,11 +196,26 @@ if(r4IsolatedPreview){
        git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
   }catch{return false}
  })();
+ // W09-3: Native W05/Agno event owner retained; only UI display and browser permission.
+ const notifyBase='ab56af052a857f281f7dc44dc15e6e90991b11a4';
+ const notifyFiles=Object.freeze({"apps/web/src/BCSettingsWorkspace.vue":"77c1bcc6728fa17a548fbcbf92da710438bd2464","apps/web/src/BCNotificationCenter.vue":"5e760fb45e673c9675619328b2398083e4c5322e","apps/web/tests/w46-r4-media-settings-native.test.mjs":"592708bc0484a4b164ddb6ad106021f7d4d53142","apps/web/tests/w09-notification-center-native-reuse.test.mjs":"1c61241956c3cdf1bc094eef4f76eb0558922d88"});
+ const notifyEvidence=new Set(["apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_REAL_1360.png","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_REAL_430.png","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_QA_20261028.json","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/W09_NOTIFICATION_CENTER_REVIEW.md"]);
+ const notifyDeltaValid=(()=>{
+  try{
+   git('merge-base','--is-ancestor',notifyBase,'HEAD');
+   const delta=git('diff','--name-only',notifyBase,'HEAD').split('\n').filter(Boolean);
+   if(delta.length<4||!delta.every(p=>Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   return Object.entries(notifyFiles).every(([p,h])=>existsSync(join(w46Root,p))&&
+     git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
+     &&[...notifyEvidence].every(p=>existsSync(join(w46Root,p))&&
+       git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
+  }catch{return false}
+ })();
  const chatUiDeltaValid=(()=>{
   try{
    git('merge-base','--is-ancestor',chatUiBase,'HEAD');
    const changed=git('diff','--name-only',chatUiBase,'HEAD').split('\n').filter(Boolean);
-   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(chatUiFiles).every(([p,sha])=>
     git('rev-parse','HEAD:'+p)===sha&&git('hash-object','--',p)===sha&&
     git('rev-parse',chatUiBase+':'+p)===(expertPins[p]||ownerFiles[p]));
@@ -217,7 +232,7 @@ if(r4IsolatedPreview){
      git('rev-parse','HEAD:'+path)===(chatUiFiles[path]||sha)&&
      git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
- const validSignedBlobs=wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
+ const validSignedBlobs=notifyDeltaValid&&wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
    const expected=pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
      git('rev-parse','HEAD:'+path)===expected;
@@ -284,7 +299,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!themeScope||!wowDeltaValid||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!themeScope||!wowDeltaValid||!notifyDeltaValid||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||

@@ -6,6 +6,7 @@ import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
 import BCNativeHostSession from './BCNativeHostSession.vue';
 import BCThemeChooser from './BCThemeChooser.vue';
+import BCNotificationCenter from './BCNotificationCenter.vue';
 
 const props=defineProps({
  active:{type:Boolean,default:false},fetchImpl:{type:Function,default:null},
@@ -148,11 +149,8 @@ function requestNotificationPermission(){
       @cycle-theme="emit('cycle-theme')" @toggle-appearance="emit('toggle-theme')"/>
    </template>
    <template v-else-if="category==='notify'">
-    <article data-test="settings-panel-notify"><h3>通知与原生声音</h3>
-     <p>浏览器权限：<strong data-test="settings-notification-permission">{{notification}}</strong></p>
-     <p>Windows桌面通知仍使用原Tauri＋WebSocket／REST，需要真实Windows安装后核验Toast与声音。</p>
-     <button type="button" data-test="settings-request-notifications" :disabled="notification!=='default'" @click="requestNotificationPermission">由本人确认浏览器通知权限</button>
-    </article>
+    <BCNotificationCenter :permission="notification"
+      @request-permission="requestNotificationPermission"/>
    </template>
    <template v-else-if="category==='privacy'">
     <article data-test="settings-panel-privacy"><h3>本机会话与隐私</h3>
