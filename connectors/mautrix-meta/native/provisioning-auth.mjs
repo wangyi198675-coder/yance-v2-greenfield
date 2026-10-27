@@ -14,6 +14,8 @@ export class ProviderAuthDenied extends Error {
 }
 function deny(code,status){throw new ProviderAuthDenied(code,status);}
 function safeString(x){return typeof x==='string'?x.slice(0,180):null;}
+function validMXC(x){return typeof x==='string'&&/^mxc:\/\/[a-zA-Z0-9.:-]+\/[a-zA-Z0-9_-]+$/.test(x)?x:null;}
+function validRoom(x){return typeof x==='string'&&/^![^\s:]{1,220}:[a-zA-Z0-9.-]+$/.test(x)?x:null;}
 async function jsonRequest(target,token,{method='GET',fetchImpl=fetch}={}){
   const r=await fetchImpl(target,{method,redirect:'error',signal:AbortSignal.timeout(5500),
     headers:{Authorization:`Bearer ${token}`,Accept:'application/json',
@@ -38,9 +40,17 @@ function normalizeLogin(l){
   const name=safeString(l?.name);
   const state=STATES.has(l?.state?.state_event)?l.state.state_event:'NOT_CONNECTED';
   if(!id)deny('INVALID_NATIVE_ACCOUNT_IDENTIFIER',503);
+  const profile=l?.profile??{};
+  const timestamp=Number.isSafeInteger(l?.state?.timestamp)&&l.state.timestamp>=0
+    ?l.state.timestamp:null;
   return Object.freeze({loginId:id,displayName:name,bridgeState:state,
-    providerConnected:state==='CONNECTED',
+    stateTimestamp:timestamp,providerConnected:state==='CONNECTED',
+    // Only official bridgev2 /whoami fields; never manufacture account IDs.
+    profile:Object.freeze({displayName:safeString(profile.name),
+      username:safeString(profile.username),avatarMXC:validMXC(profile.avatar)}),
+    matrixSpaceRoomId:validRoom(l?.space_room),
     upstreamIdentitySource:'OFFICIAL_MAUTRIX_META_V3',
+    providerAccountIdVerified:false,peerOwnershipVerified:false,
     w24BindingVerified:false,canSend:false});
 }
 export async function readNativeAccountStatus(token,{fetchImpl=fetch}={}){
@@ -54,7 +64,8 @@ export async function readNativeAccountStatus(token,{fetchImpl=fetch}={}){
       logins.some(l=>l.providerConnected)?'UPSTREAM_CONNECTED_W24_BINDING_PENDING':'UPSTREAM_NOT_CONNECTED',
     logins,connectedCount:logins.filter(x=>x.providerConnected).length,
     accountCount:logins.length,canSend:false,autoReply:false,
-    w24ChannelAccountBindingVerified:false,
+    w24ChannelAccountBindingVerified:false,peerDataSource:'UPSTREAM_MATRIX_SPACE_ONLY',
+    avatarDataSource:'UPSTREAM_BRIDGE_PROFILE_MXC_ONLY',
     source:'REAL_BRIDGE_V3_PROVISIONING_AUTHENTICATED'});
 }
 export async function readNativeLoginFlows(token,{fetchImpl=fetch}={}){
@@ -107,3 +118,55 @@ export const NATIVE_AUTH_ACTIONS=Object.freeze({
   // No QR protocol exists for this Facebook Messenger integration.
   qrFlowSupported:false,
 });
+/**
+ * Read genuine bridge-owned Matrix account space references, never invent a
+ * Facebook peer or claim W24 ownership. The bridgev2 WhoamiLogin.space_room
+ * comes from the authenticated official upstream session. Its m.space.child
+ * state events carry Matrix ROOM IDs, not native Facebook peer IDs.
+ * W24 must obtain verified provider-native Peer proof before issuing K.
+ */
+export async function readNativePeerHints(token,{fetchImpl=fetch}={}){
+  const current=await readNativeAccountStatus(token,{fetchImpl});
+  const connected=current.logins.filter(l=>l.providerConnected);
+  if(connected.length===0)return Object.freeze({
+    matrixPrincipal:current.matrixPrincipal,channel:'FB_PERSONAL',
+    state:'WAITING_USER_AUTH',rooms:null,
+    realPeers:null,peerOwnershipVerified:false,canSend:false
+  });
+  const accounts=[];
+  for(const login of connected.slice(0,10)){
+    if(!login.matrixSpaceRoomId){
+      accounts.push({loginId:login.loginId,state:'MATRIX_ACCOUNT_SPACE_UNAVAILABLE',
+        roomHints:null,realPeers:null});
+      continue;
+    }
+    const path=encodeURIComponent(login.matrixSpaceRoomId);
+    let events;
+    try{
+      events=await jsonRequest(MATRIX+'/_matrix/client/v3/rooms/'+path+'/state',
+        token,{fetchImpl});
+    }catch(error){
+      if(error instanceof ProviderAuthDenied&&error.status===404){
+        accounts.push({loginId:login.loginId,state:'MATRIX_ACCOUNT_SPACE_NOT_FOUND',
+          roomHints:null,realPeers:null});
+        continue;
+      }
+      throw error;
+    }
+    if(!Array.isArray(events))deny('INVALID_MATRIX_SPACE_STATE',503);
+    const roomHints=[...new Set(events.filter(e=>
+      e?.type==='m.space.child' && e?.sender===EXPECTED_BOT &&
+      Array.isArray(e?.content?.via) && e.content.via.length>0 &&
+      validRoom(e?.state_key)
+    ).map(e=>e.state_key))].slice(0,250);
+    accounts.push({loginId:login.loginId,state:'UPSTREAM_MATRIX_ROOM_HINTS',
+      roomHints,realPeers:null});
+  }
+  return Object.freeze({matrixPrincipal:current.matrixPrincipal,channel:'FB_PERSONAL',
+    state:'PROVIDER_CONNECTED_PEER_PROOF_PENDING',
+    accounts,realPeers:null,peerOwnershipVerified:false,
+    candidateSource:'OFFICIAL_MATRIX_ACCOUNT_SPACE_M_SPACE_CHILD',
+    candidateRoomIDsAreNotProviderPeerIDs:true,
+    requireW24PeerProof:true,canSend:false
+  });
+}

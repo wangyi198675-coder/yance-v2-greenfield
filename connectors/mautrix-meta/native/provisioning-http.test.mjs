@@ -14,6 +14,8 @@ function server(provider={}) {
         actualUpstreamTokenProvided:token==='matrix-user-token',canSend:false}),
       readNativeLoginFlows: async()=>({flows:[{id:'messenger-lite',name:'Messenger iOS'}],canSend:false}),
       revokeNativeLogin:async()=>({revoked:true,canSend:false}),
+      readNativePeerHints:async()=>({channel:'FB_PERSONAL',state:'WAITING_USER_AUTH',
+        rooms:null,realPeers:null,peerOwnershipVerified:false,canSend:false}),
       ...provider
     }});
 }
@@ -173,4 +175,25 @@ test('refuse cross-origin, missing user ticket, GET and untrusted launch request
       {'Sec-Fetch-Site':'same-origin'});
     assert.equal(r.status,200);assert.equal(launches,1);
   }finally{await new Promise(r=>s.close(r))}
+});
+
+test('R4 provider peer hints route uses Matrix authorization and returns no fabricated contacts',async()=>{
+  await withServer(async()=>{
+    let r=await fetch(BASE+'/peer/hints');
+    assert.equal(r.status,401);
+    const body=await r.json();
+    assert.equal(body.error,'MATRIX_AUTH_REQUIRED');
+    r=await fetch(BASE+'/peer/hints',{headers:{Authorization:'Bearer matrix-user-token'}});
+    assert.equal(r.status,200);
+    const data=await r.json();
+    assert.equal(data.channel,'FB_PERSONAL');
+    assert.equal(data.state,'WAITING_USER_AUTH');
+    assert.equal(data.rooms,null);
+    assert.equal(data.realPeers,null);
+    assert.equal(data.peerOwnershipVerified,false);
+    assert.equal(data.canSend,false);
+    r=await fetch(BASE+'/peer/hints?utm_source=chatgpt.com',{headers:{
+      Authorization:'Bearer matrix-user-token'}});
+    assert.equal(r.status,422);
+  });
 });

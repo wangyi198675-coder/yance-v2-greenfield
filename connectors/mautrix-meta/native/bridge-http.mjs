@@ -12,7 +12,7 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {inspectRealBridge} from './bridge-runtime.mjs';
 import {launchInstalledOfficialManager} from './native-manager-launch.mjs';
-import {readNativeAccountStatus,readNativeLoginFlows,revokeNativeLogin,
+import {readNativeAccountStatus,readNativeLoginFlows,readNativePeerHints,revokeNativeLogin,
   ProviderAuthDenied,NATIVE_AUTH_ACTIONS} from './provisioning-auth.mjs';
 const HOST='127.0.0.1',PORT=29321;
 const BASE='/api/v2/providers/fb-personal';
@@ -81,7 +81,7 @@ async function boundedJSON(req) {
     return v;}catch{throw new ProviderAuthDenied('INVALID_JSON',422);}
 }
 export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
-  provider={readNativeAccountStatus,readNativeLoginFlows,revokeNativeLogin},
+  provider={readNativeAccountStatus,readNativeLoginFlows,readNativePeerHints,revokeNativeLogin},
   installed=managerInstalled,launcher=launchInstalledOfficialManager}={}){
   const launchTickets=new Map();
   return createServer(async(req,res)=>{
@@ -166,6 +166,10 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
       if(req.method==='GET'&&url.pathname===BASE+'/account/status'){
         const account=await provider.readNativeAccountStatus(auth(req));
         return send(res,200,{ok:true,...account});
+      }
+      if(req.method==='GET'&&url.pathname===BASE+'/peer/hints'){
+        const hints=await provider.readNativePeerHints(auth(req));
+        return send(res,200,{ok:true,...hints});
       }
       if(req.method==='GET'&&url.pathname===BASE+'/auth/flows'){
         const flows=await provider.readNativeLoginFlows(auth(req));

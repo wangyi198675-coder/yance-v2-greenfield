@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {assertOfficialMatrixPrincipal,readNativeAccountStatus,readNativeLoginFlows,
-  revokeNativeLogin,NATIVE_AUTH_ACTIONS} from './provisioning-auth.mjs';
+  revokeNativeLogin,readNativePeerHints,NATIVE_AUTH_ACTIONS} from './provisioning-auth.mjs';
 
 function upstream({principal='@owner:yance-w26.invalid',bot='@facebookbot:yance-w26.invalid',
   logins=[],denyMatrix=false,flows=['facebook','messenger','messenger-lite','messenger-lite-android'],
@@ -109,4 +109,72 @@ test('after W24 durable fence, true upstream logout is followed by verified upst
   assert.equal(s.canSend,false);
   assert.equal(proof[0].principal,'@owner:yance-w26.invalid');
   assert.equal(calls.filter(c=>c.method==='POST').length,1);
+});
+
+test('upstream bridgev2 Whoami exposes only original avatar MXC and personal Matrix space',async()=>{
+  const status=await readNativeAccountStatus('valid-matrix-token',{fetchImpl:upstream({logins:[{
+    id:'opaque-login-id',name:'Meta name',
+    state:{state_event:'CONNECTED',timestamp:1723294560531},
+    profile:{name:'Native name',username:'real.upstream',avatar:'mxc://yance-w26.invalid/ABC_123'},
+    space_room:'!space123:yance-w26.invalid'}]})});
+  assert.equal(status.logins[0].profile.avatarMXC,'mxc://yance-w26.invalid/ABC_123');
+  assert.equal(status.logins[0].matrixSpaceRoomId,'!space123:yance-w26.invalid');
+  assert.equal(status.logins[0].stateTimestamp,1723294560531);
+  assert.equal(status.logins[0].providerAccountIdVerified,false);
+  assert.equal(status.logins[0].peerOwnershipVerified,false);
+  assert.equal(status.logins[0].canSend,false);
+});
+test('invalid image URL or fabricated owner room never accepted as native avatar/space proof',async()=>{
+  const status=await readNativeAccountStatus('valid-matrix-token',{fetchImpl:upstream({logins:[{
+    id:'bridge login',name:'Remote',state:{state_event:'CONNECTED'},
+    profile:{avatar:'https://thirdparty.example/tracker.png'},
+    space_room:'../../etc/passwd'}]})});
+  assert.equal(status.logins[0].profile.avatarMXC,null);
+  assert.equal(status.logins[0].matrixSpaceRoomId,null);
+});
+test('unauthed or disconnected matrix login yields no peer hints, never a fake empty contact list',async()=>{
+  await assert.rejects(readNativePeerHints(null),/MATRIX_AUTH_REQUIRED/);
+  const hints=await readNativePeerHints('valid-matrix-token',{fetchImpl:upstream()});
+  assert.equal(hints.state,'WAITING_USER_AUTH');
+  assert.equal(hints.rooms,null);
+  assert.equal(hints.realPeers,null);
+  assert.equal(hints.canSend,false);
+});
+test('verified native Matrix space children produce untrusted room hints, NEVER FB peer ID or W24 K',async()=>{
+  const seen=[];
+  const base=upstream({calls:seen,logins:[{id:'fb.login',name:'test',
+    state:{state_event:'CONNECTED'},space_room:'!space123:yance-w26.invalid'}]});
+  const fetchImpl=async(url,options)=>{
+    if(url.includes('/rooms/')){
+      assert.match(url,/!space123%3Ayance-w26\.invalid/);
+      return Response.json([
+        {type:'m.space.child',sender:'@facebookbot:yance-w26.invalid',
+         state_key:'!one:yance-w26.invalid',content:{via:['yance-w26.invalid']}},
+        {type:'m.space.child',sender:'@mallory:yance-w26.invalid',
+         state_key:'!forged:yance-w26.invalid',content:{via:['yance-w26.invalid']}},
+        {type:'m.space.child',sender:'@facebookbot:yance-w26.invalid',
+         state_key:'!one:yance-w26.invalid',content:{via:['yance-w26.invalid']}},
+        {type:'m.space.child',sender:'@facebookbot:yance-w26.invalid',
+         state_key:'fake-peer-id',content:{via:['yance-w26.invalid']}},
+        {type:'m.space.child',sender:'@facebookbot:yance-w26.invalid',
+         state_key:'!two:yance-w26.invalid',content:{via:['yance-w26.invalid']}}
+      ]);
+    }
+    return base(url,options);
+  };
+  const s=await readNativePeerHints('valid-matrix-token',{fetchImpl});
+  assert.equal(s.state,'PROVIDER_CONNECTED_PEER_PROOF_PENDING');
+  assert.deepEqual(s.accounts[0].roomHints,['!one:yance-w26.invalid','!two:yance-w26.invalid']);
+  assert.equal(s.realPeers,null);
+  assert.equal(s.peerOwnershipVerified,false);
+  assert.equal(s.candidateRoomIDsAreNotProviderPeerIDs,true);
+  assert.equal(s.requireW24PeerProof,true);
+  assert.equal(s.canSend,false);
+});
+test('native room space missing is unknown, not zero verified contacts',async()=>{
+  const s=await readNativePeerHints('valid-matrix-token',{fetchImpl:upstream({logins:[{
+    id:'native-login',name:'Meta',state:{state_event:'CONNECTED'}}]})});
+  assert.equal(s.accounts[0].state,'MATRIX_ACCOUNT_SPACE_UNAVAILABLE');
+  assert.equal(s.accounts[0].roomHints,null);
+  assert.equal(s.realPeers,null);
 });
