@@ -1,28 +1,55 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-
 const composer=readFileSync(new URL('../src/BCNativeComposer.vue',import.meta.url),'utf8');
+const picker=readFileSync(new URL('../src/BCNativeExpertPicker.vue',import.meta.url),'utf8');
 const brain=readFileSync(new URL('../src/BCPrivateBrainWorkspace.vue',import.meta.url),'utf8');
+const live=readFileSync(new URL('../src/BCLiveChatWorkspace.vue',import.meta.url),'utf8');
 
-test('PR99 CONTACT popovers use the sole native Composer, not an expanded 10-item bottom list',()=>{
+test('web-first CONTACT expert dialog uses ONE original Composer and floating responsive picker',()=>{
  assert.match(composer,/const contactTrigger=Object\.freeze/);
- assert.match(composer,/data-test="w46-composer-experts"/);
- assert.match(composer,/\.bc-compose-popup\{position:absolute/);
- assert.match(composer,/bottom:calc\(100% - 1px\)/);
- assert.match(composer,/max-height:min\(300px,58dvh\)/);
+ assert.match(composer,/import BCNativeExpertPicker/);
+ assert.match(composer,/<BCNativeExpertPicker v-if="expertsOpen"/);
+ assert.match(composer,/data-test="w46-composer-plus"/);
+ assert.match(composer,/aria-haspopup="dialog"/);
+ assert.match(picker,/data-test="w46-composer-experts"/);
+ assert.match(picker,/<Teleport to="body">/);
+ assert.match(picker,/position:fixed!important/);
+ assert.match(picker,/window\.innerWidth-24/);
+ assert.match(picker,/window\.innerHeight-r\.top\+8/);
+ assert.match(picker,/data-test="w46-expert-search"/);
+ assert.match(picker,/data-test="w46-expert-source-unavailable"/);
  assert.match(composer,/createComposerBridge/);
  assert.match(composer,/<Button disabled size="sm">发送不可用<\/Button>/);
+ assert.doesNotMatch(composer,/const designExperts=/);
+ assert.doesNotMatch(picker,/function createAgent|new Agent\(/);
 });
-test('PR99 CONTACT keyboard, Escape, outside click, focus restoration and cleanup',()=>{
+test('native W43 directory needs authenticated authoritative read; never fake ten installed experts',()=>{
+ for(const s of ['W43_NATIVE_AGNO_EXPERT','NATIVE_EXPERT_DIRECTORY_READ',
+ 'dto.cataloguedCount!==10','dto.registeredCount!==1','dto.installedReadOnlyCount!==1',
+ 'dto.experts.filter(e=>e.installed).length!==1','dto.experts.filter(e=>e.canInvoke).length>1',
+ 'READ_ONLY_STABLE252_INSPECTION','canSend!==false','credentials:\'same-origin\''])
+ assert.ok(picker.includes(s),s);
+ assert.match(picker,/experts\.value=\[\];phase\.value='loading'/);
+ assert.match(picker,/phase\.value='unavailable'/);
+ assert.match(picker,/!response\.ok/);
+ assert.match(picker,/v-for="e in found"/);
+ assert.match(picker,/data-test="w46-expert-to-brain"/);
+ assert.match(picker,/emit\('navigate','BRAIN'\)/);
+ assert.doesNotMatch(picker,/\/api\/v2\/contact.*\/send/);
+ assert.match(live,/@navigate="navigate"/);
+});
+test('CONTACT keyboard, Escape, outside click, focus restoration and cleanup preserved',()=>{
  for(const s of ['keydown','pointerdown','Escape','ArrowDown','ArrowUp','Home','End','contactOutsideClick',
-  'closeContactMenu(true)','aria-haspopup="menu"','aria-controls="w46-contact-experts-menu"']){
+  'closeContactMenu(true)','aria-controls="w46-contact-experts-menu"']){
    assert.ok(composer.includes(s),s);
  }
  assert.match(composer,/document\.removeEventListener\('keydown',contactMenuKeyboard\)/);
  assert.match(composer,/document\.removeEventListener\('pointerdown',contactOutsideClick\)/);
+ for(const s of ['Escape','ArrowDown','ArrowUp','Home','End','onBeforeUnmount',
+ 'window.removeEventListener','aria-label="搜索专家"'])assert.ok(picker.includes(s),s);
 });
-test('CONTACT model and HUMAN/ASSISTED/AUTO are not PRIVATE model grants or unsourced W44 takeovers',()=>{
+test('CONTACT model and HUMAN/ASSISTED/AUTO never use PRIVATE model grants or unsourced W44 takeover',()=>{
  assert.match(composer,/W44\/W47/);
  assert.match(composer,/disabled data-test="w46-mode-human"/);
  assert.match(composer,/disabled data-test="w46-mode-assisted"/);
@@ -30,28 +57,13 @@ test('CONTACT model and HUMAN/ASSISTED/AUTO are not PRIVATE model grants or unso
  assert.match(composer,/identity:\{type:Object,default:null\}/);
  assert.doesNotMatch(composer,/PRIVATE_ROUTES\.selection/);
 });
-test('PRIVATE model fee and Agno History unchanged, native tools/runs are only read when session valid',()=>{
- assert.match(brain,/confirmedModelSelection/);
- assert.match(brain,/verifiedTurn/);
- assert.match(brain,/verifiedHistory/);
- assert.match(brain,/confirmPaidCost:true/);
- assert.match(brain,/!modelChangeRequired/);
- assert.match(brain,/api\('\/api\/v2\/private-brain\/tools'\)/);
- assert.match(brain,/api\('\/api\/v2\/private-brain\/runs\?threadId=personal&limit=10'\)/);
- assert.match(brain,/ensureCurrent\(\)/);
- assert.match(brain,/authoritative!==true/);
- assert.match(brain,/canSend!==false/);
+test('PRIVATE model fee, one Agno History, native Tools Run/Trace retained',()=>{
+ for(const s of ['confirmedModelSelection','verifiedTurn','verifiedHistory',
+ 'confirmPaidCost:true','modelChangeRequired',
+ "api('/api/v2/private-brain/tools')",
+ "api('/api/v2/private-brain/runs?threadId=personal&limit=10')",
+ 'ensureCurrent()','authoritative!==true','canSend!==false','brainOutsideClick','brainMenuKeyboard'])
+ assert.ok(brain.includes(s),s);
  assert.doesNotMatch(brain,/expert_turn\(/);
-});
-test('PRIVATE three popovers are mutually exclusive, accessible and fail closed on unavailable inspection',()=>{
- for(const s of ['toggleBrainExpert','toggleBrainModel','toggleBrainTools','closeBrainMenu','brainOutsideClick',
-  'brainMenuKeyboard','role="menu"','aria-expanded','Escape','ArrowDown','ArrowUp','Home','End']){
-  assert.ok(brain.includes(s),s);
- }
- assert.match(brain,/nativeReadState==='unavailable'/);
- assert.match(brain,/document\.removeEventListener\('pointerdown',brainOutsideClick\)/);
- assert.match(brain,/document\.removeEventListener\('keydown',brainMenuKeyboard\)/);
  assert.match(brain,/data-test="brain-expert-popup"/);
- assert.match(brain,/data-test="brain-model-settings"/);
- assert.match(brain,/data-test="w46-brain-tools"/);
 });

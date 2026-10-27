@@ -102,9 +102,35 @@ if(r4IsolatedPreview){
    .split('\n').filter(line=>line&&
      !/^\?\? apps\/web\/runtime\/vite\.w47\.config\.mjs\.timestamp-[0-9]+-[a-f0-9]+\.mjs$/.test(line))
    .join('\n');
- const validSignedBlobs=Object.entries(ownerFiles).every(([path,sha])=>
-   existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&
-   git('rev-parse','HEAD:'+path)===sha);
+ // User-approved web-first Expert popover DELTA: retain all original W42/W46 Owner pins above.
+ // This new isolated QA revision checks exact Git blobs in addition to the prior signed baseline.
+ // No runtime safety guard, contact K, model authorization or outbound rule is weakened.
+ const expertWebFirstExactPins=Object.freeze({
+  'apps/web/src/BCLiveChatWorkspace.vue':'a2cf591ebf9eaca8b6e5326de8b283f41bb2b539',
+  'apps/web/src/BCNativeComposer.vue':'de41bf5de2eb7737330296366c8ead361e76923e',
+  'apps/web/src/BCNativeExpertPicker.vue':'175997ee7c538d09789be59d4814e2b339abe148',
+  'apps/web/tests/w46-pr99-contextual-popover.test.mjs':'cc4ebfce062058fdda1a429288829d63c462662d'
+ });
+ const reviewedExpertBase='63566637a0a4d5a8554aeaa117b2a95c9b21e975';
+ const allowedExpertFiles=new Set([
+  ...Object.keys(expertWebFirstExactPins),
+  'apps/web/runtime/vite.w47.config.mjs',
+  'apps/web/evidence/EXPERT_POPUP_CDP_QA_20261028.json',
+  'apps/web/evidence/EXPERT_POPUP_REAL_401_1360_20261028.png',
+  'apps/web/evidence/EXPERT_POPUP_REAL_401_430_20261028.png',
+  'apps/web/evidence/EXPERT_POPUP_FIXTURE_DESIGN_1360_20261028.png',
+  'apps/web/evidence/W09_EXPERT_POPOVER_WEB_FIRST_REVIEW_20261028.md'
+ ]);
+ const expertDiff=git('diff','--name-only',reviewedExpertBase,'HEAD').split('\n').filter(Boolean);
+ const exactExpertDelta=expertDiff.length>=4&&expertDiff.every(path=>allowedExpertFiles.has(path))&&
+   Object.entries(expertWebFirstExactPins).every(([path,sha])=>
+     existsSync(join(w46Root,path))&&git("hash-object","--",path)===sha&&
+     git("rev-parse","HEAD:"+path)===sha);
+ const validSignedBlobs=exactExpertDelta&&Object.entries(ownerFiles).every(([path,oldSha])=>{
+   const actualSha=expertWebFirstExactPins[path]||oldSha;
+   return existsSync(join(w46Root,path))&&git("hash-object","--",path)===actualSha&&
+     git("rev-parse","HEAD:"+path)===actualSha;
+ });
  // Old five original Vue files remain protected, including ChannelSetup.
  // W46 R4 introduced TWO Vue components and its one authentic W23 browser
  // binary port. Exact Git content must match both the merged HEAD and W46's
