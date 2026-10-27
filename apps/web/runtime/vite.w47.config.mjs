@@ -181,21 +181,6 @@ if(r4IsolatedPreview){
  const wowBase='02764244af7ae329085c4bb0c1cec939780d5a20';
  const wowFiles=Object.freeze({"apps/web/src/BCProductWorkspaceCandidate.vue":"34a02c2b9a42940e0a3174de633c8ae095e07475","apps/web/src/BCVisualAurora.vue":"0b2a805c9dee236a02cd9c7954146eb7c6ee5056","apps/web/src/BCVisualThemeSystem.css":"4b700fa0e41f1c2ee25210017bb42563195ba1a6","apps/web/tests/w09-wow-visual-themes.test.mjs":"d5d8b6997f3595dc9e11c0144cfb031f6e4328a4"});
  const wowEvidence=new Set(["apps/web/evidence/INSPIRA_UI_AURORA_LICENSE.md","apps/web/evidence/WOW_THEMES_20261028/THEME_0.png","apps/web/evidence/WOW_THEMES_20261028/THEME_1.png","apps/web/evidence/WOW_THEMES_20261028/THEME_2.png","apps/web/evidence/WOW_THEMES_20261028/THEME_3.png","apps/web/evidence/WOW_THEMES_20261028/THEME_4.png","apps/web/evidence/WOW_THEMES_20261028/CHAT.png","apps/web/evidence/WOW_THEMES_20261028/BRAIN.png","apps/web/evidence/WOW_THEMES_20261028/WOW_VISUAL_QA_20261028.json","apps/web/evidence/WOW_THEMES_20261028/W09_VISUAL_REVIEW.md"]);
- const wowDeltaValid=(()=>{
-  try{
-   const wowRelease='b96161c14a93399c7033333ce1ee6ee33f83f991';
-   git('merge-base','--is-ancestor',wowBase,'HEAD');
-   git('merge-base','--is-ancestor',wowRelease,'HEAD');
-   const delta=git('diff','--name-only',wowBase,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
-   return Object.entries(wowFiles).every(([p,h])=>{
-    const expected=p==='apps/web/src/BCProductWorkspaceCandidate.vue'?chatUiFiles[p]:h;
-    return git('rev-parse',wowRelease+':'+p)===h&&existsSync(join(w46Root,p))&&
-     git('hash-object','--',p)===expected&&git('rev-parse','HEAD:'+p)===expected;
-   })&&[...wowEvidence].every(p=>existsSync(join(w46Root,p))&&
-       git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
-  }catch{return false}
- })();
  // W09-3: Native W05/Agno event owner retained; only UI display and browser permission.
  const notifyBase='ab56af052a857f281f7dc44dc15e6e90991b11a4';
  const notifyFiles=Object.freeze({"apps/web/src/BCSettingsWorkspace.vue":"77c1bcc6728fa17a548fbcbf92da710438bd2464","apps/web/src/BCNotificationCenter.vue":"5e760fb45e673c9675619328b2398083e4c5322e","apps/web/tests/w46-r4-media-settings-native.test.mjs":"592708bc0484a4b164ddb6ad106021f7d4d53142","apps/web/tests/w09-notification-center-native-reuse.test.mjs":"1c61241956c3cdf1bc094eef4f76eb0558922d88"});
@@ -208,6 +193,21 @@ if(r4IsolatedPreview){
    return Object.entries(notifyFiles).every(([p,h])=>existsSync(join(w46Root,p))&&
      git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
      &&[...notifyEvidence].every(p=>existsSync(join(w46Root,p))&&
+       git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
+  }catch{return false}
+ })();
+ const wowDeltaValid=(()=>{
+  try{
+   const wowRelease='b96161c14a93399c7033333ce1ee6ee33f83f991';
+   git('merge-base','--is-ancestor',wowBase,'HEAD');
+   git('merge-base','--is-ancestor',wowRelease,'HEAD');
+   const delta=git('diff','--name-only',wowBase,'HEAD').split('\n').filter(Boolean);
+   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   return Object.entries(wowFiles).every(([p,h])=>{
+    const expected=p==='apps/web/src/BCProductWorkspaceCandidate.vue'?chatUiFiles[p]:h;
+    return git('rev-parse',wowRelease+':'+p)===h&&existsSync(join(w46Root,p))&&
+     git('hash-object','--',p)===expected&&git('rev-parse','HEAD:'+p)===expected;
+   })&&[...wowEvidence].every(p=>existsSync(join(w46Root,p))&&
        git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
   }catch{return false}
  })();
