@@ -25,7 +25,9 @@ test('one native Agno Brain preserves authoritatively fetched history inside R4 
  assert.match(b,/data-test="brain-expert-popup"/);
  assert.match(b,/data-test="brain-expert-close"/);
  assert.match(b,/role="menu" aria-label="闺蜜大脑专家选择"/);
- assert.match(b,/data-test="brain-attachment"[^>]*disabled|disabled[^>]*data-test="brain-attachment"/);
+ // Latest compact PRIVATE hides unavailable media attachments entirely rather than presenting a dead button.
+ assert.doesNotMatch(b,/data-test="brain-attachment"/);
+ assert.doesNotMatch(b,/simulateAttachment\(/);
  assert.match(b,/data-test="brain-send"/);
 });
 
