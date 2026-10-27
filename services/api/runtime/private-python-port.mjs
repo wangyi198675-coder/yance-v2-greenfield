@@ -35,7 +35,7 @@ export function createW43PythonPrivatePort({
   throw Error('W55_NATIVE_SECRET_PORT_INVALID');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>300000)
   throw Error('W43_PYTHON_BRIDGE_TIMEOUT_INVALID');
- async function invoke(method,ctx,threadId,text,requestId,receipt,modelSelection){
+ async function invoke(method,ctx,threadId,text,requestId,receipt,modelSelection,inspection={}){
   if(!ctx?.checkCurrent||typeof ctx.checkCurrent!=='function')
    throw {httpStatus:503,code:'W47_VERIFIED_CONTEXT_REQUIRED'};
   return new Promise((done,fail)=>{
@@ -78,7 +78,7 @@ export function createW43PythonPrivatePort({
     }
     if(msg.kind==='VERIFY'){
      if(responding||!['PRIVATE_TURN','PRIVATE_HISTORY'].includes(msg.operation)||
-        msg.operation!==(method==='history'?'PRIVATE_HISTORY':'PRIVATE_TURN')){
+        msg.operation!==(method==='history'||method.startsWith('native')?'PRIVATE_HISTORY':'PRIVATE_TURN')){
       finish({httpStatus:503,code:'W43_PYTHON_VERIFIER_PROTOCOL_INVALID'});return
      }
      responding=true;
@@ -175,13 +175,13 @@ export function createW43PythonPrivatePort({
      }
      finish(null,msg.result);
     }else if(msg.kind==='W43_ERROR'){
-     finish({httpStatus:[401,409,422,503].includes(msg.httpStatus)?msg.httpStatus:503,
+     finish({httpStatus:[401,404,409,422,503].includes(msg.httpStatus)?msg.httpStatus:503,
       code:'W43_NATIVE_PRIVATE_'+String(msg.error||'UNKNOWN').slice(0,100)});
     }else finish({httpStatus:503,code:'W43_PYTHON_TRANSPORT_INVALID'});
    });
    send({method,threadId,...(method==='history'?{}:{text,requestId}),
     ...(method==='finish'?{receipt}:{}),
-    ...(method==='turn'&&modelSelection?{modelSelection}:{})});
+    ...(method==='turn'&&modelSelection?{modelSelection}:{}),...inspection});
   });
  }
  return Object.freeze({
@@ -194,6 +194,10 @@ export function createW43PythonPrivatePort({
   turn:(ctx,thread_id,text,request_id,modelSelection)=>
    invoke('turn',ctx,thread_id,text,request_id,undefined,modelSelection),
   history:(ctx,thread_id)=>invoke('history',ctx,thread_id),
+  nativeTools:ctx=>invoke('nativeTools',ctx,'personal'),
+  nativeRuns:(ctx,thread_id,limit=25)=>invoke('nativeRuns',ctx,thread_id,undefined,undefined,undefined,undefined,{limit}),
+  nativeRun:(ctx,thread_id,runId)=>invoke('nativeRun',ctx,thread_id,undefined,undefined,undefined,undefined,{runId}),
+  nativeTrace:(ctx,thread_id,runId)=>invoke('nativeTrace',ctx,thread_id,undefined,undefined,undefined,undefined,{runId}),
   claim:(ctx,thread_id,request_id,text)=>invoke('claim',ctx,thread_id,text,request_id),
   finish:(ctx,thread_id,request_id,text,receipt)=>invoke('finish',ctx,thread_id,text,request_id,receipt),
   markUnknown:(ctx,thread_id,request_id,text)=>invoke('markUnknown',ctx,thread_id,text,request_id),
