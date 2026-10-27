@@ -44,8 +44,17 @@ export function createNativeProviderGateway({
   // an explicit user action; never a signed QR, login state, personal account
   // or credentials. Real QR requires trusted W28/Tauri native renderer path.
   if(action==='setup'&&!accountSession){
+   // Reuse the already-running original W26 official login page; this is
+   // only a user-initiated OPEN link, never a fabricated authenticated account.
+   let w26Connect=null;
+   if(info.channel==='FB_PERSONAL'&&readW26Status?.officialConnectUrl){
+    try{const actual=await readW26Status();
+     if(w26Diagnostics(actual))w26Connect=readW26Status.officialConnectUrl;
+    }catch{}
+   }
    send(res,200,{channel:info.channel,source:info.source,
-    userDecisionRequired:true,nextAction:'OFFICIAL_SETUP_REQUIRED',
+    userDecisionRequired:true,nextAction:w26Connect?'WAITING_USER_AUTH':'OFFICIAL_SETUP_REQUIRED',
+    ...(w26Connect?{officialConnectUrl:w26Connect}:{}),
     ...(info.docs?{officialSetup:info.docs}:{}),
     canSend:false,nativeSessionRequiredForAccountConnection:true});
    return true;
@@ -130,7 +139,7 @@ export function makeW26DiagnosticPort(value){
  if(value===undefined||value===null||value==='')return null;
  if(typeof value!=='string'||!/^\d{4,5}$/.test(value)||
   +value<1024||+value>65535)throw Error('W26_DEV_STATUS_PORT_INVALID');
- return async()=>{
+ const read=async()=>{
   const response=await fetch('http://127.0.0.1:'+Number(value)+
    '/api/v2/providers/fb-personal/status',
    {method:'GET',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(2500)});
@@ -140,4 +149,9 @@ export function makeW26DiagnosticPort(value){
   if(raw.length>12000)throw Error('W26_REAL_STATUS_OVERSIZED');
   return JSON.parse(raw);
  };
+ // The original installed W26 manager serves this verified local page.
+ // Do not expose an arbitrary URL or treat it as an authenticated account.
+ Object.defineProperty(read,'officialConnectUrl',{value:
+  Number(value)===29321?'http://127.0.0.1:29321/api/v2/providers/fb-personal/connect':null});
+ return read;
 }

@@ -58,7 +58,14 @@ export function parseChannelSetup(channel,payload,now=Date.now()){
    deny('CHANNEL_UNTRUSTED_SETUP_URL');
   officialDocs=url.href;
  }
- return Object.freeze({nextAction:payload.nextAction,qr,officialDocs});
+ let officialConnectUrl=null;
+ if(payload.officialConnectUrl!==undefined){
+  if(channel!=='FB_PERSONAL'||payload.nextAction!=='WAITING_USER_AUTH'||
+     payload.officialConnectUrl!=='http://127.0.0.1:29321/api/v2/providers/fb-personal/connect')
+    deny('CHANNEL_UNTRUSTED_NATIVE_AUTH_URL');
+  officialConnectUrl=payload.officialConnectUrl;
+ }
+ return Object.freeze({nextAction:payload.nextAction,qr,officialDocs,officialConnectUrl});
 }
 export const checkChannel=async(args)=>parseChannelState(args.channel,await read({...args,action:'status'}));
 export const setupChannel=async(args)=>parseChannelSetup(args.channel,await read({...args,action:'setup'}));
