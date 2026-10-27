@@ -17,6 +17,8 @@ if(r4IsolatedPreview){
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
  const expectedOwnerSha='e51375e584adf5716728fac9540ab3d61ec0dcc7';
+ const newestNoPairApprovedSha='7e986ada39a5e6b9fcbbd151af224d6dd16aad5c';
+ const previousSettingsBlob='4163cbc90869922956e35e15d1be94cca8c8fcaf';
  const signedUnionSha='c28b8bd58260b8e0dbb5c0c01cb895e4c7ecb85a';
  const priorExpertOwnerSha='cdfea6313c0b17cb1a641f2b376f51fd586b49d2';
  const priorVueOwnerSha='2765a7600e1562df658cad67faab371fee243ea2';
@@ -25,6 +27,7 @@ if(r4IsolatedPreview){
  // Original W42/W46 ACK files are byte-for-byte copies of their actual
  // independent MasterController receipts; their Git blobs are pinned below.
  const canonicalAck='apps/web/evidence/W46_R4_MEDIA_SETTINGS_NATIVE_VUE_OWNER_ACK.md';
+ const latestNoPairAck='apps/web/evidence/W46_PR110_7E986AD_NO_TERMINAL_PAIR_SETTINGS_OWNER_REVIEW_ACK.md';
  const priorExpertAck='apps/web/evidence/W46_PR102_PRIVATE_EXPERT_NATIVE_CONSUMER_REVIEW_ACK.md';
  const mediaDesignAck='apps/web/evidence/W42_R4_MEDIA_SETTINGS_COMPACT_IMPLEMENTATION_ACK.md';
  const priorUiAck='apps/web/evidence/W46_PR99_2765A760_CONTEXTUAL_POPOVER_OWNER_REVIEW_ACK.md';
@@ -34,7 +37,7 @@ if(r4IsolatedPreview){
  const ownerFiles={
   'apps/web/src/BCProductWorkspaceCandidate.vue':'cdac151c5f762c6f0e45e69f7610a704ce50abb4',
   'apps/web/src/BCMediaWorkspace.vue':'9e159e989dc3fb96a85e6c1b3fcd2426d38ff554',
-  'apps/web/src/BCSettingsWorkspace.vue':'4163cbc90869922956e35e15d1be94cca8c8fcaf',
+  'apps/web/src/BCSettingsWorkspace.vue':'d470a9c38df937bbe3dbe170e6d628671e43fc99',
   'apps/web/src/w23-media-browser-consumer.mjs':'1c298ee1af52339b54a3de44141ebc4c48be9a52',
   'apps/web/src/BCLiveChatWorkspace.vue':'bfeebb453976939b59635d01cbba9db0b3ae8dd7',
   'apps/web/src/live-chat-source.mjs':'77e1c8947371b826b5a8fc3ca00bb12764fea02c',
@@ -60,6 +63,7 @@ if(r4IsolatedPreview){
   [priorUiAck]:'495aa0ac679239f299b1aa3ae9c4f708730a0ba2',
   [priorExpertAck]:'5e5bfff0edb584a838772e671a3a501e4754c976',
   [canonicalAck]:'4f3e3a63c71abfe39efc8b3c577e0c59690b9f8d',
+  [latestNoPairAck]:'05bd98bf738105372cce67f47f607a9339167dbc',
   [mediaDesignAck]:'9cac61dd626dc6153305fead1aa7a7b719d7fd4d',
   [visualAck]:'08cf4de4d9229ff396c58e01bc4cdf9fcfdce472'
  };
@@ -73,6 +77,7 @@ if(r4IsolatedPreview){
  const priorUiReview=readAck(priorUiAck);
  const priorExpertReview=readAck(priorExpertAck);
  const mediaDesignReview=readAck(mediaDesignAck);
+ const noPairReview=readAck(latestNoPairAck);
  // A descendant W47 config-signing commit must retain the EXACT reviewed
  // original W46 review and the merged W09 PR102; no unrelated source can reuse these ACKs.
  const signedAncestor=(()=>{
@@ -88,7 +93,7 @@ if(r4IsolatedPreview){
    }
    catch{return false}
  })();
- const receiptTracked=[canonicalAck,priorExpertAck,mediaDesignAck,priorUiAck,previousOwnerAck,visualAck,legacyAck].every(path=>
+ const receiptTracked=[canonicalAck,latestNoPairAck,priorExpertAck,mediaDesignAck,priorUiAck,previousOwnerAck,visualAck,legacyAck].every(path=>
    git('ls-tree','-r','--name-only','HEAD','--',path)===path);
  // Vite 7 writes a transient bundled config beside this file WHILE it
  // imports the config. It is not a source edit; its exact generated filename
@@ -113,7 +118,8 @@ if(r4IsolatedPreview){
  ];
  const mediaSourceFiles=[
   'apps/web/src/BCMediaWorkspace.vue',
-  'apps/web/src/BCSettingsWorkspace.vue',
+  // Previous R4 media ACK covers the original Settings blob, not the
+  // two-file PR110 no-pair delta. Check the original blob separately.
   'apps/web/src/BCProductWorkspaceCandidate.vue',
   'apps/web/src/BCLiveChatWorkspace.vue',
   'apps/web/src/BCNativeComposer.vue',
@@ -138,6 +144,23 @@ if(r4IsolatedPreview){
    originalW46BlobsValid&&
    mediaSourceFiles.every(path=>ownerAck.includes(path.slice('apps/web/src/'.length))&&
      ownerAck.includes(ownerFiles[path]));
+ // W46 original media Owner still attests the unchanged previous Settings
+ // blob, and the new PR110 independently attests ONLY the genuine two
+ // settings/test deltas. Keep both ACKs and both Git provenance checks.
+ const settingsPath='apps/web/src/BCSettingsWorkspace.vue';
+ const settingsTestPath='apps/web/tests/w46-r4-media-settings-native.test.mjs';
+ const noPairReviewValid=
+   git('rev-parse',expectedOwnerSha+':'+settingsPath)===previousSettingsBlob&&
+   ownerAck.includes(previousSettingsBlob)&&
+   git('merge-base','--is-ancestor',newestNoPairApprovedSha,'HEAD')===''&&
+   noPairReview.includes('W46_PR110_SETTINGS_UI_OWNER_REVIEW_ACK_PASS')&&
+   noPairReview.includes(newestNoPairApprovedSha)&&
+   noPairReview.includes('d470a9c38df937bbe3dbe170e6d628671e43fc99')&&
+   noPairReview.includes('700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
+   git('rev-parse',newestNoPairApprovedSha+':'+settingsPath)===ownerFiles[settingsPath]&&
+   git('rev-parse',newestNoPairApprovedSha+':'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
+   git('rev-parse','HEAD:'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
+   !readFileSync(join(w46Root,settingsPath),'utf8').includes('<BCLocalSessionConnector');
  // W42 independently closed only the QR layout/status RED with actual
  // NONSCANNABLE synthetic Chrome DOM, not a real user account authorization.
  const w42VisualValid=visualOwnerAck.includes('W42原R3/R4设计Owner')&&
@@ -145,7 +168,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
  if(signedSha!==expectedOwnerSha||!signedAncestor||dirtySource||
-    !receiptTracked||!validSignedBlobs||!w46ReviewValid||!w42VisualValid||!mediaDesignValid||
+    !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
     !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
