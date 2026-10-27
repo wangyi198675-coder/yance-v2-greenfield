@@ -29,12 +29,15 @@ pub enum CloudProvider {
     OpenRouter,
     #[serde(rename = "OPENAI_API")]
     OpenAi,
+    #[serde(rename = "PANCAKE_PAIR")]
+    PancakePair,
 }
 impl CloudProvider {
     fn label(self) -> &'static str {
         match self {
             Self::OpenRouter => "OPENROUTER",
             Self::OpenAi => "OPENAI_API",
+            Self::PancakePair => "PANCAKE_PAIR",
         }
     }
 }
@@ -221,14 +224,39 @@ impl NativeKeyCustody {
         write_cred(target, &ciphertext)
     }
     fn validate_key(provider: CloudProvider, key: &[u8]) -> Result<(), VaultError> {
-        if key.len() < 16
-            || key.len() > MAX_API_KEY_BYTES
-            || !key.starts_with(b"sk-")
-            || key.iter().any(|&ch| !ch.is_ascii_graphic())
-        {
+        if key.iter().any(|&ch| !ch.is_ascii_graphic()) {
             return Err(VaultError::Denied);
         }
-        if provider == CloudProvider::OpenRouter && !key.starts_with(b"sk-or-") {
+        if provider == CloudProvider::PancakePair {
+            // Reuse original WinCred/DPAPI for one account and multiple Pages.
+            if key.len() < 35 || key.len() > 2000 {
+                return Err(VaultError::Denied);
+            }
+            let value: serde_json::Value = serde_json::from_slice(key)
+                .map_err(|_| VaultError::Denied)?;
+            let obj = value.as_object().ok_or(VaultError::Denied)?;
+            if obj.len()!=2 || !obj.contains_key("userAccessToken") ||
+               !obj.contains_key("pages") { return Err(VaultError::Denied); }
+            let user=obj.get("userAccessToken").and_then(|v|v.as_str())
+                .ok_or(VaultError::Denied)?;
+            if !(8..=480).contains(&user.len()) ||
+               !user.bytes().all(|c| c.is_ascii_graphic()) {
+                return Err(VaultError::Denied);
+            }
+            let pages=obj.get("pages").and_then(|v|v.as_object())
+                .ok_or(VaultError::Denied)?;
+            if pages.len()>24 || pages.iter().any(|(id, token)| {
+                id.is_empty() || id.len()>40 ||
+                !id.bytes().all(|c| c.is_ascii_digit()) ||
+                !token.as_str().is_some_and(|v|
+                    (8..=480).contains(&v.len()) &&
+                    v.bytes().all(|c| c.is_ascii_graphic()))
+            }) { return Err(VaultError::Denied); }
+            return Ok(());
+        }
+        if key.len() < 16 || key.len() > MAX_API_KEY_BYTES ||
+           !key.starts_with(b"sk-") ||
+           (provider == CloudProvider::OpenRouter && !key.starts_with(b"sk-or-")) {
             return Err(VaultError::Denied);
         }
         Ok(())

@@ -65,6 +65,7 @@ const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
 const channelDetailsOpen=ref(false);
+const selectedChannel=ref(null);
 const contentScroller=ref(null);
 const settingCategory=ref('general');
 // Design tabs are navigation only until authoritative Persona/Expert APIs are signed.
@@ -100,6 +101,7 @@ async function refresh(){
 watch(()=>props.enabled,refresh,{immediate:true});
 watch(()=>props.activeWorkspace,async()=>{
  menuOpen.value=false;
+ selectedChannel.value=null;
  closePersonaDetail();
  await nextTick();
  if(contentScroller.value)contentScroller.value.scrollTop=0;
@@ -149,26 +151,33 @@ defineExpose({refresh});
      {{explainCapability(snapshot,activeWorkspace)}}</span>
    </div>
    <BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" @navigate="choose"/>
-   <section v-if="activeWorkspace==='ACCOUNTS'" class="w46-r4-channel-workspace" data-test="w46-channel-workspace" aria-label="连接社交账号">
+   <section v-if="activeWorkspace==='ACCOUNTS'" class="w46-r4-channel-workspace"
+    data-test="w46-channel-workspace" aria-label="连接社交账号">
     <header class="w46-r4-channel-toolbar">
-     <strong>连接社交账号</strong>
-     <div class="w46-r4-channel-actions">
-      <span class="w46-r4-channel-count" data-test="w46-authoritative-account-count">{{snapshot?.trustedSession?'已验证账号 '+readonlyAccount:'账号状态待验证'}}</span>
-      <button type="button" class="w46-r4-channel-details-toggle" data-test="w46-channel-details-toggle"
-       :aria-expanded="channelDetailsOpen" aria-controls="w46-channel-details"
-       @click="channelDetailsOpen=!channelDetailsOpen">{{channelDetailsOpen?'收起详情':'账号详情'}} <span aria-hidden="true">{{channelDetailsOpen?'⌃':'⌄'}}</span></button>
-     </div>
+     <button type="button" class="w46-r4-channel-back" data-test="w46-channel-back"
+      @click="selectedChannel?selectedChannel=null:choose('CHAT')">
+      {{selectedChannel?'← 选择其他平台':'← 返回聊天'}}
+     </button>
+     <strong>{{selectedChannel?'连接 '+(CHANNELS.find(c=>c.id===selectedChannel)?.label||'社交账号'):'连接社交账号'}}</strong>
     </header>
-    <div class="w46-r4-channel-grid" data-test="w46-channel-grid" aria-label="四平台原生连接入口">
-     <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
-      :channel="channel" :fetch-impl="fetchImpl"/>
+    <p class="w46-r4-channel-instruction" data-test="w46-channel-instruction">
+     {{selectedChannel?'本人完成官方授权后，言策才会读取该平台账号与联系人。':'请选择要连接的平台。你可以随时返回聊天。'}}
+    </p>
+    <div v-if="!selectedChannel" class="w46-r4-channel-picker"
+     data-test="w46-channel-picker" aria-label="选择一个社交平台">
+     <button v-for="channel in CHANNELS" :key="channel.id" type="button"
+      class="w46-r4-channel-choice" :data-test="'w46-channel-choose-'+channel.id"
+      @click="selectedChannel=channel.id">
+      <BCBrandIcon :name="channel.id" :size="25"/>
+      <span>{{channel.id==='FB_PAGE'?'Facebook Page':channel.id==='FB_PERSONAL'?'Facebook Messenger':channel.label}}</span>
+      <span aria-hidden="true">›</span>
+     </button>
     </div>
-    <section v-if="channelDetailsOpen" id="w46-channel-details" class="w46-r4-channel-details"
-     data-test="w46-multi-account" role="region" aria-label="账号连接详情">
-     <strong>账号连接状态</strong>
-     <p>{{snapshot?.trustedSession?'已建立本机会话，连接账号仍以每个平台原生状态回读为准。':'尚未建立可验证的本机会话。请在对应平台通过本人官方流程完成授权。'}}</p>
-     <p>多个账号及授权范围需由原生服务提供真实记录；尚无权威账号列表时不展示示例账号。</p>
-    </section>
+    <div v-else class="w46-r4-channel-step" data-test="w46-channel-step">
+     <BCChannelAccountSetup :key="selectedChannel"
+      :channel="CHANNELS.find(c=>c.id===selectedChannel)"
+      :fetch-impl="fetchImpl"/>
+    </div>
    </section>
    <div v-else-if="activeWorkspace==='PEOPLE'" class="w46-blank">
      <strong>联系人：{{snapshot?.trustedSession?snapshot.realContacts:0}}</strong>
@@ -474,4 +483,13 @@ defineExpose({refresh});
 .w46-r4-channel-details p{color:var(--muted);margin:7px 0 0}
 @media(max-width:1099px){.w46-r4-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.w46-r4-channel-grid{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}.w46-r4-channel-details{margin:0 10px 10px}.w46-r4-channel-toolbar{padding:4px 10px}.w46-r4-channel-toolbar>strong{font-size:13px}.w46-r4-channel-count{display:none}}
+
+.w46-r4-channel-back{border:0;background:transparent;color:var(--ink);font-size:13px;cursor:pointer;min-height:44px;padding:6px 8px;text-align:left}
+.w46-r4-channel-instruction{font-size:13px;color:var(--muted);margin:14px 16px 6px}
+.w46-r4-channel-picker{max-width:570px;width:calc(100% - 32px);margin:8px 16px;display:grid;gap:8px}
+.w46-r4-channel-choice{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 15px;border:1px solid var(--border);border-radius:13px;background:var(--bg2);color:var(--ink);cursor:pointer;text-align:left;font-size:14px}
+.w46-r4-channel-choice span:nth-child(2){flex:1}
+.w46-r4-channel-choice:hover,.w46-r4-channel-choice:focus-visible{border-color:var(--accent);outline:2px solid transparent}
+.w46-r4-channel-step{max-width:590px;width:calc(100% - 32px);margin:8px 16px}
+@media(max-width:600px){.w46-r4-channel-instruction{margin:12px 10px 4px}.w46-r4-channel-picker,.w46-r4-channel-step{width:calc(100% - 20px);margin:7px 10px}.w46-r4-channel-toolbar{gap:4px}.w46-r4-channel-toolbar>strong{font-size:12px}}
 </style>

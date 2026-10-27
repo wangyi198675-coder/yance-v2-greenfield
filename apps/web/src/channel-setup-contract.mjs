@@ -77,3 +77,110 @@ export function channelError(e){
  if(v.includes('CHANNEL_OWNER_HTTP_503'))return '平台原生 SDK 或 Worker 尚未就绪';
  return '原生平台回执无法核验，未连接账号';
 }
+
+
+// R4 FB_PAGE native user action. GET /setup is documentation ONLY; it cannot
+// start an authorization session. The actual W27 START is a CSRF-guarded POST,
+// available exclusively to an original W54 NATIVE_FIRST_PARTY installation.
+const PAGE_ACTIONS=Object.freeze({
+ start:'start',pages:'pages',bind:'bind',refresh:'refresh'
+});
+export async function invokeFbPageNativeAuthorization({
+ action,selectedProviderPageId,fetchImpl=globalThis.fetch
+}={}){
+ if(!Object.hasOwn(PAGE_ACTIONS,action))deny('W27_PAGE_ACTION_NOT_ALLOWED');
+ if(typeof fetchImpl!=='function')deny('CHANNEL_OWNER_FETCH_REQUIRED');
+ const current=await fetchImpl('/api/v2/local-session/status',{
+  method:'GET',credentials:'same-origin',cache:'no-store',
+  redirect:'error',referrerPolicy:'no-referrer'
+ });
+ if(!current?.ok)deny('W54_NATIVE_SESSION_STATUS_HTTP_'+(current?.status||'UNAVAILABLE'));
+ const s=await current.json();
+ if(s?.sessionKind!=='NATIVE_FIRST_PARTY'||s?.authorized!==true||
+   typeof s.csrfToken!=='string'||!/^[a-f0-9]{64}$/.test(s.csrfToken))
+  deny('W54_NATIVE_FIRST_PARTY_SESSION_REQUIRED');
+ const body=action==='bind'?{selectedProviderPageId}:{};
+ if(action==='bind'&&(typeof selectedProviderPageId!=='string'||
+  !/^[0-9]{1,40}$/.test(selectedProviderPageId)))
+  deny('W27_VERIFIED_PAGE_SELECTION_REQUIRED');
+ const reply=await fetchImpl('/api/v2/providers/fb-page/authorization/'+PAGE_ACTIONS[action],{
+  method:'POST',credentials:'same-origin',cache:'no-store',
+  redirect:'error',referrerPolicy:'no-referrer',
+  headers:{'content-type':'application/json','x-yance-csrf':s.csrfToken},
+  body:JSON.stringify(body)
+ });
+ if(!reply?.ok)deny('W27_NATIVE_AUTH_HTTP_'+(reply?.status||'UNAVAILABLE'));
+ const value=await reply.json();
+ const statuses={
+  start:['WAITING_USER_AUTH'],pages:['PAGE_SELECTION_REQUIRED'],
+  bind:['AUTHORIZED_READ_ONLY'],refresh:[
+    'WAITING_USER_AUTH','AUTHORIZED_READ_ONLY','REVOKED','REVOKED_OR_REBOUND'
+  ]
+ };
+ if(value?.ok!==true||value?.channel!=='FB_PAGE'||
+  value?.source!=='PANCAKE_NATIVE'||value?.canSend!==false||
+  !statuses[action].includes(value.status))
+  deny('W27_NATIVE_AUTH_RESPONSE_UNVERIFIED');
+ if(action==='start'&&
+  (value.entryAvailable!==true||value.credentialInput!=='NATIVE_PROTECTED_ONLY'))
+  deny('W27_PROTECTED_TOKEN_ENTRY_NOT_VERIFIED');
+ if(action==='pages'&&(!Array.isArray(value.pages)||value.pages.length>100||
+   value.pages.some(x=>typeof x?.providerPageId!=='string'||
+     !/^[0-9]{1,40}$/.test(x.providerPageId))))
+  deny('W27_PAGE_CHOICES_NOT_VERIFIED');
+ if(action==='bind'&&(
+  value.identityVerified!==true||
+  value.providerPageId!==selectedProviderPageId||
+  !Number.isSafeInteger(value.bindingRevision)||value.bindingRevision<1))
+  deny('W24_PAGE_BINDING_NOT_VERIFIED');
+ return Object.freeze(value);
+}
+
+
+// Token bytes exist only as a temporary user form value and one authenticated
+// same-origin POST to ORIGINAL W55 custody. Never cache, echo, or log secrets.
+export async function saveFbPageCredentialConfiguration({
+ pageId,pagePublicApiToken,fetchImpl=globalThis.fetch
+}={}){
+ if(typeof fetchImpl!=='function')deny('W55_SECURE_FETCH_REQUIRED');
+ if(typeof pageId!=='string'||!/^[0-9]{1,40}$/.test(pageId)||
+   typeof pagePublicApiToken!=='string'||pagePublicApiToken.length<8||pagePublicApiToken.length>480)
+   deny('W55_TOKEN_INPUT_REQUIRED');
+ const auth=await fetchImpl('/api/v2/local-session/status',{
+  method:'GET',credentials:'same-origin',cache:'no-store',
+  redirect:'error',referrerPolicy:'no-referrer'
+ });
+ if(!auth?.ok)deny('W55_CURRENT_LOCAL_SESSION_UNAVAILABLE');
+ let s=await auth.json();
+ if(s?.authorized!==true){
+  // Reuse original Web-private session on explicit Save; no extra login.
+  const started=await fetchImpl('/api/v2/local-session/web-private-start',{
+   method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',
+   referrerPolicy:'no-referrer',headers:{'content-type':'application/json'},body:'{}'
+  });
+  if(!started?.ok)deny('W55_EXISTING_WEB_SESSION_UNAVAILABLE');
+  const renewed=await fetchImpl('/api/v2/local-session/status',{
+   method:'GET',credentials:'same-origin',cache:'no-store',
+   redirect:'error',referrerPolicy:'no-referrer'
+  });
+  if(!renewed?.ok)deny('W55_EXISTING_WEB_SESSION_UNAVAILABLE');
+  s=await renewed.json();
+ }
+ if(s?.authorized!==true||
+   !['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(s.sessionKind)||
+   !/^[a-f0-9]{64}$/.test(s.csrfToken??''))
+   deny('W55_CURRENT_LOCAL_SESSION_REQUIRED');
+ const response=await fetchImpl('/api/v2/providers/fb-page/authorization/configure',{
+  method:'POST',credentials:'same-origin',cache:'no-store',
+  redirect:'error',referrerPolicy:'no-referrer',
+  headers:{'content-type':'application/json','x-yance-csrf':s.csrfToken},
+  body:JSON.stringify({pageId,pagePublicApiToken})
+ });
+ if(!response?.ok)deny('W55_PANCAKE_CONFIG_HTTP_'+(response?.status??'UNAVAILABLE'));
+ const receipt=await response.json();
+ if(receipt?.ok!==true||receipt.status!=='CREDENTIALS_SAVED_NOT_PAGE_AUTHORIZED'||
+   receipt.source!=='W55_OS_PROTECTED_CURRENT_USER'||
+   receipt.credentialValueReturned!==false||receipt.canSend!==false)
+   deny('W55_STORAGE_RECEIPT_UNVERIFIED');
+ return Object.freeze({status:receipt.status,saved:true});
+}
