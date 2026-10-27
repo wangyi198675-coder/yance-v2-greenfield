@@ -5,7 +5,7 @@ import test,{before,after} from 'node:test';
 import {request as rawHttpRequest} from 'node:http';
 import assert from 'node:assert/strict';
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdtempSync,copyFileSync,writeFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,copyFileSync,writeFileSync,rmSync,mkdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -21,19 +21,28 @@ const files=['server.mjs','runtime-config.mjs','runtime-provenance.mjs',
  'native-pinned-web-assets.mjs','native-private-startup.mjs','web-private-local-qwen.mjs',
  'web-private-cloud-byok.mjs','web-private-cloud-http.mjs','w55-web-native-stdio.mjs',
  'w54-native-child-frame.mjs','w54-native-webview-session.mjs',
- 'w47-w43-private-child.py'];
+ 'w47-w43-private-child.py','w47-w23-media-bridge.mjs',
+ 'w47-native-settings-capabilities.mjs'];
 let child,base,work;
 before(async()=>{
  work=mkdtempSync(join(tmpdir(),'w47-exact-native-test-'));
- for(const f of files)copyFileSync(join(here,f),join(work,f));
- writeFileSync(join(work,'runtime-build.json'),JSON.stringify({
+ // Preserve the original runtime/../src/domains/file-attachment layout.
+ // Do not replace W23 with fake test modules or weaken media authorization.
+ const runtimeDir=join(work,'runtime');
+ const w23Dir=join(work,'src','domains','file-attachment');
+ mkdirSync(runtimeDir,{recursive:true});
+ mkdirSync(w23Dir,{recursive:true});
+ for(const f of files)copyFileSync(join(here,f),join(runtimeDir,f));
+ for(const f of ['web-media.mjs','web-media-http.mjs'])
+  copyFileSync(resolve(here,'../src/domains/file-attachment',f),join(w23Dir,f));
+ writeFileSync(join(runtimeDir,'runtime-build.json'),JSON.stringify({
   format:1,product:'YanceV2',source_sha:expectedSha
  }));
  const env={...process.env,YANCE_W47_RUNTIME_MODE:'installed',
   YANCE_W47_API_PORT:'0',YANCE_W47_WEB_ORIGIN:webOrigin};
  delete env.YANCE_W47_OPERATOR_PAIRING;
  delete env.YANCE_W47_LOCAL_SESSION_TTL_MS;
- child=spawn(process.execPath,[join(work,'server.mjs')],{
+ child=spawn(process.execPath,[join(work,'runtime','server.mjs')],{
   windowsHide:true,stdio:['ignore','pipe','pipe'],shell:false,env
  });
  let seen='',err='';

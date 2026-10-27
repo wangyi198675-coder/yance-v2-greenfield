@@ -23,6 +23,8 @@ import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
 import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
+import {createW47WebMediaHttp} from './w47-w23-media-bridge.mjs';
+import {createW47NativeSettingsCatalog} from './w47-native-settings-capabilities.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -137,6 +139,15 @@ const privateExpertHttp=createPrivateNativeExpertHttp({
 const contactNativeAuthorityHttp=createContactNativeAuthorityHoldHttp({
  sessionAuthority:localSessionAuthority,webOrigin
 });
+// Original W23 is installed; the REAL W24/W44 current-account proof and
+// W55 protected 32-byte persistent media key are NOT signed into this host.
+// Provide original W23 formats/capabilities, but no identity/key or fake upload.
+const nativeMediaHttp=createW47WebMediaHttp({
+ sessionAuthority:localSessionAuthority,webOrigin
+});
+const nativeSettingsCatalog=createW47NativeSettingsCatalog({
+ sessionAuthority:localSessionAuthority,webOrigin
+});
 // W24 + W26..W29 provider SDK authority is absent, not a zero-contact
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
@@ -219,6 +230,22 @@ const handler=(req,res)=>{
       });
       return;
     }
+    if(url.pathname.startsWith('/api/v2/media/')){
+      void nativeMediaHttp(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'W23_MEDIA_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'W23_MEDIA_AUTHORITY_UNAVAILABLE');
+       else res.destroy();
+      });return;
+    }
+    if(url.pathname.startsWith('/api/v2/settings/')){
+      void nativeSettingsCatalog(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'SETTINGS_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'ORIGINAL_SETTINGS_CATALOG_UNAVAILABLE');
+       else res.destroy();
+      });return;
+    }
     if(url.pathname.startsWith('/api/v2/contact-context/')){
       void contactNativeAuthorityHttp(req,res,url).then(handled=>{
        if(!handled&&!res.writableEnded)deny(res,404,'CONTACT_CONTEXT_ROUTE_NOT_FOUND');
@@ -279,12 +306,10 @@ const handler=(req,res)=>{
        deny(res,503,'W45_NATIVE_TRANSLATION_AND_ATTESTOR_NOT_CONNECTED'):
        deny(res,401,'NO_AUTHORIZED_SOURCE_MESSAGE');
     }
-    if(['/api/v2/persona-policy','/api/v2/persona/learning',
-         '/api/v2/media/capabilities'].includes(url.pathname)){
+    if(['/api/v2/persona-policy','/api/v2/persona/learning'].includes(url.pathname)){
       if(req.method!=='GET')return deny(res,405,'READ_ONLY_CAPABILITIES');
       if(!localSessionAuthority.sessionFor(req))return deny(res,401,'LOCAL_SESSION_REQUIRED');
-      return deny(res,503,url.pathname.startsWith('/api/v2/persona')?
-       'PERSONA_POLICY_NATIVE_DB_OWNER_NOT_SIGNED':'W23_MEDIA_OWNER_PORT_NOT_CONNECTED');
+      return deny(res,503,'PERSONA_POLICY_NATIVE_DB_OWNER_NOT_SIGNED');
     }
     if(url.pathname==='/api/v2/identity-consent/takeover-state' ||
        url.pathname==='/api/v2/identity-consent/takeover' ||
