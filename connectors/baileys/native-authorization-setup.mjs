@@ -80,6 +80,15 @@ export function createBaileysNativeSetupController({createWorker,verifyNativeSes
       userActionRequired:!status.connected,canSend:false,
       realQrFromSdkOnly:true});
   }
+  async function readAvatar({nativeSession,remoteJid}={}){
+    const first=await owned(nativeSession,'READ_WHATSAPP_AVATAR');
+    if(typeof worker.readAvatar!=='function')fail('W28_NATIVE_AVATAR_PORT_REQUIRED');
+    const result=await worker.readAvatar({remoteJid});
+    const after=await check(nativeSession,'READ_WHATSAPP_AVATAR');
+    if(!same(first,after)||!owner||!same(first,owner))
+      fail('NATIVE_SESSION_CHANGED_DURING_AVATAR_READ');
+    return Object.freeze({ok:true,channel:'WHATSAPP_PERSONAL',...result,canSend:false});
+  }
   async function begin(nativeSession,accountLocator,userAction){
     if(pending)fail('SETUP_ACTION_IN_PROGRESS');
     if(!valid(accountLocator))fail('ACCOUNT_LOCATOR_REQUIRED');
@@ -157,5 +166,5 @@ export function createBaileysNativeSetupController({createWorker,verifyNativeSes
         credentialRevokeRequested:true});
     }finally{pending=false}
   }
-  return Object.freeze({readStatus,beginPairing,readQr,reconnect,disconnect,revoke});
+  return Object.freeze({readStatus,readAvatar,beginPairing,readQr,reconnect,disconnect,revoke});
 }

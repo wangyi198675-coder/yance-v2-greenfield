@@ -16,6 +16,7 @@ const respond=(res,status,body)=>{
 const denied=(res,status,code)=>respond(res,status,{ok:false,error:code,canSend:false});
 const paths=Object.freeze({
   '/api/v2/providers/whatsapp-personal/native/status':{method:'GET',action:'READ_WHATSAPP_STATUS',owner:'readStatus'},
+  '/api/v2/providers/whatsapp-personal/native/avatar':{method:'GET',action:'READ_WHATSAPP_AVATAR',owner:'readAvatar'},
   '/api/v2/providers/whatsapp-personal/native/authorize':{method:'POST',action:'PAIR_OWN_ACCOUNT',owner:'beginPairing'},
   '/api/v2/providers/whatsapp-personal/native/qr':{method:'GET',action:'READ_WHATSAPP_QR',owner:'readQr'},
   '/api/v2/providers/whatsapp-personal/native/disconnect':{method:'POST',action:'DISCONNECT_WHATSAPP',owner:'disconnect'},
@@ -54,7 +55,7 @@ export function createBaileysNativeSetupHttpHandler({controller,resolveSignedNat
     const parsed=url??new URL(req.url||'/', 'http://127.0.0.1');
     const target=paths[parsed.pathname];
     if(!target)return false;
-    if(req.method!==target.method||parsed.search) {
+    if(req.method!==target.method||(target.action!=='READ_WHATSAPP_AVATAR'&&parsed.search)) {
       denied(res,405,'NATIVE_METHOD_OR_QUERY_DENIED');return true;
     }
     try{
@@ -66,6 +67,11 @@ export function createBaileysNativeSetupHttpHandler({controller,resolveSignedNat
         denied(res,401,'W54_SIGNED_NATIVE_SESSION_REQUIRED');return true;
       }
       const input=req.method==='POST'?await parseBody(req,withLocator.has(target.action)):{};
+      if(target.action==='READ_WHATSAPP_AVATAR'){
+        if(parsed.searchParams.size!==1 || parsed.searchParams.getAll('remoteJid').length!==1)
+          {denied(res,422,'AVATAR_PEER_SELECTOR_INVALID');return true;}
+        input.remoteJid=parsed.searchParams.get('remoteJid');
+      }
       const output=await controller[target.owner]({...input,nativeSession:trusted.nativeSession});
       if(output?.ok!==true||output.canSend===true) {
         denied(res,503,'NATIVE_OWNER_INVALID_RESPONSE');return true;
