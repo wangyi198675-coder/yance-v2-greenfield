@@ -149,10 +149,14 @@ export function createLocalSessionHttpApi({authority,webOrigin,enableWebPrivate=
   if(!path.startsWith('/api/v2/local-session/'))return false;
   if(path==='/api/v2/local-session/status'&&req.method==='GET'){
    const active=authority.sessionFor(req);
-   json(res,200,active?{ok:true,paired:true,expiresAt:active.record.expiresAt,
+   json(res,200,active?{ok:true,paired:true,
+    // PRIVATE local use is authorized by the existing signed local session.
+    // Never conflate this with W24/W44 social account/CONTACT permission.
+    authorized:['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(active.record.kind),
+    expiresAt:active.record.expiresAt,
     csrfToken:active.record.csrf,sessionKind:active.record.kind,
     canSend:false,providerAuthorized:false}:
-    {ok:true,paired:false,canSend:false,providerAuthorized:false,
+    {ok:true,paired:false,authorized:false,canSend:false,providerAuthorized:false,
      requiresTerminalPair:false,canConfigureModels:true,
      reason:authority.nativeLaunchAvailable?'LOCAL_APP_SESSION_NOT_STARTED':
        'LOCAL_APP_NATIVE_SESSION_NOT_CONNECTED'});
