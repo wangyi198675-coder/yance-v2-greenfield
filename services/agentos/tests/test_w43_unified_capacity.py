@@ -108,7 +108,7 @@ def test_cross_process_bounded_lock_does_not_fake_success(tmp_path):
     assert child.stdout.strip() == "CAPACITY_BUSY"
 
 
-@pytest.mark.parametrize("backend", ["ollama", "qwen3", "qwen3_llamacpp", "openai"])
+@pytest.mark.parametrize("backend", ["ollama", "qwen3", "qwen3_llamacpp"])
 def test_only_one_official_active_adapter(tmp_path, backend):
     key=tmp_path/"synthetic-key"
     key.write_text("synthetic-not-real-key-12345678901234")

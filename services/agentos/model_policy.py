@@ -38,6 +38,8 @@ def classify_provider(
     user_explicitly_selected: bool = False,
     siwc: Mapping[str, Any] | None = None,
     extra_charge_approved: bool = False,
+    provider_native_grant_attested: bool = False,
+    credential_source_verified: bool = False,
 ) -> ProviderDecision:
     """Fail closed: no subscription login, mock PASS or API key implies eligibility."""
     if provider not in _VALID_PROVIDERS or purpose not in _ALLOWED_PURPOSES:
@@ -73,9 +75,14 @@ def classify_provider(
     if not extra_charge_approved:
         return ProviderDecision(provider, "PAID_OR_UNKNOWN_CHARGE_NOT_APPROVED", False,
                                 "COST_UNDETERMINED", purpose, "PAID_PROVIDER_NEVER_AUTO_ENABLED")
-    return ProviderDecision(provider, "PROVIDER_NATIVE_GRANT_NOT_ATTESTED", False,
-                            "USER_PAYMENT_APPROVED_BUT_RUNTIME_NOT_VERIFIED", purpose,
-                            "ACCOUNT_SCOPE_AND_RUNTIME_RECEIPT_REQUIRED")
+    allowed = provider_native_grant_attested and credential_source_verified
+    return ProviderDecision(
+        provider, "READY_TO_ATTEMPT_SELECTED_PAID_MODEL" if allowed
+        else "PROVIDER_NATIVE_GRANT_NOT_ATTESTED", bool(allowed),
+        "USER_APPROVED_EXTERNAL_API_USAGE", purpose,
+        "USER_SELECTED_VERIFIED_SOURCE_NO_FALLBACK" if allowed
+        else "ACCOUNT_SCOPE_AND_RUNTIME_RECEIPT_REQUIRED",
+    )
 
 
 def choose_preferred_nonprod(*, qwen3_real_run_verified: bool) -> ProviderDecision:
