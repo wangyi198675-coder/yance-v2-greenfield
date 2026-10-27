@@ -160,8 +160,8 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 <template>
  <section class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
   <header class="bc-private-brain-head">
-   <div><strong>闺蜜大脑</strong><p>一个私人智能体 · 模型设置与聊天历史</p></div>
-   <Button size="sm" variant="outline" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">检查连接</Button>
+   <div><strong>闺蜜大脑</strong></div>
+   <div class="bc-private-brain-actions"><Button size="sm" variant="ghost" data-test="brain-open-settings" :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">{{catalog?.configured?"模型设置":"设置AI模型"}}</Button><Button size="sm" variant="ghost" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">刷新</Button></div>
   </header>
   <p class="bc-private-brain-state" role="status" data-test="brain-state">
    {{loadState==='checking'?'正在核实服务端':loadState==='ready'?'历史已由服务端恢复':
@@ -172,8 +172,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
     loadState==='history-unavailable'?'真实对话或历史暂不可用':'模型选择尚未确认'}}
   </p>
   <p v-if="notice" class="bc-private-notice" role="alert" data-test="brain-error">{{notice}}</p>
-  <Button variant="outline" size="sm" data-test="brain-open-settings"
-   :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">{{catalog?.configured?'切换AI模型':'设置AI模型'}}</Button>
+  <details class="bc-brain-trace" data-test="w46-brain-tools"><summary>工具 · Run · Trace · 专家（有真实回执时展开）</summary><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史中没有经服务端核实的工具回执；专家和运行详情待 W43 原生接口接线。</p></details>
   <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings">
    <h3>选择 AI 模型</h3>
    <BCNativeCloudKeySettings :web-csrf="session?.csrf" @changed="refresh"/>
@@ -211,7 +210,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
    <Button type="submit" data-test="brain-send"
      :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送给闺蜜大脑'}}</Button>
   </form>
-  <small>私人聊天不是 CONTACT Composer；不启用社交平台外发。没有受信任的 Agno Run 时不会生成模拟回复。</small>
+
  </section>
 </template>
 <style scoped>
@@ -230,4 +229,19 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 .bc-private-history article p{white-space:pre-wrap;overflow-wrap:anywhere}
 .bc-private-compose{display:grid;gap:8px}.bc-private-compose textarea,.bc-credential input{min-width:0;color:inherit;background:transparent;border:1px solid var(--w46-edge,#777);border-radius:8px;padding:10px}
 .bc-private-brain button{justify-self:start}.bc-private-notice{color:#dc7575}
+
+.bc-private-brain{display:flex!important;flex:1 1 0;flex-direction:column;min-height:0;height:100%;padding:12px 16px!important;gap:8px!important;background:var(--bg2);border-color:var(--border);color:var(--ink);box-shadow:0 14px 40px rgba(0,0,0,.07)}
+.bc-private-brain-head{display:flex;min-height:42px;flex:0 0 auto;align-items:center;padding-bottom:7px;border-bottom:1px solid var(--border);flex-wrap:nowrap}
+.bc-private-brain-head strong{font-size:17px}.bc-private-brain-actions{display:flex;align-items:center;gap:6px}
+.bc-private-brain-state{font-size:11px;color:var(--muted);margin:0;flex:0 0 auto}
+.bc-private-notice{font-size:12px;flex:0 0 auto}.bc-private-settings{max-height:min(42vh,360px);overflow:auto;flex:0 0 auto;background:var(--surface);border-color:var(--border)}
+.bc-brain-trace{padding:8px 12px;background:var(--surface-soft);border:1px solid var(--border);border-radius:10px;font-size:11px;flex:0 0 auto;color:var(--muted)}.bc-brain-trace summary{cursor:pointer;color:var(--ink)}.bc-brain-trace p{overflow-wrap:anywhere}
+.bc-private-history{flex:1 1 0;min-height:140px;max-height:none!important;display:block;overflow-y:auto;background:var(--bg);border:0!important;padding:13px 4px!important;overscroll-behavior:contain}
+.bc-private-history article{width:fit-content;max-width:min(84%,760px);margin:8px auto 14px 0;border:1px solid var(--border);border-radius:15px 15px 15px 4px;padding:12px 16px;background:var(--surface);box-shadow:0 4px 18px rgba(0,0,0,.055)}
+.bc-private-history article[data-role=user]{margin-left:auto;margin-right:0;border-radius:15px 15px 4px 15px;border-color:rgba(var(--accent-rgb),.28);background:linear-gradient(135deg,rgba(var(--accent-rgb),.14),rgba(var(--accent-rgb),.055))}
+.bc-private-history article strong{font-size:11px;color:var(--accent)}.bc-private-history article p{margin:7px 0 0;line-height:1.65}
+.bc-private-compose{flex:0 0 auto;display:grid;gap:7px;border:1px solid var(--border);padding:11px 12px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px rgba(var(--accent-rgb),.055),0 12px 24px rgba(0,0,0,.065)}.bc-private-compose label{font-size:11px;color:var(--muted)}
+.bc-private-compose textarea{border-radius:12px;resize:vertical;min-height:66px;background:var(--bg2)!important;border-color:var(--border)!important}.bc-private-compose textarea:focus{outline:2px solid rgba(var(--accent-rgb),.38);border-color:var(--accent)!important}.bc-private-compose button{background:var(--accent);color:var(--accent-ink);border-radius:11px}
+@media(max-width:719px){.bc-private-brain{padding:9px!important}.bc-private-brain-head{gap:4px}.bc-private-brain-head strong{font-size:15px}.bc-private-brain-head button{font-size:11px}.bc-private-history article{max-width:92%}}
+@media(prefers-reduced-motion:reduce){.bc-private-compose,.bc-private-history article{box-shadow:none}}
 </style>
