@@ -358,10 +358,15 @@ if(r4IsolatedPreview){
      .split('\n').filter(Boolean);
    const hitTestFix='apps/web/src/BCVisualThemeSystem.css';
    const reviewedHitTestBlob='934d4402942d0fe9b07a09583aaed33f9bdda8b6';
-   if(additional.length!==3||
+   const nativeQrTest='apps/web/tests/w46-r4-channel-compact.test.mjs';
+   const reviewedNativeQrTestBlob='2084a4ff5d10bc49bc14c56ed59c23cc25413c19';
+   if(additional.length!==4||
       !additional.includes(modelReview)||
       !additional.includes(hitTestFix)||
+      !additional.includes(nativeQrTest)||
       !additional.includes('apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(git('rev-parse','HEAD:'+nativeQrTest)!==reviewedNativeQrTestBlob||
+      git('hash-object','--',nativeQrTest)!==reviewedNativeQrTestBlob)return false;
    if(git('rev-parse','HEAD:'+hitTestFix)!==reviewedHitTestBlob||
       git('hash-object','--',hitTestFix)!==reviewedHitTestBlob)return false;
    const review=readAck(modelReview);
