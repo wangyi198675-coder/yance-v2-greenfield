@@ -331,9 +331,14 @@ if(r4IsolatedPreview){
       originalPaths.some(p=>!modelChanged.includes(p)))return false;
    const additional=git('diff','--name-only',modelHead,'HEAD')
      .split('\n').filter(Boolean);
-   if(additional.length!==2||
+   const hitTestFix='apps/web/src/BCVisualThemeSystem.css';
+   const reviewedHitTestBlob='61e6852f94fe12882289ca9582e97450123956a0';
+   if(additional.length!==3||
       !additional.includes(modelReview)||
+      !additional.includes(hitTestFix)||
       !additional.includes('apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(git('rev-parse','HEAD:'+hitTestFix)!==reviewedHitTestBlob||
+      git('hash-object','--',hitTestFix)!==reviewedHitTestBlob)return false;
    const review=readAck(modelReview);
    if(!review.includes('W09_MODEL_SOURCE_DIFF_REVIEW_PASS')||
       !review.includes(modelBase)||!review.includes(modelHead)||
