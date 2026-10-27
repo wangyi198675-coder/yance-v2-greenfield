@@ -873,4 +873,67 @@ defineExpose({refresh});
 @media(max-width:719px){.w46-real-tools .w46-r4-expert-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:10px;padding:10px}.w46-tools-main{min-height:0}.w46-tools-empty{min-height:0}.w46-tools-empty h3{font-size:18px}.w46-tools-empty p{font-size:13px}.w46-tools-filters{flex-wrap:wrap}.w46-tools-search{flex-basis:100%}.w46-tools-aside{margin-bottom:16px}}
 /* Keep the visible compact navigation menu above the WOW visual content layer. */
 .w46-product-candidate>.w46-compact-global{z-index:65!important}
+/* W09-3 fixed 44751: three simple personal channel cards + full-width
+   Facebook Page workspace. Original credential and grant ports stay untouched. */
+.w46-r4-channel-workspace{overflow:hidden}
+.w46-r4-channel-workspace .w46-r4-channel-grid{
+ display:grid;flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ grid-template-rows:max-content minmax(335px,1fr);grid-auto-rows:max-content;
+ gap:14px;padding:clamp(12px,1.6vw,20px);align-items:stretch;align-content:start;
+}
+.w46-r4-channel-grid>:nth-child(1){grid-column:1;grid-row:1}
+.w46-r4-channel-grid>:nth-child(3){grid-column:2;grid-row:1}
+.w46-r4-channel-grid>:nth-child(4){grid-column:3;grid-row:1}
+.w46-r4-channel-grid>:nth-child(2){grid-column:1/-1;grid-row:2;min-width:0}
+.w46-r4-channel-grid>.w46-channel{min-height:252px}
+.w46-r4-channel-grid>.w46-channel .w46-channel-copy strong{font-size:15px}
+.w46-r4-channel-grid>.w46-channel .w46-channel-copy p{font-size:12px}
+.w46-r4-channel-grid>.w46-channel .w46-account-placeholder{font-size:12px}
+.w46-r4-channel-grid>.pancake-multi{
+ display:grid;box-sizing:border-box;width:100%;max-width:none;min-width:0;
+ grid-template-columns:minmax(230px,.85fr) minmax(340px,1.3fr);
+ grid-template-rows:auto minmax(0,1fr) auto;
+ grid-template-areas:"heading config" "notice config" "footer config";
+ align-items:start;align-content:start;gap:14px 24px;
+ border:1px solid var(--border);border-radius:16px;background:var(--bg2);
+ padding:clamp(16px,2vw,25px);box-shadow:0 8px 30px #00000016;
+}
+.w46-r4-channel-grid>.pancake-multi>.pancake-heading{grid-area:heading;min-width:0}
+.w46-r4-channel-grid>.pancake-multi>.pancake-note{grid-area:notice;align-self:start}
+.w46-r4-channel-grid>.pancake-multi>.pancake-section{grid-area:config;min-width:0}
+.w46-r4-channel-grid>.pancake-multi>footer{grid-area:footer;align-self:end;max-width:420px}
+.w46-r4-channel-grid>.pancake-multi .pancake-heading h3{font-size:19px;line-height:1.35}
+.w46-r4-channel-grid>.pancake-multi .pancake-heading p{font-size:13px;line-height:1.7}
+.w46-r4-channel-grid>.pancake-multi .pancake-section{
+ padding:clamp(15px,2vw,23px);background:var(--surface-soft);
+ border-color:var(--border);gap:12px;align-content:start;
+}
+.w46-r4-channel-grid>.pancake-multi .pancake-section p,
+.w46-r4-channel-grid>.pancake-multi .pancake-note{font-size:13px;line-height:1.7}
+.w46-r4-channel-grid>.pancake-multi .pancake-section label{font-size:13px}
+.w46-r4-channel-grid>.pancake-multi .pancake-section-head strong{font-size:15px}
+.w46-r4-channel-grid>.pancake-multi .pancake-section input{font-size:13px;min-height:44px}
+.w46-r4-channel-grid>.pancake-multi .pancake-section button{font-size:13px}
+.w46-r4-channel-grid>.pancake-multi .pancake-page{min-width:0;flex-wrap:wrap}
+.w46-r4-channel-grid>.pancake-multi .pancake-page-info{min-width:0}
+@media(max-width:1000px){
+ .w46-r4-channel-workspace .w46-r4-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:max-content max-content minmax(300px,1fr)}
+ .w46-r4-channel-grid>:nth-child(4){grid-column:1/-1;grid-row:2}
+ .w46-r4-channel-grid>:nth-child(2){grid-column:1/-1;grid-row:3}
+ .w46-r4-channel-grid>.pancake-multi{grid-template-columns:1fr;grid-template-rows:auto;grid-template-areas:"heading" "notice" "config" "footer"}
+ .w46-r4-channel-grid>.pancake-multi>footer{max-width:none}
+}
+@media(max-width:640px){
+ .w46-r4-channel-workspace .w46-r4-channel-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;grid-auto-rows:max-content;gap:11px;padding:11px}
+ .w46-r4-channel-grid>:nth-child(1){grid-column:1;grid-row:1}
+ .w46-r4-channel-grid>:nth-child(3){grid-column:1;grid-row:2}
+ .w46-r4-channel-grid>:nth-child(4){grid-column:1;grid-row:3}
+ .w46-r4-channel-grid>:nth-child(2){grid-column:1;grid-row:4}
+ .w46-r4-channel-grid>.w46-channel{min-height:215px}
+ .w46-r4-channel-grid>.pancake-multi{gap:13px;padding:15px}
+ .w46-r4-channel-grid>.pancake-multi .pancake-section{padding:13px}
+ .w46-r4-channel-grid>.pancake-multi .pancake-heading{flex-wrap:wrap}
+ .w46-r4-channel-grid>.pancake-multi .pancake-heading h3{font-size:17px}
+}
 </style>
