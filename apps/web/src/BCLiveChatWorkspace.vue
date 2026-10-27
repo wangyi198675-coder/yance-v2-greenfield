@@ -119,27 +119,26 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
       <input ref="searchBox" v-model="search" type="search" data-test="w46-search" aria-label="搜索当前授权联系人" placeholder="搜索联系人、消息…" autocomplete="off"/>
       <kbd>Ctrl K</kbd>
      </label>
-     <button type="button" class="bc-unread-toggle" data-test="w46-unread" :aria-pressed="unreadOnly"
+     <button v-if="unreadAuthoritative" type="button" class="bc-unread-toggle" data-test="w46-unread" :aria-pressed="unreadOnly"
       :disabled="!unreadAuthoritative" :title="unreadAuthoritative?'筛选权威未读会话':'未读状态尚未接入原生账号'" @click="unreadOnly=!unreadOnly">未读</button>
     </div>
    </div>
    <div v-if="plusOpen" class="bc-action-popover" data-test="w46-plus-menu">
     <button type="button" @click="navigate('ACCOUNTS')">连接社交账号</button>
-    <button type="button" disabled title="等待原生渠道新会话资格">发起新会话 · 暂不可用</button>
-    <small>不会创建虚构联系人，需本人完成平台授权。</small>
+    <!-- Chat creation remains controlled by each channel's existing account flow. -->
    </div>
    <div v-if="filterOpen" class="bc-action-popover" data-test="w46-filter-menu">
     <label>平台<select v-model="channel" aria-label="平台筛选"><option v-for="ch in channels" :key="ch.id" :value="ch.id">{{ch.label}}</option></select></label>
     <label>账号<select v-model="account" aria-label="账号筛选"><option v-for="id in accountIds" :key="id" :value="id">{{id==='ALL'?'全部已授权账号':id}}</option></select></label>
-    <small>归档、托管、标签及消息全文筛选：等待原生有来源的索引与持久状态。</small>
+
     <button type="button" @click="channel='ALL';account='ALL';filterOpen=false">清除筛选</button>
    </div>
    <div class="bc-inbox-list-scroll" data-test="w46-contacts-scroll">
     <p v-if="state==='checking'&&!contacts.length" class="bc-inbox-state">正在读取本机联系人…</p>
-    <p v-else-if="state!=='ready'" class="bc-inbox-state" data-test="w46-contact-waiting">
-     {{state==='waiting-auth'?'连接社交账号后显示真实联系人':state==='waiting-session'?'本机私人会话暂未建立':error||'原生联系人接口暂不可用'}}
-     <button type="button" @click="navigate('ACCOUNTS')">连接账号</button>
-    </p>
+    <div v-else-if="state!=='ready'" class="bc-inbox-state" data-test="w46-contact-waiting">
+     <p>{{state==='unavailable'?'对话列表暂时无法加载':'暂无会话'}}</p>
+     <button v-if="state==='unavailable'" type="button" @click="refresh">重试</button>
+    </div>
     <template v-else>
      <template v-if="pinned.length">
       <button type="button" class="bc-group-title" :aria-expanded="pinnedExpanded" @click="pinnedExpanded=!pinnedExpanded">置顶 <span>{{pinnedExpanded?'⌄':'›'}}</span></button>
@@ -157,11 +156,11 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
      <p v-if="!filtered.length" class="bc-inbox-state">没有匹配的当前授权联系人</p>
     </template>
    </div>
-   <footer class="bc-inbox-footer"><span>{{state==='ready'?'已核验账号 '+accounts+' · 联系人 '+contacts.length:'等待真实授权'}}</span>
+   <footer class="bc-inbox-footer"><span>{{state==='ready'?contacts.length+' 个联系人':state==='unavailable'?'连接异常':'尚无对话'}}</span>
     <button type="button" :disabled="state==='checking'" @click="refresh">刷新</button>
    </footer>
   </aside>
-  <div class="bc-real-conversation" data-test="w46-live-timeline">
+  <div class="bc-real-conversation" :class="{'is-empty-chat':!selected}" data-test="w46-live-timeline">
    <template v-if="selected">
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
@@ -184,12 +183,13 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
       </div>
      </div>
     </div>
-    <p v-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">需要W24提供完整的联系人身份K，才能读取消息并启用原CONTACT Composer。</p>
+    <p v-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">暂时无法读取此对话，请重新连接账号后重试。</p>
    </template>
    <div v-else class="bc-real-no-contact" data-test="w46-empty-chat">
-    <div aria-hidden="true" class="bc-empty-glow">✦</div><h2>选择联系人开始聊天</h2>
-    <p>当前没有已选择的真实联系人，聊天、译文及草稿仅从你授权的账号读取。</p>
-    <button type="button" @click="navigate('ACCOUNTS')">连接聊天账号</button>
+    <div aria-hidden="true" class="bc-empty-glow">✦</div>
+    <h2>{{state==='ready'?'选择对话开始聊天':state==='unavailable'?'暂时无法加载聊天':'开始聊天'}}</h2>
+    <p>{{state==='ready'?'从左侧选择联系人，继续聊天。':state==='unavailable'?'聊天服务暂时无法连接，请重试。':'连接你的聊天账号，联系人和消息会出现在这里。'}}</p>
+    <button v-if="state!=='ready'" type="button" @click="state==='unavailable'?refresh():navigate('ACCOUNTS')">{{state==='unavailable'?'重新连接':'连接聊天账号'}}</button>
    </div>
    <!-- One always-mounted original CONTACT Composer. Null K must leave input
         and expert/media operations disabled, not create a second renderer. -->
@@ -218,14 +218,14 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
 .bc-action-popover{position:absolute;right:10px;top:54px;width:min(285px,calc(100% - 20px));z-index:30;display:grid;gap:9px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised);box-shadow:0 14px 40px #0006}
 .bc-action-popover button,.bc-action-popover select{min-height:35px;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:9px;padding:8px}
 .bc-action-popover button:disabled{opacity:.58}.bc-action-popover label{display:grid;gap:5px}.bc-action-popover small{line-height:1.5;color:var(--muted)}
-.bc-inbox-state{padding:14px;color:var(--muted);font-size:12px;line-height:1.6}.bc-inbox-state button,.bc-real-no-contact button{display:block;margin-top:10px;padding:9px 14px;border:1px solid var(--accent);border-radius:10px;background:rgba(var(--accent-rgb),.13);color:var(--ink);cursor:pointer}
+.bc-inbox-state{padding:14px;color:var(--muted);font-size:13px;line-height:1.6}.bc-inbox-state p{margin:0}.bc-inbox-state button,.bc-real-no-contact button{display:block;margin-top:10px;padding:9px 14px;border:1px solid var(--accent);border-radius:10px;background:rgba(var(--accent-rgb),.13);color:var(--ink);cursor:pointer}
 .bc-inbox-footer{min-height:32px;display:flex;justify-content:space-between;align-items:center;padding:6px 12px;gap:6px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}.bc-inbox-footer button{border:0;background:transparent;color:var(--accent);cursor:pointer}
 .bc-real-conversation{min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
 .bc-chat-heading{display:flex;align-items:center;gap:11px;padding:10px 14px;min-height:57px;border-bottom:1px solid var(--border);background:var(--bg2)}.bc-chat-title{display:grid;gap:4px;min-width:0;flex:1}.bc-chat-title strong,.bc-chat-title small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bc-chat-title small{color:var(--muted);font-size:11px}.bc-chat-heading button{border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--ink);padding:8px;cursor:pointer}
 .bc-real-timeline{min-height:0;flex:1 1 auto;overflow-y:auto;padding:18px;overscroll-behavior:contain}.bc-real-message{max-width:100%;margin-bottom:14px}.bc-real-message p{white-space:pre-wrap;overflow-wrap:anywhere}.bc-translation{color:var(--accent)}.bc-message-meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:11px}.bc-message-meta button{padding:2px 7px;border:0;background:none;color:var(--accent);cursor:pointer}.bc-message-meta button:disabled{opacity:.45}
-.bc-real-no-contact{flex:1;min-height:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:20px;text-align:center}.bc-empty-glow{font-size:40px;color:var(--accent);text-shadow:0 0 30px rgba(var(--accent-rgb),.6)}.bc-real-no-contact h2{font-size:20px;margin:0}.bc-real-no-contact p{font-size:12px;color:var(--muted);max-width:390px;margin:0}
+.bc-real-no-contact{flex:1;min-height:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:20px;text-align:center}.bc-empty-glow{font-size:40px;color:var(--accent);text-shadow:0 0 30px rgba(var(--accent-rgb),.6)}.bc-real-no-contact h2{font-size:20px;margin:0}.bc-real-no-contact p{font-size:14px;line-height:1.65;color:var(--muted);max-width:390px;margin:0}
 .bc-mobile-back{display:none}
-:deep(.bc-native-composer){flex:0 0 auto}
+:deep(.bc-native-composer){flex:0 0 auto}.bc-real-conversation.is-empty-chat :deep(.bc-native-composer){display:none}
 @media(min-width:720px) and (max-width:1099px){.bc-real-chat{grid-template-columns:260px minmax(0,1fr)}.bc-search-capsule kbd{display:none}}
 @media(max-width:719px){.bc-real-chat{display:block;position:relative}.bc-real-list,.bc-real-conversation{width:100%;height:100%}.bc-real-conversation{display:none}.bc-real-chat.mobile-conversation .bc-real-list{display:none}.bc-real-chat.mobile-conversation .bc-real-conversation{display:flex}.bc-mobile-back{display:block!important;min-height:44px}.bc-tools-row{height:43px}.bc-sidebar-tools{min-height:107px}.bc-round-action{height:44px;min-width:44px}.bc-unread-toggle{height:44px}.bc-search-capsule{height:42px}.bc-real-contact{min-height:70px}}
 @media(prefers-reduced-motion:reduce){.bc-real-contact,.bc-search-capsule{transition:none!important}}

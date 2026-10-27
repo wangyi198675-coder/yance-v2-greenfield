@@ -95,7 +95,7 @@ defineExpose({refresh});
     <Button v-for="item in WORKSPACES.filter(i=>!['CHAT','BRAIN','AUTOPILOT'].includes(i.id))" :key="item.id" size="sm" variant="ghost" :data-test="'workspace-'+item.id" @click="choose(item.id)">{{item.label}}</Button>
    </div>
   </header>
-  <div v-if="compactInfo||error" class="w46-compact-status" data-test="w46-trusted-status" role="status">
+  <div v-if="compactInfo||(error&&activeWorkspace!=='CHAT')" class="w46-compact-status" data-test="w46-trusted-status" role="status">
    <span>{{status}}</span><Button size="xs" variant="outline" data-test="w46-refresh" :disabled="loading" @click="refresh">刷新状态</Button>
   </div>
   <div ref="contentScroller" tabindex="0" role="region"
