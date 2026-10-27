@@ -57,8 +57,11 @@ function build(t,{oldTable=false}={}){
 }
 test('history direction fromMe preserves incoming and authenticated self-sent; no sender/auto reply',async t=>{
  const h=build(t),{native,delivery}=h.open();
- const a=await native.acceptHistory(event('in',false));
- const b=await native.acceptHistory(event('self',true));
+ // Deterministic VERIFIED provider order: CI can record both local receipts
+ // in the same millisecond, where tie-break by random ID is not arrival order.
+ // Keep authoritative provenance; never change original native history sorting.
+ const a=await native.acceptHistory(event('in',false,{providerTimestampMs:1770000001000}));
+ const b=await native.acceptHistory(event('self',true,{providerTimestampMs:1770000002000}));
  assert.equal(a.fromMe,false);assert.equal(a.direction,'INBOUND');
  assert.equal(b.fromMe,true);assert.equal(b.direction,'OUTBOUND');
  assert.equal(b.deliveryState,'PROVIDER_HISTORY_UNRECONCILED');
@@ -66,6 +69,7 @@ test('history direction fromMe preserves incoming and authenticated self-sent; n
  assert.equal(a.createsSendIntent,false);assert.equal(h.calls,0);
  assert.equal(delivery.db.prepare('SELECT COUNT(*) AS n FROM send_intents').get().n,0);
  const rows=await native.listHistory({k,nativePrincipalId:'verified-owner'});
+ assert.ok(rows.every(r=>r.timeSource==='VERIFIED_PROVIDER_TIMESTAMP'));
  assert.deepEqual(rows.map(r=>r.fromMe),[false,true]);
  assert.ok(rows.every(r=>r.triggerReply===false));
 });
