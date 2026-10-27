@@ -453,7 +453,7 @@ defineExpose({refresh});
 .w46-r4-channel-count{color:var(--muted);font-size:11px}
 .w46-r4-channel-details-toggle{border:1px solid var(--border)!important;border-radius:999px;background:var(--surface-soft)!important;color:var(--ink)!important;min-height:34px;padding:5px 13px;font-size:12px;cursor:pointer;white-space:nowrap}
 .w46-r4-channel-details-toggle:hover,.w46-r4-channel-details-toggle:focus-visible{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(var(--accent-rgb),.13)}
-.w46-r4-channel-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch;padding:16px;min-height:0}
+.w46-r4-channel-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch;align-content:start;grid-auto-rows:max-content;flex-shrink:0;padding:16px;min-height:0}
 .w46-r4-channel-details{margin:0 16px 16px;padding:15px 17px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);font-size:12px;line-height:1.7}
 .w46-r4-channel-details strong{font-size:13px}
 .w46-r4-channel-details p{color:var(--muted);margin:7px 0 0}
