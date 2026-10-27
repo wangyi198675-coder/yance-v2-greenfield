@@ -24,7 +24,8 @@ const normalize=x=>{
    channel:r.channel,peerId:r.peer_id,bindingRevision:String(r.binding_revision)});
  const eventId=createHash('sha256').update(JSON.stringify([k,x.providerMid,'WA_HISTORY'])).digest('hex');
  return Object.freeze({k,source:'baileys',sourceEventId:'wa-history-'+eventId,
-   providerMid:x.providerMid,original:x.original,synthetic:false,
+   providerMid:x.providerMid,providerRemoteJid:x.providerRemoteJid,
+   original:x.original,synthetic:false,
    isHistory:true,fromMe:x.fromMe,
    ...(x.timestampSec?{providerTimestampMs:x.timestampSec*1000}:{}),
  });

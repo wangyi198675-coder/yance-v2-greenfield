@@ -16,6 +16,7 @@ export function createW47WhatsAppCurrentSessionPort({
     !Number.isSafeInteger(nativeBoot.nativeRevocationGeneration)||
     !/^[a-f0-9]{64}$/.test(nativeSession?.binding??'')||
     typeof webOrigin!=='string')return null;
+ let liveWitness=null;
  function checked(req,operation){
   if(!req||!operations.has(operation))refuse('W54_WHATSAPP_ACTION_INVALID');
   const session=sessionAuthority.sessionFor(req);
@@ -38,6 +39,7 @@ export function createW47WhatsAppCurrentSessionPort({
  }
  const resolveSignedNativeSession=async({request,operation}={})=>{
   const session=checked(request,operation);
+  liveWitness=Object.freeze({request,sessionId:session.id,record:session.record});
   return Object.freeze({nativeSession:Object.freeze({
    request,sessionRef:session.id,sessionRecord:session.record,
    owner:'W47_ORIGINAL_NATIVE_SESSION'}),
@@ -55,5 +57,13 @@ export function createW47WhatsAppCurrentSessionPort({
    sessionRef:current.id,
    revocationGeneration:nativeBoot.nativeRevocationGeneration});
  };
- return Object.freeze({resolveSignedNativeSession,verifyNativeSession});
+ const assertCurrentNativeUser=async()=>{
+  if(!liveWitness)return false;
+  const {request,sessionId,record}=liveWitness;
+  const now=sessionAuthority.sessionFor(request);
+  return now?.id===sessionId&&now.record===record&&
+   record.nativeHostBinding===nativeSession.binding;
+ };
+ return Object.freeze({resolveSignedNativeSession,verifyNativeSession,
+  assertCurrentNativeUser});
 }

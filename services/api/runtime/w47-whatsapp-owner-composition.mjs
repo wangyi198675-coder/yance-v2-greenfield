@@ -6,7 +6,7 @@ import {createW47WhatsAppW25HistoryAdapter} from './w47-whatsapp-w25-history.mjs
 
 const fn=x=>typeof x==='function';
 export async function createW47WhatsAppOwnerComposition({
-  w54, w24, w25, w55Executable, qaEnv
+  w54, w24, w25, w55Executable, sdkEvidence=null, qaEnv
 }={}){
  if(!w54||!w24||!w25||typeof w55Executable!=='string'||
    !['verifyNativeSession','resolveSignedNativeSession'].every(x=>fn(w54[x]))||
@@ -45,6 +45,7 @@ export async function createW47WhatsAppOwnerComposition({
    acceptHistory:history.acceptHistory,
   }),
   observed:Object.freeze({onState,onQr}),
+  ...(sdkEvidence?.sdk?{sdk:sdkEvidence.sdk}:{}),
  });
  return createW47WhatsAppNativeRoute({
   createWorker,verifyNativeSession:w54.verifyNativeSession,

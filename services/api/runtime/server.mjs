@@ -152,18 +152,37 @@ const nativeSettingsCatalog=createW47NativeSettingsCatalog({
 // W24 + W26..W29 provider SDK authority is absent, not a zero-contact
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
-const nativeOwnerReads=createNativeOwnerReadHttp({sessionAuthority:localSessionAuthority,webOrigin});
+// The actual W28/W24/W44/W25/W55 graph is installed ONLY under the
+// existing signed W54 native launch, never localhost or a test-only actor.
+const whatsAppLive=nativeBoot&&nativeSession&&process.env.YANCE_W55_SIGNAL_NATIVE_EXE?
+ await import('./w47-whatsapp-live-runtime.mjs').then(({createW47WhatsAppLiveRuntime})=>
+  createW47WhatsAppLiveRuntime({nativeBoot,nativeSession,
+   sessionAuthority:localSessionAuthority,webOrigin,
+   w55Executable:process.env.YANCE_W55_SIGNAL_NATIVE_EXE})):null;
+const nativeOwnerReads=createNativeOwnerReadHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,
+ ...(whatsAppLive?{
+  resolveW54CurrentUser:whatsAppLive.resolveW54CurrentUser,
+  readW24AuthorizedAccounts:whatsAppLive.readW24AuthorizedAccounts,
+  readW24VerifiedContacts:whatsAppLive.readW24VerifiedContacts,
+ }:{}),
+});
 // W26 real official bridge read is DIAGNOSTIC ONLY, never source of FB
 // user auth. Explicit W09/W54-injected native owner ports are still required
 // for actual W24 account ONLINE, SDK setup and authorized message access.
 const nativeMessages=createNativeMessageReadHttp({
- sessionAuthority:localSessionAuthority,webOrigin
+ sessionAuthority:localSessionAuthority,webOrigin,
+ ...(whatsAppLive?{
+  resolveW54Principal:whatsAppLive.resolveW54CurrentUser,
+  resolveW24CurrentFullK:whatsAppLive.resolveW24CurrentFullK,
+  readW25OriginalInbound:whatsAppLive.readW25OriginalInbound,
+ }:{}),
 });
 // W28 actual Baileys QR/contacts/history lives behind the original W24/W55
 // owner ports. This one-listener mount becomes active ONLY after the original
 // W54 current user, W24 real account/peer, and W55 protected Signal creds are
 // installed in-process. Current unprovisioned QA must explicitly remain 503.
-const whatsAppNativeHttp=createW47WhatsAppNativeRoute();
+const whatsAppNativeHttp=whatsAppLive?.handler??null;
 const nativeProviders=createNativeProviderGateway({
  sessionAuthority:localSessionAuthority,
  readW26Status:makeW26DiagnosticPort(process.env.YANCE_W47_W26_READONLY_PORT)
