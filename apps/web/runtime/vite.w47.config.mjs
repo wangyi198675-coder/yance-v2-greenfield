@@ -102,20 +102,33 @@ if(r4IsolatedPreview){
    .split('\n').filter(line=>line&&
      !/^\?\? apps\/web\/runtime\/vite\.w47\.config\.mjs\.timestamp-[0-9]+-[a-f0-9]+\.mjs$/.test(line))
    .join('\n');
- // Local iterative release: pin only the committed media/gallery delta.
+ // R4 local release: retain both exact, reviewed media 4e8545 and expert a9cc670 deltas.
+ // Neither delta confers account, contact, provider-send, or cloud authorization.
  const galleryCommit='4e8545b82e87afc3104c96115f18c8da3f7f9467';
+ const expertCommit='a9cc670583138785f0fd65896420bdd32408ecc7';
  const galleryPath='apps/web/src/BCMediaWorkspace.vue';
  const galleryTest='apps/web/tests/w46-r4-immersive-media-gallery.test.mjs';
  const gallerySettingsTest='apps/web/tests/w46-r4-media-settings-native.test.mjs';
- // This local W09 release allowance does not claim independent W46 re-signing.
+ const expertPins=Object.freeze({
+  'apps/web/src/BCLiveChatWorkspace.vue':'a2cf591ebf9eaca8b6e5326de8b283f41bb2b539',
+  'apps/web/src/BCNativeComposer.vue':'de41bf5de2eb7737330296366c8ead361e76923e',
+  'apps/web/src/BCNativeExpertPicker.vue':'175997ee7c538d09789be59d4814e2b339abe148',
+  'apps/web/tests/w46-pr99-contextual-popover.test.mjs':'cc4ebfce062058fdda1a429288829d63c462662d'
+ });
  const galleryScope=(()=>{try{
    git('merge-base','--is-ancestor',galleryCommit,'HEAD');
    return [galleryPath,galleryTest,gallerySettingsTest].every(path=>
      git('rev-parse','HEAD:'+path)===git('rev-parse',galleryCommit+':'+path));
  }catch{return false}})();
- const validSignedBlobs=Object.entries(ownerFiles).every(([path,sha])=>
-   existsSync(join(w46Root,path))&&git('hash-object','--',path)===(path===galleryPath&&galleryScope?git('rev-parse',galleryCommit+':'+path):sha)&&
-   git('rev-parse','HEAD:'+path)===(path===galleryPath&&galleryScope?git('rev-parse',galleryCommit+':'+path):sha));
+ const expertScope=Object.entries(expertPins).every(([path,sha])=>{try{
+   return existsSync(join(w46Root,path))&&git('rev-parse',expertCommit+':'+path)===sha&&
+     git('rev-parse','HEAD:'+path)===sha&&git('hash-object','--',path)===sha;
+ }catch{return false}});
+ const validSignedBlobs=galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
+   const expected=path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha);
+   return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
+     git('rev-parse','HEAD:'+path)===expected;
+ });
  // Old five original Vue files remain protected, including ChannelSetup.
  // W46 R4 introduced TWO Vue components and its one authentic W23 browser
  // binary port. Exact Git content must match both the merged HEAD and W46's

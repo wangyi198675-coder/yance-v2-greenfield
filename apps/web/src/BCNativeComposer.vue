@@ -3,6 +3,7 @@ import {computed,ref,watch,nextTick,onMounted,onBeforeUnmount} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import {InputGroup,InputGroupTextarea} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/input-group';
 import {createComposerBridge,fullK} from './composer-bridge.mjs';
+import BCNativeExpertPicker from './BCNativeExpertPicker.vue';
 import {createW23BrowserMediaClient} from './w23-media-browser-consumer.mjs';
 
 // Replacement seam for the ONE selected B+C CONTACT Composer; not a second sender.
@@ -12,6 +13,7 @@ const props=defineProps({
   takeoverPort:{type:Object,default:null}, draftCandidatePort:{type:Object,default:null},
   mediaAuthorityPort:{type:Object,default:null},fetchImpl:{type:Function,default:null}
 });
+const emit=defineEmits(['navigate']);
 let bridge=createComposerBridge({takeoverPort:props.takeoverPort});
 const current=ref({key:null,status:'NO_CONTACT',draft:null,canSend:false});
 const composing=ref(false),compositionK=ref(null),why=ref('');
@@ -47,7 +49,6 @@ function contactOutsideClick(e){
 onMounted(()=>{document.addEventListener('keydown',contactMenuKeyboard);document.addEventListener('pointerdown',contactOutsideClick)});
 onBeforeUnmount(()=>{document.removeEventListener('keydown',contactMenuKeyboard);document.removeEventListener('pointerdown',contactOutsideClick)});
 watch(()=>props.identity,()=>closeContactMenu());
-const designExperts=['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家'];
 const update=()=>{current.value=bridge.view()};
 const safeIdentity=()=>{try{return props.identity&&current.value.key===fullK(props.identity)?props.identity:null}catch{return null}};
 const sourceMessage=computed(()=>{
@@ -167,18 +168,16 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
         @compositionend="endIME" @paste="onPaste" @keydown="onSendAttempt"/>
     </InputGroup>
     <div class="bc-footer">
-      <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-haspopup="menu" aria-controls="w46-contact-experts-menu" :aria-expanded="expertsOpen" @click="toggleContactMenu('experts')">＋ 专家</Button>
+      <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-haspopup="dialog" aria-controls="w46-contact-experts-menu" :aria-expanded="expertsOpen" @click="toggleContactMenu('experts')">＋ 专家</Button>
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-model" aria-haspopup="menu" aria-controls="w46-contact-model-menu" :aria-expanded="contactMenu==='model'" @click="toggleContactMenu('model')">模型</Button>
       <button type="button" class="bc-mode-label bc-compact-menu-trigger" data-test="w46-contact-mode" aria-haspopup="menu" aria-controls="w46-contact-mode-menu" :aria-expanded="contactMenu==='mode'" @click="toggleContactMenu('mode')">人工 · 辅助 · 自动（待核验）⌄</button>
       <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key||mediaUploading||!mediaClient" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/wav,audio/mpeg,audio/ogg"/></label>
       <span class="bc-send-hold" title="真人发送仅允许原W25唯一MessageDelivery通过当前身份及ACK授权边界">未授权 · 不能发送</span>
       <Button disabled size="sm">发送不可用</Button>
     </div>
-    <div v-if="expertsOpen" class="bc-expert-candidates bc-compose-popup" data-test="w46-composer-experts" id="w46-contact-experts-menu" role="menu" aria-label="专家选择"><button type="button" data-test="w46-contact-expert-close" @click="toggleContactMenu('experts')">关闭</button>
-      <strong>选择协作专家 · 暂未接通</strong>
-      <p>本次任务、当前联系人或全局作用域需W43/W45真实注册及持久授权，不能按设计草稿伪造选择。</p>
-      <button v-for="name in designExperts" :key="name" type="button" disabled :title="name+'尚未获得原生可用确认'">{{name}} · 未安装核验</button>
-    </div>    <div v-if="contactMenu==='model'" class="bc-compose-popup" role="menu" data-test="w46-contact-model-popup" id="w46-contact-model-menu">
+    <BCNativeExpertPicker v-if="expertsOpen" :fetch-impl="fetchImpl"
+      @close="closeContactMenu(true)" @navigate="section=>{closeContactMenu();emit('navigate',section)}"/>
+    <div v-if="contactMenu==='model'" class="bc-compose-popup" role="menu" data-test="w46-contact-model-popup" id="w46-contact-model-menu">
       <div class="bc-popup-head"><strong>联系人模型</strong><button type="button" @click="toggleContactMenu('model')">关闭</button></div>
       <p>尚未取得当前联系人完整身份K、原生模型费用预算与授权，不能使用闺蜜大脑私人模型的权限代替。</p>
       <button type="button" disabled>本地模型 · 待资格回读</button><button type="button" disabled>云端模型 · 待密钥和批准</button>
@@ -207,11 +206,8 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 .bc-native-composer :deep(.cn-input-group){border-radius:17px!important;border-color:var(--border);background:linear-gradient(120deg,rgba(var(--accent-rgb),.04),transparent),var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
 .bc-native-composer :deep(.cn-input-group:focus-within){border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.13)}
 .bc-mode-label{color:var(--muted);font-size:10px}.bc-footer{justify-content:flex-start!important}.bc-footer .bc-file-label{margin-left:auto}
-.bc-expert-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px;max-height:220px;overflow:auto}.bc-expert-candidates strong,.bc-expert-candidates p{grid-column:1/-1;margin:0}.bc-expert-candidates p{font-size:11px;color:var(--muted)}
-.bc-expert-candidates button{padding:8px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);color:var(--muted);text-align:left;opacity:.7}
 /* Anchored R4 contextual menus; no second Composer or shadow sender. */
 .bc-native-composer{position:relative;overflow:visible!important;max-height:none!important}
-.bc-expert-candidates.bc-compose-popup{grid-template-columns:1fr}
 .bc-compose-popup{position:absolute;box-sizing:border-box;left:12px;bottom:calc(100% - 1px);z-index:70;width:min(315px,calc(100vw - 32px));max-height:min(300px,58dvh);overflow:auto!important;display:grid;gap:8px;align-content:start;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised,var(--surface));color:var(--ink)}
 .bc-compose-popup p{font-size:11px;line-height:1.55;margin:0;color:var(--muted)}
 .bc-compose-popup button{border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface-soft);color:var(--ink);text-align:left;font-size:11px}
