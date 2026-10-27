@@ -118,9 +118,17 @@ if(r4IsolatedPreview){
  // Narrow user-directed chat UI delta on the existing W09-3 baseline.
  // Preserve the independently reviewed W46/W47 parent blobs and all API authority checks.
  const chatUiBase='a27138f2bdecf2a5565f13970ae2c86ee4b63237';
+ // Narrow source-only tools UI and its test, preserving the installed WOW parent.
+ const toolsUiTest='apps/web/tests/w46-r4-compact-v1.test.mjs';
+ const toolsUiTestBlob='0a3f7190a3d148c9ca116d56e318e4d4ba60aec4';
+ const toolsUiTestValid=(()=>{
+  try{return git('rev-parse','HEAD:'+toolsUiTest)===toolsUiTestBlob&&
+   git('hash-object','--',toolsUiTest)===toolsUiTestBlob}
+  catch{return false}
+ })();
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'34a02c2b9a42940e0a3174de633c8ae095e07475',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'d480881fe842289c2ef5718fb57cd33f21772855',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'ea1577aabcba2b11bba091321f007fd1c45cda75'
  });
  // Reuse the exact already-running 6b0118d multi-account UI: no new authority.
@@ -158,19 +166,23 @@ if(r4IsolatedPreview){
   &&[...themeEvidence].every(path=>existsSync(join(w46Root,path))&&
      git('hash-object','--',path)===git('rev-parse','HEAD:'+path))
   &&git('rev-parse','HEAD:apps/web/src/BCProductWorkspaceCandidate.vue')===
-    '34a02c2b9a42940e0a3174de633c8ae095e07475';
+    'd480881fe842289c2ef5718fb57cd33f21772855';
  // Only user-approved MIT visual layer on top of fixed-44751 Persona SHA; zero business rewrites.
  const wowBase='02764244af7ae329085c4bb0c1cec939780d5a20';
  const wowFiles=Object.freeze({"apps/web/src/BCProductWorkspaceCandidate.vue":"34a02c2b9a42940e0a3174de633c8ae095e07475","apps/web/src/BCVisualAurora.vue":"0b2a805c9dee236a02cd9c7954146eb7c6ee5056","apps/web/src/BCVisualThemeSystem.css":"4b700fa0e41f1c2ee25210017bb42563195ba1a6","apps/web/tests/w09-wow-visual-themes.test.mjs":"d5d8b6997f3595dc9e11c0144cfb031f6e4328a4"});
  const wowEvidence=new Set(["apps/web/evidence/INSPIRA_UI_AURORA_LICENSE.md","apps/web/evidence/WOW_THEMES_20261028/THEME_0.png","apps/web/evidence/WOW_THEMES_20261028/THEME_1.png","apps/web/evidence/WOW_THEMES_20261028/THEME_2.png","apps/web/evidence/WOW_THEMES_20261028/THEME_3.png","apps/web/evidence/WOW_THEMES_20261028/THEME_4.png","apps/web/evidence/WOW_THEMES_20261028/CHAT.png","apps/web/evidence/WOW_THEMES_20261028/BRAIN.png","apps/web/evidence/WOW_THEMES_20261028/WOW_VISUAL_QA_20261028.json","apps/web/evidence/WOW_THEMES_20261028/W09_VISUAL_REVIEW.md"]);
  const wowDeltaValid=(()=>{
   try{
+   const wowRelease='b96161c14a93399c7033333ce1ee6ee33f83f991';
    git('merge-base','--is-ancestor',wowBase,'HEAD');
+   git('merge-base','--is-ancestor',wowRelease,'HEAD');
    const delta=git('diff','--name-only',wowBase,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<5||!delta.every(p=>Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
-   return Object.entries(wowFiles).every(([p,h])=>
-    existsSync(join(w46Root,p))&&git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
-    &&[...wowEvidence].every(p=>existsSync(join(w46Root,p))&&
+   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   return Object.entries(wowFiles).every(([p,h])=>{
+    const expected=p==='apps/web/src/BCProductWorkspaceCandidate.vue'?chatUiFiles[p]:h;
+    return git('rev-parse',wowRelease+':'+p)===h&&existsSync(join(w46Root,p))&&
+     git('hash-object','--',p)===expected&&git('rev-parse','HEAD:'+p)===expected;
+   })&&[...wowEvidence].every(p=>existsSync(join(w46Root,p))&&
        git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
   }catch{return false}
  })();
@@ -178,7 +190,7 @@ if(r4IsolatedPreview){
   try{
    git('merge-base','--is-ancestor',chatUiBase,'HEAD');
    const changed=git('diff','--name-only',chatUiBase,'HEAD').split('\n').filter(Boolean);
-   if(!changed.every(p=>Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(chatUiFiles).every(([p,sha])=>
     git('rev-parse','HEAD:'+p)===sha&&git('hash-object','--',p)===sha&&
     git('rev-parse',chatUiBase+':'+p)===(expertPins[p]||ownerFiles[p]));
@@ -262,7 +274,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!multiScope||!themeScope||!wowDeltaValid||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!themeScope||!wowDeltaValid||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
