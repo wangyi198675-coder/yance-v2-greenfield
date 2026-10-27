@@ -17,7 +17,7 @@ test('R4 MEDIA is a real library, original preview and W23 native capability; ne
  assert.match(media,/data-test="w46-media-library"/);
  assert.match(media,/data-test="w46-media-preview"/);
  assert.match(media,/data-test="w46-media-capabilities"/);
- assert.match(media,/W23当前没有已签署的账号范围媒体列表分页/);
+ assert.match(media,/分页目录接入前不会显示虚构的图库/);
  assert.match(media,/media-filter-'\+f.id/);
  assert.match(media,/port.value.uploadFile\(file/);
  assert.match(media,/port.value.binary\(item.asset_id\)/);
