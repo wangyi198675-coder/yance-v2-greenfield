@@ -1,5 +1,6 @@
 <script setup>
-import {computed,ref,watch} from 'vue';
+import {computed,ref,watch,onMounted} from 'vue';
+import {createW05NativeNotificationPort} from './w05-native-notification-port.mjs';
 import {
  BellRing,Monitor,Volume2,Moon,ShieldCheck,Activity,MessageSquare,
  Bell,CheckCircle2,AlertCircle,Clock3,LockKeyhole,Play,Settings2,
@@ -13,6 +14,37 @@ const props=defineProps({
 const emit=defineEmits(['request-permission']);
 const lastTest=ref('');
 const testPending=ref(false);
+const native=createW05NativeNotificationPort();
+const nativeStatus=ref(native.available?'checking':'unavailable');
+const nativeBusy=ref(false),nativeFeedback=ref('');
+const nativeLabel=computed(()=>({
+ granted:'系统权限已允许',denied:'系统通知已关闭',
+ default:'需要 Windows 授权',checking:'正在核验系统权限',
+ unavailable:'待实机核验'
+})[nativeStatus.value]||'无法确认');
+async function inspectNative(){
+ if(!native.available)return;
+ try{nativeStatus.value=await native.permission()}
+ catch{nativeStatus.value='unavailable'}
+}
+async function allowNative(){
+ if(nativeBusy.value||nativeStatus.value!=='default')return;
+ nativeBusy.value=true;nativeFeedback.value='';
+ try{nativeStatus.value=await native.askPermission()}
+ catch{nativeStatus.value='unavailable';nativeFeedback.value='Windows 原生权限请求失败。'}
+ finally{nativeBusy.value=false}
+}
+async function testNative(){
+ if(nativeBusy.value||nativeStatus.value!=='granted')return;
+ nativeBusy.value=true;nativeFeedback.value='';
+ try{
+  const receipt=await native.nativeTest();
+  nativeFeedback.value=receipt.submitted===true?
+   '已提交给 Windows；请查看系统通知中心确认实际显示。':'未能提交测试通知。';
+ }catch{nativeFeedback.value='测试未提交：检查 Windows 应用通知权限与安装状态。'}
+ finally{nativeBusy.value=false}
+}
+onMounted(()=>{void inspectNative()});
 const browserSupported=computed(()=>typeof window!=='undefined'&&'Notification' in window);
 const browserGranted=computed(()=>browserSupported.value&&props.permission==='granted');
 const browserLabel=computed(()=>({
@@ -85,7 +117,15 @@ function testNativeBrowser(){
      <div class="nc-method-head"><span class="nc-icon nc-blue"><Bell :size="21" :stroke-width="1.8"/></span><span class="nc-status nc-wait">待实机核验</span></div>
      <strong>Windows 桌面通知</strong>
      <p>继续使用言策现有的 Tauri 原生 Toast 与 WebSocket／REST。当前网页不能代表 Windows 安装版的实际通知状态。</p>
-     <div class="nc-method-actions"><span class="nc-readonly"><ShieldCheck :size="14"/> 使用原生 W05 通知链路</span></div>
+     <div class="nc-method-actions">
+      <button v-if="native.available" type="button" class="nc-action-primary" data-test="notify-native-authorize"
+       :disabled="nativeStatus!=='default'||nativeBusy" @click="allowNative">请求 Windows 权限</button>
+      <button v-if="native.available" type="button" class="nc-action-ghost" data-test="notify-native-test"
+       :disabled="nativeStatus!=='granted'||nativeBusy" @click="testNative"><Play :size="14"/> 测试原生 Toast</button>
+      <span v-if="!native.available" class="nc-readonly"><ShieldCheck :size="14"/> 使用原生 W05 通知链路</span>
+     </div>
+     <p v-if="native.available" class="nc-native-state" data-test="notify-native-readback">{{nativeLabel}}</p>
+     <p v-if="nativeFeedback" class="nc-feedback" role="status" data-test="notify-native-feedback">{{nativeFeedback}}</p>
     </section>
    </div>
    <p v-if="lastTest" class="nc-feedback" role="status" data-test="notify-browser-test-status">{{lastTest}}</p>
@@ -173,6 +213,7 @@ function testNativeBrowser(){
 .nc-action-primary{background:var(--accent)!important;color:var(--bg)!important;border:1px solid var(--accent)!important;font-weight:700}
 .nc-action-ghost{background:var(--surface)!important;color:var(--ink)!important;border:1px solid var(--border)!important}
 .nc-action-primary:disabled,.nc-action-ghost:disabled{opacity:.5!important;cursor:not-allowed}
+.nc-native-state{font-size:10px;color:var(--muted)}
 .nc-readonly{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px;padding:7px 0}
 .nc-feedback{font-size:11px;color:var(--accent);padding:12px;border:1px solid rgba(var(--accent-rgb),.22);background:rgba(var(--accent-rgb),.07);border-radius:10px}
 .nc-group{gap:0;padding:17px}

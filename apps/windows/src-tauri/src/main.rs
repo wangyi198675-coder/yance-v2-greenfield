@@ -64,7 +64,7 @@ fn main() {
     } else {
         None
     };
-    let mut builder = tauri::Builder::default().manage(session);
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_notification::init()).manage(session);
     if let Some(port) = bc_port {
         builder = builder.plugin(
             tauri_plugin_localhost::Builder::new(port)
@@ -127,7 +127,13 @@ fn main() {
                         .permission("allow-logout-session")
                         .permission("allow-cloud-key-status")
                         .permission("allow-cloud-key-store")
-                        .permission("allow-cloud-key-revoke"),
+                        .permission("allow-cloud-key-revoke")
+                        // Existing official W05 Tauri plugin. Only exact trusted
+                        // OS-user WebView receives native permission & test Toast.
+                        // This is not a contact send or an event subscription.
+                        .permission("notification:allow-is-permission-granted")
+                        .permission("notification:allow-request-permission")
+                        .permission("notification:allow-notify"),
                 )?;
                 let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(address))
                     .title("言策 V2 | 本机闺蜜大脑")
@@ -166,7 +172,13 @@ fn main() {
                         .permission("allow-logout-session")
                         .permission("allow-cloud-key-status")
                         .permission("allow-cloud-key-store")
-                        .permission("allow-cloud-key-revoke"),
+                        .permission("allow-cloud-key-revoke")
+                        // Existing official W05 Tauri plugin. Only exact trusted
+                        // OS-user WebView receives native permission & test Toast.
+                        // This is not a contact send or an event subscription.
+                        .permission("notification:allow-is-permission-granted")
+                        .permission("notification:allow-request-permission")
+                        .permission("notification:allow-notify"),
                 )?;
                 WebviewWindowBuilder::new(app, "main", WebviewUrl::External(address))
                     .title("言策 V2 | B+C 本机候选（未授权）")

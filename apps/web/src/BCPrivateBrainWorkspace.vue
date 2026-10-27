@@ -2,6 +2,7 @@
 import {ref,onMounted,onBeforeUnmount,computed,nextTick} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
+import {notifyVerifiedAgnoInBackground} from './w05-native-notification-port.mjs';
 import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModelSelection,
   verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody} from './private-brain-ui-contract.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
@@ -321,6 +322,13 @@ async function send(){
   if(!safeCurrent(id))return;
   text.value=''; // history is sole persisted authority
   await loadHistory(id); // if history unavailable, don't fabricate turn in timeline
+  // W43 verified COMPLETED receipt + re-read original durable Agno History.
+  // Only if the app is backgrounded and OS permission is ALREADY granted.
+  // No new Agent framework, no synthetic message, and replayed Runs stay silent.
+  if(safeCurrent(id)&&loadState.value==='ready'&&
+     messages.value.some(m=>m.role==='assistant'&&m.content===reply.assistantText)){
+   void notifyVerifiedAgnoInBackground({receipt:reply,historyVerified:true});
+  }
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='history-unavailable'}}
  finally{if(safeCurrent(id))requestInFlight.value=false}
 }

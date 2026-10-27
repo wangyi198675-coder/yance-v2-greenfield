@@ -129,7 +129,7 @@ if(r4IsolatedPreview){
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
   'apps/web/src/BCProductWorkspaceCandidate.vue':'96f57574e82fd2ed498fdb83036c60c61451ac1a',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'ea1577aabcba2b11bba091321f007fd1c45cda75'
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'8584acc60a34917fd45afbd6860650aef588687c'
  });
  // Reuse the exact already-running 6b0118d multi-account UI: no new authority.
  const multiAccountBase='6b0118de6fed027fb3785ad425c98aeaec11e402';
@@ -212,13 +212,28 @@ if(r4IsolatedPreview){
  const wowEvidence=new Set(["apps/web/evidence/INSPIRA_UI_AURORA_LICENSE.md","apps/web/evidence/WOW_THEMES_20261028/THEME_0.png","apps/web/evidence/WOW_THEMES_20261028/THEME_1.png","apps/web/evidence/WOW_THEMES_20261028/THEME_2.png","apps/web/evidence/WOW_THEMES_20261028/THEME_3.png","apps/web/evidence/WOW_THEMES_20261028/THEME_4.png","apps/web/evidence/WOW_THEMES_20261028/CHAT.png","apps/web/evidence/WOW_THEMES_20261028/BRAIN.png","apps/web/evidence/WOW_THEMES_20261028/WOW_VISUAL_QA_20261028.json","apps/web/evidence/WOW_THEMES_20261028/W09_VISUAL_REVIEW.md"]);
  // W09-3: Native W05/Agno event owner retained; only UI display and browser permission.
  const notifyBase='b32f8790c066c72756b7283b27f6127204bed50e';
- const notifyFiles=Object.freeze({"apps/web/src/BCSettingsWorkspace.vue":"77c1bcc6728fa17a548fbcbf92da710438bd2464","apps/web/src/BCNotificationCenter.vue":"5e760fb45e673c9675619328b2398083e4c5322e","apps/web/tests/w46-r4-media-settings-native.test.mjs":"592708bc0484a4b164ddb6ad106021f7d4d53142","apps/web/tests/w09-notification-center-native-reuse.test.mjs":"1c61241956c3cdf1bc094eef4f76eb0558922d88"});
+ const notifyFiles=Object.freeze({"apps/web/src/BCSettingsWorkspace.vue":"77c1bcc6728fa17a548fbcbf92da710438bd2464","apps/web/src/BCNotificationCenter.vue":"7aff3161ef2b2f447a28b51270877401f66d9411","apps/web/tests/w46-r4-media-settings-native.test.mjs":"592708bc0484a4b164ddb6ad106021f7d4d53142","apps/web/tests/w09-notification-center-native-reuse.test.mjs":"1c61241956c3cdf1bc094eef4f76eb0558922d88"});
  const notifyEvidence=new Set(["apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_REAL_1360.png","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_REAL_430.png","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_QA_20261028.json","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/W09_NOTIFICATION_CENTER_REVIEW.md"]);
+ // Exact W05 native Tauri 2.6.0 + W43 verified Agno completion, no second event engine.
+ const w05Base='ffdd62dd8b9e5a512f322adeb5819b595dddc5f5';
+ const w05Files=Object.freeze({"apps/web/src/BCNotificationCenter.vue":"7aff3161ef2b2f447a28b51270877401f66d9411","apps/web/src/BCPrivateBrainWorkspace.vue":"8584acc60a34917fd45afbd6860650aef588687c","apps/web/src/w05-native-notification-port.mjs":"a3b5b759a344305e7a02f848d8e479e8b89587f7","apps/web/tests/w09-w05-native-notification.test.mjs":"e8a027864ab15c612940b7b2363d884573bd4a4a","apps/windows/src-tauri/Cargo.toml":"624b745b73f514fdcfb0f168064546ce1c55f864","apps/windows/src-tauri/Cargo.lock":"cc0bb05412250f404872fc438d23b88ad62fcd5a","apps/windows/src-tauri/src/main.rs":"2fd2fdad1e4e6de1e41c224efe8252ff5c9b1031","apps/windows/src-tauri/capabilities/main.json":"8aefc72b1a3ce83a83b147c485a807a4eb060833"});
+ const w05Evidence=new Set(["apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/NOTIFY_W05_NATIVE_QA_20261028.json","apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/NOTIFY_W05_NATIVE_REAL_1360.png","apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/NOTIFY_W05_NATIVE_REAL_430.png","apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/W09_W05_AGNO_DELTA_REVIEW.md"]);
+ const w05Scope=(()=>{
+  try{
+   git('merge-base','--is-ancestor',w05Base,'HEAD');
+   const delta=git('diff','--name-only',w05Base,'HEAD').split('\n').filter(Boolean);
+   if(delta.length<8||!delta.every(p=>Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   return Object.entries(w05Files).every(([p,h])=>existsSync(join(w46Root,p))&&
+    git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
+    &&[...w05Evidence].every(p=>existsSync(join(w46Root,p))&&
+      git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
+  }catch{return false}
+ })();
  const notifyDeltaValid=(()=>{
   try{
    git('merge-base','--is-ancestor',notifyBase,'HEAD');
    const delta=git('diff','--name-only',notifyBase,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<4||!delta.every(p=>Object.hasOwn(notifyFiles,p)||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(delta.length<4||!delta.every(p=>Object.hasOwn(notifyFiles,p)||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(notifyFiles).every(([p,h])=>existsSync(join(w46Root,p))&&
      git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
      &&[...notifyEvidence].every(p=>existsSync(join(w46Root,p))&&
@@ -231,7 +246,7 @@ if(r4IsolatedPreview){
    git('merge-base','--is-ancestor',wowBase,'HEAD');
    git('merge-base','--is-ancestor',wowRelease,'HEAD');
    const delta=git('diff','--name-only',wowBase,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(wowFiles).every(([p,h])=>{
     const expected=p==='apps/web/src/BCProductWorkspaceCandidate.vue'?chatUiFiles[p]:h;
     return git('rev-parse',wowRelease+':'+p)===h&&existsSync(join(w46Root,p))&&
@@ -244,7 +259,7 @@ if(r4IsolatedPreview){
   try{
    git('merge-base','--is-ancestor',chatUiBase,'HEAD');
    const changed=git('diff','--name-only',chatUiBase,'HEAD').split('\n').filter(Boolean);
-   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(chatUiFiles).every(([p,sha])=>
     git('rev-parse','HEAD:'+p)===sha&&git('hash-object','--',p)===sha&&
     git('rev-parse',chatUiBase+':'+p)===(expertPins[p]||ownerFiles[p]));
@@ -261,7 +276,7 @@ if(r4IsolatedPreview){
      git('rev-parse','HEAD:'+path)===(chatUiFiles[path]||sha)&&
      git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
- const validSignedBlobs=notifyDeltaValid&&wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
+ const validSignedBlobs=w05Scope&&notifyDeltaValid&&wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
    const expected=path===channelUxFile?channelUxSha:(notifyFiles[path]||pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha)));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
      git('rev-parse','HEAD:'+path)===expected;
@@ -328,7 +343,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!themeScope||!wowDeltaValid||!notifyDeltaValid||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!themeScope||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
