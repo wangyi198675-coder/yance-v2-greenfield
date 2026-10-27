@@ -19,6 +19,7 @@ const emit=defineEmits(['select','toggle-theme','cycle-theme']);
 const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
+const channelDetailsOpen=ref(false);
 const contentScroller=ref(null);
 const settingCategory=ref('general');
 // Design tabs are navigation only until authoritative Persona/Expert APIs are signed.
@@ -103,17 +104,27 @@ defineExpose({refresh});
      {{explainCapability(snapshot,activeWorkspace)}}</span>
    </div>
    <BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl" @navigate="choose"/>
-   <div v-if="activeWorkspace==='ACCOUNTS'" class="w46-channel-grid" aria-label="四渠道真实授权回读">
-    <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
-     :channel="channel" :fetch-impl="fetchImpl"/>
-    <p class="w46-note">R4 四平台品牌 SVG 路径来源已校验；平台连接须取得各原生渠道授权回读。</p>
-    <div class="w46-account-summary" data-test="w46-multi-account">
-     <strong>多账号管理 · 已验证账号 {{readonlyAccount}}</strong>
-     <p>同一渠道可独立绑定多个账号，当前全部未授权。账号列表仅能由可信原生服务返回。</p>
-     <p>Messenger · mautrix-meta | Page · Pancake | WhatsApp · Baileys | Telegram · TDLib JSON</p>
-     <p>点击上方「准备官方授权」从 W47 正式服务获取上游步骤。没有原生签署结果时不会显示已连接。</p>
+   <section v-if="activeWorkspace==='ACCOUNTS'" class="w46-r4-channel-workspace" data-test="w46-channel-workspace" aria-label="连接社交账号">
+    <header class="w46-r4-channel-toolbar">
+     <strong>连接社交账号</strong>
+     <div class="w46-r4-channel-actions">
+      <span class="w46-r4-channel-count" data-test="w46-authoritative-account-count">{{snapshot?.trustedSession?'已验证账号 '+readonlyAccount:'账号状态待验证'}}</span>
+      <button type="button" class="w46-r4-channel-details-toggle" data-test="w46-channel-details-toggle"
+       :aria-expanded="channelDetailsOpen" aria-controls="w46-channel-details"
+       @click="channelDetailsOpen=!channelDetailsOpen">{{channelDetailsOpen?'收起详情':'账号详情'}} <span aria-hidden="true">{{channelDetailsOpen?'⌃':'⌄'}}</span></button>
+     </div>
+    </header>
+    <div class="w46-r4-channel-grid" data-test="w46-channel-grid" aria-label="四平台原生连接入口">
+     <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
+      :channel="channel" :fetch-impl="fetchImpl"/>
     </div>
-   </div>
+    <section v-if="channelDetailsOpen" id="w46-channel-details" class="w46-r4-channel-details"
+     data-test="w46-multi-account" role="region" aria-label="账号连接详情">
+     <strong>账号连接状态</strong>
+     <p>{{snapshot?.trustedSession?'已建立本机会话，连接账号仍以每个平台原生状态回读为准。':'尚未建立可验证的本机会话。请在对应平台通过本人官方流程完成授权。'}}</p>
+     <p>多个账号及授权范围需由原生服务提供真实记录；尚无权威账号列表时不展示示例账号。</p>
+    </section>
+   </section>
    <div v-else-if="activeWorkspace==='PEOPLE'" class="w46-blank">
      <strong>联系人：{{snapshot?.trustedSession?snapshot.realContacts:0}}</strong>
      <p>仅从当前服务端取得有授权的实际身份 K。未连接时不加载演示联系人。</p>
@@ -432,4 +443,20 @@ defineExpose({refresh});
 @media(max-width:719px){.w46-compact-global{display:flex;padding:0 7px;gap:4px}.w46-compact-brand strong{display:none}.w46-brand-glyph{height:27px;width:27px}.w46-main-links{flex:1;justify-content:flex-start;gap:0}.w46-main-links button{font-size:11px;padding:7px 6px!important}.w46-global-tools button{padding:5px!important;min-width:26px}.w46-compact-global .w46-workspace-menu{left:7px;transform:none}.w46-brain-one{padding:0}}
 @media(max-width:360px){.w46-main-links button{font-size:10px;padding:6px 4px!important}.w46-global-tools{gap:0}.w46-compact-brand{margin:0}}
 @media(prefers-reduced-motion:reduce){.w46-brand-glyph{box-shadow:none}}
+
+/* User-approved R4 Compact: CHANNELS uses the same 43px context toolbar
+   and genuine SDK setup ports as the other workspaces. No duplicate admin shell. */
+.w46-r4-channel-workspace{display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;overflow:auto;background:var(--bg)}
+.w46-r4-channel-toolbar{display:flex;flex-shrink:0;box-sizing:border-box;min-height:43px;align-items:center;justify-content:space-between;gap:12px;padding:5px 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.w46-r4-channel-toolbar>strong{font-size:15px;letter-spacing:-.02em}
+.w46-r4-channel-actions{display:flex;align-items:center;gap:12px;min-width:0}
+.w46-r4-channel-count{color:var(--muted);font-size:11px}
+.w46-r4-channel-details-toggle{border:1px solid var(--border)!important;border-radius:999px;background:var(--surface-soft)!important;color:var(--ink)!important;min-height:34px;padding:5px 13px;font-size:12px;cursor:pointer;white-space:nowrap}
+.w46-r4-channel-details-toggle:hover,.w46-r4-channel-details-toggle:focus-visible{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(var(--accent-rgb),.13)}
+.w46-r4-channel-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch;padding:16px;min-height:0}
+.w46-r4-channel-details{margin:0 16px 16px;padding:15px 17px;border:1px solid var(--border);border-radius:14px;background:var(--bg2);font-size:12px;line-height:1.7}
+.w46-r4-channel-details strong{font-size:13px}
+.w46-r4-channel-details p{color:var(--muted);margin:7px 0 0}
+@media(max-width:1099px){.w46-r4-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.w46-r4-channel-grid{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}.w46-r4-channel-details{margin:0 10px 10px}.w46-r4-channel-toolbar{padding:4px 10px}.w46-r4-channel-toolbar>strong{font-size:13px}.w46-r4-channel-count{display:none}}
 </style>
