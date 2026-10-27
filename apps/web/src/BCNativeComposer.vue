@@ -13,7 +13,9 @@ const props=defineProps({
 let bridge=createComposerBridge({takeoverPort:props.takeoverPort});
 const current=ref({key:null,status:'NO_CONTACT',draft:null,canSend:false});
 const composing=ref(false),compositionK=ref(null),why=ref('');
-const expertsOpen=ref(false);
+const expertsOpen=ref(false),contactMenu=ref(null);
+function toggleContactMenu(which){contactMenu.value=contactMenu.value===which?null:which;expertsOpen.value=contactMenu.value==='experts'}
+watch(()=>props.identity,()=>{contactMenu.value=null;expertsOpen.value=false});
 const designExperts=['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家'];
 const update=()=>{current.value=bridge.view()};
 const safeIdentity=()=>{try{return props.identity&&current.value.key===fullK(props.identity)?props.identity:null}catch{return null}};
@@ -111,17 +113,28 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
         @compositionend="endIME" @paste="onPaste" @keydown="onSendAttempt"/>
     </InputGroup>
     <div class="bc-footer">
-      <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-label="专家与附件" :aria-expanded="expertsOpen" @click="expertsOpen=!expertsOpen">＋ 专家</Button>
-      <Button size="sm" variant="ghost" type="button" disabled title="当前联系人模型选择尚未取得原生服务端授权" data-test="w46-composer-model">模型</Button>
-      <span class="bc-mode-label" title="等待W44原生模式资格回读">人工 · 辅助 · 自动（待核验）</span>
+      <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" :aria-expanded="expertsOpen" @click="toggleContactMenu('experts')">＋ 专家</Button>
+      <Button size="sm" variant="ghost" type="button" data-test="w46-composer-model" :aria-expanded="contactMenu==='model'" @click="toggleContactMenu('model')">模型</Button>
+      <button type="button" class="bc-mode-label bc-compact-menu-trigger" data-test="w46-contact-mode" :aria-expanded="contactMenu==='mode'" @click="toggleContactMenu('mode')">人工 · 辅助 · 自动（待核验）⌄</button>
       <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key"/></label>
       <span class="bc-send-hold" title="真人发送仅允许原W25唯一MessageDelivery通过当前身份及ACK授权边界">未授权 · 不能发送</span>
       <Button disabled size="sm">发送不可用</Button>
     </div>
-    <div v-if="expertsOpen" class="bc-expert-candidates" data-test="w46-composer-experts">
+    <div v-if="expertsOpen" class="bc-expert-candidates bc-compose-popup" data-test="w46-composer-experts" role="menu" aria-label="专家选择"><button type="button" data-test="w46-contact-expert-close" @click="toggleContactMenu('experts')">关闭</button>
       <strong>选择协作专家 · 暂未接通</strong>
       <p>本次任务、当前联系人或全局作用域需W43/W45真实注册及持久授权，不能按设计草稿伪造选择。</p>
       <button v-for="name in designExperts" :key="name" type="button" disabled :title="name+'尚未获得原生可用确认'">{{name}} · 未安装核验</button>
+    </div>    <div v-if="contactMenu==='model'" class="bc-compose-popup" role="menu" data-test="w46-contact-model-popup">
+      <div class="bc-popup-head"><strong>联系人模型</strong><button type="button" @click="toggleContactMenu('model')">关闭</button></div>
+      <p>尚未取得当前联系人完整身份K、原生模型费用预算与授权，不能使用闺蜜大脑私人模型的权限代替。</p>
+      <button type="button" disabled>本地模型 · 待资格回读</button><button type="button" disabled>云端模型 · 待密钥和批准</button>
+    </div>
+    <div v-if="contactMenu==='mode'" class="bc-compose-popup" role="menu" data-test="w46-contact-mode-popup">
+      <div class="bc-popup-head"><strong>回复模式</strong><button type="button" @click="toggleContactMenu('mode')">关闭</button></div>
+      <p>三模式须由原W44/W47读取当前联系人有效授权，真实切换经写入与服务端再次回读才生效。</p>
+      <button type="button" disabled data-test="w46-mode-human">人工 · 等待模式回读</button>
+      <button type="button" disabled data-test="w46-mode-assisted">辅助 · 等待授权</button>
+      <button type="button" disabled data-test="w46-mode-auto">自动托管 · 等待持续授权</button>
     </div>
   </section>
 </template>
@@ -142,4 +155,13 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 .bc-mode-label{color:var(--muted);font-size:10px}.bc-footer{justify-content:flex-start!important}.bc-footer .bc-file-label{margin-left:auto}
 .bc-expert-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px;max-height:220px;overflow:auto}.bc-expert-candidates strong,.bc-expert-candidates p{grid-column:1/-1;margin:0}.bc-expert-candidates p{font-size:11px;color:var(--muted)}
 .bc-expert-candidates button{padding:8px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);color:var(--muted);text-align:left;opacity:.7}
+/* Anchored R4 contextual menus; no second Composer or shadow sender. */
+.bc-native-composer{position:relative;overflow:visible!important;max-height:none!important}
+.bc-expert-candidates.bc-compose-popup{grid-template-columns:1fr}
+.bc-compose-popup{position:absolute;box-sizing:border-box;left:12px;bottom:calc(100% - 35px);z-index:70;width:min(315px,calc(100vw - 32px));max-height:min(360px,64vh);overflow:auto!important;display:grid;gap:8px;align-content:start;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised,var(--surface));color:var(--ink)}
+.bc-compose-popup p{font-size:11px;line-height:1.55;margin:0;color:var(--muted)}
+.bc-compose-popup button{border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface-soft);color:var(--ink);text-align:left;font-size:11px}
+.bc-compose-popup button:disabled{opacity:.6}.bc-popup-head{display:flex;align-items:center;justify-content:space-between}
+.bc-mode-label.bc-compact-menu-trigger{border:1px solid var(--border);border-radius:8px;padding:7px;background:var(--surface-soft);color:var(--muted);font-size:10px;cursor:pointer}
+@media(max-width:430px){.bc-compose-popup{left:4px;width:min(300px,calc(100vw - 24px))}}
 </style>

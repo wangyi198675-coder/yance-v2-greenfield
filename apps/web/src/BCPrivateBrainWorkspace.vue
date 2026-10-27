@@ -9,7 +9,10 @@ const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
 const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=ref(false),text=ref('');
 const chosen=ref(''),requestInFlight=ref(false);
-const modelCostApproved=ref(false);
+const modelCostApproved=ref(false),brainExpertOpen=ref(false);
+function toggleBrainExpert(){brainExpertOpen.value=!brainExpertOpen.value;if(brainExpertOpen.value){toolsOpen.value=false;setupOpen.value=false}}
+function toggleBrainModel(){setupOpen.value=!setupOpen.value;if(setupOpen.value){brainExpertOpen.value=false;toolsOpen.value=false}}
+function toggleBrainTools(){toolsOpen.value=!toolsOpen.value;if(toolsOpen.value){brainExpertOpen.value=false;setupOpen.value=false}}
 let revision=0,mounted=true,sessionDeadline=null;
 const threadId='personal';
 const safeCurrent=id=>mounted&&revision===id;
@@ -206,6 +209,12 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
     <strong>{{m.role==='user'?'你':m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
     <p>{{m.content}}</p>
    </article>
+  </div>  <div v-if="brainExpertOpen" class="bc-brain-context-menu" data-test="brain-expert-popup" role="menu" aria-label="闺蜜大脑专家选择">
+    <div class="bc-brain-popup-head"><strong>选择专家</strong><button type="button" data-test="brain-expert-close" @click="toggleBrainExpert">关闭</button></div>
+    <p>原W43十类专家目录尚未通过W47正式HTTP资格回读。可显示目录，不伪称已经安装或运行。</p>
+    <button type="button" disabled>任务专家 · 待真实注册和本人授权</button>
+    <button type="button" disabled>当前联系人专家 · 待联系人身份K</button>
+    <button type="button" disabled>全局默认专家 · 待持续授权</button>
   </div>
   <form class="bc-private-compose" @submit.prevent="send">
    <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
@@ -214,9 +223,9 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
      data-test="brain-question" placeholder="向闺蜜大脑提问；可召唤专家或执行已授权任务" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
    <div class="bc-brain-compose-toolbar">
     <div class="bc-brain-compose-tools">
-     <Button type="button" size="sm" variant="ghost" disabled title="专家调用须先取得原W43注册及联系人作用域资格" data-test="brain-expert">＋ 专家</Button>
-     <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen" data-test="brain-compose-model">模型</Button>
-     <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toolsOpen=!toolsOpen" data-test="brain-compose-tools">工具</Button>
+     <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert">＋ 专家</Button>
+     <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model">模型</Button>
+     <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toggleBrainTools" data-test="brain-compose-tools">工具</Button>
      <Button type="button" size="sm" variant="ghost" disabled title="附件尚待W23原生媒体资格接线" data-test="brain-attachment">附件</Button>
     </div>
     <Button type="submit" data-test="brain-send"
@@ -291,4 +300,13 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
  .bc-private-history article{max-width:92%}
 }
 @media(prefers-reduced-motion:reduce){.bc-private-compose,.bc-private-history article{box-shadow:none}}
+/* Input-adjacent R4 popovers retain original PRIVATE Agno model config and cost safety. */
+.bc-brain-context-menu{box-sizing:border-box;position:absolute;left:max(10px,calc((100% - 844px)/2 + 12px));bottom:103px;z-index:35;width:min(320px,calc(100vw - 24px));max-height:min(350px,65vh);overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised);color:var(--ink)}
+.bc-brain-popup-head{display:flex;justify-content:space-between;align-items:center}
+.bc-brain-context-menu p{margin:0;font-size:11px;line-height:1.55;color:var(--muted)}
+.bc-brain-context-menu button{border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface-soft);color:var(--ink);font-size:11px;text-align:left}
+.bc-brain-context-menu button:disabled{opacity:.6}
+.bc-private-settings{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 64px));bottom:103px;width:min(410px,calc(100vw - 24px));max-height:min(67vh,540px)}
+.bc-brain-trace{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 115px));bottom:103px;width:min(320px,calc(100vw - 24px));max-height:65vh}
+@media(max-width:719px){.bc-brain-context-menu,.bc-private-settings,.bc-brain-trace{left:10px!important;bottom:96px;width:min(340px,calc(100vw - 20px))}}
 </style>
