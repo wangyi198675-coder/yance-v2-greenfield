@@ -98,7 +98,8 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     if(anyBarrier(k))return deny('AUTHORITY_MUTATION_PENDING');
     if(!s)return deny('W24_IDENTITY_OR_CONSENT_INVALID');
     const custody=readCustody.get(key);
-    if(custody&&custody.mode!=='AUTO')return deny('HUMAN_CUSTODY');
+    if(custody&&custody.mode!=='AUTO')return deny(custody.mode==='ASSIST'?
+      'ASSIST_MODE_NO_AUTO':'HUMAN_CUSTODY');
     const choice=effective(k);
     if(!choice.grant)return deny(choice.reason);
     const g=choice.grant;
@@ -381,6 +382,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       (!native.valid)?'ACCOUNT_OR_PEER_UNBOUND':
       anyBarrier(k)?'AUTHORITY_MUTATION_PENDING':
       mode==='HUMAN'?'HUMAN_CUSTODY':
+      mode==='ASSIST'?'ASSIST_MODE_NO_AUTO':
       current.reason??(
         current.grant&&current.grant.spent+current.grant.reserved>=current.grant.budget_limit
           ?'BUDGET_EXHAUSTED':null);
@@ -447,6 +449,64 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     return {ok:true,status:'COMMITTED',requestId:req.requestId,
       generation:req.generation,readback:readGrantState({identity:k,actor,scope})};
   }
+  // W47 signed owner DTO: same W24 actor, full K, and existing custody/grant ledger.
+  // The in-repo synthetic store NEVER authorizes real platform sending.
+  function readModeState({identity:k,actor}={}){
+    const state=readGrantState({identity:k,actor,scope:'CONTACT'});
+    const custodyMode=state.custodyMode;
+    const selectedMode=custodyMode==='HUMAN'?'MANUAL':
+      custodyMode==='ASSIST'?'ASSIST':'AUTO';
+    const checked=qualify(k);
+    const nativeAutoEligible=selectedMode==='AUTO'&&checked.ok===true;
+    return Object.freeze({ok:true,selectedMode,
+      // An unset legacy custody row is AUTO but never creates a grant.
+      effectiveMode:nativeAutoEligible?'AUTO':selectedMode==='ASSIST'?'ASSIST':'MANUAL',
+      nativeAutoEligible,realAutoAuthorized:false,
+      authorityClass:state.authorityClass,realAccountVerified:false,
+      realUserAuthorized:false,status:nativeAutoEligible?'SYNTHETIC_ONLY':
+        state.barrier.pending||state.barrier.globalPending?'PENDING':'NOT_AUTO_ELIGIBLE',
+      reason:checked.ok?null:checked.reason,
+      identityKey:state.fullK,bindingRevision:state.identityEpochs.bindingRevision,
+      identityEpochs:state.identityEpochs,budget:state.effectiveBudget,
+      effectiveScope:state.effectiveScope,grant:state.grant,
+      barriers:state.barrier,globalPaused:state.globalPaused,
+      contactPaused:state.contactPaused,
+      canSend:false});
+  }
+  function switchMode({identity:k,actor,targetMode,idempotencyKey,
+    expectedGeneration,expectedBindingRevision,expectedAccountEpoch,
+    expectedConsentEpoch,expectedCustodyEpoch,payload}={}){
+    if(!requireDurableIdentity)return {ok:false,status:'DENIED',reason:'NATIVE_IDENTITY_REQUIRED'};
+    if(!['MANUAL','ASSIST','AUTO'].includes(targetMode))
+      return {ok:false,status:'DENIED',reason:'INVALID_TARGET_MODE'};
+    if(!payload||payload.targetMode!==targetMode||
+       typeof payload.approvalRef!=='string'||!payload.approvalRef)
+      return {ok:false,status:'DENIED',reason:'EXPLICIT_MODE_APPROVAL_REQUIRED'};
+    const current=durable.readIdentityAuthority({identity:k,actor});
+    if(!current.valid)return {ok:false,status:'DENIED',reason:'ACCOUNT_OR_PEER_REVOKED'};
+    const scope='CONTACT',kind='MODE_'+targetMode;
+    const req=durable.requestMutationFence({identity:k,scope,actor,kind,
+      idempotencyKey,payload,expectedGeneration,expectedBindingRevision,
+      expectedAccountEpoch,expectedConsentEpoch,expectedCustodyEpoch});
+    if(!req.ok)return {...req,targetMode};
+    if(req.status==='COMMITTED')return {ok:true,status:'COMMITTED',replayed:true,
+      requestId:req.requestId,generation:req.generation,
+      readback:readModeState({identity:k,actor})};
+    const finished=durable.finalizeMutationFence({requestId:req.requestId,
+      generation:req.generation,actor,ownerValidatedMutation:payload});
+    if(finished.status==='PENDING')return {ok:true,status:'PENDING',
+      reason:finished.reason??'ACTIVE_SEND_MUST_SETTLE_FIRST',
+      requestId:req.requestId,generation:req.generation,
+      readback:readModeState({identity:k,actor})};
+    if(finished.status!=='COMMITTED')return {...finished,targetMode,
+      requestId:req.requestId,generation:req.generation};
+    const settled=durable.mutationResult({requestId:req.requestId,actor});
+    if(settled.status!=='COMMITTED')throw Error('W44_MODE_POSTCOMMIT_READBACK_FAILED');
+    const readback=readModeState({identity:k,actor});
+    if(readback.selectedMode!==targetMode)throw Error('W44_MODE_READBACK_MISMATCH');
+    return {ok:true,status:'COMMITTED',requestId:req.requestId,
+      generation:req.generation,readback};
+  }
   function inspection(k){
     const key=canonicalK(k);
     if(!currentIdentity(k))return deny('W24_IDENTITY_OR_CONSENT_INVALID');
@@ -461,6 +521,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     requestMutationFence:requireDurableIdentity?durable.requestMutationFence:requestMutationFence,
     finalizeMutationFence:requireDurableIdentity?durable.finalizeMutationFence:finalizeMutationFence,
     settleBoundary,finish,inspection,readGrantState,grantAction,
+    readModeState,switchMode,
     readIdentityAuthority:durable.readIdentityAuthority,
     readMutationFence:durable.readMutationFence,
     requestNativeMutationFence:durable.requestMutationFence,
