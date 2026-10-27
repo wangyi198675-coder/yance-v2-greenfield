@@ -16,17 +16,18 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='9ec024e46c84db8f84258558752e6685b1ef2d49';
+ const expectedOwnerSha='28023e133f71dc69621fbf3fbfe3d08a30d1c71e';
  const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'efabfa1a02d78494d4429bb2d7bf373d0c4c00ed',
-  'apps/web/src/BCLiveChatWorkspace.vue':'61df3ba766ad8d0df618070a9ad1285e26164e05',
-  'apps/web/src/live-chat-source.mjs':'9663d5bc6a4ac5117bd4a40097e89eca466ef2f2',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'f57556f107a5da1827e6f663fd4ff6315c5a018a',
+  'apps/web/src/BCLiveChatWorkspace.vue':'0bec15289d3455b8d44cf54b4092d07a6cb71a9b',
+  'apps/web/src/live-chat-source.mjs':'77e1c8947371b826b5a8fc3ca00bb12764fea02c',
   'apps/web/src/BCChannelAccountSetup.vue':'a61b33339920f74b4d04d0d440762c821d8e334d',
   'apps/web/src/BCNativeHostSession.vue':'613b9b761cf1b8325da03677b4051c2807d29a9b',
   'apps/web/src/channel-setup-contract.mjs':'308400756e9363972310fc6c059fa7df96ff985a',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'0ce278163fd720032c923fbd6f64f283e8d51e80',
+  'apps/web/src/BCNativeComposer.vue':'c1628462dc1e41e78d5de19c4e2fe866372a5e1e',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'efdb517b86aef2a541e7ef31e0bb5c4de1656401',
   'apps/web/src/BCNativeCloudKeySettings.vue':'93788ef4abf859bfb470223dad49a8a5e57905b0',
   'apps/web/src/private-brain-ui-contract.mjs':'674307159167361edf9f769408e0c399764aaff5',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
@@ -37,7 +38,7 @@ if(r4IsolatedPreview){
   'apps/web/src/BCBrandIcon.vue':'d99edca93a61f0464349cd515a6fee1a0580bb11',
   'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
   'apps/web/src/product-workspace-contract.mjs':'594442c0f6f1e2a249cd67423a68bbd4e0940afa',
-  'apps/web/vite.w46.config.mjs':'2c9b8f0bb66dd35d7a6d76f1a57ae3847a0a4605',
+  'apps/web/vite.w46.config.mjs':'c4d79e2cb25f60dc0eedf1f355bc936ef2ac915b',
   [canonicalAck]:'45893dca88309c678bc7b232f12809d879890c9e'
  };
  const handoff=join(w46Root,canonicalAck);
