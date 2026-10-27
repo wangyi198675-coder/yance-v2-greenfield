@@ -162,7 +162,7 @@ watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
     <button type="button" data-test="cloud-refresh" :disabled="busy" @click="refresh">刷新状态</button>
    </form>
   </template>
-  <p>Key 不会回填到输入框。密钥设置不自动启动收费推理；选择云端模型与每次收费提问需要另行确认。</p>
+  <p>Key 不会回填到输入框。密钥设置不自动启动收费推理；首次选择收费模型或主动切换收费来源时确认一次，之后同一已授权模型正常连续聊天。</p>
   <p v-if="message" role="status" data-test="cloud-action-result">{{message}}</p>
  </section>
 </template>
