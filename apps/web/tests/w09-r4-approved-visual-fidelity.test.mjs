@@ -21,7 +21,10 @@ test('one native Agno Brain preserves authoritatively fetched history inside R4 
  assert.match(b,/data-test="brain-open-settings"/);
  assert.match(b,/data-test="brain-check"/);
  assert.match(b,/data-test="brain-toggle-tools"/);
- assert.match(b,/data-test="brain-expert"[^>]*disabled|disabled[^>]*data-test="brain-expert"/);
+ assert.match(b,/@click="toggleBrainExpert" data-test="brain-expert"/);
+ assert.match(b,/data-test="brain-expert-popup"/);
+ assert.match(b,/data-test="brain-expert-close"/);
+ assert.match(b,/role="menu" aria-label="闺蜜大脑专家选择"/);
  assert.match(b,/data-test="brain-attachment"[^>]*disabled|disabled[^>]*data-test="brain-attachment"/);
  assert.match(b,/data-test="brain-send"/);
 });
@@ -81,4 +84,29 @@ test('CHAT keeps exactly one original contact composer mounted even with no acco
  assert.match(readFileSync(new URL('../src/BCNativeComposer.vue',import.meta.url),'utf8'),/data-test="w46-composer-model"/);
  assert.match(chat,/createTrustedTakeoverPort/);
  assert.doesNotMatch(chat,/simulateSend\(/);
+});
+
+const contactComposer=readFileSync(new URL('../src/BCNativeComposer.vue',import.meta.url),'utf8');
+test('R4 one CONTACT composer uses anchored expert/model/mode menus, never a bottom expert block',()=>{
+ for(const id of ['w46-composer-plus','w46-composer-model','w46-contact-mode','w46-composer-experts','w46-contact-model-popup','w46-contact-mode-popup']){
+  assert.ok(contactComposer.includes('data-test="'+id+'"'),id);
+ }
+ assert.match(contactComposer,/\.bc-compose-popup\{position:absolute/);
+ assert.match(contactComposer,/data-test="w46-mode-human"[^>]*disabled|disabled[^>]*data-test="w46-mode-human"/);
+ assert.match(contactComposer,/data-test="w46-mode-assisted"/);
+ assert.match(contactComposer,/data-test="w46-mode-auto"/);
+ assert.match(contactComposer,/disabled>.*W24|disabled>.*Qwen|disabled>.*待资格/);
+ assert.match(contactComposer,/createComposerBridge\(/);
+});
+test('PRIVATE Agno model and tools remain original authority while expert menu remains fail-closed',()=>{
+ assert.match(b,/data-test="brain-expert-popup"/);
+ assert.match(b,/data-test="brain-expert-close"/);
+ assert.match(b,/data-test="brain-compose-model"/);
+ assert.match(b,/data-test="brain-compose-tools"/);
+ assert.match(b,/toggleBrainModel\(\)/);
+ assert.match(b,/toggleBrainTools\(\)/);
+ assert.match(b,/selectModel\(\)/);
+ assert.match(b,/PRIVATE_ROUTES.selection/);
+ assert.match(b,/data-test="cloud-model-cost-confirm"/);
+ assert.match(b,/type="button" disabled>.*任务专家/);
 });
