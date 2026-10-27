@@ -16,18 +16,22 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='28023e133f71dc69621fbf3fbfe3d08a30d1c71e';
- const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
+ const expectedOwnerSha='376277cbc61fe8946e0d26aac163eea04cb50e05';
+ // Original W42/W46 ACK files are byte-for-byte copies of their actual
+ // independent MasterController receipts; their Git blobs are pinned below.
+ const canonicalAck='apps/web/evidence/W46_PR97_376277C_FIVE_VUE_OWNER_REVIEW_ACK.md';
+ const visualAck='apps/web/evidence/W42_PR97_376277C_QR_VISUAL_DELTA_ACK.md';
+ const legacyAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'f57556f107a5da1827e6f663fd4ff6315c5a018a',
-  'apps/web/src/BCLiveChatWorkspace.vue':'0bec15289d3455b8d44cf54b4092d07a6cb71a9b',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'44db3a1fb7af6929543fe97a0da4312afee31e2e',
+  'apps/web/src/BCLiveChatWorkspace.vue':'9a553bb72480d516e2394d12278f40b15f0649b5',
   'apps/web/src/live-chat-source.mjs':'77e1c8947371b826b5a8fc3ca00bb12764fea02c',
-  'apps/web/src/BCChannelAccountSetup.vue':'a61b33339920f74b4d04d0d440762c821d8e334d',
+  'apps/web/src/BCChannelAccountSetup.vue':'f8fbfea417a9293d48fb10fc3976c0f1d38424f6',
   'apps/web/src/BCNativeHostSession.vue':'613b9b761cf1b8325da03677b4051c2807d29a9b',
   'apps/web/src/channel-setup-contract.mjs':'308400756e9363972310fc6c059fa7df96ff985a',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
-  'apps/web/src/BCNativeComposer.vue':'c1628462dc1e41e78d5de19c4e2fe866372a5e1e',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'efdb517b86aef2a541e7ef31e0bb5c4de1656401',
+  'apps/web/src/BCNativeComposer.vue':'b2f06a864eacee691f1ec404fd9754ddcf50499c',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'7ea77e06458d8ee4c8619bd45992803be09dcdca',
   'apps/web/src/BCNativeCloudKeySettings.vue':'93788ef4abf859bfb470223dad49a8a5e57905b0',
   'apps/web/src/private-brain-ui-contract.mjs':'674307159167361edf9f769408e0c399764aaff5',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
@@ -39,20 +43,52 @@ if(r4IsolatedPreview){
   'apps/web/src/r4-brand-paths.mjs':'d8000f36dabcc5041c858c6c0c2f03a33345e103',
   'apps/web/src/product-workspace-contract.mjs':'594442c0f6f1e2a249cd67423a68bbd4e0940afa',
   'apps/web/vite.w46.config.mjs':'c4d79e2cb25f60dc0eedf1f355bc936ef2ac915b',
-  [canonicalAck]:'45893dca88309c678bc7b232f12809d879890c9e'
+  [legacyAck]:'45893dca88309c678bc7b232f12809d879890c9e',
+  [canonicalAck]:'bc95c1a2232bad01bd9f818c1d148e3aee53c5c6',
+  [visualAck]:'08cf4de4d9229ff396c58e01bc4cdf9fcfdce472'
  };
- const handoff=join(w46Root,canonicalAck);
  const git=(...args)=>execFileSync('git',args,{cwd:w46Root,encoding:'utf8'}).trim();
- const ownerAck=existsSync(handoff)?readFileSync(handoff,'utf8'):'';
- const receiptTracked=git('ls-tree','-r','--name-only','HEAD','--',canonicalAck)===canonicalAck;
- const dirtySource=git('status','--porcelain','--','apps/web/src','apps/web/tests','apps/web/vite.w46.config.mjs',canonicalAck);
+ const readAck=path=>existsSync(join(w46Root,path))?
+   readFileSync(join(w46Root,path),'utf8'):'';
+ const ownerAck=readAck(canonicalAck);
+ const visualOwnerAck=readAck(visualAck);
+ const oldOwnerAck=readAck(legacyAck);
+ // A descendant W47 config-signing commit must retain the EXACT reviewed
+ // 376277c source blobs; an unrelated branch cannot reuse someone else's ACK.
+ const signedAncestor=(()=>{
+   try{git('merge-base','--is-ancestor',expectedOwnerSha,'HEAD');return true}
+   catch{return false}
+ })();
+ const receiptTracked=[canonicalAck,visualAck,legacyAck].every(path=>
+   git('ls-tree','-r','--name-only','HEAD','--',path)===path);
+ const dirtySource=git('status','--porcelain');
  const validSignedBlobs=Object.entries(ownerFiles).every(([path,sha])=>
    existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&
    git('rev-parse','HEAD:'+path)===sha);
- if(signedSha!==expectedOwnerSha||dirtySource||!receiptTracked||!validSignedBlobs||
-    !ownerAck.includes('W46 → W09-2')||!ownerAck.includes('R4 Vue')||
-    !readFileSync(join(w46Root,'apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md'),'utf8').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
-    !readFileSync(join(w46Root,'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md'),'utf8').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
+ // W46 actually approved these FIVE original Vue blobs at PR97 exact HEAD.
+ // Do not accept an unrelated review or the PR95 three-file approval alone.
+ const fiveW46Vue=[
+  'apps/web/src/BCProductWorkspaceCandidate.vue',
+  'apps/web/src/BCLiveChatWorkspace.vue',
+  'apps/web/src/BCChannelAccountSetup.vue',
+  'apps/web/src/BCNativeComposer.vue',
+  'apps/web/src/BCPrivateBrainWorkspace.vue'
+ ];
+ const w46ReviewValid=ownerAck.includes('W46_PR97_376277C_FIVE_VUE_OWNER_REVIEW_ACK')&&
+   ownerAck.includes('OWNER_REVIEW_ACK_PASS')&&ownerAck.includes(expectedOwnerSha)&&
+   fiveW46Vue.every(path=>ownerAck.includes(path.slice('apps/web/src/'.length))&&
+     ownerAck.includes(ownerFiles[path]));
+ // W42 independently closed only the QR layout/status RED with actual
+ // NONSCANNABLE synthetic Chrome DOM, not a real user account authorization.
+ const w42VisualValid=visualOwnerAck.includes('W42原R3/R4设计Owner')&&
+   visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
+   visualOwnerAck.includes('44 PASS / 0 FAIL')&&
+   visualOwnerAck.includes(expectedOwnerSha);
+ if(signedSha!==expectedOwnerSha||!signedAncestor||dirtySource||
+    !receiptTracked||!validSignedBlobs||!w46ReviewValid||!w42VisualValid||
+    !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
+    !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
+    !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
    throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
 }
 // This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
