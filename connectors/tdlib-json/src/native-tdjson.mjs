@@ -112,6 +112,14 @@ export function nativeTDJsonController({
   let authState='authorizationStateClosed', authDetails=null, exactSelfUserId=null;
   let logoutPending=false,removalConfirmed=false;
   const nativeMeRequests=new Set();
+  const readRequests=new Map();
+  const failPendingReads=code=>{
+    for(const item of readRequests.values()){
+      clearTimeout(item.timer);
+      item.reject(new TDHold(code));
+    }
+    readRequests.clear();
+  };
   const errors=[],pending=new Set();
   const status=()=>Object.freeze({
     nativeRunning:proc!==null,telegramAuthorized:authorized,
@@ -143,8 +151,8 @@ export function nativeTDJsonController({
     proc=worker; account=Object.freeze(owner); authorized=false; identityVerified=false;
     exactSelfUserId=null; authDetails=null;authState='authorizationStateStarting';
     logoutPending=false;removalConfirmed=false;
-    worker.once('error',()=>{errors.push('WORKER_SPAWN_FAILED');proc=null;account=null;identityVerified=false;authDetails=null;exactSelfUserId=null;});
-    worker.once('close',()=>{proc=null;account=null;authorized=false;identityVerified=false;clientId=null;
+    worker.once('error',()=>{failPendingReads('NATIVE_WORKER_EXIT');errors.push('WORKER_SPAWN_FAILED');proc=null;account=null;identityVerified=false;authDetails=null;exactSelfUserId=null;});
+    worker.once('close',()=>{failPendingReads('NATIVE_WORKER_EXIT');proc=null;account=null;authorized=false;identityVerified=false;clientId=null;
       authState='authorizationStateClosed';authDetails=null;exactSelfUserId=null;logoutPending=false;});
     worker.stderr.on('data',()=>errors.push('NATIVE_STDERR_REDACTED'));
     createInterface({input:worker.stdout,crlfDelay:Infinity}).on('line',line=>{
@@ -157,7 +165,10 @@ export function nativeTDJsonController({
         authDetails=packet.details && packet.details['@type']===authState?
           packet.details:null;
         authorized=authState==='authorizationStateReady';
-        if(!authorized){ identityVerified=false;exactSelfUserId=null; }
+        if(!authorized){
+          failPendingReads('TDLIB_AUTH_REVOKED');
+          identityVerified=false;exactSelfUserId=null;
+        }
         if(authState==='authorizationStateClosed'){
           const confirmedByNative=logoutPending;
           logoutPending=false;
@@ -182,6 +193,16 @@ export function nativeTDJsonController({
       if(packet.kind!=='tdlib_update'||!authorized||!account)return;
       const kind=packet.data?.['@type'];
       const requestExtra=packet.data?.['@extra'];
+      // A TDLib @extra belongs to one native read; other unsolicited updates
+      // continue through original W24/W25 handlers below.
+      const reading=typeof requestExtra==='string'?readRequests.get(requestExtra):null;
+      if(reading){
+        readRequests.delete(requestExtra);
+        clearTimeout(reading.timer);
+        if(kind==='error')reading.reject(new TDHold('OFFICIAL_TDLIB_READ_ERROR'));
+        else reading.resolve(packet.data);
+        return;
+      }
       if(kind==='user' && nativeMeRequests.has(requestExtra)){
         nativeMeRequests.delete(requestExtra);
         const task=(async()=>{
@@ -279,6 +300,52 @@ export function nativeTDJsonController({
       providerAck:false,canSend:false}; // td_send is async; never claim delivery
   }
 
+  async function requestRead({sessionHandle,query,timeoutMs=15000}={}){
+    ensure(proc!==null && account && authorized && identityVerified &&
+      !logoutPending, 'WAITING_USER_AUTH');
+    const owner=account, selfId=exactSelfUserId;
+    const session=await attestReadSession({sessionHandle});
+    ensure(session?.verified===true && session?.channel==='TELEGRAM_PERSONAL' &&
+      session?.channelAccountId===owner.channelAccountId,
+      'TRUSTED_PROVIDER_READ_SESSION_REQUIRED');
+    ensure(query && typeof query==='object' && !Array.isArray(query),
+      'TDLIB_READ_QUERY_REQUIRED');
+    const allowed=new Set(['getChats','loadChats','getContacts','getChat',
+      'getUser','getUserFullInfo','getChatHistory','getMessage',
+      'getUserProfilePhotos','getFile','downloadFile']);
+    ensure(allowed.has(query['@type']), 'TDLIB_READ_ONLY_METHOD_REQUIRED');
+    ensure(Number.isInteger(timeoutMs) && timeoutMs>=1000 && timeoutMs<=30000,
+      'TDLIB_READ_TIMEOUT_INVALID');
+    const extra='w29-read-'+randomUUID();
+    const request={...query,'@extra':extra};
+    const reading=new Promise((resolveRead,rejectRead)=>{
+      const timer=setTimeout(()=>{
+        readRequests.delete(extra);
+        rejectRead(new TDHold('TDLIB_READ_TIMEOUT'));
+      },timeoutMs);
+      readRequests.set(extra,{resolve:resolveRead,reject:rejectRead,timer});
+    });
+    try {
+      proc.stdin.write(JSON.stringify({action:'tdlib',query:request})+'\n');
+    } catch {
+      const item=readRequests.get(extra);
+      if(item){
+        readRequests.delete(extra);clearTimeout(item.timer);
+        item.reject(new TDHold('TDLIB_NATIVE_IPC_WRITE_FAILED'));
+      }
+    }
+    const result=await reading;
+    // A read can finish after logout/identity or session revision changed.
+    const stillCurrent=await attestReadSession({sessionHandle});
+    ensure(proc!==null && account===owner && authorized && identityVerified &&
+      !logoutPending && exactSelfUserId===selfId &&
+      stillCurrent?.verified===true &&
+      stillCurrent?.channelAccountId===owner.channelAccountId &&
+      stillCurrent?.channel==='TELEGRAM_PERSONAL',
+      'TDLIB_READ_AUTH_REVOKED_AFTER_RESPONSE');
+    return result;
+  }
+
   async function disconnect({sessionHandle,gestureId,logout=false}={}){
     if(!proc)return status();
     if(logout){
@@ -299,6 +366,7 @@ export function nativeTDJsonController({
     const result=status();
     return Object.freeze({...result,
       platformUserIdExact:identityVerified?exactSelfUserId:null,
+      channelAccountId:account.channelAccountId,
       // This login link is obtained exclusively from official TDLib update.
       qrLoginLink:authState==='authorizationStateWaitOtherDeviceConfirmation'?
         (authDetails?.link??null):null,
@@ -313,6 +381,6 @@ export function nativeTDJsonController({
       canSend:false,
     });
   }
-  return Object.freeze({status,begin,authorizeStep,disconnect,
+  return Object.freeze({status,begin,authorizeStep,disconnect,requestRead,
     readPrivateAccountState,errors:()=>[...errors]});
 }

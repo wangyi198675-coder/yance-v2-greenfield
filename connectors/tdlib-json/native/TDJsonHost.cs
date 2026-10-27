@@ -67,7 +67,8 @@ internal sealed class Host
         "checkAuthenticationPassword", "requestQrCodeAuthentication",
         "registerUser", "logOut", "close", "getMe", "getChats",
         "loadChats", "getChat", "getChatHistory", "getUser",
-        "getContacts", "getUserFullInfo"
+        "getContacts", "getUserFullInfo", "getMessage",
+        "getUserProfilePhotos", "getFile", "downloadFile"
     };
     private static readonly object StdoutLock = new object();
     private static readonly JavaScriptSerializer Json = new JavaScriptSerializer
@@ -127,7 +128,9 @@ internal sealed class Host
                     if (nativeType == "getMe" || nativeType == "getChats" ||
                         nativeType == "loadChats" || nativeType == "getChat" ||
                         nativeType == "getChatHistory" || nativeType == "getUser" ||
-                        nativeType == "getContacts" || nativeType == "getUserFullInfo")
+                        nativeType == "getContacts" || nativeType == "getUserFullInfo" ||
+                        nativeType == "getMessage" || nativeType == "getUserProfilePhotos" ||
+                        nativeType == "getFile" || nativeType == "downloadFile")
                     {
                         if (!ready) { Emit(new {kind="error",code="WAITING_USER_AUTH"}); continue; }
                     }
