@@ -399,7 +399,7 @@ export function createPrivateNativeExpertHttp({
   if(!resolveNativePrincipal||typeof w43Port?.expertDirectory!=='function'){
    reject(res,503,'W43_NATIVE_EXPERT_OWNER_NOT_CONNECTED');return true
   }
-  const principal=async(operation=reading?'PRIVATE_HISTORY':'PRIVATE_TURN')=>{
+  const principal=async(operation=reading?'PRIVATE_HISTORY':verb==='turn'?'EXPERT_TURN':'PRIVATE_TURN')=>{
    const session=sessionAuthority.sessionFor(req);
    if(!session)throw {httpStatus:401};
    const p=await resolveNativePrincipal({session,operation});

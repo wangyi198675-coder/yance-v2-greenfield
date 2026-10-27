@@ -3,12 +3,13 @@ import {ref,computed,onMounted,watch} from 'vue';
 type Provider='OPENROUTER_USER_API'|'OPENAI_USER_API';
 type Status={provider:Provider,configured:boolean,revoked:boolean,revision:number};
 type NativeStatus={provider:string,configured:boolean,revoked:boolean,revision:number};
-const props=defineProps<{webCsrf?:string|null}>();
+const props=defineProps<{webCsrf?:string|null;openRouterOnly?:boolean}>();
 const emit=defineEmits<{changed:[]}>();
 const native=typeof window!=='undefined'&&(window as any).__TAURI__?.core?.invoke;
 const path='/api/v2/private-brain/cloud-keys';
 const vendors=[{id:'OPENROUTER_USER_API',label:'OpenRouter'},
  {id:'OPENAI_USER_API',label:'OpenAI API'}] as const;
+const visibleVendors=computed(()=>props.openRouterOnly?vendors.filter(v=>v.id==='OPENROUTER_USER_API'):vendors);
 const provider=ref<Provider>('OPENROUTER_USER_API');
 const key=ref(''),current=ref<Status|null>(null);
 const ready=ref(!!native),busy=ref(false),message=ref('');
@@ -133,10 +134,10 @@ watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
 <template>
  <section class="cloud-key-panel" data-test="cloud-key-native" aria-label="云端 AI Key 设置">
   <strong>云端 AI 密钥</strong>
-  <p>可以使用自己的 OpenRouter 或 OpenAI API Key。本地 Qwen3 不受云端设置影响。</p>
+  <p>{{openRouterOnly?'管理自己的OpenRouter Key，由原W55 Windows凭据保护；不需要OpenAI API Key。':'可以使用自己的 OpenRouter 或 OpenAI API Key。本地 Qwen3 不受云端设置影响。'}}</p>
   <label>来源
    <select v-model="provider" data-test="cloud-provider" :disabled="busy" @change="onProviderChange">
-    <option v-for="p in vendors" :key="p.id" :value="p.id">{{p.label}}</option>
+    <option v-for="p in visibleVendors" :key="p.id" :value="p.id">{{p.label}}</option>
    </select>
   </label>
   <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">

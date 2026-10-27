@@ -20,10 +20,12 @@ const validSelection=x=>x&&typeof x==='object'&&
  Object.hasOwn(IDS,x.provider)&&validModel(x.modelId)&&
  Number.isSafeInteger(x.epoch)&&x.epoch>0&&
  Number.isSafeInteger(x.keyRevision)&&x.keyRevision>0;
-export function createWebPrivateCloudByok({appLocalDataRoot,nativeKeyPort}={}){
+export function createWebPrivateCloudByok({appLocalDataRoot,nativeKeyPort,resolveScopedSelection=null}={}){
  if(typeof appLocalDataRoot!=='string'||!isAbsolute(appLocalDataRoot)||appLocalDataRoot.includes('..')||
   !nativeKeyPort||['status','store','revoke','withSecret'].some(x=>typeof nativeKeyPort[x]!=='function'))
   throw Error('W55_CURRENT_WINDOWS_USER_NATIVE_PORT_REQUIRED');
+ if(resolveScopedSelection!==null&&typeof resolveScopedSelection!=='function')
+  throw Error('W47_SCOPED_MODEL_SELECTION_OWNER_PORT_INVALID');
  const file=join(appLocalDataRoot,FILE);
  const read=()=>{
   try{if(!existsSync(file)||lstatSync(file).isSymbolicLink())return null;
@@ -120,13 +122,22 @@ export function createWebPrivateCloudByok({appLocalDataRoot,nativeKeyPort}={}){
  };
  const withSecret=async({profile,provider,modelId,selectionEpoch},consume)=>{
   const x=await current();
-  if(!x||IDS[x.provider]!==provider||x.modelId!==modelId||
-   x.epoch!==selectionEpoch||profile?.modelSelectionEpoch!==selectionEpoch)
-   throw {status:409,code:'CLOUD_SELECTION_OR_KEY_REVISION_CHANGED'};
+  let authorizedRevision=null;
+  if(x&&IDS[x.provider]===provider&&x.modelId===modelId&&
+    x.epoch===selectionEpoch&&profile?.modelSelectionEpoch===selectionEpoch)
+   authorizedRevision=x.keyRevision;
+  else if(resolveScopedSelection&&provider==='OPENROUTER'&&
+      profile?.modelSelectionEpoch===selectionEpoch){
+   const state=await status('OPENROUTER_USER_API');
+   if(state.configured&&!state.revoked&&await resolveScopedSelection({
+     provider:'OPENROUTER_USER_API',modelId,selectionEpoch,keyRevision:state.revision}))
+    authorizedRevision=state.revision;
+  }
+  if(!authorizedRevision)throw {status:409,code:'CLOUD_SELECTION_OR_KEY_REVISION_CHANGED'};
   // W55 native adapter is responsible for current OS-user binding and never
   // returns a key to a browser; only the W43 executor's private callback sees it.
   return nativeKeyPort.withSecret({provider,modelId,
-   expectedRevision:x.keyRevision,selectionEpoch},consume);
+   expectedRevision:authorizedRevision,selectionEpoch},consume);
  };
  const clearSelection=()=>{if(read()){try{unlinkSync(file)}catch{}}};
  return Object.freeze({status,statuses,save,revoke,select,current,
