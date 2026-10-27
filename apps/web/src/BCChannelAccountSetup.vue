@@ -10,7 +10,7 @@ const props=defineProps({channel:{type:Object,required:true},fetchImpl:{type:Fun
  connectTrigger:{type:Number,default:0}});
 const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
 const verifiedAccounts=ref(null);
-const userRequested=ref(false);
+const userRequested=ref(false),qrOpen=ref(false);
 const isWhatsApp=computed(()=>props.channel.id==='WHATSAPP_PERSONAL');
 let alive=true,revision=0,expiryTimer=null,pollTimer=null,waTimer=null;
 const stopWaPoll=()=>{if(waTimer){clearTimeout(waTimer);waTimer=null}};
@@ -19,7 +19,7 @@ async function waUpdate(id){
  if(!alive||id!==revision)return;
  state.value=result.online?'ONLINE_VERIFIED':result.state;
  if(result.online){
-   stopWaPoll();clearReceipt();
+   stopWaPoll();clearReceipt();qrOpen.value=false;
    verifiedAccounts.value=[{accountId:result.account.platformJid,
     displayName:result.account.platformJid,state:'ONLINE_VERIFIED'}];
    notice.value='WhatsApp已连接，正在同步联系人和聊天记录';return;
@@ -75,6 +75,14 @@ async function refresh(){
 async function setup(){
  if(busy.value)return;
  userRequested.value=true;
+ // Facebook's existing verified local bridge opens from the actual click.
+ // No Facebook credentials are collected by the Yance renderer.
+ let fbLogin=null;
+ if(props.channel.id==='FB_PERSONAL'&&typeof window!=='undefined'){
+  fbLogin=window.open('about:blank','yance_facebook_login','width=570,height=760');
+  if(fbLogin)fbLogin.opener=null;
+ }
+ if(isWhatsApp.value)qrOpen.value=true;
  const id=++revision;clearReceipt();stopWaPoll();busy.value=true;notice.value='';
  try{
   if(isWhatsApp.value){
@@ -88,13 +96,20 @@ async function setup(){
   const v=await setupChannel({channel:props.channel.id,fetchImpl:fetcher()});
   if(!alive||id!==revision)return;
   receipt.value=v;state.value='WAITING_USER_AUTH';
-  notice.value=v.qr?'请使用本人手机扫描当前二维码':'请在下方进入原生官方授权步骤';
+  if(v.officialConnectUrl){
+   if(fbLogin&&!fbLogin.closed)fbLogin.location.replace(v.officialConnectUrl);
+   notice.value='请在打开的连接窗口完成登录，之后返回言策核对账号状态';
+  }else{
+   if(fbLogin&&!fbLogin.closed)fbLogin.close();
+   notice.value=v.qr?'使用自己的手机扫描二维码':'此平台暂未返回可直接登录的授权入口';
+  }
   if(v.qr){
    expiryTimer=setTimeout(()=>{
     if(alive&&id===revision){clearReceipt();state.value='EXPIRED';notice.value='二维码已过期，请重新连接'}
    },Math.max(0,v.qr.expiresAt-Date.now()));
   }
  }catch(e){
+  if(fbLogin&&!fbLogin.closed)fbLogin.close();
   if(alive&&id===revision){state.value='unavailable';notice.value=isWhatsApp.value?whatsappNativeError(e):channelError(e)}
  }finally{if(alive&&id===revision)busy.value=false}
 }
@@ -157,7 +172,7 @@ defineExpose({setup,refresh});
      target="_blank" rel="noopener noreferrer" data-test="native-provider-connect-real">继续本人官方授权</a>
     <a v-if="receipt.officialDocs" :href="receipt.officialDocs"
      target="_blank" rel="noopener noreferrer" data-test="native-provider-docs">查看官方连接步骤</a>
-    <div v-if="receipt.qr" data-test="native-provider-qr">
+    <div v-if="receipt.qr&&!isWhatsApp" data-test="native-provider-qr">
      <img :src="receipt.qr.src" alt="当前由Baileys原生服务提供的WhatsApp登录二维码"/>
      <small>本人扫码后请检查实际连接状态。二维码过期后须重新获取。</small>
     </div>
@@ -166,6 +181,21 @@ defineExpose({setup,refresh});
    <div v-if="isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK','ONLINE_VERIFIED'].includes(state)" class="w46-channel-native-actions">
     <Button variant="outline" size="sm" :disabled="busy" @click="waDisconnect('disconnect')">断开连接</Button>
     <Button v-if="state==='ONLINE_VERIFIED'" variant="outline" size="sm" :disabled="busy" @click="waDisconnect('revoke')">移除账号</Button>
+   </div>
+   <div v-if="qrOpen&&isWhatsApp" class="w46-qr-backdrop" data-test="native-provider-qr-dialog" @click.self="qrOpen=false">
+    <section class="w46-qr-dialog" role="dialog" aria-modal="true" aria-label="连接 WhatsApp">
+     <header><div><strong>连接 WhatsApp</strong><p>手机 WhatsApp → 已关联设备 → 关联设备</p></div>
+      <button type="button" aria-label="关闭扫码窗口" data-test="native-provider-close-qr" @click="qrOpen=false">✕</button></header>
+     <div v-if="receipt?.qr" class="w46-qr-live" data-test="native-provider-qr">
+      <img :src="receipt.qr.src" alt="当前服务端真实 WhatsApp 连接二维码"/>
+      <p>使用手机扫码；成功后自动核实连接状态。</p>
+     </div>
+     <div v-else class="w46-qr-wait" role="status">
+      <p>{{busy||['STARTING_NATIVE_SDK','WAITING_QR_SCAN','checking'].includes(state)?'正在获取实时扫码二维码…':'当前没有可用的登录二维码'}}</p>
+      <p v-if="state==='unavailable'">{{notice}}</p>
+      <button v-if="!busy&&state==='unavailable'" type="button" @click="setup">重新连接</button>
+     </div>
+    </section>
    </div>
    <details class="w46-channel-extra" data-test="native-provider-details">
     <summary>连接问题？查看帮助</summary>
@@ -231,4 +261,17 @@ defineExpose({setup,refresh});
 .w46-channel-extra{opacity:.9}
 .w46-channel-extra summary{font-size:10px}
 @media(max-width:600px){.w46-channel{min-height:240px;padding:13px}}
+/* Real native WhatsApp QR is shown only after the original W47 bytes API attests it. */
+.w46-qr-backdrop{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
+.w46-qr-dialog{display:flex;flex-direction:column;box-sizing:border-box;gap:18px;width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--surface-raised);color:var(--ink);box-shadow:0 24px 65px #0009}
+.w46-qr-dialog header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.w46-qr-dialog header strong{font-size:18px}
+.w46-qr-dialog header p{font-size:13px;line-height:1.6;margin:6px 0 0;color:var(--muted)}
+.w46-qr-dialog header button{min-width:35px;min-height:35px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);color:var(--ink);cursor:pointer}
+.w46-qr-live,.w46-qr-wait{display:grid;justify-items:center;gap:13px;text-align:center}
+.w46-qr-live img{display:block;width:min(280px,100%);height:auto;aspect-ratio:1;background:white;padding:12px;border-radius:12px}
+.w46-qr-live p,.w46-qr-wait p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
+.w46-qr-wait{padding:28px 12px}
+.w46-qr-wait button{padding:10px 17px;border-radius:9px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+@media(max-width:600px){.w46-qr-dialog{padding:16px}}
 </style>
