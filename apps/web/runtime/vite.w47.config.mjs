@@ -16,7 +16,7 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='98927b17a93a46280260f0f9880ffd5f3871185d';
+ const expectedOwnerSha='9ec024e46c84db8f84258558752e6685b1ef2d49';
  const canonicalAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
   'apps/web/src/BCProductWorkspaceCandidate.vue':'efabfa1a02d78494d4429bb2d7bf373d0c4c00ed',
@@ -26,8 +26,8 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeHostSession.vue':'613b9b761cf1b8325da03677b4051c2807d29a9b',
   'apps/web/src/channel-setup-contract.mjs':'308400756e9363972310fc6c059fa7df96ff985a',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'d012946c39d31e590b48fbd9dfe303e10c263ff9',
-  'apps/web/src/BCNativeCloudKeySettings.vue':'611820690ef5f7941df6f3e389935ecd8529c475',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'0ce278163fd720032c923fbd6f64f283e8d51e80',
+  'apps/web/src/BCNativeCloudKeySettings.vue':'93788ef4abf859bfb470223dad49a8a5e57905b0',
   'apps/web/src/private-brain-ui-contract.mjs':'674307159167361edf9f769408e0c399764aaff5',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
   'apps/web/evidence/TO_W09_2_W47_W46_MODEL_DTO_NATIVE_JOIN_20261026.md':'c42830240483a4ac553513b7202d7d41136719c8',
