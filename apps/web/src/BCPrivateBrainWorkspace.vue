@@ -342,7 +342,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
     </p>
    </div>
    <div class="bc-private-brain-actions">
-    <Button size="sm" variant="ghost" data-test="brain-open-settings" aria-haspopup="menu" :aria-expanded="setupOpen" :disabled="busy||requestInFlight" @click="toggleBrainModel">模型 ▾</Button>
+    <Button size="sm" variant="ghost" data-test="brain-open-settings" aria-haspopup="dialog" :aria-expanded="setupOpen" :disabled="requestInFlight" @click="toggleBrainModel">模型 ▾</Button>
     <Button size="sm" variant="ghost" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">历史</Button>
     <Button size="sm" variant="ghost" data-test="brain-toggle-tools" aria-haspopup="menu" :aria-expanded="toolsOpen" @click="toggleBrainTools">工具详情 ▣</Button>
    </div>
@@ -431,7 +431,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    <div class="bc-brain-compose-toolbar">
     <div class="bc-brain-compose-tools">
      <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert" aria-haspopup="menu" aria-controls="w46-brain-expert-menu">＋ 专家</Button>
-     <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model" aria-haspopup="menu" aria-controls="w46-brain-model-menu">模型</Button>
+     <Button type="button" size="sm" variant="ghost" :disabled="requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model" aria-haspopup="dialog" aria-controls="w46-brain-model-menu">模型</Button>
      <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toggleBrainTools" data-test="brain-compose-tools" aria-haspopup="menu" aria-controls="w46-brain-tools-menu">工具</Button>
 
     </div>
