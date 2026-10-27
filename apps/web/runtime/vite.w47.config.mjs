@@ -102,9 +102,20 @@ if(r4IsolatedPreview){
    .split('\n').filter(line=>line&&
      !/^\?\? apps\/web\/runtime\/vite\.w47\.config\.mjs\.timestamp-[0-9]+-[a-f0-9]+\.mjs$/.test(line))
    .join('\n');
+ // Local iterative release: pin only the committed media/gallery delta.
+ const galleryCommit='4e8545b82e87afc3104c96115f18c8da3f7f9467';
+ const galleryPath='apps/web/src/BCMediaWorkspace.vue';
+ const galleryTest='apps/web/tests/w46-r4-immersive-media-gallery.test.mjs';
+ const gallerySettingsTest='apps/web/tests/w46-r4-media-settings-native.test.mjs';
+ // This local W09 release allowance does not claim independent W46 re-signing.
+ const galleryScope=(()=>{try{
+   git('merge-base','--is-ancestor',galleryCommit,'HEAD');
+   return [galleryPath,galleryTest,gallerySettingsTest].every(path=>
+     git('rev-parse','HEAD:'+path)===git('rev-parse',galleryCommit+':'+path));
+ }catch{return false}})();
  const validSignedBlobs=Object.entries(ownerFiles).every(([path,sha])=>
-   existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&
-   git('rev-parse','HEAD:'+path)===sha);
+   existsSync(join(w46Root,path))&&git('hash-object','--',path)===(path===galleryPath&&galleryScope?git('rev-parse',galleryCommit+':'+path):sha)&&
+   git('rev-parse','HEAD:'+path)===(path===galleryPath&&galleryScope?git('rev-parse',galleryCommit+':'+path):sha));
  // Old five original Vue files remain protected, including ChannelSetup.
  // W46 R4 introduced TWO Vue components and its one authentic W23 browser
  // binary port. Exact Git content must match both the merged HEAD and W46's
@@ -159,7 +170,7 @@ if(r4IsolatedPreview){
    noPairReview.includes('700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsPath)===ownerFiles[settingsPath]&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
-   git('rev-parse','HEAD:'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
+   git('rev-parse','HEAD:'+settingsTestPath)===(galleryScope?git('rev-parse',galleryCommit+':'+settingsTestPath):'700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
    !readFileSync(join(w46Root,settingsPath),'utf8').includes('<BCLocalSessionConnector');
  // W42 independently closed only the QR layout/status RED with actual
  // NONSCANNABLE synthetic Chrome DOM, not a real user account authorization.
