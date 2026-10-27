@@ -342,7 +342,7 @@ if(r4IsolatedPreview){
    const additional=git('diff','--name-only',modelHead,'HEAD')
      .split('\n').filter(Boolean);
    const hitTestFix='apps/web/src/BCVisualThemeSystem.css';
-   const reviewedHitTestBlob='61e6852f94fe12882289ca9582e97450123956a0';
+   const reviewedHitTestBlob='934d4402942d0fe9b07a09583aaed33f9bdda8b6';
    if(additional.length!==3||
       !additional.includes(modelReview)||
       !additional.includes(hitTestFix)||
