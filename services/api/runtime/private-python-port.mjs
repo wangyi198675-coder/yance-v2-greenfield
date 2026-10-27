@@ -77,8 +77,15 @@ export function createW43PythonPrivatePort({
      finish({httpStatus:503,code:'W43_PYTHON_TRANSPORT_INVALID'});return
     }
     if(msg.kind==='VERIFY'){
-     if(responding||!['PRIVATE_TURN','PRIVATE_HISTORY'].includes(msg.operation)||
-        msg.operation!==(method==='history'||method.startsWith('native')||method==='expertDirectory'?'PRIVATE_HISTORY':'PRIVATE_TURN')){
+     // The ORIGINAL W43 expert_turn invokes Agno PRIVATE_TURN, then reads
+     // its persisted Run/Tool/Trace via PRIVATE_HISTORY in the SAME scope.
+     // Re-verify the current trusted W54/W55 Principal at every challenge;
+     // do not broaden any other method's one-operation protocol.
+     const permittedOperations=method==='expertTurn'
+      ?['PRIVATE_TURN','PRIVATE_HISTORY']
+      :method==='history'||method.startsWith('native')||method==='expertDirectory'
+       ?['PRIVATE_HISTORY']:['PRIVATE_TURN'];
+     if(responding||!permittedOperations.includes(msg.operation)){
       finish({httpStatus:503,code:'W43_PYTHON_VERIFIER_PROTOCOL_INVALID'});return
      }
      responding=true;

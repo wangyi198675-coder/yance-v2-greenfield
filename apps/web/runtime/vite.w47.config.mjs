@@ -16,10 +16,13 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='376277cbc61fe8946e0d26aac163eea04cb50e05';
+ const expectedOwnerSha='2765a7600e1562df658cad67faab371fee243ea2';
+ const signedUnionSha='5730d390861865126e4a4748d05a92aafad5f917';
+ const previousSignedSha='376277cbc61fe8946e0d26aac163eea04cb50e05';
  // Original W42/W46 ACK files are byte-for-byte copies of their actual
  // independent MasterController receipts; their Git blobs are pinned below.
- const canonicalAck='apps/web/evidence/W46_PR97_376277C_FIVE_VUE_OWNER_REVIEW_ACK.md';
+ const canonicalAck='apps/web/evidence/W46_PR99_2765A760_CONTEXTUAL_POPOVER_OWNER_REVIEW_ACK.md';
+ const previousOwnerAck='apps/web/evidence/W46_PR97_376277C_FIVE_VUE_OWNER_REVIEW_ACK.md';
  const visualAck='apps/web/evidence/W42_PR97_376277C_QR_VISUAL_DELTA_ACK.md';
  const legacyAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
  const ownerFiles={
@@ -30,8 +33,8 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeHostSession.vue':'613b9b761cf1b8325da03677b4051c2807d29a9b',
   'apps/web/src/channel-setup-contract.mjs':'308400756e9363972310fc6c059fa7df96ff985a',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
-  'apps/web/src/BCNativeComposer.vue':'b2f06a864eacee691f1ec404fd9754ddcf50499c',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'7ea77e06458d8ee4c8619bd45992803be09dcdca',
+  'apps/web/src/BCNativeComposer.vue':'ba846b3f8acaa84fe4f7bccdcd75874df5dbc7fd',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'2247e83d0925642bf3b82433c76be6adf49395cc',
   'apps/web/src/BCNativeCloudKeySettings.vue':'93788ef4abf859bfb470223dad49a8a5e57905b0',
   'apps/web/src/private-brain-ui-contract.mjs':'674307159167361edf9f769408e0c399764aaff5',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
@@ -44,7 +47,8 @@ if(r4IsolatedPreview){
   'apps/web/src/product-workspace-contract.mjs':'594442c0f6f1e2a249cd67423a68bbd4e0940afa',
   'apps/web/vite.w46.config.mjs':'c4d79e2cb25f60dc0eedf1f355bc936ef2ac915b',
   [legacyAck]:'45893dca88309c678bc7b232f12809d879890c9e',
-  [canonicalAck]:'bc95c1a2232bad01bd9f818c1d148e3aee53c5c6',
+  [previousOwnerAck]:'bc95c1a2232bad01bd9f818c1d148e3aee53c5c6',
+  [canonicalAck]:'495aa0ac679239f299b1aa3ae9c4f708730a0ba2',
   [visualAck]:'08cf4de4d9229ff396c58e01bc4cdf9fcfdce472'
  };
  const git=(...args)=>execFileSync('git',args,{cwd:w46Root,encoding:'utf8'}).trim();
@@ -53,13 +57,19 @@ if(r4IsolatedPreview){
  const ownerAck=readAck(canonicalAck);
  const visualOwnerAck=readAck(visualAck);
  const oldOwnerAck=readAck(legacyAck);
+ const previousOwnerReview=readAck(previousOwnerAck);
  // A descendant W47 config-signing commit must retain the EXACT reviewed
- // 376277c source blobs; an unrelated branch cannot reuse someone else's ACK.
+ // original W46 review and the merged W09 PR102; no unrelated source can reuse these ACKs.
  const signedAncestor=(()=>{
-   try{git('merge-base','--is-ancestor',expectedOwnerSha,'HEAD');return true}
+   try{
+    git('merge-base','--is-ancestor',previousSignedSha,'HEAD');
+    git('merge-base','--is-ancestor',expectedOwnerSha,'HEAD');
+    git('merge-base','--is-ancestor',signedUnionSha,'HEAD');
+    return true
+   }
    catch{return false}
  })();
- const receiptTracked=[canonicalAck,visualAck,legacyAck].every(path=>
+ const receiptTracked=[canonicalAck,previousOwnerAck,visualAck,legacyAck].every(path=>
    git('ls-tree','-r','--name-only','HEAD','--',path)===path);
  // Vite 7 writes a transient bundled config beside this file WHILE it
  // imports the config. It is not a source edit; its exact generated filename
@@ -80,8 +90,10 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeComposer.vue',
   'apps/web/src/BCPrivateBrainWorkspace.vue'
  ];
- const w46ReviewValid=ownerAck.includes('W46_PR97_376277C_FIVE_VUE_OWNER_REVIEW_ACK')&&
-   ownerAck.includes('OWNER_REVIEW_ACK_PASS')&&ownerAck.includes(expectedOwnerSha)&&
+ const w46ReviewValid=ownerAck.includes('W46_POPOVER_UI_AND_PRIVATE_NATIVE_INSPECTION_OWNER_REVIEW_ACK_PASS')&&
+   ownerAck.includes(expectedOwnerSha)&&
+   previousOwnerReview.includes('OWNER_REVIEW_ACK_PASS')&&
+   previousOwnerReview.includes(previousSignedSha)&&
    fiveW46Vue.every(path=>ownerAck.includes(path.slice('apps/web/src/'.length))&&
      ownerAck.includes(ownerFiles[path]));
  // W42 independently closed only the QR layout/status RED with actual
@@ -89,7 +101,7 @@ if(r4IsolatedPreview){
  const w42VisualValid=visualOwnerAck.includes('W42原R3/R4设计Owner')&&
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
-   visualOwnerAck.includes(expectedOwnerSha);
+   visualOwnerAck.includes(previousSignedSha);
  if(signedSha!==expectedOwnerSha||!signedAncestor||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!w42VisualValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
