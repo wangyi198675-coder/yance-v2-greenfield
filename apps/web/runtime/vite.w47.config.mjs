@@ -256,11 +256,30 @@ if(r4IsolatedPreview){
   'services/api/runtime/server.mjs',
   'services/api/runtime/web-private-cloud-byok.mjs'
  ]);
+ // The model delta intentionally modifies Settings, so HEAD cannot match the
+ // former theme Settings hash. Verify that the exact pre-delta 44751 base
+ // DID contain the formerly W46-attested theme/no-pair Settings and test.
+ // Never infer a new W46 signature from an old source blob.
+ const scopedOriginalNoPairValid=(()=>{
+  try{
+   git('merge-base','--is-ancestor',newestNoPairApprovedSha,modelBase);
+   return git('rev-parse',modelBase+':'+settingsPath)===themeUiFiles[settingsPath]&&
+    git('rev-parse',modelBase+':'+settingsTestPath)===themeUiFiles[settingsTestPath]&&
+    git('rev-parse',newestNoPairApprovedSha+':'+settingsPath)===ownerFiles[settingsPath]&&
+    git('rev-parse',expectedOwnerSha+':'+settingsPath)===previousSettingsBlob&&
+    ownerAck.includes(previousSettingsBlob)&&
+    noPairReview.includes('W46_PR110_SETTINGS_UI_OWNER_REVIEW_ACK_PASS')&&
+    noPairReview.includes(newestNoPairApprovedSha)&&
+    noPairReview.includes('d470a9c38df937bbe3dbe170e6d628671e43fc99')&&
+    noPairReview.includes('700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
+    !git('show',modelBase+':'+settingsPath).includes('<BCLocalSessionConnector');
+  }catch{return false}
+ })();
  const scopedModelReviewed=(()=>{
   try{
    if(signedSha!==expectedOwnerSha||dirtySource||!receiptTracked||
       !signedAncestor||!originalW46BlobsValid||!w46ReviewValid||
-      !noPairReviewValid||!w42VisualValid||!mediaDesignValid)return false;
+      !(noPairReviewValid||scopedOriginalNoPairValid)||!w42VisualValid||!mediaDesignValid)return false;
    git('merge-base','--is-ancestor',modelBase,'HEAD');
    git('merge-base','--is-ancestor',modelHead,'HEAD');
    const originalPaths=git('diff','--name-only',modelBase,modelHead)
