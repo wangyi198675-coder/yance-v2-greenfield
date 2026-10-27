@@ -49,3 +49,14 @@ test('same-origin native contract preserved; no provider SDK in renderer',()=>{
  assert.doesNotMatch(card,/fetch\(.+127\.0\.0\.1/);
  assert.doesNotMatch(card,/sock\.sendMessage/);
 });
+test('W42 P0 mobile QR card grows with verified native QR and never overlaps next card',()=>{
+ assert.match(parent,/\.w46-r4-channel-grid\{[^}]*align-content:start;grid-auto-rows:max-content;flex-shrink:0/);
+ assert.match(card,/\.w46-channel\{[^}]*height:auto;overflow:visible/);
+ assert.match(card,/\.w46-channel-auth-result img\{width:min\(240px,100%\);height:auto/);
+});
+test('W42 P1 verified WAITING_USER_AUTH uses actionable waiting labels, not false offline',()=>{
+ assert.match(card,/state\.value==='WAITING_USER_AUTH'\?\(receipt\.value\?\.qr\?'等待扫码':'等待授权'\)/);
+ assert.match(card,/state==='WAITING_USER_AUTH'\?\(receipt\?\.qr\?'重新获取二维码':'重新获取授权'\)/);
+ assert.match(card,/state\.value='EXPIRED'/);
+ assert.match(card,/state\.value=v\.state/);
+});

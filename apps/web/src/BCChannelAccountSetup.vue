@@ -17,6 +17,7 @@ const display=computed(()=>providerCopy[props.channel.id]||{title:props.channel.
 const statusLabel=computed(()=>state.value==='ONLINE_VERIFIED'?'已连接':
  state.value==='checking'?'检查中':
  state.value==='EXPIRED'?'二维码已过期':
+ state.value==='WAITING_USER_AUTH'?(receipt.value?.qr?'等待扫码':'等待授权'):
  state.value==='unavailable'?'暂不可用':'未连接');
 function clearReceipt(){receipt.value=null;if(expiryTimer){clearTimeout(expiryTimer);expiryTimer=null}}
 async function refresh(){
@@ -62,7 +63,7 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt()});
   <div class="w46-channel-bottom">
    <Button class="w46-channel-connect" size="sm"
     data-test="native-provider-setup" :disabled="busy||state==='ONLINE_VERIFIED'"
-    @click="setup">{{busy?'正在处理…':state==='ONLINE_VERIFIED'?'已连接':'连接账号'}} <span v-if="!busy&&state!=='ONLINE_VERIFIED'" aria-hidden="true">›</span></Button>
+    @click="setup">{{busy?'正在处理…':state==='ONLINE_VERIFIED'?'已连接':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':'重新获取授权'):'连接账号'}} <span v-if="!busy&&state!=='ONLINE_VERIFIED'" aria-hidden="true">›</span></Button>
    <p v-if="(receipt||state==='unavailable'||state==='EXPIRED')&&notice"
     class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{notice}}</p>
    <div v-if="receipt" class="w46-channel-auth-result" data-test="native-provider-auth-result">
@@ -86,7 +87,7 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt()});
  </article>
 </template>
 <style scoped>
-.w46-channel{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:218px;padding:19px 18px 16px;border:1px solid var(--border);border-radius:16px;background:var(--bg2);box-shadow:0 12px 25px #00000012;transition:border-color .16s,transform .16s,box-shadow .16s}
+.w46-channel{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:218px;height:auto;overflow:visible;padding:19px 18px 16px;border:1px solid var(--border);border-radius:16px;background:var(--bg2);box-shadow:0 12px 25px #00000012;transition:border-color .16s,transform .16s,box-shadow .16s}
 .w46-channel:hover{border-color:rgba(var(--accent-rgb),.47);box-shadow:0 12px 32px rgba(var(--accent-rgb),.07),0 6px 22px #00000022;transform:translateY(-1px)}
 .w46-channel-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .w46-channel-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:13px;background:var(--surface-soft);border:1px solid var(--border)}
