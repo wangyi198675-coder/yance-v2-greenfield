@@ -115,6 +115,24 @@ const status=computed(()=>{
  return '已取得服务会话，仍需权限范围验证';
 });
 const readonlyAccount=computed(()=>snapshot.value?.connectedAccountCount||0);
+// Reuse the exact W47 snapshot already read for this workspace. Never show a
+// fabricated zero-contact authority when the native endpoint denies access.
+const peopleQuery=ref(''),peopleChannel=ref('ALL'),peopleAccount=ref('ALL');
+const peopleVerified=computed(()=>snapshot.value?.trustedSession===true&&
+ snapshot.value?.contactsAccess==='SIGNED_NATIVE_READ');
+const peopleContacts=computed(()=>peopleVerified.value&&Array.isArray(snapshot.value?.contacts)?
+ snapshot.value.contacts:[]);
+const peopleAccountOptions=computed(()=>['ALL',...new Set(peopleContacts.value
+ .map(c=>String(c.accountRef||'')).filter(Boolean))]);
+const peopleFiltered=computed(()=>{
+ const q=peopleQuery.value.trim().toLowerCase();
+ return peopleContacts.value.filter(c=>
+  (peopleChannel.value==='ALL'||c.channel===peopleChannel.value)&&
+  (peopleAccount.value==='ALL'||c.accountRef===peopleAccount.value)&&
+  (!q||[c.displayName,c.peerRef,c.accountRef].some(v=>String(v||'').toLowerCase().includes(q))));
+});
+const peopleLabel=c=>String(c?.displayName||c?.peerRef||'联系人').slice(0,100);
+const channelLabel=id=>CHANNELS.find(c=>c.id===id)?.label||String(id||'其他平台');
 defineExpose({refresh});
 </script>
 <template>
@@ -137,7 +155,7 @@ defineExpose({refresh});
     <Button v-for="item in WORKSPACES.filter(i=>!['CHAT','BRAIN','AUTOPILOT'].includes(i.id))" :key="item.id" size="sm" variant="ghost" :data-test="'workspace-'+item.id" @click="choose(item.id)">{{item.label}}</Button>
    </div>
   </header>
-  <div v-if="compactInfo||(error&&!['CHAT','AUTOPILOT'].includes(activeWorkspace))" class="w46-compact-status" data-test="w46-trusted-status" role="status">
+  <div v-if="compactInfo||(error&&!['CHAT','AUTOPILOT','PEOPLE'].includes(activeWorkspace))" class="w46-compact-status" data-test="w46-trusted-status" role="status">
    <span>{{status}}</span><Button size="xs" variant="outline" data-test="w46-refresh" :disabled="loading" @click="refresh">刷新状态</Button>
   </div>
   <div ref="contentScroller" tabindex="0" role="region"
@@ -170,10 +188,66 @@ defineExpose({refresh});
      <p>多个账号及授权范围需由原生服务提供真实记录；尚无权威账号列表时不展示示例账号。</p>
     </section>
    </section>
-   <div v-else-if="activeWorkspace==='PEOPLE'" class="w46-blank">
-     <strong>联系人：{{snapshot?.trustedSession?snapshot.realContacts:0}}</strong>
-     <p>仅从当前服务端取得有授权的实际身份 K。未连接时不加载演示联系人。</p>
-   </div>
+   <section v-else-if="activeWorkspace==='PEOPLE'" class="w46-people" data-test="w46-people-workspace" aria-label="联系人管理">
+    <header class="w46-people-toolbar">
+     <div class="w46-people-heading"><h2>联系人</h2>
+      <span v-if="peopleVerified" data-test="w46-people-count">{{peopleContacts.length}} 位联系人</span>
+     </div>
+     <div class="w46-people-actions">
+      <button type="button" data-test="w46-people-refresh" :disabled="loading" @click="refresh">{{loading?'正在刷新':'刷新'}}</button>
+      <button type="button" data-test="w46-people-accounts" class="w46-people-connect" @click="choose('ACCOUNTS')">连接账号</button>
+     </div>
+    </header>
+    <div class="w46-people-body">
+     <section class="w46-people-search-panel" aria-label="联系人筛选">
+      <label class="w46-people-search"><span aria-hidden="true">⌕</span>
+       <input v-model="peopleQuery" type="search" data-test="w46-people-search" placeholder="搜索联系人、账号…" aria-label="搜索联系人" autocomplete="off"/>
+      </label>
+      <label class="w46-people-select">平台
+       <select v-model="peopleChannel" data-test="w46-people-channel" aria-label="选择联系人平台">
+        <option value="ALL">全部平台</option>
+        <option v-for="c in CHANNELS" :key="c.id" :value="c.id">{{c.label}}</option>
+       </select>
+      </label>
+      <label v-if="peopleAccountOptions.length>1" class="w46-people-select">账号
+       <select v-model="peopleAccount" data-test="w46-people-account" aria-label="选择已授权账号">
+        <option v-for="id in peopleAccountOptions" :key="id" :value="id">{{id==='ALL'?'全部账号':id}}</option>
+       </select>
+      </label>
+     </section>
+     <section v-if="loading&&!snapshot" class="w46-people-empty" role="status">
+      <span class="w46-people-symbol" aria-hidden="true">◎</span><h3>正在加载联系人</h3>
+      <p>正在读取已连接账号中的联系人。</p>
+     </section>
+     <section v-else-if="error" class="w46-people-empty" data-test="w46-people-error" role="status">
+      <span class="w46-people-symbol" aria-hidden="true">◎</span><h3>暂时无法加载联系人</h3>
+      <p>请检查本机服务连接，然后重试。不会显示未经验证的联系人。</p>
+      <button type="button" @click="refresh">重试</button>
+     </section>
+     <section v-else-if="!peopleVerified||peopleContacts.length===0" class="w46-people-empty" data-test="w46-people-empty" role="status">
+      <span class="w46-people-symbol" aria-hidden="true">◎</span>
+      <h3>{{peopleVerified?'还没有联系人':'把聊天账号连接到言策'}}</h3>
+      <p>{{peopleVerified?'当前账号还没有可显示的联系人。连接更多账号后，这里会自动显示真实联系人。':'连接 Facebook、WhatsApp 或 Telegram 后，就可以在这里查看并搜索已授权的联系人。'}}</p>
+      <button type="button" data-test="w46-people-empty-connect" @click="choose('ACCOUNTS')">连接聊天账号</button>
+      <div class="w46-people-platforms" aria-label="支持的平台">
+       <span v-for="c in CHANNELS" :key="c.id">{{c.label}}</span>
+      </div>
+     </section>
+     <section v-else class="w46-people-results" data-test="w46-people-results" aria-label="已授权联系人">
+      <div class="w46-people-result-head"><strong>联系人列表</strong>
+       <span>{{peopleFiltered.length}} 位匹配</span></div>
+      <div v-if="!peopleFiltered.length" class="w46-people-no-match">没有找到匹配的联系人。可以更换关键词或平台筛选。</div>
+      <div v-for="(contact,index) in peopleFiltered" :key="contact.contactRef||index" class="w46-people-row" data-test="w46-people-row">
+       <span class="w46-people-avatar" aria-hidden="true">{{peopleLabel(contact).slice(0,1)}}</span>
+       <div class="w46-people-row-copy"><strong>{{peopleLabel(contact)}}</strong>
+        <small>{{channelLabel(contact.channel)}} · {{contact.accountRef||'当前账号'}}</small></div>
+       <span class="w46-people-source">已连接</span>
+      </div>
+     </section>
+     <div v-if="peopleContacts.length" class="w46-people-bottom"><span>联系人仅来自当前已授权的账号。</span>
+      <button type="button" @click="choose('CHAT')">前往聊天</button></div>
+    </div>
+   </section>
    <section v-else-if="activeWorkspace==='AUTOPILOT'" class="w46-autopilot" data-test="w46-autopilot-workspace" aria-label="自动托管中心">
     <header class="w46-autopilot-toolbar">
      <div><h2>自动托管</h2><p>让闺蜜大脑按照你的授权，协助管理真实聊天。</p></div>
@@ -512,4 +586,41 @@ defineExpose({refresh});
 .w46-autopilot-readonly{margin-top:auto;font-size:12px;color:var(--muted)}
 .w46-autopilot-help{margin:0;padding:12px 14px;border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:12px;line-height:1.7}
 @media(max-width:719px){.w46-autopilot-toolbar{padding:11px 12px}.w46-autopilot-toolbar p{max-width:240px}.w46-autopilot-body{padding:14px;gap:12px}.w46-autopilot-overview{padding:17px;gap:12px;flex-wrap:wrap}.w46-autopilot-overview-copy strong{font-size:16px}.w46-autopilot-overview button{margin-left:0}.w46-autopilot-modes{grid-template-columns:minmax(0,1fr);gap:12px}.w46-autopilot-mode{min-height:125px;padding:17px}}
+/* W09-3 fixed 44751: verified-only contact directory, no fixture or new send path. */
+.w46-people{display:flex;flex:1 1 0;flex-direction:column;min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--ink)}
+.w46-people-toolbar{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:12px;flex:0 0 auto;min-height:59px;padding:11px clamp(12px,2vw,22px);background:var(--bg2);border-bottom:1px solid var(--border)}
+.w46-people-heading{display:flex;align-items:center;gap:12px;min-width:0}
+.w46-people-heading h2{font-size:18px;letter-spacing:-.025em;line-height:1.3;margin:0}
+.w46-people-heading span{font-size:12px;color:var(--muted)}
+.w46-people-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.w46-people-actions button,.w46-people-empty button,.w46-people-bottom button{min-height:36px;padding:8px 13px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);color:var(--ink);font-size:13px;cursor:pointer}
+.w46-people-actions button:disabled{opacity:.55;cursor:not-allowed}
+.w46-people-actions .w46-people-connect,.w46-people-empty button{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
+.w46-people-body{box-sizing:border-box;display:flex;flex-direction:column;gap:15px;width:100%;max-width:1050px;align-self:center;padding:clamp(14px,2.5vw,27px)}
+.w46-people-search-panel{display:flex;align-items:end;gap:10px;min-width:0;padding:13px;border:1px solid var(--border);border-radius:13px;background:var(--bg2)}
+.w46-people-search{display:flex;align-items:center;gap:9px;min-width:100px;min-height:41px;flex:1 1 300px;padding:0 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--muted)}
+.w46-people-search span{font-size:18px}
+.w46-people-search input{min-width:0;width:100%;min-height:39px;border:0;outline:none;background:transparent;color:var(--ink);font-size:13px}
+.w46-people-search:focus-within{border-color:var(--accent)}
+.w46-people-select{display:flex;flex-direction:column;gap:5px;min-width:145px;font-size:11px;color:var(--muted)}
+.w46-people-select select{min-height:41px;min-width:0;width:100%;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--surface);color:var(--ink);font-size:13px;cursor:pointer}
+.w46-people-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:320px;padding:42px 22px;text-align:center;border:1px solid var(--border);border-radius:16px;background:linear-gradient(140deg,rgba(var(--accent-rgb),.065),transparent 65%),var(--bg2)}
+.w46-people-symbol{width:60px;height:60px;display:grid;place-items:center;border-radius:18px;color:var(--accent);background:rgba(var(--accent-rgb),.12);font-size:36px}
+.w46-people-empty h3{font-size:22px;font-weight:680;margin:3px 0 0;letter-spacing:-.03em}
+.w46-people-empty p{max-width:475px;font-size:14px;line-height:1.7;margin:0;color:var(--muted)}
+.w46-people-platforms{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px;margin-top:6px}
+.w46-people-platforms span{padding:5px 10px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:11px}
+.w46-people-results{border:1px solid var(--border);border-radius:14px;background:var(--bg2);overflow:hidden}
+.w46-people-result-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 17px;border-bottom:1px solid var(--border)}
+.w46-people-result-head strong{font-size:14px}.w46-people-result-head span{font-size:12px;color:var(--muted)}
+.w46-people-row{display:flex;gap:12px;align-items:center;min-height:66px;padding:10px 17px;border-bottom:1px solid var(--border)}
+.w46-people-row:last-child{border-bottom:0}
+.w46-people-avatar{display:grid;place-items:center;flex:0 0 41px;height:41px;border-radius:14px;background:rgba(var(--accent-rgb),.13);color:var(--accent);font-weight:700}
+.w46-people-row-copy{min-width:0;flex:1;display:grid;gap:4px}
+.w46-people-row-copy strong{font-size:14px;overflow-wrap:anywhere}
+.w46-people-row-copy small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.w46-people-source{font-size:11px;color:var(--muted)}
+.w46-people-no-match{padding:25px;color:var(--muted);font-size:13px}
+.w46-people-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px}
+@media(max-width:600px){.w46-people-body{padding:12px;gap:10px}.w46-people-toolbar{padding:10px 11px}.w46-people-heading h2{font-size:16px}.w46-people-actions{gap:5px}.w46-people-actions button{padding:7px 9px;font-size:12px}.w46-people-search-panel{padding:10px;flex-wrap:wrap;gap:8px}.w46-people-search{flex-basis:100%}.w46-people-select{flex:1 1 120px}.w46-people-empty{min-height:290px;padding:30px 16px}.w46-people-empty h3{font-size:18px}.w46-people-empty p{font-size:13px}.w46-people-row{padding:10px}.w46-people-source{display:none}}
 </style>
