@@ -1,5 +1,5 @@
 <script setup>
-import {ref,watch,computed,nextTick} from 'vue';
+import {ref,watch,computed,nextTick,onMounted} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
 import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
@@ -19,6 +19,48 @@ const props=defineProps({
  theme:{type:String,default:'Obsidian Lime'}
 });
 const emit=defineEmits(['select','toggle-theme','cycle-theme']);
+// Browser-native per-origin appearance preference; two safe strings, no secrets or identities.
+const THEME_NAMES=Object.freeze(['Obsidian Lime','Cosmic Sunset','Ocean Electric','Amber Ember','Opal Prism']);
+const UI_THEME_STORAGE_KEY='yance.ui.theme.appearance.v1';
+function validThemePreference(v){
+ return v&&typeof v==='object'&&Object.keys(v).length===2&&
+  THEME_NAMES.includes(v.theme)&&(v.appearance==='dark'||v.appearance==='light');
+}
+async function rememberThemeAfterOriginalAppUpdate(){
+ await nextTick();
+ const value={theme:props.theme,appearance:props.appearance};
+ if(!validThemePreference(value))return;
+ try{window.localStorage.setItem(UI_THEME_STORAGE_KEY,JSON.stringify(value))}catch{
+  // User may have disabled browser storage; do not claim durable save.
+ }
+}
+function cycleOriginalTheme(){
+ emit('cycle-theme');
+ void rememberThemeAfterOriginalAppUpdate();
+}
+function toggleOriginalAppearance(){
+ emit('toggle-theme');
+ void rememberThemeAfterOriginalAppUpdate();
+}
+onMounted(()=>{
+ let desired=null;
+ try{
+  const raw=window.localStorage.getItem(UI_THEME_STORAGE_KEY);
+  if(raw&&raw.length<=160){
+   const value=JSON.parse(raw);
+   if(validThemePreference(value))desired=value;
+  }
+ }catch{
+  // Unavailable storage must not block the chat UI.
+ }
+ if(!desired)return;
+ const start=THEME_NAMES.indexOf(props.theme),target=THEME_NAMES.indexOf(desired.theme);
+ if(start>=0&&target>=0){
+  const steps=(target-start+THEME_NAMES.length)%THEME_NAMES.length;
+  for(let i=0;i<steps;i++)emit('cycle-theme');
+ }
+ if(desired.appearance!==props.appearance)emit('toggle-theme');
+});
 const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
@@ -87,8 +129,8 @@ defineExpose({refresh});
    </nav>
    <div class="w46-global-tools">
     <Button size="sm" variant="ghost" data-test="w46-command" aria-label="搜索联系人 Ctrl+K" @click="openCommand">⌕</Button>
-    <Button size="sm" variant="ghost" data-test="w46-theme" :title="'主题：'+theme" @click="emit('cycle-theme')">◐</Button>
-    <Button size="sm" variant="ghost" data-test="w46-appearance" :title="appearance==='dark'?'切换浅色':'切换深色'" @click="emit('toggle-theme')">{{appearance==='dark'?'☀':'☾'}}</Button>
+    <Button size="sm" variant="ghost" data-test="w46-theme" :title="'主题：'+theme" @click="cycleOriginalTheme">◐</Button>
+    <Button size="sm" variant="ghost" data-test="w46-appearance" :title="appearance==='dark'?'切换浅色':'切换深色'" @click="toggleOriginalAppearance">{{appearance==='dark'?'☀':'☾'}}</Button>
     <Button size="sm" variant="ghost" data-test="w46-info" aria-label="查看服务状态" @click="compactInfo=!compactInfo">ⓘ</Button>
    </div>
    <div v-if="menuOpen" class="w46-workspace-menu" data-test="workspace-mobile-list">
@@ -225,7 +267,7 @@ defineExpose({refresh});
    </section>
    <BCSettingsWorkspace v-else-if="activeWorkspace==='SETTINGS'" :fetch-impl="fetchImpl"
     :active="activeWorkspace==='SETTINGS'" :theme="theme" :appearance="appearance"
-    @navigate="choose" @cycle-theme="emit('cycle-theme')" @toggle-theme="emit('toggle-theme')"/>
+    @navigate="choose" @cycle-theme="cycleOriginalTheme" @toggle-theme="toggleOriginalAppearance"/>
    <BCMediaWorkspace v-else-if="activeWorkspace==='MEDIA'" :fetch-impl="fetchImpl"
     :active="activeWorkspace==='MEDIA'" :media-authority-port="mediaAuthorityPort"/>
    <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">

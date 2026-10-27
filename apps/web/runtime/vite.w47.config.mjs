@@ -112,6 +112,7 @@ if(r4IsolatedPreview){
   'apps/web/tests/w46-pr99-contextual-popover.test.mjs':'cc4ebfce062058fdda1a429288829d63c462662d',
   'apps/web/src/BCSettingsWorkspace.vue':'60b2bff8621c06abcc233aeb6f2ff23703d34054',
   'apps/web/src/BCThemeChooser.vue':'6cfd5c572e82b9663e14d93a05af847f37180b02',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'97f1aff63185c92ddfd855b70f563ea44457081d',
   'apps/web/tests/w46-r4-media-settings-native.test.mjs':'6a45ebb9c745a8a24147a22fbad9c6fb6d1869d6'
  });
  const reviewedExpertBase='6e52ef5b80df19f558c160bab47791c47107e8cb';
@@ -126,7 +127,9 @@ if(r4IsolatedPreview){
   'apps/web/evidence/THEME_WEB_FIRST_CHROME_20261028.json',
   'apps/web/evidence/THEME_WEB_FIRST_1360.png',
   'apps/web/evidence/THEME_WEB_FIRST_430.png',
-  'apps/web/evidence/W09_THEME_WEB_FIRST_REVIEW_20261028.md'
+  'apps/web/evidence/W09_THEME_WEB_FIRST_REVIEW_20261028.md',
+  'apps/web/evidence/THEME_PERSISTENCE_CDP_20261028.json',
+  'apps/web/evidence/W09_THEME_PERSIST_REUSE_NATIVE_BROWSER_STORE_20261028.md'
  ]);
  const expertDiff=git('diff','--name-only',reviewedExpertBase,'HEAD').split('\n').filter(Boolean);
  const exactExpertDelta=expertDiff.length>=4&&expertDiff.every(path=>allowedExpertFiles.has(path))&&
