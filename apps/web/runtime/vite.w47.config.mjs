@@ -120,7 +120,7 @@ if(r4IsolatedPreview){
  const chatUiBase='a27138f2bdecf2a5565f13970ae2c86ee4b63237';
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'c011745eeba99d800e04fb054f9fbe100b9046c6',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'c9bc510b8fb1505268acb472f9b2563d80d403e4',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'ea1577aabcba2b11bba091321f007fd1c45cda75'
  });
  const chatUiDeltaValid=(()=>{
