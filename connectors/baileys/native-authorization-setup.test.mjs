@@ -182,3 +182,16 @@ test('repeated setup click cannot orphan live QR or allow cross-principal revoke
   assert.equal(f.sockets.length,1);
   await assert.rejects(f.controller.revoke({nativeSession:session('other')}),/CROSS_PRINCIPAL/);
 });
+
+test('immediate QR GET waits for real native event PNG render without fabricating QR',async()=>{
+  const f=fixture(),user=session();
+  await f.controller.beginPairing({nativeSession:user,accountLocator:'only-loc'});
+  await assert.rejects(f.controller.readQr({nativeSession:user}),/SDK_QR_NOT_AVAILABLE/);
+  // Real event source shape; never used as a real WhatsApp QR for the user.
+  f.sockets[0].ev.emit('connection.update',{qr:'ONLY_TEST_NATIVE_QR_EVENT'});
+  const rendered=await f.controller.readQr({nativeSession:user});
+  assert.equal(rendered.source,'BAILEYS_NATIVE_CONNECTION_UPDATE');
+  assert.match(rendered.imageDataUrl,/^data:image\/png;base64,/);
+  assert.ok(rendered.expiresAt>Date.now());
+  assert.equal(f.sockets.length,1);
+});

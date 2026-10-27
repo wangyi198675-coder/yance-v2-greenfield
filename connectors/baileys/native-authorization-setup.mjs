@@ -130,6 +130,17 @@ export function createBaileysNativeSetupController({createWorker,verifyNativeSes
   async function readQr({nativeSession}={}){
     if(!owner)fail('PAIRING_NOT_STARTED');
     const first=await owned(nativeSession,'READ_WHATSAPP_QR');
+    // The Baileys upstream emits QR before QRCode.toDataURL has finished.
+    // An immediate first-party GET must await that real render briefly rather
+    // than falsely claim that the SDK QR does not exist. Never fabricate one.
+    if(worker.getStatus().state==='WAITING_QR_SCAN' && worker.getStatus().qrAvailable &&
+       !image && same(first,owner)) {
+      for(let tries=0;tries<20&&!image;tries++){
+        await new Promise(resolve=>setTimeout(resolve,25));
+        if(worker.getStatus().state!=='WAITING_QR_SCAN'||!worker.getStatus().qrAvailable||
+           !owner||!same(first,owner))break;
+      }
+    }
     if(worker.getStatus().state!=='WAITING_QR_SCAN'||!worker.getStatus().qrAvailable||
       !image||!same(first,owner)||Date.now()>=image.expiresAt){
       await clearQr();fail('SDK_QR_NOT_AVAILABLE');
