@@ -79,6 +79,10 @@ test('REAL W47 localhost WEB_PRIVATE API to REAL W55 Rust WinCred/DPAPI, fake Ke
   const before=await req('/api/v2/private-brain/cloud-keys');
   assert.equal(before.code,200);
   assert.equal(before.data.providers[0].configured,false);
+  const beforeChoices=await req('/api/v2/private-brain/model-config');
+  assert.equal(beforeChoices.code,200);
+  assert.equal(beforeChoices.data.models.some(m=>m.keyRequired),false,
+   'no cloud key must not be presented as a selectable paid model');
   const old=await req('/api/v2/private-brain/history?threadId=personal');
   assert.equal(old.code,200);
   assert.equal(old.data.source,'W43_NATIVE_AGNO_CHAT_HISTORY');
@@ -91,6 +95,15 @@ test('REAL W47 localhost WEB_PRIVATE API to REAL W55 Rust WinCred/DPAPI, fake Ke
   assert.equal(result.code,200);
   assert.equal(result.data.revision,1);
   assert.equal(JSON.stringify(result.data).includes(fakeKey),false);
+  const firstCloudChoice=await req('/api/v2/private-brain/model-config');
+  assert.equal(firstCloudChoice.code,200);
+  assert.equal(firstCloudChoice.data.selectedProvider,'');
+  assert.equal(firstCloudChoice.data.paidCostConsentRecorded,false);
+  assert.ok(firstCloudChoice.data.models.some(m=>
+   m.provider==='OPENROUTER_USER_API'&&m.modelId==='openai/gpt-4o-mini'&&
+   m.configured===true&&m.available===true&&m.keyRequired===true&&
+   m.providerAvailability==='UNVERIFIED_UNTIL_RUN'),
+   'after first real native W55 Key setup the original B+C must see a selectable Agno model');
   assert.equal((await req('/api/v2/private-brain/model-selection',{method:'POST',
    body:{provider:'OPENROUTER_USER_API',modelId:'openai/gpt-4o-mini'}})).code,422);
   result=await req('/api/v2/private-brain/model-selection',{method:'POST',
@@ -102,6 +115,9 @@ test('REAL W47 localhost WEB_PRIVATE API to REAL W55 Rust WinCred/DPAPI, fake Ke
   assert.equal(config.data.selectedProvider,'OPENROUTER_USER_API');
   assert.equal(config.data.selectedModelId,'openai/gpt-4o-mini');
   assert.equal(config.data.secureCredentialStorage,true);
+  assert.equal(config.data.paidCostConsentRecorded,true);
+  assert.equal(config.data.requiresPaidCallApproval,false,
+   'original W55 selection consent persists for repeated private Agno turns');
   const lateHistory=await req('/api/v2/private-brain/history?threadId=personal');
   assert.equal(lateHistory.code,200,'real WinCred selection never blocks native Agno History');
   result=await req('/api/v2/private-brain/cloud-keys',{method:'POST',
@@ -113,6 +129,11 @@ test('REAL W47 localhost WEB_PRIVATE API to REAL W55 Rust WinCred/DPAPI, fake Ke
    body:{provider:'OPENROUTER_USER_API',expectedRevision:2}});
   assert.equal(result.code,200);
   assert.equal(result.data.revoked,true);
+  const afterRevoke=await req('/api/v2/private-brain/model-config');
+  assert.equal(afterRevoke.code,200);
+  assert.equal(afterRevoke.data.models.some(m=>m.provider==='OPENROUTER_USER_API'),false,
+   'revoked WinCred cannot offer paid cloud models');
+  assert.equal(afterRevoke.data.paidCostConsentRecorded,false);
   const history=await req('/api/v2/private-brain/history?threadId=personal');
   assert.equal(history.code,200);
   const locked=await req('/api/v2/private-brain/model-selection',{method:'POST',

@@ -9,6 +9,13 @@ const catalog=Object.freeze([
  Object.freeze({provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true})
 ]);
 const maxBody=2048;
+// W43's original Agno OpenRouter/OpenAI SDK integration tests already exercise
+// these model IDs. They are selectable *candidates*, not a live provider catalog
+// or a promise that the user's account has quota / model availability.
+const webCloudModelCandidates=Object.freeze({
+ OPENROUTER_USER_API:'openai/gpt-4o-mini',
+ OPENAI_USER_API:'gpt-4o-mini'
+});
 const write=(res,status,value)=>{
  res.writeHead(status,{'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store','x-content-type-options':'nosniff',
@@ -146,13 +153,32 @@ export function createPrivateModelHttp({
    }
    const selectedLocal=!cloudSelected&&state.ready&&state.choice;
    const models=[...state.models];
-   if(cloudSelected)models.push({provider:cloudSelected.provider,
-    modelId:cloudSelected.modelId,configured:true,available:true,
-    keyRequired:true,billingNotice:'本机已配置本人API Key，云端调用可能产生费用；模型服务状态以实际运行回执为准'});
+   // A first-time cloud user needs a real selectable model BEFORE selecting
+   // it. Offer only the IDs already covered by original W43 Agno SDK tests,
+   // and only after original W55 reports a configured, non-revoked Key.
+   // This is native SDK readiness, NOT a claim that the provider is online.
+   for(const source of cloudSources){
+    if(!source.configured||source.revoked)continue;
+    const modelId=webCloudModelCandidates[source.provider];
+    if(!modelId)continue;
+    models.push({provider:source.provider,modelId,
+     configured:true,available:true,keyRequired:true,
+     providerAvailability:'UNVERIFIED_UNTIL_RUN',
+     billingNotice:'已配置本人本机Key；所列模型由原Agno SDK支持，实际服务可用性与费用以供应商回执为准'});
+   }
+   if(cloudSelected&&!models.some(m=>m.provider===cloudSelected.provider&&
+     m.modelId===cloudSelected.modelId))
+    models.push({provider:cloudSelected.provider,
+     modelId:cloudSelected.modelId,configured:true,available:true,
+     keyRequired:true,providerAvailability:'UNVERIFIED_UNTIL_RUN',
+     billingNotice:'当前本人已选模型，实际服务可用性与费用以供应商回执为准'});
    write(res,200,{ok:true,authoritative:true,models,
     selectedProvider:cloudSelected?.provider??(selectedLocal?'LLAMACPP_LOCAL_QWEN3_8B_FREE':''),
     selectedModelId:cloudSelected?.modelId??(selectedLocal?'qwen3:8b':''),
-    cloudSources,requiresPaidCallApproval:!!cloudSelected,
+    cloudSources,
+    // W55 current key revision and user-confirmed model selection already
+    // authorize repeated private turns. No per-message fee checkbox is needed.
+    requiresPaidCallApproval:false,paidCostConsentRecorded:!!cloudSelected,
     secureCredentialStorage:!!webCloudModelPort,credentialsExposed:false,
     canSend:false,providerAuthorized:false});
    return true;
