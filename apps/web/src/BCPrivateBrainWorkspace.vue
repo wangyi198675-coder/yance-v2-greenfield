@@ -7,7 +7,7 @@ import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModel
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
 const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
-const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),text=ref('');
+const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=ref(false),text=ref('');
 const chosen=ref(''),requestInFlight=ref(false);
 const modelCostApproved=ref(false);
 let revision=0,mounted=true,sessionDeadline=null;
@@ -74,7 +74,7 @@ async function refresh(){
   if(!s.authorized){
    // Ordinary PRIVATE use never asks the person for a terminal pair code.
    // The original W47 process/session owner must establish local access on app startup.
-   loadState.value='setup-required';setupOpen.value=true;return
+   loadState.value='setup-required';setupOpen.value=false;return
   }
   session.value=s;armExpiry(s.expiresAt);
   let models;
@@ -89,9 +89,9 @@ async function refresh(){
   // Existing Agno History must load with NO model configured.
   await loadHistory(id);
   if(!safeCurrent(id))return;
-  if(!models.configured){loadState.value='no-model';setupOpen.value=true;return}
+  if(!models.configured){loadState.value='no-model';setupOpen.value=false;return}
  }catch(e){if(safeCurrent(id)){
-   loadState.value='service-unavailable';setupOpen.value=true;notice.value=reason(e)
+   loadState.value='service-unavailable';setupOpen.value=false;notice.value=reason(e)
   }}
  finally{if(safeCurrent(id))busy.value=false}
 }
@@ -160,19 +160,24 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 <template>
  <section class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
   <header class="bc-private-brain-head">
-   <div><strong>闺蜜大脑</strong></div>
-   <div class="bc-private-brain-actions"><Button size="sm" variant="ghost" data-test="brain-open-settings" :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">{{catalog?.configured?"模型设置":"设置AI模型"}}</Button><Button size="sm" variant="ghost" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">刷新</Button></div>
-  </header>
-  <p class="bc-private-brain-state" role="status" data-test="brain-state">
+   <div class="bc-private-brain-heading"><strong>闺蜜大脑</strong><span>私人 Agno · 独立会话</span>
+    <p class="bc-private-brain-state" role="status" data-test="brain-state">
    {{loadState==='checking'?'正在核实服务端':loadState==='ready'?'历史已由服务端恢复':
     loadState==='no-model'?'尚未配置 AI 模型':
     loadState==='setup-required'?'先设置 AI 模型；本机服务连接后即可聊天':
     loadState==='service-unavailable'?'AI 服务暂时不可用，仍可查看模型设置':
     loadState==='models-unavailable'?'模型服务接口尚未接通':
     loadState==='history-unavailable'?'真实对话或历史暂不可用':'模型选择尚未确认'}}
-  </p>
+    </p>
+   </div>
+   <div class="bc-private-brain-actions">
+    <Button size="sm" variant="ghost" data-test="brain-open-settings" :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">模型 ▾</Button>
+    <Button size="sm" variant="ghost" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">历史</Button>
+    <Button size="sm" variant="ghost" data-test="brain-toggle-tools" :aria-expanded="toolsOpen" @click="toolsOpen=!toolsOpen">工具详情 ▣</Button>
+   </div>
+  </header>
   <p v-if="notice" class="bc-private-notice" role="alert" data-test="brain-error">{{notice}}</p>
-  <details class="bc-brain-trace" data-test="w46-brain-tools"><summary>工具 · Run · Trace · 专家（有真实回执时展开）</summary><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史中没有经服务端核实的工具回执；专家和运行详情待 W43 原生接口接线。</p></details>
+  <details v-if="toolsOpen" open class="bc-brain-trace" data-test="w46-brain-tools"><summary>真实执行详情 · 工具 / Run / Trace</summary><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史中没有经服务端核实的工具回执；专家和运行详情待 W43 原生接口接线。</p></details>
   <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings">
    <h3>选择 AI 模型</h3>
    <BCNativeCloudKeySettings :web-csrf="session?.csrf" @changed="refresh"/>
@@ -203,12 +208,20 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
    </article>
   </div>
   <form class="bc-private-compose" @submit.prevent="send">
-   <label for="bc-private-question">给闺蜜大脑发消息</label>
+   <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
    <small v-if="catalog?.configured&&catalog.selectedProvider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
-   <textarea id="bc-private-question" v-model="text" rows="3" maxlength="4000"
-     data-test="brain-question" placeholder="输入你的问题" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
-   <Button type="submit" data-test="brain-send"
-     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送给闺蜜大脑'}}</Button>
+   <textarea id="bc-private-question" v-model="text" rows="2" maxlength="4000"
+     data-test="brain-question" placeholder="向闺蜜大脑提问；可召唤专家或执行已授权任务" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
+   <div class="bc-brain-compose-toolbar">
+    <div class="bc-brain-compose-tools">
+     <Button type="button" size="sm" variant="ghost" disabled title="专家调用须先取得原W43注册及联系人作用域资格" data-test="brain-expert">＋ 专家</Button>
+     <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen" data-test="brain-compose-model">模型</Button>
+     <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toolsOpen=!toolsOpen" data-test="brain-compose-tools">工具</Button>
+     <Button type="button" size="sm" variant="ghost" disabled title="附件尚待W23原生媒体资格接线" data-test="brain-attachment">附件</Button>
+    </div>
+    <Button type="submit" data-test="brain-send"
+     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送 ↗'}}</Button>
+   </div>
   </form>
 
  </section>
@@ -243,5 +256,39 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 .bc-private-compose{flex:0 0 auto;display:grid;gap:7px;border:1px solid var(--border);padding:11px 12px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px rgba(var(--accent-rgb),.055),0 12px 24px rgba(0,0,0,.065)}.bc-private-compose label{font-size:11px;color:var(--muted)}
 .bc-private-compose textarea{border-radius:12px;resize:vertical;min-height:66px;background:var(--bg2)!important;border-color:var(--border)!important}.bc-private-compose textarea:focus{outline:2px solid rgba(var(--accent-rgb),.38);border-color:var(--accent)!important}.bc-private-compose button{background:var(--accent);color:var(--accent-ink);border-radius:11px}
 @media(max-width:719px){.bc-private-brain{padding:9px!important}.bc-private-brain-head{gap:4px}.bc-private-brain-head strong{font-size:15px}.bc-private-brain-head button{font-size:11px}.bc-private-history article{max-width:92%}}
+/* R4 Compact approval: ONE full-width 43px context bar, centered 880px
+   native Agno timeline, and a bottom prompt. Do not replace any API or history. */
+.bc-private-brain{position:relative;width:100%;min-height:0;height:100%;padding:0!important;gap:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:var(--bg)!important}
+.bc-private-brain-head{box-sizing:border-box;flex:0 0 43px;height:43px;min-height:43px;padding:0 17px;border-bottom:1px solid var(--border);background:var(--bg2);gap:12px}
+.bc-private-brain-heading{display:flex;align-items:center;gap:10px;min-width:0}
+.bc-private-brain-heading strong{font-size:15px;white-space:nowrap}
+.bc-private-brain-heading>span{font-size:11px;color:var(--muted);white-space:nowrap}
+.bc-private-brain-state{font-size:10px;color:var(--muted);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc-private-brain-actions{gap:7px;flex-shrink:0}
+.bc-private-brain-actions button{font-size:11px}
+.bc-private-history{box-sizing:border-box;flex:1 1 0;min-height:0;max-width:880px;width:100%;align-self:center;padding:20px 22px!important;background:transparent!important;border:0!important}
+.bc-private-history article{max-width:80%;padding:11px 14px;border-radius:14px 14px 14px 4px}
+.bc-private-history article[data-role=user]{border-radius:14px 14px 4px 14px}
+.bc-private-compose{box-sizing:border-box;flex:0 0 auto;max-width:844px;width:calc(100% - 36px);align-self:center;margin:0 0 16px;gap:0;padding:11px!important;border-radius:14px;border:1px solid var(--border)}
+.bc-brain-sr-label{position:absolute;overflow:hidden;width:1px;height:1px;clip:rect(0,0,0,0);white-space:nowrap}
+.bc-private-compose textarea{box-sizing:border-box;min-height:52px!important;max-height:110px;resize:vertical;border:0!important;background:transparent!important;border-radius:0!important;padding:5px 2px;outline-offset:1px}
+.bc-private-compose textarea:focus{outline:2px solid rgba(var(--accent-rgb),.45)}
+.bc-brain-compose-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding-top:8px}
+.bc-brain-compose-tools{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.bc-brain-compose-tools button{padding:6px 7px!important;font-size:11px;border-radius:7px;background:var(--surface-soft);color:var(--ink)}
+.bc-brain-compose-tools button:disabled{opacity:.43;cursor:not-allowed}
+.bc-brain-compose-toolbar>[data-test=brain-send]{margin-left:auto;white-space:nowrap;border-radius:8px;color:var(--accent-ink);background:var(--accent)}
+.bc-brain-trace{position:absolute;right:12px;top:48px;z-index:25;width:min(310px,calc(100vw - 24px));max-height:65vh;overflow:auto;box-shadow:0 15px 35px rgba(0,0,0,.2);background:var(--surface-raised);border-color:var(--border)}
+.bc-private-settings{box-sizing:border-box;max-width:880px;width:calc(100% - 28px);align-self:center}
+@media(max-width:719px){
+ .bc-private-brain-head{padding:0 8px;gap:5px}
+ .bc-private-brain-heading{gap:4px}.bc-private-brain-heading>span{display:none}
+ .bc-private-brain-state{max-width:95px;font-size:10px}
+ .bc-private-brain-actions{gap:2px}.bc-private-brain-actions button{padding:5px!important;font-size:10px}
+ .bc-private-history{padding:15px 12px!important}
+ .bc-private-compose{width:calc(100% - 20px);margin-bottom:10px;padding:9px!important}
+ .bc-brain-compose-tools{gap:1px}.bc-brain-compose-tools button{font-size:10px;padding:5px!important}
+ .bc-private-history article{max-width:92%}
+}
 @media(prefers-reduced-motion:reduce){.bc-private-compose,.bc-private-history article{box-shadow:none}}
 </style>
