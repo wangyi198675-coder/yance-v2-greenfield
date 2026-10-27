@@ -6,7 +6,7 @@ const json=(res,status,body)=>{res.writeHead(status,{'content-type':'application
 const errStatus=code=>['ACCESS_DENIED','ASSET_NOT_FOUND_OR_FORBIDDEN','AUTH_REVISION_CHANGED'].includes(code)?403:
  ['BLOB_UNAVAILABLE','BLOB_AUTH_FAILED','INDEX_UNAVAILABLE'].includes(code)?503:
  ['SIZE_LIMIT','BODY_TOO_LARGE'].includes(code)?413:
- ['IDEMPOTENCY_CONFLICT','UPLOAD_EXPIRED','UPLOAD_ALREADY_COMPLETED','ASSET_NOT_READY','ASSET_GONE'].includes(code)?409:400;
+ ['IDEMPOTENCY_CONFLICT','UPLOAD_EXPIRED','UPLOAD_ALREADY_COMPLETED','ASSET_NOT_READY','ASSET_GONE','CURSOR_EXPIRED','LIST_SNAPSHOT_CHANGED'].includes(code)?409:400;
 async function take(req,limit){
  const parts=[];let sum=0;
  for await(const p of req){sum+=p.length;if(sum>limit)fail('BODY_TOO_LARGE');parts.push(p)}
@@ -17,7 +17,8 @@ export function createWebMediaHttpHandler({service,resolveIdentity,checkCsrf}={}
  if(!(service instanceof PersistentMediaAssets)||typeof resolveIdentity!=='function'||typeof checkCsrf!=='function')fail('TRUSTED_PORTS_REQUIRED');
  return async function mediaHandler(req,res){
   try{
-   const path=new URL(req.url,'http://localhost').pathname.replace(/^\/api(?=\/v2\/media\/)/,'');
+   const url=new URL(req.url,'http://localhost');
+   const path=url.pathname.replace(/^\/api(?=\/v2\/media\/)/,'');
    if(path!=='/v2/media/capabilities'&&!path.startsWith('/v2/media/'))return json(res,404,{error:'NOT_FOUND'});
    // checkCsrf must verify the host's authenticated session & origin for all mutating requests.
    if(!['GET','HEAD'].includes(req.method)&&await checkCsrf(req)!==true)return json(res,403,{error:'CSRF_DENIED'});
@@ -25,7 +26,13 @@ export function createWebMediaHttpHandler({service,resolveIdentity,checkCsrf}={}
    if(!ctx||typeof ctx.actor!=='string'||!ctx.k)return json(res,401,{error:'AUTH_REQUIRED'});
    let status=200,result;
    if(path==='/v2/media/capabilities'&&req.method==='GET')result=mediaCapabilities();
-   else if(path==='/v2/media/upload-sessions'&&req.method==='POST'){
+   else if(path==='/v2/media/assets'&&req.method==='GET'){
+    const params=url.searchParams,allowed=new Set(['cursor','limit','q','kind','mime']);
+    if([...params.keys()].some(k=>!allowed.has(k)||params.getAll(k).length!==1))fail('BAD_FILTER');
+    const limit=params.has('limit')?Number(params.get('limit')):20;
+    result=await service.list({...ctx,limit,cursor:params.get('cursor'),
+     query:params.get('q')??'',kind:params.get('kind'),mime:params.get('mime')});
+   }else if(path==='/v2/media/upload-sessions'&&req.method==='POST'){
     if(!String(req.headers['content-type']||'').startsWith('application/json'))fail('JSON_REQUIRED');
     let b;try{b=JSON.parse((await take(req,8192)).toString('utf8'))}catch(e){if(e instanceof MediaError)throw e;fail('INVALID_JSON')}
     if(!b||typeof b!=='object'||Array.isArray(b))fail('INVALID_JSON');

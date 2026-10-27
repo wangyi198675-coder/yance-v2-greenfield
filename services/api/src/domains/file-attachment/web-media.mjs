@@ -1,6 +1,6 @@
 // W23 Issue #77: real browser file attachment bytes, encrypted on local disk.
 // No AI media generation, account login, sender, public CDN or self-issued grants.
-import { randomBytes, randomUUID, createHash, createCipheriv, createDecipheriv } from 'node:crypto';
+import { randomBytes, randomUUID, createHash, createHmac, timingSafeEqual, createCipheriv, createDecipheriv } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, readdir, unlink, lstat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
@@ -112,6 +112,97 @@ export class PersistentMediaAssets {
   sha256:a.sha256,status:a.status,created_at:a.created_at,expires_at:a.expires_at,deleted_at:a.deleted_at,
   // never return disk paths, key material, private ciphertext, or grant token
   }}
+ // The current W24/W44 authority, not a client-provided K or local index, owns list eligibility.
+ // A cursor is integrity-protected with a derived key and invalid on identity, grant or inventory changes.
+ #inventoryFingerprint(k){
+  // Only this exact five-part K affects its cursor; unrelated accounts never invalidate it.
+  return sha(Buffer.from(JSON.stringify([...this.#items.values()].filter(a=>kID(a.k)===kID(k)).map(a=>
+   [a.asset_id,a.status,a.created_at,a.sha256,a.deleted_at]))));
+ }
+ #cursorMac(bytes){
+  const derived=createHmac('sha256',this.#key).update('W23_MEDIA_LIST_CURSOR_KEY_V1').digest();
+  return createHmac('sha256',derived).update(bytes).digest();
+ }
+ #cursorScope(actor,k){return this.#cursorMac(Buffer.from(JSON.stringify([actor,kID(k)]))).toString('base64url')}
+ #cursorFilters({kind,mime,query}){return this.#cursorMac(Buffer.from(JSON.stringify([kind,mime,query]))).toString('base64url')}
+ #decodeCursor(token){
+  if(typeof token!=='string'||token.length>2048||!/^([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]{43})$/.test(token))die('CURSOR_INVALID');
+  const [body,mac]=token.split('.');
+  let bytes,value;
+  try{
+   bytes=Buffer.from(body,'base64url');
+   if(bytes.toString('base64url')!==body)die('CURSOR_INVALID');
+   const sig=Buffer.from(mac,'base64url');
+   if(sig.length!==32||!timingSafeEqual(this.#cursorMac(bytes),sig))die('CURSOR_INVALID');
+   value=JSON.parse(bytes.toString('utf8'));
+  }catch{die('CURSOR_INVALID')}
+  if(!value||value.v!==1||!Number.isSafeInteger(value.after)||value.after<1||
+    !Number.isFinite(value.expires_at)||typeof value.subject!=='string'||
+    typeof value.filters!=='string'||typeof value.epoch!=='string'||
+    typeof value.inventory!=='string')die('CURSOR_INVALID');
+  if(value.expires_at<=this.#clock())die('CURSOR_EXPIRED');
+  return value;
+ }
+ #encodeCursor(value){
+  const bytes=Buffer.from(JSON.stringify(value));
+  return bytes.toString('base64url')+'.'+this.#cursorMac(bytes).toString('base64url');
+ }
+ async list({actor,k:rawK,cursor=null,limit=20,kind=null,mime=null,query='' }={}){
+  const k=mediaK(rawK);
+  if(!Number.isSafeInteger(limit)||limit<1||limit>50)die('BAD_PAGE_LIMIT');
+  if(kind!==null&&!['image','video','audio'].includes(kind))die('BAD_FILTER');
+  if(mime!==null&&!Object.hasOwn(ACCEPT,mime))die('BAD_FILTER');
+  if(kind!==null&&mime!==null&&ACCEPT[mime].type!==kind)die('BAD_FILTER');
+  if(typeof query!=='string'||query.length>80||/[\x00-\x1f]/.test(query))die('BAD_FILTER');
+  query=query.trim().toLowerCase();
+  // Fail closed even when there are zero assets: an empty index is not an entitlement.
+  const before=await this.#check('list',actor,k);
+  const epoch=stamp(before),inventory=this.#inventoryFingerprint(k);
+  const subject=this.#cursorScope(actor,k),filters=this.#cursorFilters({kind,mime,query});
+  let offset=0;
+  if(cursor!==null){
+   const c=this.#decodeCursor(cursor);
+   if(c.subject!==subject||c.filters!==filters)die('CURSOR_INVALID');
+   if(c.epoch!==epoch)die('AUTH_REVISION_CHANGED');
+   if(c.inventory!==inventory)die('LIST_SNAPSHOT_CHANGED');
+   offset=c.after;
+  }
+  const items=[...this.#items.values()].filter(a=>
+   a.status==='READY'&&kID(a.k)===kID(k)&&
+   (kind===null||ACCEPT[a.mime]?.type===kind)&&
+   (mime===null||a.mime===mime)&&
+   (!query||a.original_name.toLowerCase().includes(query)||a.mime.includes(query)))
+   .sort((a,b)=>b.created_at-a.created_at||b.asset_id.localeCompare(a.asset_id));
+  if(offset>items.length)die('LIST_SNAPSHOT_CHANGED');
+  const authorized=[];let nextOffset=offset,hasMore=false;
+  for(let i=offset;i<items.length;i++){
+   const a=items[i];
+   let auth;
+   try{auth=await this.#check('read',actor,k,a)}
+   catch(e){if(e instanceof MediaError&&e.code==='ACCESS_DENIED')continue;throw e}
+   if(authorized.length===limit){hasMore=true;break}
+   authorized.push({a,epoch:stamp(auth)});nextOffset=i+1;
+  }
+  // Revalidate every returned asset, plus the scope and inventory, before releasing any metadata.
+  const after=await this.#check('list',actor,k);
+  if(stamp(after)!==epoch)die('AUTH_REVISION_CHANGED');
+  for(const item of authorized){
+   const now=await this.#check('read',actor,k,item.a);
+   if(stamp(now)!==item.epoch||item.a.status!=='READY')die('AUTH_REVISION_CHANGED');
+  }
+  if(this.#inventoryFingerprint(k)!==inventory)die('LIST_SNAPSHOT_CHANGED');
+  return {
+   items:authorized.map(({a})=>({
+    asset_id:a.asset_id,purpose:a.purpose,message_id:a.message_id,
+    original_name:a.original_name,mime:a.mime,kind:ACCEPT[a.mime].type,
+    byte_size:a.byte_size,sha256:a.sha256,created_at:a.created_at,status:'READY'
+   })),
+   has_more:hasMore,
+   next_cursor:hasMore?this.#encodeCursor({v:1,subject,filters,epoch,inventory,
+    after:nextOffset,expires_at:this.#clock()+5*60*1000}):null,
+   order:'created_at_desc_asset_id_desc'
+  };
+ }
  async begin({actor,k:rawK,purpose,mime,byte_size,original_name,message_id=null,consent_id,grant_id,idempotency_key}){
   const k=mediaK(rawK);if(!PURPOSES.has(purpose)||!ACCEPT[mime])die('UNSUPPORTED_MEDIA');
   if(!Number.isSafeInteger(byte_size)||byte_size<12||byte_size>ACCEPT[mime].max)die('SIZE_LIMIT');
