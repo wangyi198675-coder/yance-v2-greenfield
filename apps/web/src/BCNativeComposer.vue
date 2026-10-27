@@ -13,6 +13,8 @@ const props=defineProps({
 let bridge=createComposerBridge({takeoverPort:props.takeoverPort});
 const current=ref({key:null,status:'NO_CONTACT',draft:null,canSend:false});
 const composing=ref(false),compositionK=ref(null),why=ref('');
+const expertsOpen=ref(false);
+const designExperts=['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家'];
 const update=()=>{current.value=bridge.view()};
 const safeIdentity=()=>{try{return props.identity&&current.value.key===fullK(props.identity)?props.identity:null}catch{return null}};
 const sourceMessage=computed(()=>{
@@ -109,9 +111,16 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
         @compositionend="endIME" @paste="onPaste" @keydown="onSendAttempt"/>
     </InputGroup>
     <div class="bc-footer">
+      <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-label="专家与附件" :aria-expanded="expertsOpen" @click="expertsOpen=!expertsOpen">＋ 专家</Button>
+      <span class="bc-mode-label" title="等待W44原生模式资格回读">人工 · 辅助 · 自动（待核验）</span>
       <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key"/></label>
       <span>真人发送锁定 · 等待 W25 唯一 MessageDelivery</span>
       <Button disabled size="sm">发送不可用</Button>
+    </div>
+    <div v-if="expertsOpen" class="bc-expert-candidates" data-test="w46-composer-experts">
+      <strong>选择协作专家 · 暂未接通</strong>
+      <p>本次任务、当前联系人或全局作用域需W43/W45真实注册及持久授权，不能按设计草稿伪造选择。</p>
+      <button v-for="name in designExperts" :key="name" type="button" disabled :title="name+'尚未获得原生可用确认'">{{name}} · 未安装核验</button>
     </div>
   </section>
 </template>
@@ -125,4 +134,11 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 .bc-file-label{display:flex;gap:4px;align-items:center;max-width:160px}
 .bc-file-label input{width:95px;max-width:100%}
 @media(max-width:430px){.bc-native-composer{padding:10px}.bc-footer{align-items:flex-start}}
+
+.bc-native-composer{gap:8px!important;border-top:1px solid var(--border);background:var(--bg2);border-radius:0 0 13px 13px;padding:9px 12px!important;max-height:min(42vh,360px);overflow-y:auto}
+.bc-native-composer :deep(.cn-input-group){border-radius:17px!important;border-color:var(--border);background:linear-gradient(120deg,rgba(var(--accent-rgb),.04),transparent),var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.bc-native-composer :deep(.cn-input-group:focus-within){border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.13)}
+.bc-mode-label{color:var(--muted);font-size:10px}.bc-footer{justify-content:flex-start!important}.bc-footer .bc-file-label{margin-left:auto}
+.bc-expert-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px;max-height:220px;overflow:auto}.bc-expert-candidates strong,.bc-expert-candidates p{grid-column:1/-1;margin:0}.bc-expert-candidates p{font-size:11px;color:var(--muted)}
+.bc-expert-candidates button{padding:8px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);color:var(--muted);text-align:left;opacity:.7}
 </style>
