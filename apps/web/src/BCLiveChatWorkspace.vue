@@ -7,7 +7,7 @@ import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/s
 import BCNativeComposer from './BCNativeComposer.vue';
 import {createTrustedTakeoverPort} from './native-takeover-port.mjs';
 import {readLiveContacts,readLiveTimeline,explainNativeFailure} from './live-chat-source.mjs';
-const props=defineProps({fetchImpl:{type:Function,default:null}});
+const props=defineProps({fetchImpl:{type:Function,default:null},mediaAuthorityPort:{type:Object,default:null}});
 const emit=defineEmits(['navigate']);
 const searchBox=ref(null),composerRef=ref(null);
 const mobileChat=ref(false),plusOpen=ref(false),filterOpen=ref(false),pinnedExpanded=ref(true),unreadOnly=ref(false);
@@ -193,7 +193,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
    </div>
    <!-- One always-mounted original CONTACT Composer. Null K must leave input
         and expert/media operations disabled, not create a second renderer. -->
-   <BCNativeComposer ref="composerRef" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
+   <BCNativeComposer ref="composerRef" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
     :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"/>
   </div>
  </section>
