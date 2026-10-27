@@ -7,6 +7,7 @@ const props=defineProps({channel:{type:Object,required:true},fetchImpl:{type:Fun
  connectTrigger:{type:Number,default:0}});
 const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
 const verifiedAccounts=ref(null);
+const userRequested=ref(false);
 let alive=true,revision=0,expiryTimer=null,pollTimer=null;
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const providerCopy=Object.freeze({
@@ -36,6 +37,7 @@ async function refresh(){
 }
 async function setup(){
  if(busy.value)return;
+ userRequested.value=true;
  const id=++revision;clearReceipt();busy.value=true;notice.value='';
  try{
   const v=await setupChannel({channel:props.channel.id,fetchImpl:fetcher()});
@@ -92,8 +94,8 @@ defineExpose({setup,refresh});
    <Button class="w46-channel-connect" size="sm"
     data-test="native-provider-setup" :disabled="busy"
     @click="setup"><span aria-hidden="true">＋</span> {{busy?'正在处理…':state==='ONLINE_VERIFIED'?'添加另一个账号':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':'重新获取授权'):'连接账号'}} </Button>
-   <p v-if="(receipt||state==='unavailable'||state==='EXPIRED')&&notice"
-    class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{notice}}</p>
+   <p v-if="(receipt||state==='EXPIRED'||userRequested)&&notice"
+    class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{state==='unavailable'?'当前无法连接，请查看帮助':notice}}</p>
    <div v-if="receipt" class="w46-channel-auth-result" data-test="native-provider-auth-result">
     <a v-if="receipt.officialConnectUrl" :href="receipt.officialConnectUrl"
      target="_blank" rel="noopener noreferrer" data-test="native-provider-connect-real">继续本人官方授权</a>
