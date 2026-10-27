@@ -12,9 +12,11 @@ const refuse=(reason,other={})=>({ok:false,status:'CONFLICT',reason,...other});
 const frozen=x=>Object.freeze(x);
 const KINDS=new Set(['REGISTER_ACCOUNT','BIND_PEER','CREATE_CONSENT',
  'REVOKE_CONSENT','REVOKE_ACCOUNT','RELINK_ACCOUNT','HUMAN_TAKEOVER',
- 'REVOKE_GRANT','ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT']);
+ 'REVOKE_GRANT','ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT',
+ 'MODE_MANUAL','MODE_ASSIST','MODE_AUTO']);
 const GLOBAL=new Set(['REGISTER_ACCOUNT','REVOKE_ACCOUNT','RELINK_ACCOUNT']);
-const CONTACT=new Set(['BIND_PEER','CREATE_CONSENT','REVOKE_CONSENT','HUMAN_TAKEOVER']);
+const CONTACT=new Set(['BIND_PEER','CREATE_CONSENT','REVOKE_CONSENT','HUMAN_TAKEOVER',
+ 'MODE_MANUAL','MODE_ASSIST','MODE_AUTO']);
 const aj=k=>JSON.stringify([k.tenant,k.account,k.channel]);
 const pj=k=>JSON.stringify([k.tenant,k.account,k.channel,k.peer_id]);
 const sj=(k,scope,canonicalK)=>scope==='GLOBAL'?JSON.stringify(['G',...JSON.parse(aj(k))]):
@@ -127,6 +129,9 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
        ?{...status(prior),replayed:true}:refuse('IDEMPOTENCY_CONFLICT');
      const b=readBarrier.get(scopeId);
      if(b?.pending===1)return refuse('MUTATION_ALREADY_PENDING');
+     if(kind.startsWith('MODE_')&&
+        readBarrier.get(sj(k,'GLOBAL',canonicalK))?.pending===1)
+       return refuse('GLOBAL_AUTHORITY_MUTATION_PENDING');
      if((b?.generation??0)!==expectedGeneration)
        return refuse('STALE_MUTATION_GENERATION',{generation:b?.generation??0});
      const current=snapshot(k);
@@ -143,6 +148,34 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
      // Known invalid grant operations must be rejected BEFORE the PENDING
      // barrier is written. Otherwise an invalid budget/proof could strand
      // legitimate conversation traffic until manual database intervention.
+     if(kind.startsWith('MODE_')){
+       if(!current.account?.active||!current.peer?.bound||
+          current.peer.bindingRevision!==k.binding_revision)
+         return refuse('ACCOUNT_OR_PEER_REVOKED');
+       if(!str(payload.approvalRef)||
+          payload.targetMode!==kind.slice('MODE_'.length))
+         return refuse('EXPLICIT_MODE_APPROVAL_REQUIRED');
+       if(typeof verifyOwnerMutation!=='function')return refuse('W24_MUTATION_VALIDATOR_REQUIRED');
+       const proof=verifyOwnerMutation({actor,kind,identity:k,mutation:payload,requestId:idempotencyKey});
+       if(proof&&typeof proof.then==='function')throw Error('ASYNC_W24_PROOF_NOT_ATOMIC');
+       if(proof?.verified!==true)return refuse('W24_MUTATION_PROOF_REJECTED');
+       const next=kind==='MODE_MANUAL'?'HUMAN':kind==='MODE_ASSIST'?'ASSIST':'AUTO';
+       if(current.mode===next)return refuse('MODE_ALREADY_SELECTED');
+       if(next==='AUTO'){
+         const global=sj(k,'GLOBAL',canonicalK),contact=sj(k,'CONTACT',canonicalK);
+         const pause=db.prepare('SELECT paused FROM grant_pauses WHERE scope_key=?');
+         const g=db.prepare('SELECT * FROM grants WHERE scope_key=?');
+         const g0=g.get(global),g1=g.get(contact),chosen=g1??g0;
+         if(pause.get(global)?.paused===1||pause.get(contact)?.paused===1)
+           return refuse('GRANT_PAUSED');
+         if(g0&&(!g0.enabled||g0.expires_at<=now())||
+            g1&&(!g1.enabled||g1.expires_at<=now())||
+            !chosen?.enabled||chosen.expires_at<=now())
+           return refuse('NO_EFFECTIVE_GRANT');
+         if(chosen.spent+chosen.reserved>=chosen.budget_limit)
+           return refuse('BUDGET_EXHAUSTED');
+       }
+     }
      if(['ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT'].includes(kind)){
        if(typeof verifyOwnerMutation!=='function')return refuse('W24_MUTATION_VALIDATOR_REQUIRED');
        const proof=verifyOwnerMutation({actor,kind,identity:k,mutation:payload,requestId:idempotencyKey});
@@ -240,6 +273,29 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
      if(!a?.active||!pr?.bound||p.action!=='USER_EDIT')return refuse('NOT_AN_ACTUAL_USER_EDIT');
      const key=canonicalK(k);
      db.prepare("INSERT INTO custody(k,mode,epoch) VALUES(?,'HUMAN',1) ON CONFLICT(k) DO UPDATE SET mode='HUMAN',epoch=epoch+1").run(key);
+   } else if(['MODE_MANUAL','MODE_ASSIST','MODE_AUTO'].includes(kind)){
+     if(!a?.active||!pr?.bound||a.binding_revision!==k.binding_revision||
+        pr.binding_revision!==k.binding_revision)return refuse('ACCOUNT_OR_PEER_REVOKED');
+     if(p.targetMode!==kind.slice('MODE_'.length)||!str(p.approvalRef))
+       return refuse('EXPLICIT_MODE_APPROVAL_REQUIRED');
+     const key=canonicalK(k),chosenMode=kind==='MODE_MANUAL'?'HUMAN':
+       kind==='MODE_ASSIST'?'ASSIST':'AUTO';
+     if((custody(k)?.mode??'AUTO')===chosenMode)return refuse('MODE_ALREADY_SELECTED');
+     if(chosenMode==='AUTO'){
+       const global=sj(k,'GLOBAL',canonicalK),contact=sj(k,'CONTACT',canonicalK);
+       const pause=db.prepare('SELECT paused FROM grant_pauses WHERE scope_key=?');
+       const g=db.prepare('SELECT * FROM grants WHERE scope_key=?');
+       const g0=g.get(global),g1=g.get(contact),chosen=g1??g0;
+       if(pause.get(global)?.paused===1||pause.get(contact)?.paused===1)
+         return refuse('GRANT_PAUSED');
+       if(g0&&(!g0.enabled||g0.expires_at<=now())||
+          g1&&(!g1.enabled||g1.expires_at<=now())||
+          !chosen?.enabled||chosen.expires_at<=now())
+         return refuse('NO_EFFECTIVE_GRANT');
+       if(chosen.spent+chosen.reserved>=chosen.budget_limit)return refuse('BUDGET_EXHAUSTED');
+     }
+     db.prepare('INSERT INTO custody(k,mode,epoch) VALUES(?,?,1) ON CONFLICT(k) DO UPDATE SET mode=excluded.mode,epoch=epoch+1')
+       .run(key,chosenMode);
    } else if(['ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT','REVOKE_GRANT'].includes(kind)){
      const scope=JSON.parse(row.scope_key)[0]==='G'?'GLOBAL':'CONTACT';
      if(p.grantScope!==scope)return refuse('GRANT_SCOPE_MISMATCH');
