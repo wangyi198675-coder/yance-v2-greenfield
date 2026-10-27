@@ -120,7 +120,7 @@ if(r4IsolatedPreview){
  const chatUiBase='a27138f2bdecf2a5565f13970ae2c86ee4b63237';
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'007f8cf66ab333c2cc7d4d4e0ca6e2644e9d6740',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'f22b3badcac33864fa02e9e1dccb0d8c96f883ab',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'ea1577aabcba2b11bba091321f007fd1c45cda75'
  });
  // Preserve original R4 signed parent and the exact two review deltas for browser-only appearance.
@@ -142,7 +142,7 @@ if(r4IsolatedPreview){
   &&[...themeEvidence].every(path=>existsSync(join(w46Root,path))&&
      git('hash-object','--',path)===git('rev-parse','HEAD:'+path))
   &&git('rev-parse','HEAD:apps/web/src/BCProductWorkspaceCandidate.vue')===
-    '007f8cf66ab333c2cc7d4d4e0ca6e2644e9d6740';
+    'f22b3badcac33864fa02e9e1dccb0d8c96f883ab';
  const chatUiDeltaValid=(()=>{
   try{
    git('merge-base','--is-ancestor',chatUiBase,'HEAD');
