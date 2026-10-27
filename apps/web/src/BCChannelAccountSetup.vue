@@ -163,8 +163,8 @@ defineExpose({setup,refresh});
   </div>
   <div class="w46-channel-bottom">
    <Button class="w46-channel-connect" size="sm"
-    data-test="native-provider-setup" :disabled="busy||(isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK','ONLINE_VERIFIED'].includes(state))"
-    @click="setup"><span aria-hidden="true">＋</span> {{busy?'正在处理…':state==='ONLINE_VERIFIED'?'添加另一个账号':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':isWhatsApp?'连接 WhatsApp':'重新获取授权'):'连接账号'}} </Button>
+    data-test="native-provider-setup" :disabled="busy||(isWhatsApp&&state==='ONLINE_VERIFIED')"
+    @click="isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)?qrOpen=true:setup()"><span aria-hidden="true">＋</span> {{busy?'正在处理…':isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)?'查看二维码':state==='ONLINE_VERIFIED'?'添加另一个账号':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':isWhatsApp?'连接 WhatsApp':'重新获取授权'):'连接账号'}} </Button>
    <p v-if="(receipt||state==='EXPIRED'||userRequested)&&notice"
     class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{state==='unavailable'?'当前无法连接，请查看帮助':notice}}</p>
    <div v-if="receipt" class="w46-channel-auth-result" data-test="native-provider-auth-result">
