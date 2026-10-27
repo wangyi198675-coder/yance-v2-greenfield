@@ -29,16 +29,19 @@ const bodyJson=async req=>{
  return data;
 };
 export function createFunctionModelRoutingHttp({
- sessionAuthority,webOrigin,appLocalDataRoot,readEligibleModels
+ sessionAuthority,webOrigin,appLocalDataRoot,readEligibleModels,store:providedStore=null
 }={}){
  if(typeof sessionAuthority?.sessionFor!=='function'||typeof webOrigin!=='string')
   throw Error('W47_CURRENT_SESSION_REQUIRED');
  // Missing original native root means NO durable user preference, fail closed.
- const store=appLocalDataRoot&&readEligibleModels?
-  createFunctionModelRoutingStore({appLocalDataRoot,readEligibleModels}):null;
+ const store=providedStore??(appLocalDataRoot&&readEligibleModels?
+  createFunctionModelRoutingStore({appLocalDataRoot,readEligibleModels}):null);
  return async(req,res,url)=>{
-  if(url.pathname!=='/api/v2/model-routing')return false;
-  if(url.search){deny(res,422,'MODEL_ROUTING_QUERY_NOT_ALLOWED');return true}
+  const catalog=url.pathname==='/api/v2/model-routing/catalog';
+  if(url.pathname!=='/api/v2/model-routing'&&!catalog)return false;
+  if((!catalog&&url.search)||(catalog&&req.method!=='GET')){
+   deny(res,catalog?405:422,catalog?'METHOD_NOT_ALLOWED':'MODEL_ROUTING_QUERY_NOT_ALLOWED');return true
+  }
   if(!['GET','POST'].includes(req.method)){deny(res,405,'METHOD_NOT_ALLOWED');return true}
   if(req.headers.origin&&req.headers.origin!==webOrigin){
    deny(res,403,'ORIGIN_NOT_ALLOWED');return true
@@ -52,7 +55,19 @@ export function createFunctionModelRoutingHttp({
   }
   if(!store){deny(res,503,'ORIGINAL_NATIVE_MODEL_STORAGE_NOT_CONNECTED');return true}
   try{
-   const value=req.method==='GET'?await store.current():await store.select(await bodyJson(req));
+   let value;
+   if(catalog){
+    if([...url.searchParams.keys()].some(k=>!['q','offset','limit'].includes(k)||
+       url.searchParams.getAll(k).length!==1)){
+     deny(res,422,'MODEL_CATALOG_QUERY_INVALID');return true
+    }
+    const q=url.searchParams.get('q')??'';
+    const off=url.searchParams.get('offset')??'0',lim=url.searchParams.get('limit')??'60';
+    if(!/^\d{1,4}$/.test(off)||!/^\d{1,3}$/.test(lim)){
+     deny(res,422,'MODEL_CATALOG_QUERY_INVALID');return true
+    }
+    value=await store.catalog({query:q,offset:Number(off),limit:Number(lim)});
+   }else value=req.method==='GET'?await store.current():await store.select(await bodyJson(req));
    const final=sessionAuthority.sessionFor(req);
    if(!final||final.id!==session.id||final.record.rev!==session.record.rev){
     deny(res,401,'CURRENT_SESSION_REVOKED_DURING_ROUTING');return true
