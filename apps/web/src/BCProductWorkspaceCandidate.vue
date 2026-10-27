@@ -86,8 +86,77 @@ const personaModal=ref(null);
 function showPersonaDetail(kind){personaModal.value={kind}}
 function closePersonaDetail(){personaModal.value=null}
 const personaTabs=Object.freeze([{id:'pending',label:'待审规则'},{id:'current',label:'当前人格'},{id:'versions',label:'版本'}]);
-const expertTabs=Object.freeze([{id:'experts',label:'专家 10'},{id:'tasks',label:'任务'},{id:'skills',label:'Skills / MCP'}]);
-const designExpertCatalog=Object.freeze(['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家']);
+const expertTabs=Object.freeze([{id:'experts',label:'专家'},{id:'tasks',label:'任务记录'},{id:'skills',label:'工具 / Skills'}]);
+// Read ONLY the original W43 authenticated expert, tool and Run contracts.
+// No new registry, no unverified expert execution or business side effect.
+const expertPhase=ref('idle'),expertRows=ref([]),nativeRuns=ref([]),nativeTools=ref([]);
+const expertShowCatalog=ref(false),expertSearch=ref('');
+let expertReadEpoch=0;
+const availableExperts=computed(()=>expertRows.value.filter(e=>e.installed&&e.registered));
+const displayedExperts=computed(()=>{
+ const source=expertShowCatalog.value?expertRows.value:availableExperts.value;
+ const q=expertSearch.value.trim().toLowerCase();
+ return source.filter(e=>!q||(e.label+' '+e.expertId).toLowerCase().includes(q));
+});
+async function refreshExpertWorkspace(){
+ const id=++expertReadEpoch;
+ expertPhase.value='loading';expertRows.value=[];nativeRuns.value=[];nativeTools.value=[];
+ try{
+  const read=async url=>{
+   const response=await (props.fetchImpl||globalThis.fetch)(url,{
+    method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error',
+    headers:{accept:'application/json'}});
+   if(!response.ok)throw Error('NATIVE_READ_UNAVAILABLE');
+   return response.json();
+  };
+  let dto;
+  if(expertTab.value==='experts'){
+   dto=await read('/api/v2/private-brain/experts');
+   if(dto?.authoritative!==true||dto.source!=='W43_NATIVE_AGNO_EXPERT'||
+     dto.status!=='NATIVE_EXPERT_DIRECTORY_READ'||dto.canSend!==false||
+     !Array.isArray(dto.experts)||dto.experts.length>30||
+     !dto.experts.every(e=>typeof e.expertId==='string'&&/^[a-z0-9-]{3,64}$/.test(e.expertId)&&
+      typeof e.label==='string'&&typeof e.installed==='boolean'&&
+      typeof e.registered==='boolean'&&typeof e.enabled==='boolean'&&
+      typeof e.canInvoke==='boolean')||
+     dto.experts.filter(e=>e.installed&&e.registered).length!==dto.registeredCount)
+     throw Error('EXPERT_AUTHORITY_INVALID');
+   if(id!==expertReadEpoch)return;
+   expertRows.value=dto.experts.map(e=>({
+    expertId:e.expertId,label:e.label.slice(0,100),installed:e.installed,
+    registered:e.registered,enabled:e.enabled,canInvoke:e.canInvoke
+   }));
+  }else if(expertTab.value==='tasks'){
+   dto=await read('/api/v2/private-brain/runs?threadId=personal&limit=10');
+   if(dto?.authoritative!==true||dto.source!=='W43_NATIVE_AGNO_SDK'||
+      dto.status!=='NATIVE_RUNS_READ'||dto.canSend!==false||
+      !Array.isArray(dto.runs)||dto.runs.length>10)throw Error('RUN_AUTHORITY_INVALID');
+   if(id!==expertReadEpoch)return;
+   nativeRuns.value=dto.runs.map(r=>({
+    id:String(r.runId||r.id||'').slice(0,100),
+    status:String(r.status||'未知状态').slice(0,50)
+   }));
+  }else{
+   dto=await read('/api/v2/private-brain/tools');
+   if(dto?.authoritative!==true||dto.source!=='W43_NATIVE_AGNO_SDK'||
+      dto.canSend!==false||!Array.isArray(dto.registeredTools)||
+      dto.registeredTools.length>50)throw Error('TOOL_AUTHORITY_INVALID');
+   if(id!==expertReadEpoch)return;
+   nativeTools.value=dto.registeredTools.map(t=>({
+    name:String(t.name||t.toolName||t.id||'已注册工具').slice(0,90),
+    businessExecutable:t.businessExecutable===true
+   }));
+  }
+  expertPhase.value='ready';
+ }catch{
+  if(id===expertReadEpoch)expertPhase.value='unavailable';
+ }
+}
+watch([()=>props.activeWorkspace,expertTab],([workspace])=>{
+ expertReadEpoch++;
+ if(workspace==='TASKS')void refreshExpertWorkspace();
+ else{expertPhase.value='idle';expertRows.value=[];nativeRuns.value=[];nativeTools.value=[]}
+},{immediate:true});
 const category=computed(()=>R4_SETTINGS_CATEGORIES.find(c=>c.id===settingCategory.value)||R4_SETTINGS_CATEGORIES[0]);
 let epoch=0;
 const selected=computed(()=>WORKSPACES.find(x=>x.id===props.activeWorkspace)||WORKSPACES[0]);
@@ -351,26 +420,84 @@ defineExpose({refresh});
      </section>
     </div>
    </section>
-   <section v-else-if="activeWorkspace==='TASKS'" class="w46-r4-feature" data-test="w46-tools-experts">
+   <section v-else-if="activeWorkspace==='TASKS'" class="w46-r4-feature w46-real-tools" data-test="w46-tools-experts">
     <header class="w46-r4-feature-toolbar">
-     <div class="w46-r4-feature-title"><strong>工具与任务</strong><small>已完成 ≠ 已启用</small></div>
-     <nav class="w46-r4-feature-tabs" aria-label="工具与任务"><button v-for="tab in expertTabs" :key="tab.id" type="button" :class="{active:expertTab===tab.id}" :aria-pressed="expertTab===tab.id" :data-test="'w46-expert-tab-'+tab.id" @click="expertTab=tab.id">{{tab.label}}</button></nav>
+     <div class="w46-r4-feature-title"><strong>工具与任务</strong><small>查看已连接的专家与实际任务</small></div>
+     <nav class="w46-r4-feature-tabs" aria-label="工具与任务">
+      <button v-for="tab in expertTabs" :key="tab.id" type="button" :class="{active:expertTab===tab.id}" :aria-pressed="expertTab===tab.id" :data-test="'w46-expert-tab-'+tab.id" @click="expertTab=tab.id">{{tab.label}}</button>
+     </nav>
     </header>
     <div class="w46-r4-feature-body w46-r4-expert-layout">
-     <section class="w46-r4-feature-card">
-      <div class="w46-r4-card-head"><strong>{{expertTab==='experts'?'专家目录 · 十类设计候选':expertTab==='tasks'?'任务与运行':'Skills / MCP'}}</strong><small>待W43核实安装与授权</small></div>
-      <div v-if="expertTab==='experts'" class="w46-r4-expert-list" data-test="w46-r4-expert-list">
-       <div v-for="(name,index) in designExpertCatalog" :key="name" class="w46-r4-expert-row">
-        <span class="w46-r4-expert-glyph" aria-hidden="true">{{index===0?'◈':index===8?'⌕':'✧'}}</span>
-        <div><strong>{{name}}</strong><small>{{index===8?'原W43本地只读源码已接入；当前Web启用与权限尚未回读':'设计目录候选，尚无真实安装与执行资格'}}</small></div>
-        <Button size="sm" variant="outline" disabled :title="'等待W43/W47原生身份及启用状态确认'">待核验</Button>
-       </div>
+     <section class="w46-r4-feature-card w46-tools-main" data-test="w46-tools-main">
+      <div class="w46-r4-card-head">
+       <strong>{{expertTab==='experts'?'可用专家':expertTab==='tasks'?'任务记录':'工具与 Skills'}}</strong>
+       <button type="button" class="w46-tools-refresh" :disabled="expertPhase==='loading'" data-test="w46-tools-refresh" @click="refreshExpertWorkspace">{{expertPhase==='loading'?'正在读取':'刷新'}}</button>
       </div>
-      <div v-else class="w46-r4-feature-empty"><strong>尚无经本机服务确认的{{expertTab==='tasks'?'任务执行记录':'Skills / MCP 能力'}}</strong><p>只能由原Agno工具、运行和Trace返回真实来源，未接通时不模拟结果。</p></div>
+      <div v-if="expertPhase==='loading'" class="w46-tools-empty" role="status" data-test="w46-tools-loading">
+       <span class="w46-tools-empty-symbol" aria-hidden="true">✧</span><h3>正在载入{{expertTab==='experts'?'专家':expertTab==='tasks'?'任务':'工具'}}</h3>
+       <p>仅从你当前的私人会话读取数据。</p>
+      </div>
+      <div v-else-if="expertPhase==='unavailable'||expertPhase==='idle'" class="w46-tools-empty" data-test="w46-tools-unavailable" role="status">
+       <span class="w46-tools-empty-symbol" aria-hidden="true">✧</span>
+       <h3>暂时无法查看{{expertTab==='experts'?'专家':expertTab==='tasks'?'任务记录':'工具列表'}}</h3>
+       <p>打开闺蜜大脑建立私人会话后，再回来查看已连接的能力与记录。</p>
+       <button type="button" data-test="w46-tools-open-brain" @click="choose('BRAIN')">前往闺蜜大脑</button>
+      </div>
+      <template v-else-if="expertTab==='experts'">
+       <div class="w46-tools-filters" data-test="w46-tools-expert-filters">
+        <label class="w46-tools-search"><span aria-hidden="true">⌕</span>
+         <input v-model="expertSearch" type="search" placeholder="搜索专家…" aria-label="搜索已读取的专家" autocomplete="off"/>
+        </label>
+        <button type="button" data-test="w46-tools-expert-browse" :aria-pressed="expertShowCatalog" @click="expertShowCatalog=!expertShowCatalog">{{expertShowCatalog?'仅看已接入':'浏览全部目录'}}</button>
+       </div>
+       <div v-if="!displayedExperts.length" class="w46-tools-empty" data-test="w46-tools-empty" role="status">
+        <span class="w46-tools-empty-symbol" aria-hidden="true">✧</span>
+        <h3>{{expertSearch?'没有匹配的专家':'暂时没有已接入的专家'}}</h3>
+        <p>当前只展示原生服务已确认的安装状态。</p>
+       </div>
+       <div v-else class="w46-tools-list" data-test="w46-tools-expert-list">
+        <article v-for="e in displayedExperts" :key="e.expertId" class="w46-tools-row" data-test="w46-tools-expert-row">
+         <span class="w46-tools-glyph" aria-hidden="true">✦</span>
+         <div class="w46-tools-row-copy"><strong>{{e.label}}</strong><small>{{e.installed&&e.registered?(e.enabled?'已接入':'已安装 · 当前停用'):'尚未接入'}}</small></div>
+         <button v-if="e.installed&&e.registered&&e.enabled" type="button" data-test="w46-tools-use-expert" @click="choose('BRAIN')">去使用</button>
+        </article>
+       </div>
+      </template>
+      <template v-else-if="expertTab==='tasks'">
+       <div v-if="!nativeRuns.length" class="w46-tools-empty" data-test="w46-tools-empty" role="status">
+        <span class="w46-tools-empty-symbol" aria-hidden="true">◷</span><h3>还没有任务记录</h3>
+        <p>闺蜜大脑执行的任务会在服务端产生记录后显示在这里。</p>
+        <button type="button" @click="choose('BRAIN')">打开闺蜜大脑</button>
+       </div>
+       <div v-else class="w46-tools-list" data-test="w46-tools-run-list">
+        <article v-for="run in nativeRuns" :key="run.id" class="w46-tools-row">
+         <span class="w46-tools-glyph" aria-hidden="true">◷</span>
+         <div class="w46-tools-row-copy"><strong>任务 {{run.id}}</strong><small>{{run.status}}</small></div>
+        </article>
+       </div>
+      </template>
+      <template v-else>
+       <div v-if="!nativeTools.length" class="w46-tools-empty" data-test="w46-tools-empty" role="status">
+        <span class="w46-tools-empty-symbol" aria-hidden="true">⌘</span><h3>暂无已确认的工具</h3>
+        <p>原生工具注册成功后会在这里显示，不会把设计候选当成已安装。</p>
+       </div>
+       <div v-else class="w46-tools-list" data-test="w46-tools-native-list">
+        <article v-for="tool in nativeTools" :key="tool.name" class="w46-tools-row">
+         <span class="w46-tools-glyph" aria-hidden="true">⌘</span>
+         <div class="w46-tools-row-copy"><strong>{{tool.name}}</strong><small>{{tool.businessExecutable?'执行权限须另行确认':'只读或未开放执行'}}</small></div>
+        </article>
+       </div>
+      </template>
      </section>
-     <aside class="w46-r4-feature-card w46-r4-details"><div class="w46-r4-card-head"><strong>任务与执行详情</strong><small>按需查看</small></div>
-      <p>选择合法安装的专家或任务后，才显示Agno Run、Tool与Trace。未完成身份和能力签署前不允许调用。</p>
-      <div class="w46-r4-feature-empty" role="status">已验证执行：暂无 · 授权范围：未获得原生回读</div>
+     <aside class="w46-r4-feature-card w46-r4-details w46-tools-aside" data-test="w46-tools-details">
+      <div class="w46-r4-card-head"><strong>能力概览</strong></div>
+      <div class="w46-tools-summary">
+       <span>专家</span><strong>{{expertPhase==='ready'&&expertTab==='experts'?availableExperts.length+' 位已接入':'等待读取'}}</strong>
+       <span>任务记录</span><strong>{{expertPhase==='ready'&&expertTab==='tasks'?nativeRuns.length+' 条':'按需查看'}}</strong>
+       <span>工具</span><strong>{{expertPhase==='ready'&&expertTab==='skills'?nativeTools.length+' 项':'按需查看'}}</strong>
+      </div>
+      <p>专家与工具由闺蜜大脑统一调用，不需要另外创建一个助手。</p>
+      <button type="button" class="w46-tools-aside-brain" data-test="w46-tools-aside-open-brain" @click="choose('BRAIN')">进入闺蜜大脑</button>
      </aside>
     </div>
    </section>
@@ -710,4 +837,35 @@ defineExpose({refresh});
 .w46-r4-persona .w46-r4-feature-tabs button{font-size:12px}
 @media(max-width:950px){.w46-r4-persona .w46-r4-persona-layout{grid-template-columns:minmax(0,1fr) minmax(215px,250px);gap:10px;padding:12px}.w46-persona-verified-empty{padding:30px 18px}}
 @media(max-width:719px){.w46-r4-persona .w46-r4-persona-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto!important;padding:10px}.w46-persona-main-card{min-height:360px}.w46-persona-main-card>.w46-r4-card-head{padding:14px}.w46-persona-verified-empty h3{font-size:18px}.w46-persona-verified-empty p{font-size:13px}.w46-r4-persona .w46-r4-feature-tabs button{font-size:11px}}
+/* W09-3: expert/task page reads only original W43 authenticated endpoints. */
+.w46-real-tools .w46-r4-expert-layout{grid-template-columns:minmax(0,1fr) minmax(230px,285px);grid-template-rows:auto;align-content:start;align-items:start;gap:15px;padding:clamp(12px,2vw,24px)}
+.w46-real-tools .w46-r4-expert-layout>.w46-r4-feature-card{align-self:start;min-width:0}
+.w46-tools-main{display:flex;flex-direction:column;min-height:410px}
+.w46-tools-main>.w46-r4-card-head{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px}
+.w46-tools-main>.w46-r4-card-head strong{font-size:15px}
+.w46-tools-refresh,.w46-tools-filters button,.w46-tools-row button,.w46-tools-empty button,.w46-tools-aside-brain{min-height:35px;padding:7px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);color:var(--ink);font-size:12px;cursor:pointer}
+.w46-tools-refresh:disabled{opacity:.5;cursor:not-allowed}
+.w46-tools-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;min-height:310px;box-sizing:border-box;padding:32px 18px}
+.w46-tools-empty-symbol{display:grid;place-items:center;width:62px;height:62px;border-radius:18px;background:rgba(var(--accent-rgb),.1);border:1px solid var(--border);color:var(--accent);font-size:32px}
+.w46-tools-empty h3{font-size:20px;letter-spacing:-.025em;color:var(--ink);font-weight:650;margin:4px 0 0}
+.w46-tools-empty p{margin:0;max-width:435px;font-size:14px;line-height:1.7;color:var(--muted)}
+.w46-tools-empty button,.w46-tools-aside-brain{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600;margin-top:6px}
+.w46-tools-filters{display:flex;gap:9px;align-items:center;padding:12px 15px;border-bottom:1px solid var(--border)}
+.w46-tools-search{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:9px;padding:0 11px;min-height:39px;background:var(--surface)}
+.w46-tools-search input{min-width:0;width:100%;font-size:13px;min-height:36px;border:0;outline:0;background:transparent;color:var(--ink)}
+.w46-tools-list{min-width:0;padding:0 15px}
+.w46-tools-row{display:flex;align-items:center;gap:12px;min-height:71px;padding:11px 3px;border-bottom:1px solid var(--border)}
+.w46-tools-row:last-child{border-bottom:0}
+.w46-tools-glyph{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft);font-size:20px;color:var(--accent)}
+.w46-tools-row-copy{flex:1;min-width:0;display:grid;gap:5px}
+.w46-tools-row-copy strong{font-size:13px;line-height:1.5;color:var(--ink);overflow-wrap:anywhere}
+.w46-tools-row-copy small{font-size:12px;color:var(--muted);line-height:1.4}
+.w46-tools-aside>.w46-r4-card-head{padding:16px}
+.w46-tools-summary{display:grid;grid-template-columns:1fr auto;gap:13px;padding:18px;border-bottom:1px solid var(--border)}
+.w46-tools-summary span{font-size:12px;color:var(--muted)}
+.w46-tools-summary strong{font-size:12px;color:var(--ink);font-weight:600;text-align:right}
+.w46-tools-aside>p{font-size:12px;color:var(--muted);line-height:1.7;margin:15px 18px}
+.w46-tools-aside-brain{margin:0 18px 18px}
+@media(max-width:900px){.w46-real-tools .w46-r4-expert-layout{grid-template-columns:minmax(0,1fr) minmax(185px,220px);gap:10px;padding:12px}}
+@media(max-width:719px){.w46-real-tools .w46-r4-expert-layout{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}.w46-tools-main{min-height:350px}.w46-tools-empty{min-height:270px}.w46-tools-empty h3{font-size:18px}.w46-tools-empty p{font-size:13px}.w46-tools-filters{flex-wrap:wrap}.w46-tools-search{flex-basis:100%}.w46-tools-aside{margin-bottom:16px}}
 </style>
