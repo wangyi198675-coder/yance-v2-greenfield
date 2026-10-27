@@ -184,15 +184,17 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
       </div>
      </div>
     </div>
-    <BCNativeComposer v-if="selected.identity&&selected.identityKey" ref="composerRef" :identity="selected.identity" :native-message="lastNativeMessage"
-      :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"/>
-    <p v-else class="bc-inbox-state bc-composer-hold">需要W24提供完整的联系人身份K，才能读取消息并启用原CONTACT Composer。</p>
+    <p v-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">需要W24提供完整的联系人身份K，才能读取消息并启用原CONTACT Composer。</p>
    </template>
    <div v-else class="bc-real-no-contact" data-test="w46-empty-chat">
     <div aria-hidden="true" class="bc-empty-glow">✦</div><h2>选择联系人开始聊天</h2>
     <p>当前没有已选择的真实联系人，聊天、译文及草稿仅从你授权的账号读取。</p>
     <button type="button" @click="navigate('ACCOUNTS')">连接聊天账号</button>
    </div>
+   <!-- One always-mounted original CONTACT Composer. Null K must leave input
+        and expert/media operations disabled, not create a second renderer. -->
+   <BCNativeComposer ref="composerRef" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
+    :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"/>
   </div>
  </section>
 </template>

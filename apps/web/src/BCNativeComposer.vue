@@ -88,14 +88,14 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 
 <template>
   <section class="bc-native-composer" aria-label="唯一 CONTACT Composer" @dragover.prevent @drop="onDrop">
-    <p class="bc-identity">CONTACT · {{current.key||'NO_CONTACT'}} · {{current.status}}</p>
+    <p class="bc-identity" :title="current.key?'当前联系人身份由原W24/W47接口核验':'尚未选择经平台授权的真实联系人'">{{current.key?'当前联系人 · '+current.status:'未选联系人 · 发送已禁用'}}</p>
     <p v-if="why" role="alert" class="bc-warning">{{why}}</p>
     <div v-if="sourceMessage" class="bc-source" data-test="native-message">
       <p>原文 · MID {{sourceMessage.mid}} · {{sourceMessage.original}}</p>
       <p v-if="sourceMessage.zh">有来源的译文（质量另行验收） · {{sourceMessage.zh}}</p>
       <p v-else>中文译文：{{sourceMessage.translationStatus==='FIXTURE_ONLY'?'仅模拟数据，不作为真实译文':'暂无经过验证的译文'}}</p>
     </div>
-    <div class="bc-replies" aria-label="有来源的建议回复">
+    <div v-if="current.key" class="bc-replies" aria-label="有来源的建议回复">
       <span>{{cards.length}} 条有来源建议（质量审核：未通过正式签署）</span>
       <div v-for="s in cards" :key="s.id" class="bc-card">
         <p>{{s.text}}</p><small>未审核 · {{s.qualityStatus||'MODEL_QUALITY_UNREVIEWED'}} · 候选 {{s.id}} · Agno Run {{s.provenance.runId}} · MID {{s.provenance.sourceMid}}</small>
@@ -112,9 +112,10 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
     </InputGroup>
     <div class="bc-footer">
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-label="专家与附件" :aria-expanded="expertsOpen" @click="expertsOpen=!expertsOpen">＋ 专家</Button>
+      <Button size="sm" variant="ghost" type="button" disabled title="当前联系人模型选择尚未取得原生服务端授权" data-test="w46-composer-model">模型</Button>
       <span class="bc-mode-label" title="等待W44原生模式资格回读">人工 · 辅助 · 自动（待核验）</span>
       <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key"/></label>
-      <span>真人发送锁定 · 等待 W25 唯一 MessageDelivery</span>
+      <span class="bc-send-hold" title="真人发送仅允许原W25唯一MessageDelivery通过当前身份及ACK授权边界">未授权 · 不能发送</span>
       <Button disabled size="sm">发送不可用</Button>
     </div>
     <div v-if="expertsOpen" class="bc-expert-candidates" data-test="w46-composer-experts">
