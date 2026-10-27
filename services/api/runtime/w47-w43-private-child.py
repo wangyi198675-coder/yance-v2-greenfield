@@ -56,7 +56,8 @@ def main():
             return
     if method not in {
         "turn", "history", "claim", "finish", "markUnknown", "reconcile",
-        "nativeTools", "nativeRuns", "nativeRun", "nativeTrace"
+        "nativeTools", "nativeRuns", "nativeRun", "nativeTrace",
+        "expertDirectory", "expertSetEnabled", "expertTurn"
     }:
         raise RuntimeError("W43_UNSUPPORTED_NATIVE_METHOD")
     thread = request.get("threadId")
@@ -165,6 +166,16 @@ def main():
         elif method == "nativeTrace":
             result = original.native_trace(
                 context, thread_id=thread, run_id=request.get("runId"))
+        elif method == "expertDirectory":
+            result = original.expert_directory(context)
+        elif method == "expertSetEnabled":
+            result = original.expert_set_enabled(context,
+                expert_id=request.get("expertId"), enabled=request.get("enabled"))
+        elif method == "expertTurn":
+            result = original.expert_turn(context,thread_id=thread,
+                request_id=identifier,expert_id=request.get("expertId"),
+                stable_id=request.get("stableId"),
+                usage_scope=request.get("usageScope","THIS_TASK"))
         emit({"kind": "RESULT", "result": result})
     except W47PrivateAccessError as e:
         emit({"kind": "W43_ERROR", "error": e.code, "httpStatus": e.http_status})
