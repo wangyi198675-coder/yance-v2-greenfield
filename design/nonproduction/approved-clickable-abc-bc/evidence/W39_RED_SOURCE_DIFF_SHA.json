@@ -1,0 +1,20 @@
+{
+  "baseline": "a96b4ded8c74bd66ff175682a0da375e5924dc7d",
+  "scope": "W39 changed source only, including new derived fixture; OSS 72 remain untouched",
+  "paths": [
+    "src/store.ts",
+    "src/App.vue",
+    "src/style.css",
+    "src/browser-tests.ts",
+    "src/collision-runtime-tests.ts",
+    "tests/parity.cjs",
+    "vite.config.ts",
+    "index.html",
+    "src/data/effective-fixture.json"
+  ],
+  "bytes": 119257,
+  "sha256": "0a8957e5bb0b82c58e096c430fadddcdc5d9d2ed9e0c31f5b5ccd2681b926957",
+  "compressedFile": "evidence/W39_RED_MINIMAL_SOURCE_DIFF.patch.gz",
+  "compressedBytes": 18992,
+  "compressedSha256": "db2b72f7b0ada3f2ac766d6786678d942cac42dc9657269d4e13b5b236fdf11e"
+}

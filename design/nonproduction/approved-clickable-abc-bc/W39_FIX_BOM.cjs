@@ -1,0 +1,1 @@
+const fs=require('fs'),p=require('path');for(const n of ['package.json','tsconfig.json','W42_APPROVED_ACTIONS.json']){const f=p.join(__dirname,n),b=fs.readFileSync(f);if(b[0]===0xef&&b[1]===0xbb&&b[2]===0xbf){fs.writeFileSync(f,b.subarray(3));console.log(n,'BOM removed')}else console.log(n,'no BOM')}

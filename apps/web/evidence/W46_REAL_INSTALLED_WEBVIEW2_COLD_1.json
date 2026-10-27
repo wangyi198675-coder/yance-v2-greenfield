@@ -1,0 +1,72 @@
+{
+  "type": "REAL_INSTALLED_TAURI_WEBVIEW2",
+  "actualInstalledExecutable": "C:\\Users\\1\\AppData\\Local\\YanceV2_W46_InstalledHost_R3_UAT\\yance-v2-native-session-lab.exe",
+  "spawnedInstalledPid": 29776,
+  "entry": "http://tauri.localhost/",
+  "first": {
+    "title": "言策 V2 · 四方案离线交互实验",
+    "url": "http://tauri.localhost/",
+    "appRoot": 1,
+    "nativeProduct": 1,
+    "uniqueChat": 1,
+    "frozenContacts": 0,
+    "nativeProviderControls": 0,
+    "trueBrain": 0,
+    "brainSendDisabled": null,
+    "currentDisplay": "言\n言策\nObsidian Lime\n言策 V2\n独立候选 · 未经 R4 原件复核\n无法读取真实服务端：Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON\n检查连接\n聊天\n闺蜜大脑\n托管中心\n渠道账号\n联系人\n人格\n工具任务\n媒体\n设置诊断\n\nCONTACT · 原生能力权限待签署\n\n聊天\n\n唯一 B+C CONTACT Composer\n\n聊天平台尚未授权\n四渠道 · 当前账号\n联系人 0\n刷新真实联系人\n\n平台原生接口尚未接通\n\n无法核实当前身份与消息来源，保持不可用\n\n服务器验证的账户 0 · 实际联系人 0 · 未授权不会加载演示联系人\n\n四个平台须通过各自已安装的 mautrix-meta、Pancake、Baileys 或 TDLib 正式授权流程。当前没有可查看的真实联系人。\n\n尚未选择真实联系人\n\n连接你本人的平台账号后，从左侧选择联系人。查看或切换不会接管，也不会发送消息。\n\n当前 W47 服务器尚未提供真实授权的联系人、消息及 W25 发信资格；因此聊天内容保持空白，绝不载入冻结的虚构对话。"
+  },
+  "accounts": {
+    "title": "言策 V2 · 四方案离线交互实验",
+    "url": "http://tauri.localhost/",
+    "appRoot": 1,
+    "nativeProduct": 1,
+    "uniqueChat": 0,
+    "frozenContacts": 0,
+    "nativeProviderControls": 4,
+    "trueBrain": 0,
+    "brainSendDisabled": null,
+    "currentDisplay": "言\n言策\nObsidian Lime\n言策 V2\n独立候选 · 未经 R4 原件复核\n无法读取真实服务端：Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON\n检查连接\n聊天\n闺蜜大脑\n托管中心\n渠道账号\n联系人\n人格\n工具任务\n媒体\n设置诊断\n\nCHANNELS · 原生能力权限待签署\n\n渠道账号\n\n四渠道与多账号绑定\n\n服务端不可用，操作已禁用\nFacebook\nWAITING_USER_AUTH / unavailable\n\n原生平台回执无法核验，未连接账号\n\n检查连接\n准备官方授权\nPage\nWAITING_USER_AUTH / unavailable\n\n原生平台回执无法核验，未连接账号\n\n检查连接\n准备官方授权\nWhatsApp\nWAITING_USER_AUTH / unavailable\n\n原生平台回执无法核验，未连接账号\n\n检查连接\n准备官方授权\nTelegram\nWAITING_USER_AUTH / unavailable\n\n原生平台回执无法核验，未连接账号\n\n检查连接\n准备官方授权\n\nR4 四平台品牌 SVG 路径来源已校验；平台连接须取得各原生渠道授权回读。\n\n多账号管理 · 已验证账号 0\n\n同一渠道可独立绑定多个账号，当前全部未授权。账号列表仅能由可信原生服务返回。\n\nMessenger · mautrix-meta | Page · Pancake | WhatsApp · Baileys "
+  },
+  "setup": {
+    "feedback": [
+      "原生平台回执无法核验，未连接账号",
+      "原生平台回执无法核验，未连接账号",
+      "原生平台回执无法核验，未连接账号",
+      "原生平台回执无法核验，未连接账号"
+    ],
+    "qrCount": 0
+  },
+  "brain": {
+    "title": "言策 V2 · 四方案离线交互实验",
+    "url": "http://tauri.localhost/",
+    "appRoot": 1,
+    "nativeProduct": 1,
+    "uniqueChat": 0,
+    "frozenContacts": 0,
+    "nativeProviderControls": 0,
+    "trueBrain": 1,
+    "brainSendDisabled": true,
+    "currentDisplay": "言\n言策\nObsidian Lime\n言策 V2\n独立候选 · 未经 R4 原件复核\n无法读取真实服务端：Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON\n检查连接\n聊天\n闺蜜大脑\n托管中心\n渠道账号\n联系人\n人格\n工具任务\n媒体\n设置诊断\n\nSELF_PRIVATE · 原生能力权限待签署\n\n闺蜜大脑\n\n唯一 Agno，授权后才能执行\n\n服务端不可用，操作已禁用\nWindows 原生会话\n\nWindows 本地会话已启动，但 W47 可信自动登录尚未接通\n\n检查本机身份\n退出当前原生会话\n本机身份不等于 Agno 模型和云端费用授权。只有 W47 实际会话回读可放行 PRIVATE。\n闺蜜大脑\n\n一个私人智能体 · 模型设置与聊天历史\n\n检查连接\n\n本机可信会话尚未建立\n\n服务端权威校验尚未完成，当前不可用\n\n设置AI模型\n\n暂无经过服务端确认的历史消息\n\n给闺蜜大脑发消息\n发送给闺蜜大脑\n私人聊天不是 CONTACT Composer；不启用社交平台外发。没有受信任的 Agno Run 时不会生成模拟回复。\n真实状态来自 W47 API。R4 的导航措辞、九分类及 252 Stable ID 对位需原件签认。"
+  },
+  "nativeStatus": {
+    "nativeOsVerified": true,
+    "nativeSessionActive": true,
+    "serverTrusted": false,
+    "canSend": false
+  },
+  "back": {
+    "title": "言策 V2 · 四方案离线交互实验",
+    "url": "http://tauri.localhost/",
+    "appRoot": 1,
+    "nativeProduct": 1,
+    "uniqueChat": 1,
+    "frozenContacts": 0,
+    "nativeProviderControls": 0,
+    "trueBrain": 0,
+    "brainSendDisabled": null,
+    "currentDisplay": "言\n言策\nObsidian Lime\n言策 V2\n独立候选 · 未经 R4 原件复核\n无法读取真实服务端：Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON\n检查连接\n聊天\n闺蜜大脑\n托管中心\n渠道账号\n联系人\n人格\n工具任务\n媒体\n设置诊断\n\nCONTACT · 原生能力权限待签署\n\n聊天\n\n唯一 B+C CONTACT Composer\n\n聊天平台尚未授权\n四渠道 · 当前账号\n联系人 0\n刷新真实联系人\n\n平台原生接口尚未接通\n\n无法核实当前身份与消息来源，保持不可用\n\n服务器验证的账户 0 · 实际联系人 0 · 未授权不会加载演示联系人\n\n四个平台须通过各自已安装的 mautrix-meta、Pancake、Baileys 或 TDLib 正式授权流程。当前没有可查看的真实联系人。\n\n尚未选择真实联系人\n\n连接你本人的平台账号后，从左侧选择联系人。查看或切换不会接管，也不会发送消息。\n\n当前 W47 服务器尚未提供真实授权的联系人、消息及 W25 发信资格；因此聊天内容保持空白，绝不载入冻结的虚构对话。"
+  },
+  "jsEvents": [],
+  "paidCalls": 0,
+  "socialSends": 0
+}
