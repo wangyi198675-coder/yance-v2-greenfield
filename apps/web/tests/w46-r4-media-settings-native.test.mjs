@@ -26,13 +26,13 @@ test('R4 MEDIA is a real library, original preview and W23 native capability; ne
 test('R4 SETTINGS nine unique original categories render separate real panels and reuse existing native components',()=>{
  const categories=['general','accounts','model','translate','media','theme','notify','privacy','diagnostics'];
  assert.match(shell,/<BCSettingsWorkspace v-else-if="activeWorkspace==='SETTINGS'"/);
- for(const k of categories)assert.ok(settings.includes('settings-panel-'+k),k);
+ for(const k of categories)assert.ok((k==='theme'?src('BCThemeChooser.vue'):settings).includes('settings-panel-'+k),k);
  for(const n of ['BCChannelAccountSetup','BCNativeCloudKeySettings','BCNativeHostSession'])
   assert.ok(settings.includes('<'+n),n);
  assert.match(settings,/\/api\/v2\/translations/);
  assert.match(settings,/\/api\/v2\/local-session\/status/);
- assert.match(settings,/data-test="settings-cycle-theme"/);
- assert.match(settings,/data-test="settings-toggle-appearance"/);
+ assert.match(src('BCThemeChooser.vue'),/data-test="settings-cycle-theme"/);
+ assert.match(src('BCThemeChooser.vue'),/data-test="settings-toggle-appearance"/);
  assert.match(settings,/Notification.requestPermission\(\)/);
  assert.doesNotMatch(settings,/localStorage\.setItem|fakeSave|mockSuccess/);
 });

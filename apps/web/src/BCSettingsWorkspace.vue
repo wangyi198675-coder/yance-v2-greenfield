@@ -5,6 +5,7 @@ import {mediaCapabilitiesRead} from './w23-media-browser-consumer.mjs';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
 import BCNativeHostSession from './BCNativeHostSession.vue';
+import BCThemeChooser from './BCThemeChooser.vue';
 
 const props=defineProps({
  active:{type:Boolean,default:false},fetchImpl:{type:Function,default:null},
@@ -143,13 +144,8 @@ function requestNotificationPermission(){
     </article>
    </template>
    <template v-else-if="category==='theme'">
-    <article data-test="settings-panel-theme"><h3>外观与主题</h3>
-     <p>当前主题：<strong data-test="settings-current-theme">{{theme}}</strong></p>
-     <p>外观：<strong data-test="settings-current-mode">{{appearance==='dark'?'深色':'浅色'}}</strong></p>
-     <div class="bc-settings-actions"><button type="button" data-test="settings-cycle-theme" @click="emit('cycle-theme')">切换至下一个已批准主题</button>
-     <button type="button" data-test="settings-toggle-appearance" @click="emit('toggle-theme')">切换深／浅模式</button></div>
-     <small>直接调用原App主题Token逻辑；无第二套偏好存储或虚构保存成功。</small>
-    </article>
+    <BCThemeChooser :theme="theme" :appearance="appearance"
+      @cycle-theme="emit('cycle-theme')" @toggle-appearance="emit('toggle-theme')"/>
    </template>
    <template v-else-if="category==='notify'">
     <article data-test="settings-panel-notify"><h3>通知与原生声音</h3>
