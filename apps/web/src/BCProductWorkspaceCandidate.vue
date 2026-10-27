@@ -95,7 +95,7 @@ defineExpose({refresh});
     <Button v-for="item in WORKSPACES.filter(i=>!['CHAT','BRAIN','AUTOPILOT'].includes(i.id))" :key="item.id" size="sm" variant="ghost" :data-test="'workspace-'+item.id" @click="choose(item.id)">{{item.label}}</Button>
    </div>
   </header>
-  <div v-if="compactInfo||(error&&activeWorkspace!=='CHAT')" class="w46-compact-status" data-test="w46-trusted-status" role="status">
+  <div v-if="compactInfo||(error&&!['CHAT','AUTOPILOT'].includes(activeWorkspace))" class="w46-compact-status" data-test="w46-trusted-status" role="status">
    <span>{{status}}</span><Button size="xs" variant="outline" data-test="w46-refresh" :disabled="loading" @click="refresh">刷新状态</Button>
   </div>
   <div ref="contentScroller" tabindex="0" role="region"
@@ -132,22 +132,37 @@ defineExpose({refresh});
      <strong>联系人：{{snapshot?.trustedSession?snapshot.realContacts:0}}</strong>
      <p>仅从当前服务端取得有授权的实际身份 K。未连接时不加载演示联系人。</p>
    </div>
-   <div v-else-if="activeWorkspace==='AUTOPILOT'" class="w46-operator-grid">
-    <div class="w46-status-grid">
-    <div><strong>持续授权</strong><span>未签发 / 无可信会话</span></div>
-    <div><strong>有效期</strong><span>未获得回读</span></div>
-    <div><strong>预算</strong><span>无已验证预算，禁止托管</span></div>
-    <div><strong>撤权</strong><span>未授权状态，无可撤销真实 Grant</span></div>
+   <section v-else-if="activeWorkspace==='AUTOPILOT'" class="w46-autopilot" data-test="w46-autopilot-workspace" aria-label="自动托管中心">
+    <header class="w46-autopilot-toolbar">
+     <div><h2>自动托管</h2><p>让闺蜜大脑按照你的授权，协助管理真实聊天。</p></div>
+     <button type="button" data-test="w46-autopilot-refresh" :disabled="loading" @click="refresh">{{loading?'正在刷新':'刷新状态'}}</button>
+    </header>
+    <div class="w46-autopilot-body">
+     <section class="w46-autopilot-overview" data-test="w46-autopilot-real-status" role="status">
+      <span class="w46-autopilot-emblem" aria-hidden="true">✦</span>
+      <div class="w46-autopilot-overview-copy">
+       <strong>{{loading?'正在读取状态':error?'暂时无法读取托管状态':readonlyAccount===0?'尚未连接聊天账号':'托管状态尚待确认'}}</strong>
+       <p>{{error?'本机服务暂时没有返回完整状态。你可以重试，原有授权和聊天数据不会因此更改。':readonlyAccount===0?'连接你自己的社交账号后，才能查看可管理的联系人与托管授权。':'已检测到聊天账号，但尚未获取当前托管授权与开关的权威结果。'}}</p>
+      </div>
+      <button v-if="!error&&readonlyAccount===0" type="button" data-test="w46-autopilot-connect" @click="choose('ACCOUNTS')">连接聊天账号</button>
+      <button v-else-if="error" type="button" data-test="w46-autopilot-retry" @click="refresh">重新连接</button>
+     </section>
+     <div class="w46-autopilot-modes">
+      <article class="w46-autopilot-mode" data-test="w46-global-custody">
+       <div class="w46-autopilot-mode-heading"><span class="w46-autopilot-mode-icon" aria-hidden="true">◎</span><strong>全局托管</strong></div>
+       <p>统一管理你明确授权的聊天账号与联系人。</p>
+       <span class="w46-autopilot-readonly">尚未取得全局托管授权状态</span>
+      </article>
+      <article class="w46-autopilot-mode" data-test="w46-contact-custody">
+       <div class="w46-autopilot-mode-heading"><span class="w46-autopilot-mode-icon" aria-hidden="true">◉</span><strong>指定联系人</strong></div>
+       <p>仅托管你选择的联系人，其他聊天不受影响。</p>
+       <span class="w46-autopilot-readonly">尚未取得联系人托管授权状态</span>
+       <button v-if="readonlyAccount>0" type="button" data-test="w46-autopilot-open-chats" @click="choose('CHAT')">查看联系人</button>
+      </article>
+     </div>
+     <p class="w46-autopilot-help">你主动接管某位联系人的聊天时，其他已经授权托管的联系人不应被打断。所有自动发送仍由原有授权机制控制。</p>
     </div>
-    <div class="w46-danger-grid" data-test="w46-hosting-failclosed">
-     <article v-for="state in R4_STOP_FAILURE_STATES" :key="state.id" class="w46-danger">
-      <strong>{{state.id}}</strong><span>{{state.label}}</span>
-      <p>{{state.effect}}</p><small>{{state.action}}</small>
-      <Button variant="outline" size="sm" disabled>操作禁用 · 等待服务端核验</Button>
-     </article>
-    </div>
-    <small>安全状态说明：当前未收到真实 REVOKED / 过期 / 预算不足事件，不将演示状态冒充线上告警。</small>
-   </div>
+   </section>
    <section v-else-if="activeWorkspace==='PERSONA'" class="w46-r4-feature w46-r4-persona" data-test="w46-persona-studio">
     <header class="w46-r4-feature-toolbar" data-test="w46-persona-toolbar">
      <div class="w46-r4-feature-title"><strong>人格与学习</strong><small>规则 · 记忆 · 版本</small></div>
@@ -432,4 +447,27 @@ defineExpose({refresh});
 .w46-r4-channel-details p{color:var(--muted);margin:7px 0 0}
 @media(max-width:1099px){.w46-r4-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.w46-r4-channel-grid{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}.w46-r4-channel-details{margin:0 10px 10px}.w46-r4-channel-toolbar{padding:4px 10px}.w46-r4-channel-toolbar>strong{font-size:13px}.w46-r4-channel-count{display:none}}
+/* W09-3: real-state autopilot center; no fabricated revoke, expiry or budget events. */
+.w46-autopilot{display:flex;flex:1 1 0;flex-direction:column;min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--ink)}
+.w46-autopilot-toolbar{box-sizing:border-box;display:flex;min-height:64px;flex:0 0 auto;align-items:center;justify-content:space-between;gap:12px;padding:12px clamp(14px,2vw,24px);border-bottom:1px solid var(--border);background:var(--bg2)}
+.w46-autopilot-toolbar h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.025em}
+.w46-autopilot-toolbar p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.w46-autopilot-toolbar button,.w46-autopilot-overview button,.w46-autopilot-mode button{flex-shrink:0;min-height:35px;border:1px solid var(--border);border-radius:9px;padding:8px 13px;background:var(--surface-soft);color:var(--ink);cursor:pointer;font-size:13px}
+.w46-autopilot-toolbar button:disabled{opacity:.55;cursor:not-allowed}
+.w46-autopilot-body{box-sizing:border-box;display:flex;flex-direction:column;gap:16px;width:100%;max-width:980px;margin:0 auto;padding:clamp(18px,3vw,34px)}
+.w46-autopilot-overview{display:flex;align-items:center;gap:18px;padding:24px;border-radius:16px;border:1px solid var(--border);background:linear-gradient(120deg,rgba(var(--accent-rgb),.085),transparent 65%),var(--bg2)}
+.w46-autopilot-emblem{display:grid;flex:0 0 50px;place-items:center;width:50px;height:50px;border-radius:15px;background:rgba(var(--accent-rgb),.13);color:var(--accent);font-size:27px}
+.w46-autopilot-overview-copy{flex:1;min-width:0}
+.w46-autopilot-overview-copy strong{display:block;font-size:18px;font-weight:650;line-height:1.4}
+.w46-autopilot-overview-copy p{margin:7px 0 0;color:var(--muted);font-size:13px;line-height:1.7}
+.w46-autopilot-overview button{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.w46-autopilot-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.w46-autopilot-mode{min-height:146px;box-sizing:border-box;display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:22px;border:1px solid var(--border);border-radius:15px;background:var(--bg2)}
+.w46-autopilot-mode-heading{display:flex;align-items:center;gap:10px}
+.w46-autopilot-mode-heading strong{font-size:16px;font-weight:650}
+.w46-autopilot-mode-icon{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);color:var(--accent);font-size:22px}
+.w46-autopilot-mode p{font-size:13px;line-height:1.65;color:var(--muted);margin:0}
+.w46-autopilot-readonly{margin-top:auto;font-size:12px;color:var(--muted)}
+.w46-autopilot-help{margin:0;padding:12px 14px;border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:12px;line-height:1.7}
+@media(max-width:719px){.w46-autopilot-toolbar{padding:11px 12px}.w46-autopilot-toolbar p{max-width:240px}.w46-autopilot-body{padding:14px;gap:12px}.w46-autopilot-overview{padding:17px;gap:12px;flex-wrap:wrap}.w46-autopilot-overview-copy strong{font-size:16px}.w46-autopilot-overview button{margin-left:0}.w46-autopilot-modes{grid-template-columns:minmax(0,1fr);gap:12px}.w46-autopilot-mode{min-height:125px;padding:17px}}
 </style>
