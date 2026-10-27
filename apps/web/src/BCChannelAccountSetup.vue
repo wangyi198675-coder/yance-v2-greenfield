@@ -2,12 +2,17 @@
 import {ref,onMounted,onBeforeUnmount,computed} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
-import {checkChannel,setupChannel,channelError,invokeFbPageNativeAuthorization} from './channel-setup-contract.mjs';
+import {checkChannel,setupChannel,channelError,invokeFbPageNativeAuthorization,
+ saveFbPageCredentialConfiguration} from './channel-setup-contract.mjs';
 const props=defineProps({
  channel:{type:Object,required:true},fetchImpl:{type:Function,default:null}
 });
 const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
 const chosenPage=ref(''),pageChoices=ref([]),nativeReady=ref(false);
+// Credentials are transient local form state. Never store in localStorage,
+// URL, query params, browser profile, diagnostic log, or conversation history.
+const accountToken=ref(''),pageToken=ref(''),secureEnrollmentReady=ref(false);
+const configNotice=ref('');
 let alive=true,revision=0,expiryTimer=null;
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const isFbPage=computed(()=>props.channel.id==='FB_PAGE');
@@ -33,7 +38,7 @@ const connectLabel=computed(()=>
  busy.value?'正在核验…':
  state.value==='ONLINE_VERIFIED'?'已连接':
  state.value==='AUTHORIZED_READ_ONLY'?'检查主页授权':
- isFbPage.value?(nativeReady.value?'连接 Facebook Page':'此设备暂未启用连接'):
+ isFbPage.value?(nativeReady.value?'连接 Facebook Page':'Facebook Page 暂不可连接'):
  state.value==='WAITING_USER_AUTH'&&receipt.value?.qr?'重新获取二维码':'连接账号');
 function clearReceipt(){
  receipt.value=null;
@@ -43,6 +48,21 @@ async function refresh(){
  const id=++revision;clearReceipt();busy.value=true;state.value='checking';notice.value='';
  try{
   if(isFbPage.value){
+   const capabilityResponse=await fetcher()('/api/v2/providers/fb-page/authorization/capabilities',{
+    method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'
+   });
+   const capability=capabilityResponse?.ok?await capabilityResponse.json():null;
+   secureEnrollmentReady.value=capability?.channel==='FB_PAGE'&&
+    capability.secureCredentialEnrollment===true;
+   if(!secureEnrollmentReady.value){accountToken.value='';pageToken.value='';}
+   if(capability?.channel!=='FB_PAGE'||capability.ownerPortConnected!==true){
+    nativeReady.value=false;
+    if(alive&&id===revision){
+     state.value='OFFICIAL_SETUP_REQUIRED';
+     notice.value='Facebook Page 官方连接接口尚未接通，当前不能开始授权。';
+    }
+    return;
+   }
    const sessionResponse=await fetcher()('/api/v2/local-session/status',{
     method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'
    });
@@ -52,10 +72,12 @@ async function refresh(){
    if(!nativeReady.value){
     if(alive&&id===revision){
      state.value='OFFICIAL_SETUP_REQUIRED';
-     notice.value='此设备还没有启用安全账号连接。请在受信任的言策桌面客户端完成本机授权。';
+     notice.value='Facebook Page 网页授权尚未接通。私人聊天仍可正常使用，无须终端配对。';
     }
     return;
    }
+   if(alive&&id===revision){state.value='unconnected';notice.value='请连接你自己的 Facebook Page。';}
+   return;
   }
   const v=await checkChannel({channel:props.channel.id,fetchImpl:fetcher()});
   if(!alive||id!==revision)return;
@@ -65,7 +87,7 @@ async function refresh(){
   if(alive&&id===revision){
    state.value='unavailable';
    notice.value=isFbPage.value?
-    '此设备尚未建立 Facebook Page 的安全账号会话，当前不能连接。':
+    'Facebook Page 连接状态暂不可核验，稍后可重新检查。':
     channelError(e);
   }
  }finally{if(alive&&id===revision)busy.value=false;}
@@ -110,7 +132,7 @@ async function setup(){
      v.includes('W27_NATIVE_AUTH_HTTP_503')))nativeReady.value=false;
    notice.value=isFbPage.value?
     v.includes('W54_NATIVE_FIRST_PARTY_SESSION_REQUIRED')?
-     '当前只是浏览器会话，尚未获得受保护的本机账号授权。请从已启用原生授权的言策桌面客户端连接。':
+     '当前 Facebook Page 账号授权通道尚未接通，无法启动连接。':
     v.includes('W27_NATIVE_AUTH_HTTP_503')?
      'Facebook Page 原生授权尚未接通，不能冒充正在授权。':
      '安全授权未开始，请检查本机授权服务后重试。':
@@ -144,8 +166,30 @@ async function bindPage(){
  }catch(e){if(alive&&id===revision)notice.value='主页绑定尚未确认，请检查权限后重新选择。';}
  finally{if(alive&&id===revision)busy.value=false;}
 }
+async function savePageConfig(){
+ if(!secureEnrollmentReady.value||busy.value)return;
+ busy.value=true;configNotice.value='';
+ try{
+  const receipt=await saveFbPageCredentialConfiguration({
+   userAccessToken:accountToken.value,pagePublicApiToken:pageToken.value,
+   fetchImpl:fetcher()
+  });
+  if(!alive)return;
+  configNotice.value=receipt.saved?
+   '凭据已保存至系统保护区。请继续读取并选择 Facebook 主页；这还不代表连接成功。':
+   '凭据保存状态尚未确认。';
+ }catch{
+  if(alive)configNotice.value='凭据未保存。请检查本机安全保存服务后再试。';
+ }finally{
+  // Never retain social tokens after an attempted save.
+  accountToken.value='';pageToken.value='';busy.value=false;
+ }
+}
 onMounted(refresh);
-onBeforeUnmount(()=>{alive=false;revision++;clearReceipt();pageChoices.value=[]});
+onBeforeUnmount(()=>{
+ alive=false;revision++;clearReceipt();pageChoices.value=[];
+ accountToken.value='';pageToken.value='';
+});
 </script>
 <template>
  <article class="w46-channel" data-test="w46-native-provider" :data-provider="channel.id">
@@ -157,6 +201,39 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt();pageChoices.value=[]}
    <strong>{{display.title}}</strong><p>{{display.description}}</p>
   </div>
   <div class="w46-channel-bottom">
+   <section v-if="isFbPage" class="w46-page-config" data-test="fb-page-config">
+    <div class="w46-page-config-head">
+     <strong>Facebook Page 连接配置</strong>
+     <span>只需准备两个令牌</span>
+    </div>
+    <p class="w46-page-config-hint">你已在 Pancake 登录的账号无需重新注册。请从自己的 Pancake 账户和主页设置中获取以下凭据。</p>
+    <div class="w46-config-field">
+     <label for="w46-pancake-user-token">1. Pancake 账户 Access Token</label>
+     <p>打开 Pancake「账户设置 → 高级 → Access Token」。</p>
+     <a href="https://pancake.biz/account" target="_blank" rel="noopener noreferrer" data-test="pancake-account-settings">打开 Pancake 账户设置</a>
+     <input id="w46-pancake-user-token" type="password" v-model="accountToken"
+      autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="在安全录入启用后粘贴账户 Access Token"
+      :disabled="!secureEnrollmentReady||busy" data-test="fb-page-user-access-token"/>
+    </div>
+    <div class="w46-config-field">
+     <label for="w46-pancake-page-token">2. 主页 Public API access token</label>
+     <p>在 Pancake 工作区「设置 → 工具 → Public API access token」创建令牌。</p>
+     <a href="https://pancake.biz/" target="_blank" rel="noopener noreferrer" data-test="pancake-page-settings">打开我的 Pancake 工作区</a>
+     <input id="w46-pancake-page-token" type="password" v-model="pageToken"
+      autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="在安全录入启用后粘贴主页 Public API Token"
+      :disabled="!secureEnrollmentReady||busy" data-test="fb-page-public-api-token"/>
+    </div>
+    <p v-if="!secureEnrollmentReady" class="w46-page-config-warning"
+     data-test="fb-page-credential-hold">安全保存接口尚未接入，当前不能输入或保存令牌。不要把令牌发到聊天里，也不要粘贴到公开表单。</p>
+    <p v-else class="w46-page-config-hint">令牌仅通过言策同源请求提交给原 W55 系统凭据保护能力，不保存在浏览器本地。</p>
+    <Button variant="outline" size="sm" data-test="fb-page-save-config"
+     :disabled="!secureEnrollmentReady||busy||accountToken.trim().length<8||pageToken.trim().length<8"
+     @click="savePageConfig">安全保存凭据，下一步验证主页</Button>
+    <p v-if="configNotice" role="status" class="w46-page-config-hint" data-test="fb-page-config-result">{{configNotice}}</p>
+    <p class="w46-page-config-foot">保存成功后可通过官方接口读取可管理的主页供你选择；Page ID 不需要手动填写，尚未验证前不会显示“已连接”。</p>
+   </section>
    <Button class="w46-channel-connect" size="sm" data-test="native-provider-setup"
     :disabled="busy||(isFbPage&&!nativeReady)||state==='ONLINE_VERIFIED'||state==='PAGE_SELECTION_REQUIRED'"
     @click="setup">{{connectLabel}}</Button>
@@ -164,7 +241,7 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt();pageChoices.value=[]}
     data-test="native-provider-feedback">{{notice}}</p>
    <div v-if="isFbPage&&state==='WAITING_USER_AUTH'&&receipt?.entryAvailable===true"
     class="w46-channel-auth-result" data-test="fb-page-actual-started">
-    <p>官方登录和凭据输入均由本机受保护流程处理，言策不要求在网页内填写 Token。</p>
+    <p>请完成本人官方登录；配置凭据只允许通过上方启用后的安全输入框保存。</p>
     <Button size="sm" variant="outline" data-test="fb-page-read-pages"
      :disabled="busy" @click="readPages">我已授权，读取我的主页</Button>
    </div>
@@ -219,5 +296,18 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt();pageChoices.value=[]}
 .w46-channel-extra{border-top:1px solid var(--border);padding-top:11px;color:var(--muted);font-size:12px}
 .w46-channel-extra p{font-size:12px;line-height:1.5}.w46-channel-extra summary{cursor:pointer}
 .w46-channel-extra button{min-height:38px}
+.w46-page-config{display:grid;gap:13px;border:1px solid var(--border);border-radius:14px;padding:15px;background:var(--bg);min-width:0}
+.w46-page-config-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.w46-page-config-head strong{font-size:15px;color:var(--ink)}
+.w46-page-config-head span{font-size:11px;color:var(--muted)}
+.w46-page-config-hint,.w46-page-config-foot{font-size:12px;line-height:1.55;color:var(--muted);margin:0}
+.w46-config-field{display:grid;gap:7px;min-width:0}
+.w46-config-field label{font-size:13px;font-weight:600;color:var(--ink)}
+.w46-config-field p{font-size:12px;line-height:1.45;color:var(--muted);margin:0}
+.w46-config-field a{font-size:12px;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.w46-config-field input{width:100%;min-width:0;min-height:44px;padding:9px 12px;border:1px solid var(--border);background:var(--bg2);color:var(--ink);border-radius:10px;box-sizing:border-box}
+.w46-config-field input:disabled{opacity:.58;cursor:not-allowed}
+.w46-page-config-warning{font-size:12px;line-height:1.55;padding:10px 12px;border:1px solid var(--border);border-radius:10px;color:var(--muted);margin:0}
+@media(max-width:430px){.w46-page-config{padding:12px}.w46-page-config-head{align-items:flex-start}}
 @media (prefers-reduced-motion:reduce){.w46-channel{transition:none}}
 </style>

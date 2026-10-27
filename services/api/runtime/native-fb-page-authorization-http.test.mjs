@@ -9,12 +9,17 @@ import {createNativeFbPageAuthorizationHttp,makeOriginalW27NativeInvoker} from '
 const principal={verified:true,source:'W54_NATIVE_CURRENT_USER',
  principalRef:'trusted-principal-w27',installationRef:'original-w54-install',
  revocationGeneration:3};
-async function fixture({withPorts=true,changePrincipal=false,revokeSession=false}={}){
+async function fixture({withPorts=true,changePrincipal=false,revokeSession=false,withVault=false}={}){
  const sessionAuthority=createLocalSessionAuthority();
  const origin='http://127.0.0.1:44767';
  let calls=0;
  const h=createNativeFbPageAuthorizationHttp({
   sessionAuthority,webOrigin:origin,
+  enrollW55PancakeCredentials:withVault?async ({userAccessToken,pagePublicApiToken})=>{
+   assert.equal(userAccessToken,'fake-user-token-12345');
+   assert.equal(pagePublicApiToken,'fake-page-token-12345');
+   return {stored:true,source:'W55_OS_PROTECTED_CURRENT_USER'};
+  }:null,
   resolveW54Principal:withPorts?async()=>{
    if(changePrincipal&&calls)return {...principal,revocationGeneration:4};
    return principal;
@@ -139,4 +144,72 @@ test('adapter invokes only original W27 Owner methods, not a new authorization s
  await call({action:'revokeAuthorization'});
  assert.deepEqual(calls,['START','PAGES','BIND:9988','STATUS:true','REVOKE']);
  await assert.rejects(call({action:'sendMessage'}),/W27_ORIGINAL_ACTION_NOT_ALLOWED/);
+});
+
+test('Web-first owner capability GET is read-only and truthful without W54/W55 system setup',async()=>{
+ const disabled=await fixture({withPorts:false});
+ try{
+  const response=await disabled.send('capabilities',{method:'GET',cookieHeader:''});
+  assert.equal(response.status,200);
+  assert.equal(response.body.channel,'FB_PAGE');
+  assert.equal(response.body.ownerPortConnected,false);
+  assert.equal(response.body.canSend,false);
+  assert.equal(disabled.calls,0);
+ }finally{await disabled.close()}
+ const enabled=await fixture();
+ try{
+  const response=await enabled.send('capabilities',{method:'GET'});
+  assert.equal(response.status,200);
+  assert.equal(response.body.ownerPortConnected,true);
+  assert.equal(enabled.calls,0);
+ }finally{await enabled.close()}
+});
+test('Web-first read-only readiness never lets a missing owner port forge a successful grant',async()=>{
+ const f=await fixture({withPorts:false});
+ try{
+  const caps=await f.send('capabilities',{method:'GET'});
+  assert.equal(caps.body.ownerPortConnected,false);
+  const result=await f.send('start');
+  assert.equal(result.status,503);
+  assert.equal(result.body.canSend,false);
+ }finally{await f.close()}
+});
+
+test('Pancake configuration never accepts or echoes tokens without original W55 port',async()=>{
+ const f=await fixture({withPorts:false});
+ try{
+  const caps=await f.send('capabilities',{method:'GET'});
+  assert.equal(caps.body.secureCredentialEnrollment,false);
+  const r=await f.send('configure',{body:JSON.stringify({
+   userAccessToken:'fake-user-token-12345',pagePublicApiToken:'fake-page-token-12345'
+  })});
+  assert.equal(r.status,503);
+  assert.equal(r.body.error,'W55_PANCAKE_CREDENTIAL_PORT_NOT_CONNECTED');
+  assert.equal(JSON.stringify(r.body).includes('fake-user-token-12345'),false);
+ }finally{await f.close()}
+});
+test('configured original W55 port receives temporary credentials without returning secrets',async()=>{
+ const f=await fixture({withVault:true});
+ try{
+  const caps=await f.send('capabilities',{method:'GET'});
+  assert.equal(caps.body.secureCredentialEnrollment,true);
+  const r=await f.send('configure',{body:JSON.stringify({
+   userAccessToken:'fake-user-token-12345',pagePublicApiToken:'fake-page-token-12345'
+  })});
+  assert.equal(r.status,200);
+  assert.equal(r.body.status,'CREDENTIALS_SAVED_NOT_PAGE_AUTHORIZED');
+  assert.equal(r.body.credentialValueReturned,false);
+  assert.equal(r.body.canSend,false);
+  assert.equal(JSON.stringify(r.body).includes('fake-page-token-12345'),false);
+ }finally{await f.close()}
+});
+test('credentials cannot be submitted cross-origin or with invalid CSRF',async()=>{
+ const f=await fixture({withVault:true});
+ try{
+  const body=JSON.stringify({userAccessToken:'fake-user-token-12345',
+   pagePublicApiToken:'fake-page-token-12345'});
+  assert.equal((await f.send('configure',{body,originHeader:'https://evil.test'})).status,403);
+  assert.equal((await f.send('configure',{body,csrf:'0'.repeat(64)})).status,403);
+  assert.equal((await f.send('configure',{body,cookieHeader:''})).status,401);
+ }finally{await f.close()}
 });

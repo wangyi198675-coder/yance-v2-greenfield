@@ -99,3 +99,43 @@ test('current theme and compact viewport remain touch accessible',()=>{
  assert.match(parent,/w46-r4-channel-picker/);
  assert.match(parent,/w46-r4-channel-choice/);
 });
+
+test('Facebook Page settings shows both actual Pancake token fields without browser persistence',()=>{
+ assert.match(card,/data-test="fb-page-config"/);
+ assert.match(card,/data-test="fb-page-user-access-token"/);
+ assert.match(card,/data-test="fb-page-public-api-token"/);
+ assert.match(card,/data-test="fb-page-save-config"/);
+ assert.match(card,/https:\/\/pancake\.biz\/account/);
+ assert.match(card,/Public API access token/);
+ assert.match(card,/:disabled="!secureEnrollmentReady\|\|busy"/);
+ assert.match(card,/W55/);
+ assert.doesNotMatch(card,/localStorage\.setItem|sessionStorage\.setItem/);
+});
+test('W55 user input needs current local session and cannot fabricate success',async()=>{
+ const {saveFbPageCredentialConfiguration}=await import('../src/channel-setup-contract.mjs');
+ const userAccessToken='synthetic-token-user-12345';
+ const pagePublicApiToken='synthetic-token-page-12345';
+ const calls=[];
+ const fetchImpl=async(url,init)=>{
+  calls.push({url,method:init.method});
+  if(url==='/api/v2/local-session/status')return {ok:true,json:async()=>({
+   authorized:true,sessionKind:'WEB_LOCAL_PRIVATE',csrfToken:'d'.repeat(64)
+  })};
+  assert.equal(init.method,'POST');
+  assert.equal(init.headers['x-yance-csrf'],'d'.repeat(64));
+  assert.deepEqual(JSON.parse(init.body),{userAccessToken,pagePublicApiToken});
+  return {ok:true,json:async()=>({ok:true,
+   status:'CREDENTIALS_SAVED_NOT_PAGE_AUTHORIZED',
+   source:'W55_OS_PROTECTED_CURRENT_USER',
+   credentialValueReturned:false,canSend:false})};
+ };
+ const result=await saveFbPageCredentialConfiguration({
+  userAccessToken,pagePublicApiToken,fetchImpl
+ });
+ assert.equal(result.saved,true);
+ assert.equal(calls.length,2);
+ assert.equal(JSON.stringify(result).includes('synthetic-token'),false);
+ await assert.rejects(saveFbPageCredentialConfiguration({
+  userAccessToken,pagePublicApiToken,fetchImpl:async()=>({ok:false,status:503})
+ }),/W55_CURRENT_LOCAL_SESSION_UNAVAILABLE/);
+});

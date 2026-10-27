@@ -135,3 +135,38 @@ export async function invokeFbPageNativeAuthorization({
   deny('W24_PAGE_BINDING_NOT_VERIFIED');
  return Object.freeze(value);
 }
+
+
+// Token bytes exist only as a temporary user form value and one authenticated
+// same-origin POST to ORIGINAL W55 custody. Never cache, echo, or log secrets.
+export async function saveFbPageCredentialConfiguration({
+ userAccessToken,pagePublicApiToken,fetchImpl=globalThis.fetch
+}={}){
+ if(typeof fetchImpl!=='function')deny('W55_SECURE_FETCH_REQUIRED');
+ if(![userAccessToken,pagePublicApiToken].every(x=>
+   typeof x==='string'&&x.length>=8&&x.length<=4096))
+   deny('W55_TOKEN_INPUT_REQUIRED');
+ const auth=await fetchImpl('/api/v2/local-session/status',{
+  method:'GET',credentials:'same-origin',cache:'no-store',
+  redirect:'error',referrerPolicy:'no-referrer'
+ });
+ if(!auth?.ok)deny('W55_CURRENT_LOCAL_SESSION_UNAVAILABLE');
+ const s=await auth.json();
+ if(s?.authorized!==true||
+   !['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(s.sessionKind)||
+   !/^[a-f0-9]{64}$/.test(s.csrfToken??''))
+   deny('W55_CURRENT_LOCAL_SESSION_REQUIRED');
+ const response=await fetchImpl('/api/v2/providers/fb-page/authorization/configure',{
+  method:'POST',credentials:'same-origin',cache:'no-store',
+  redirect:'error',referrerPolicy:'no-referrer',
+  headers:{'content-type':'application/json','x-yance-csrf':s.csrfToken},
+  body:JSON.stringify({userAccessToken,pagePublicApiToken})
+ });
+ if(!response?.ok)deny('W55_PANCAKE_CONFIG_HTTP_'+(response?.status??'UNAVAILABLE'));
+ const receipt=await response.json();
+ if(receipt?.ok!==true||receipt.status!=='CREDENTIALS_SAVED_NOT_PAGE_AUTHORIZED'||
+   receipt.source!=='W55_OS_PROTECTED_CURRENT_USER'||
+   receipt.credentialValueReturned!==false||receipt.canSend!==false)
+   deny('W55_STORAGE_RECEIPT_UNVERIFIED');
+ return Object.freeze({status:receipt.status,saved:true});
+}

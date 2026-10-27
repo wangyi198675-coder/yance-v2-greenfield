@@ -15,13 +15,73 @@ const json=(res,status,body)=>{res.writeHead(status,{
 });res.end(JSON.stringify(body));};
 const deny=(res,status,error)=>json(res,status,{ok:false,error,canSend:false});
 export function createNativeFbPageAuthorizationHttp({
- sessionAuthority,webOrigin,invokeW27NativeAuthorization=null,resolveW54Principal=null
+ sessionAuthority,webOrigin,invokeW27NativeAuthorization=null,resolveW54Principal=null,
+ enrollW55PancakeCredentials=null
 }={}){
  if(typeof sessionAuthority?.sessionFor!=='function'||!/^http:\/\/127\.0\.0\.1:\d{2,5}$/.test(webOrigin))
   throw Error('W47_NATIVE_AUTH_TRUST_REQUIRED');
- if([invokeW27NativeAuthorization,resolveW54Principal].some(x=>x!==null&&typeof x!=='function'))
+ if([invokeW27NativeAuthorization,resolveW54Principal,enrollW55PancakeCredentials]
+    .some(x=>x!==null&&typeof x!=='function'))
   throw Error('W27_NATIVE_AUTH_PORT_INVALID');
  return async(req,res,url)=>{
+  if(url.pathname==='/api/v2/providers/fb-page/authorization/capabilities'){
+   if(req.method!=='GET'){deny(res,405,'METHOD_NOT_ALLOWED');return true;}
+   json(res,200,{ok:true,channel:'FB_PAGE',
+    ownerPortConnected:!!(invokeW27NativeAuthorization&&resolveW54Principal),
+    secureCredentialEnrollment:typeof enrollW55PancakeCredentials==='function',
+    canSend:false});return true;
+  }
+  if(url.pathname==='/api/v2/providers/fb-page/authorization/configure'){
+   if(req.method!=='POST'){deny(res,405,'USER_ACTION_POST_ONLY');return true;}
+   if(req.headers.origin!==webOrigin||req.headers['sec-fetch-site']!=='same-origin'||
+      req.headers['content-type']!=='application/json'||url.search){
+    deny(res,403,'CURRENT_LOCAL_ORIGIN_REQUIRED');return true;
+   }
+   const current=sessionAuthority.sessionFor(req);
+   if(!current||!['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(current.record?.kind)){
+    deny(res,401,'EXISTING_LOCAL_SESSION_REQUIRED');return true;
+   }
+   if(req.headers['x-yance-csrf']!==current.record.csrf){
+    deny(res,403,'EXISTING_LOCAL_SESSION_CSRF_REQUIRED');return true;
+   }
+   // Original W55 OS credential custody remains the only keeper of secrets.
+   // Missing W55 social-token owner port MUST NOT read or save a secret.
+   if(typeof enrollW55PancakeCredentials!=='function'){
+    deny(res,503,'W55_PANCAKE_CREDENTIAL_PORT_NOT_CONNECTED');return true;
+   }
+   const chunks=[];let bytes=0;
+   try{
+    for await(const chunk of req){bytes+=chunk.length;
+     if(bytes>8192)throw Error('TOO_LARGE');chunks.push(chunk)}
+   }catch{deny(res,413,'CREDENTIAL_BODY_TOO_LARGE');return true;}
+   let payload;
+   try{payload=JSON.parse(Buffer.concat(chunks).toString('utf8'))}
+   catch{deny(res,422,'CREDENTIAL_INPUT_INVALID');return true;}
+   if(!payload||Array.isArray(payload)||typeof payload!=='object'||
+      Object.keys(payload).sort().join('|')!=='pagePublicApiToken|userAccessToken'||
+      ![payload.userAccessToken,payload.pagePublicApiToken].every(x=>
+       typeof x==='string'&&x.length>=8&&x.length<=4096&&!x.includes('\n')&&!x.includes('\r'))){
+    deny(res,422,'CREDENTIAL_INPUT_INVALID');return true;
+   }
+   try{
+    const result=await enrollW55PancakeCredentials({
+     session:current,channel:'FB_PAGE',provider:'PANCAKE',
+     userAccessToken:payload.userAccessToken,
+     pagePublicApiToken:payload.pagePublicApiToken,
+     explicitUserEntry:true,canSend:false
+    });
+    const after=sessionAuthority.sessionFor(req);
+    if(!after||after.id!==current.id||after.record.rev!==current.record.rev){
+     deny(res,409,'LOCAL_SESSION_CHANGED_DURING_CREDENTIAL_SAVE');return true;
+    }
+    if(result?.stored!==true||result?.source!=='W55_OS_PROTECTED_CURRENT_USER'){
+     deny(res,503,'W55_CREDENTIAL_STORAGE_NOT_VERIFIED');return true;
+    }
+    json(res,200,{ok:true,status:'CREDENTIALS_SAVED_NOT_PAGE_AUTHORIZED',
+     source:'W55_OS_PROTECTED_CURRENT_USER',canSend:false,credentialValueReturned:false});
+   }catch{deny(res,503,'W55_CREDENTIAL_STORAGE_UNAVAILABLE');}
+   return true;
+  }
   const m=/^\/api\/v2\/providers\/fb-page\/authorization\/(start|pages|bind|refresh|revoke)$/.exec(url.pathname);
   if(!m)return false;
   if(req.method!=='POST'){deny(res,405,'USER_ACTION_POST_ONLY');return true}
