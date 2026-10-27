@@ -12,6 +12,7 @@ const props=defineProps({
 });
 const emit=defineEmits(['navigate','cycle-theme','toggle-theme']);
 const category=ref('general'),busy=ref(false),state=ref('idle'),error=ref(''),data=ref(null);
+const selectedAccountChannel=ref(null);
 const csrf=ref(null),session=ref(null),notification=ref('unsupported');
 let seq=0,alive=true;
 const channels=[{id:'FB_PERSONAL',label:'Facebook'},{id:'FB_PAGE',label:'Page'},
@@ -60,7 +61,7 @@ async function refresh(){
  }catch(e){if(alive&&t===seq){state.value='unavailable';error.value=failure(e)}}
  finally{if(alive&&t===seq)busy.value=false}
 }
-function switchCategory(id){if(!R4_SETTINGS_CATEGORIES.some(x=>x.id===id))return;category.value=id}
+function switchCategory(id){if(!R4_SETTINGS_CATEGORIES.some(x=>x.id===id))return;selectedAccountChannel.value=null;category.value=id}
 watch([()=>props.active,category],([active])=>{if(active)void refresh();else{seq++;data.value=null;csrf.value=null;session.value=null}},{immediate:true});
 watch([()=>props.theme,()=>props.appearance],()=>{
  if(category.value==='theme'&&props.active)data.value={theme:props.theme,mode:props.appearance,source:'APP_THEME_TOKENS_CURRENT'};
@@ -116,7 +117,16 @@ function requestNotificationPermission(){
     <article data-test="settings-panel-accounts"><h3>账号与官方授权</h3>
      <p>只有真人社交账号连接需要按对应平台的官方流程授权。使用本地聊天和私人闺蜜大脑，不需要额外登录或验证。</p>
      <p>本机会话绝不等同于四渠道官方登录。</p>
-     <div class="bc-settings-channel-grid"><BCChannelAccountSetup v-for="x in channels" :key="x.id" :channel="x" :fetch-impl="fetchImpl"/></div>
+     <div v-if="!selectedAccountChannel" class="bc-settings-channel-list" data-test="settings-channel-picker">
+      <button v-for="x in channels" :key="x.id" type="button" :data-test="'settings-channel-choose-'+x.id"
+       @click="selectedAccountChannel=x.id">{{x.id==='FB_PAGE'?'Facebook Page':x.label}} <span aria-hidden="true">›</span></button>
+     </div>
+     <div v-else class="bc-settings-channel-single" data-test="settings-channel-step">
+      <button type="button" class="bc-settings-channel-back" data-test="settings-channel-back"
+       @click="selectedAccountChannel=null">← 选择其他平台</button>
+      <BCChannelAccountSetup :key="selectedAccountChannel"
+       :channel="channels.find(x=>x.id===selectedAccountChannel)" :fetch-impl="fetchImpl"/>
+     </div>
      <p data-test="settings-accounts-no-terminal-pair">直接选择需要连接的社交平台，并按对应平台的官方步骤授权；本地聊天与私人助手无需额外验证。</p>
     </article>
    </template>
@@ -199,4 +209,5 @@ function requestNotificationPermission(){
  .bc-settings-nav{display:none}.bc-settings-mobile{display:grid;gap:6px;font-size:12px}
  .bc-settings-mobile select{width:100%;min-height:43px;border:1px solid var(--border);border-radius:9px;padding:8px;background:var(--bg2);color:var(--ink)}
  .bc-settings-detail{padding:12px}.bc-settings-channel-grid{grid-template-columns:1fr}}
+.bc-settings-channel-list{display:grid;gap:8px;max-width:530px}.bc-settings-channel-list button{display:flex;justify-content:space-between;gap:14px;align-items:center;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--ink);text-align:left;cursor:pointer;font-size:13px}.bc-settings-channel-list button:hover,.bc-settings-channel-list button:focus-visible{border-color:var(--accent)}.bc-settings-channel-single{display:grid;gap:10px;max-width:550px}.bc-settings-channel-back{border:0;background:transparent;color:var(--ink);min-height:42px;text-align:left;cursor:pointer;padding:4px 0}
 </style>
