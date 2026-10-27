@@ -15,13 +15,20 @@ after(()=>{for(const child of procset)if(!child.killed)child.kill();rmSync(folde
 const rawHost=(port,host)=>new Promise((ok,bad)=>{const req=httpRequest({hostname:'127.0.0.1',port,path:'/api/v2/runtime/health',headers:{Host:host}},res=>{res.resume();res.once('end',()=>ok(res.statusCode))});req.on('error',bad);req.end()});
 function pkg(name,{manifest=true}={}){
  const path=join(folder,name);mkdirSync(path);
- for(const file of ['server.mjs','runtime-config.mjs','runtime-provenance.mjs','local-session.mjs','local-operator-console.mjs','private-brain-http.mjs','private-python-port.mjs','private-native-ledger-port.mjs','private-model-http.mjs','native-authoritative-reads.mjs','native-provider-gateway.mjs','native-message-reads.mjs','native-pinned-web-assets.mjs','native-private-startup.mjs','web-private-local-qwen.mjs','web-private-cloud-byok.mjs','web-private-cloud-http.mjs','w55-web-native-stdio.mjs','w54-native-child-frame.mjs','w54-native-webview-session.mjs','w47-w43-private-child.py']){
-  copyFileSync(join(here,file),join(path,file));
+ const runtimeDir=join(path,'runtime');
+ const nativeMediaDir=join(path,'src','domains','file-attachment');
+ mkdirSync(runtimeDir,{recursive:true});mkdirSync(nativeMediaDir,{recursive:true});
+ for(const file of ['server.mjs','runtime-config.mjs','runtime-provenance.mjs','local-session.mjs','local-operator-console.mjs','private-brain-http.mjs','private-python-port.mjs','private-native-ledger-port.mjs','private-model-http.mjs','native-authoritative-reads.mjs','native-provider-gateway.mjs','native-message-reads.mjs','native-pinned-web-assets.mjs','native-private-startup.mjs','web-private-local-qwen.mjs','web-private-cloud-byok.mjs','web-private-cloud-http.mjs','w55-web-native-stdio.mjs','w54-native-child-frame.mjs','w54-native-webview-session.mjs','w47-w43-private-child.py',
+ 'w47-w23-media-bridge.mjs','w47-native-settings-capabilities.mjs']){
+  copyFileSync(join(here,file),join(runtimeDir,file));
  }
- if(manifest)writeFileSync(join(path,'runtime-build.json'),JSON.stringify({
+ // Original W23 native relative modules are packaged unchanged, not mocked.
+ for(const file of ['web-media.mjs','web-media-http.mjs'])
+  copyFileSync(resolve(here,'../src/domains/file-attachment',file),join(nativeMediaDir,file));
+ if(manifest)writeFileSync(join(runtimeDir,'runtime-build.json'),JSON.stringify({
   format:1,product:'YanceV2',source_sha:sourceSha
  }));
- return join(path,'server.mjs');
+ return join(runtimeDir,'server.mjs');
 }
 const exe=process.execPath;
 async function boot(server,{webOrigin,port='0',mode='installed'}={}){
