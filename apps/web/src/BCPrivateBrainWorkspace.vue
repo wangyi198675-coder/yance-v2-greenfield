@@ -1,5 +1,5 @@
 <script setup>
-import {ref,onMounted,onBeforeUnmount,computed} from 'vue';
+import {ref,onMounted,onBeforeUnmount,computed,nextTick} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
 import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModelSelection,
@@ -9,10 +9,81 @@ const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
 const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=ref(false),text=ref('');
 const chosen=ref(''),requestInFlight=ref(false);
-const modelCostApproved=ref(false),brainExpertOpen=ref(false);
-function toggleBrainExpert(){brainExpertOpen.value=!brainExpertOpen.value;if(brainExpertOpen.value){toolsOpen.value=false;setupOpen.value=false}}
-function toggleBrainModel(){setupOpen.value=!setupOpen.value;if(setupOpen.value){brainExpertOpen.value=false;toolsOpen.value=false}}
-function toggleBrainTools(){toolsOpen.value=!toolsOpen.value;if(toolsOpen.value){brainExpertOpen.value=false;setupOpen.value=false}}
+const modelCostApproved=ref(false),brainExpertOpen=ref(false),brainRoot=ref(null);
+const nativeTools=ref([]),nativeRuns=ref([]),nativeReadState=ref('idle'),nativeTrace=ref(null),traceReadState=ref('idle');
+let nativeReadRevision=0;
+const brainTrigger={experts:'brain-expert',model:'brain-compose-model',tools:'brain-compose-tools'};
+function brainActiveMenu(){return brainExpertOpen.value?'experts':setupOpen.value?'model':toolsOpen.value?'tools':null}
+function closeBrainMenu(restoreFocus=false){
+ const prior=brainActiveMenu();
+ brainExpertOpen.value=false;setupOpen.value=false;toolsOpen.value=false;nativeReadRevision++;
+ if(restoreFocus&&prior)nextTick(()=>brainRoot.value?.querySelector('[data-test="'+brainTrigger[prior]+'"]')?.focus());
+}
+async function focusBrainPopup(){
+ await nextTick();
+ brainRoot.value?.querySelector('.bc-brain-context-menu button:not(:disabled), .bc-private-settings button:not(:disabled), .bc-brain-trace summary')?.focus();
+}
+async function toggleBrainExpert(){
+ if(brainExpertOpen.value){closeBrainMenu(true);return}
+ closeBrainMenu();brainExpertOpen.value=true;await focusBrainPopup();
+}
+async function toggleBrainModel(){
+ if(setupOpen.value){closeBrainMenu(true);return}
+ closeBrainMenu();setupOpen.value=true;await focusBrainPopup();
+}
+async function readNativeTools(){
+ const ticket=++nativeReadRevision;nativeReadState.value='loading';nativeTools.value=[];nativeRuns.value=[];nativeTrace.value=null;traceReadState.value='idle';
+ try{
+  ensureCurrent();
+  const [tools,runs]=await Promise.all([api('/api/v2/private-brain/tools'),
+   api('/api/v2/private-brain/runs?threadId=personal&limit=10')]);
+  if(!mounted||ticket!==nativeReadRevision||!toolsOpen.value)return;
+  if(tools?.authoritative!==true||tools?.source!=='W43_NATIVE_AGNO_SDK'||tools?.canSend!==false||
+   !Array.isArray(tools.registeredTools)||tools.registeredTools.length>50||
+   runs?.authoritative!==true||runs?.source!=='W43_NATIVE_AGNO_SDK'||runs?.status!=='NATIVE_RUNS_READ'||runs?.canSend!==false||
+   !Array.isArray(runs.runs)||runs.runs.length>10)throw Error('UNVERIFIED_AGNO_INSPECTION');
+  nativeTools.value=tools.registeredTools.map(t=>({label:String(t.name||t.toolName||t.id||'已注册工具').slice(0,80),businessExecutable:t.businessExecutable===true}));
+  nativeRuns.value=runs.runs.map(r=>({id:String(r.runId||r.id||'').slice(0,128),status:String(r.status||'未知').slice(0,50)}));
+  nativeReadState.value='ready';
+ }catch{if(mounted&&ticket===nativeReadRevision)nativeReadState.value='unavailable'}
+}
+async function readNativeTrace(run){
+ if(!toolsOpen.value||!run||!/^[A-Za-z0-9_-]{6,128}$/.test(run.id))return;
+ const ticket=++nativeReadRevision;nativeTrace.value=null;traceReadState.value='loading';
+ try{
+  ensureCurrent();
+  const dto=await api('/api/v2/private-brain/runs/'+encodeURIComponent(run.id)+'/trace?threadId=personal');
+  if(!mounted||ticket!==nativeReadRevision||!toolsOpen.value)return;
+  if(dto?.authoritative!==true||dto?.source!=='W43_NATIVE_AGNO_SDK'||dto?.canSend!==false||
+   dto.runId!==run.id||dto.noTraceFabricated!==true||
+   !['NATIVE_TRACES_FOUND','NATIVE_TRACE_NOT_FOUND'].includes(dto.status)||
+   !Array.isArray(dto.traces)||dto.traces.length>50||
+   !Number.isSafeInteger(dto.traceCount)||dto.traceCount<0)
+   throw Error('W43_NATIVE_TRACE_UNVERIFIED');
+  nativeTrace.value={runId:run.id,count:dto.traceCount,status:dto.status};
+  traceReadState.value='ready';
+ }catch{if(mounted&&ticket===nativeReadRevision)traceReadState.value='unavailable'}
+}
+async function toggleBrainTools(){
+ if(toolsOpen.value){closeBrainMenu(true);return}
+ closeBrainMenu();toolsOpen.value=true;await focusBrainPopup();void readNativeTools();
+}
+function brainMenuKeyboard(e){
+ const active=brainActiveMenu();if(!active)return;
+ if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeBrainMenu(true);return}
+ if(!['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;
+ const popup=brainRoot.value?.querySelector('.bc-brain-context-menu, .bc-private-settings, .bc-brain-trace');
+ if(!popup?.contains(document.activeElement))return;
+ const items=[...popup.querySelectorAll('button:not(:disabled), summary, input:not(:disabled), a[href]')].filter(x=>x.getClientRects().length);
+ if(!items.length)return;
+ e.preventDefault();const index=items.indexOf(document.activeElement);
+ const next=e.key==='Home'?0:e.key==='End'?items.length-1:e.key==='ArrowDown'?(index+1)%items.length:(index<=0?items.length-1:index-1);
+ items[next].focus();
+}
+function brainOutsideClick(e){
+ if(!brainActiveMenu())return;
+ if(!e.target.closest?.('.bc-brain-context-menu, .bc-private-settings, .bc-brain-trace, [data-test="brain-expert"], [data-test="brain-compose-model"], [data-test="brain-compose-tools"], [data-test="brain-open-settings"], [data-test="brain-toggle-tools"]'))closeBrainMenu();
+}
 let revision=0,mounted=true,sessionDeadline=null;
 const threadId='personal';
 const safeCurrent=id=>mounted&&revision===id;
@@ -157,11 +228,12 @@ async function send(){
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='history-unavailable'}}
  finally{if(safeCurrent(id))requestInFlight.value=false}
 }
-onMounted(refresh);
-onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
+onMounted(()=>{document.addEventListener('keydown',brainMenuKeyboard);document.addEventListener('pointerdown',brainOutsideClick);void refresh()});
+onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);document.removeEventListener('pointerdown',brainOutsideClick);
+ mounted=false;revision++;nativeReadRevision++;clearSession();text.value=''});
 </script>
 <template>
- <section class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
+ <section ref="brainRoot" class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
   <header class="bc-private-brain-head">
    <div class="bc-private-brain-heading"><strong>闺蜜大脑</strong><span>私人 Agno · 独立会话</span>
     <p class="bc-private-brain-state" role="status" data-test="brain-state">
@@ -174,14 +246,28 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
     </p>
    </div>
    <div class="bc-private-brain-actions">
-    <Button size="sm" variant="ghost" data-test="brain-open-settings" :disabled="busy||requestInFlight" @click="setupOpen=!setupOpen">模型 ▾</Button>
+    <Button size="sm" variant="ghost" data-test="brain-open-settings" aria-haspopup="menu" :aria-expanded="setupOpen" :disabled="busy||requestInFlight" @click="toggleBrainModel">模型 ▾</Button>
     <Button size="sm" variant="ghost" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">历史</Button>
-    <Button size="sm" variant="ghost" data-test="brain-toggle-tools" :aria-expanded="toolsOpen" @click="toolsOpen=!toolsOpen">工具详情 ▣</Button>
+    <Button size="sm" variant="ghost" data-test="brain-toggle-tools" aria-haspopup="menu" :aria-expanded="toolsOpen" @click="toggleBrainTools">工具详情 ▣</Button>
    </div>
   </header>
   <p v-if="notice" class="bc-private-notice" role="alert" data-test="brain-error">{{notice}}</p>
-  <details v-if="toolsOpen" open class="bc-brain-trace" data-test="w46-brain-tools"><summary>真实执行详情 · 工具 / Run / Trace</summary><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史中没有经服务端核实的工具回执；专家和运行详情待 W43 原生接口接线。</p></details>
-  <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings">
+  <details v-if="toolsOpen" open class="bc-brain-trace" data-test="w46-brain-tools" id="w46-brain-tools-menu"><summary tabindex="0">真实执行详情 · 工具 / Run / Trace</summary><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史内暂无经过服务端确认的工具回执。</p>
+   <p v-if="nativeReadState==='loading'">正在读取W43原生工具与Run…</p>
+   <p v-else-if="nativeReadState==='unavailable'">本机原生工具／Run接口不可用或未授权；不显示模拟记录。</p>
+   <template v-else-if="nativeReadState==='ready'">
+    <p>已注册工具 {{nativeTools.length}} 项，实际执行资格由W43授权决定。</p>
+    <div v-for="(tool,i) in nativeTools" :key="i">{{tool.label}} · {{tool.businessExecutable?'服务端限制执行':'只读／未开放执行'}}</div>
+    <p>当前有来源Run {{nativeRuns.length}} 条</p>
+    <div v-for="(run,i) in nativeRuns" :key="i" class="bc-native-run-row">
+     <span>{{run.id}} · {{run.status}}</span>
+     <button type="button" :disabled="!run.id||!/^[-A-Za-z0-9_]{6,128}$/.test(run.id)" @click="readNativeTrace(run)">查看 Trace</button>
+    </div>
+    <p v-if="traceReadState==='loading'">正在读取原生Trace…</p>
+    <p v-else-if="traceReadState==='unavailable'">此Run的原生Trace未授权或不可用。</p>
+    <p v-else-if="traceReadState==='ready'&&nativeTrace">Run {{nativeTrace.runId}}：{{nativeTrace.count}} 条有来源Trace（{{nativeTrace.status}}）</p>
+   </template></details>
+  <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings" id="w46-brain-model-menu" role="menu" aria-label="当前私人模型选择">
    <h3>选择 AI 模型</h3>
    <BCNativeCloudKeySettings :web-csrf="session?.csrf" @changed="refresh"/>
    <p>可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。</p>
@@ -209,7 +295,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
     <strong>{{m.role==='user'?'你':m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
     <p>{{m.content}}</p>
    </article>
-  </div>  <div v-if="brainExpertOpen" class="bc-brain-context-menu" data-test="brain-expert-popup" role="menu" aria-label="闺蜜大脑专家选择">
+  </div>  <div v-if="brainExpertOpen" class="bc-brain-context-menu" data-test="brain-expert-popup" id="w46-brain-expert-menu" role="menu" aria-label="闺蜜大脑专家选择">
     <div class="bc-brain-popup-head"><strong>选择专家</strong><button type="button" data-test="brain-expert-close" @click="toggleBrainExpert">关闭</button></div>
     <p>原W43十类专家目录尚未通过W47正式HTTP资格回读。可显示目录，不伪称已经安装或运行。</p>
     <button type="button" disabled>任务专家 · 待真实注册和本人授权</button>
@@ -223,9 +309,9 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
      data-test="brain-question" placeholder="向闺蜜大脑提问；可召唤专家或执行已授权任务" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
    <div class="bc-brain-compose-toolbar">
     <div class="bc-brain-compose-tools">
-     <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert">＋ 专家</Button>
-     <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model">模型</Button>
-     <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toggleBrainTools" data-test="brain-compose-tools">工具</Button>
+     <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert" aria-haspopup="menu" aria-controls="w46-brain-expert-menu">＋ 专家</Button>
+     <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model" aria-haspopup="menu" aria-controls="w46-brain-model-menu">模型</Button>
+     <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toggleBrainTools" data-test="brain-compose-tools" aria-haspopup="menu" aria-controls="w46-brain-tools-menu">工具</Button>
      <Button type="button" size="sm" variant="ghost" disabled title="附件尚待W23原生媒体资格接线" data-test="brain-attachment">附件</Button>
     </div>
     <Button type="submit" data-test="brain-send"
@@ -258,6 +344,8 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 .bc-private-brain-state{font-size:11px;color:var(--muted);margin:0;flex:0 0 auto}
 .bc-private-notice{font-size:12px;flex:0 0 auto}.bc-private-settings{max-height:min(42vh,360px);overflow:auto;flex:0 0 auto;background:var(--surface);border-color:var(--border)}
 .bc-brain-trace{padding:8px 12px;background:var(--surface-soft);border:1px solid var(--border);border-radius:10px;font-size:11px;flex:0 0 auto;color:var(--muted)}.bc-brain-trace summary{cursor:pointer;color:var(--ink)}.bc-brain-trace p{overflow-wrap:anywhere}
+.bc-native-run-row{display:grid;gap:4px;margin:6px 0;overflow-wrap:anywhere}
+.bc-native-run-row button{border:1px solid var(--border);border-radius:8px;padding:5px 7px;max-width:max-content;background:var(--surface-soft);color:var(--ink);cursor:pointer}
 .bc-private-history{flex:1 1 0;min-height:140px;max-height:none!important;display:block;overflow-y:auto;background:var(--bg);border:0!important;padding:13px 4px!important;overscroll-behavior:contain}
 .bc-private-history article{width:fit-content;max-width:min(84%,760px);margin:8px auto 14px 0;border:1px solid var(--border);border-radius:15px 15px 15px 4px;padding:12px 16px;background:var(--surface);box-shadow:0 4px 18px rgba(0,0,0,.055)}
 .bc-private-history article[data-role=user]{margin-left:auto;margin-right:0;border-radius:15px 15px 4px 15px;border-color:rgba(var(--accent-rgb),.28);background:linear-gradient(135deg,rgba(var(--accent-rgb),.14),rgba(var(--accent-rgb),.055))}
