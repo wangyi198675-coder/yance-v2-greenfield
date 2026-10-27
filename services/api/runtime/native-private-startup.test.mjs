@@ -38,6 +38,12 @@ test('genuine W47 installed-mode process consumes private W54 QA stdin, CookieSt
  const runtime=join(tmp,'runtime');mkdirSync(runtime);
  for(const name of readdirSync(here).filter(s=>s.endsWith('.mjs')&&!s.includes('.test.')))
   cpSync(join(here,name),join(runtime,name));
+ // Include unchanged original W23 code in the W54 installed packaging test.
+ // This test never creates a media key, authorizes a contact or uploads.
+ const nativeMedia=join(tmp,'src','domains','file-attachment');
+ mkdirSync(nativeMedia,{recursive:true});
+ for(const f of ['web-media.mjs','web-media-http.mjs'])
+  cpSync(join(here,'..','src','domains','file-attachment',f),join(nativeMedia,f));
  cpSync(join(here,'w47-w43-private-child.py'),join(runtime,'w47-w43-private-child.py'));
  writeFileSync(join(runtime,'runtime-build.json'),JSON.stringify({
   format:1,product:'YanceV2',source_sha:'02adaec9f72f28aa1c974a3537be626632015c34'
