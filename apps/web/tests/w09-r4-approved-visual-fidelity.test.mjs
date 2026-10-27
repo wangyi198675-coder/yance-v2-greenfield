@@ -36,13 +36,41 @@ test('R4 experts directory is visible by default and never fabricates enabled ex
  assert.match(shell,/等待W43\/W47原生身份及启用状态确认/);
  assert.doesNotMatch(shell,/<details class="w46-native-panel"><summary>专家中心/);
 });
-test('R4 Persona uses real empty rule/version tabs, not design fiction',()=>{
+test('approved R4 Persona has four visible top entries and clear nonproduction learning status',()=>{
  assert.match(shell,/data-test="w46-persona-studio"/);
+ assert.match(shell,/data-test="w46-persona-toolbar"/);
+ assert.match(shell,/规则 · 记忆 · 版本/);
  for(const k of ['pending','current','versions'])assert.match(shell,new RegExp("id:'"+k+"'"));
  assert.match(shell,/data-test="'w46-persona-tab-'/);
- assert.match(shell,/暂无经服务端核验的待审规则/);
- assert.match(shell,/本人事实、联系人推断和学习建议必须按原W43\/W45权威来源分别读取/);
- assert.match(shell,/Button disabled size="sm">版本回滚/);
+ assert.match(shell,/data-test="w46-persona-learning-status"/);
+ assert.match(shell,/showPersonaDetail\('learning'\)/);
+ assert.match(shell,/学习状态尚未获得服务端有效版本/);
+});
+test('approved Persona pending design is visibly labeled as three readonly design examples',()=>{
+ for(const [name,subtitle] of [
+  ['自然、成熟、简短表达','建议规则 · 来源待核验'],
+  ['忠于用户本人事实','联系人推断不能变成本人事实'],
+  ['跨会话表达偏好','可暂停、撤销及恢复到先前版本']
+ ]){assert.ok(shell.includes(name));assert.ok(shell.includes(subtitle))}
+ assert.match(shell,/待审规则 · 设计示例/);
+ assert.match(shell,/未执行审批/);
+ assert.match(shell,/v-for="\(rule,index\) in personaExamples"/);
+ assert.match(shell,/data-test="'w46-persona-rule-example-'/);
+ assert.match(shell,/data-test="'w46-persona-rule-view-'/);
+ assert.match(shell,/data-test="w46-persona-source-hold"/);
+ assert.match(shell,/仅展示设计中的规则入口，审批、版本与学习必须连接已有服务端并经过真实读回/);
+});
+test('Persona version sidebar opens only readonly dialog and never grants approval',()=>{
+ assert.match(shell,/data-test="w46-persona-details-card"/);
+ assert.match(shell,/人格版本与控制/);
+ assert.match(shell,/已生效版本、规则来源、冲突、撤回和回滚在这里按需展示/);
+ assert.match(shell,/原R4中的技术状态面板与大幅说明文字不长期占据核心操作区域/);
+ assert.match(shell,/data-test="w46-persona-rule-details"/);
+ assert.match(shell,/data-test="w46-persona-example-details"/);
+ assert.match(shell,/aria-modal="true"/);
+ assert.match(shell,/data-test="w46-persona-detail-close"/);
+ assert.match(shell,/该内容为只读界面示例，并非真实已批准规则/);
+ assert.doesNotMatch(shell,/function showPersonaDetail[^\n]*fetch\(/);
 });
 test('CHAT keeps exactly one original contact composer mounted even with no account',()=>{
  assert.equal((chat.match(/<BCNativeComposer\b/g)||[]).length,1);
