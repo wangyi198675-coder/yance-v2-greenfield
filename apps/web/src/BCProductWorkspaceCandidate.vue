@@ -79,13 +79,9 @@ const settingCategory=ref('general');
 // Design tabs are navigation only until authoritative Persona/Expert APIs are signed.
 const personaTab=ref('pending'),expertTab=ref('experts');
 const personaModal=ref(null);
-// UI-only reference examples from the user-approved R4 design, never PersonaPolicy facts.
-const personaExamples=Object.freeze([
- {title:'自然、成熟、简短表达',description:'建议规则 · 来源待核验',symbol:'✦'},
- {title:'忠于用户本人事实',description:'联系人推断不能变成本人事实',symbol:'◈'},
- {title:'跨会话表达偏好',description:'可暂停、撤销及恢复到先前版本',symbol:'↗'}
-]);
-function showPersonaDetail(kind,index=null){personaModal.value={kind,index}}
+// Only the original native Persona owner can provide actual pending rules,
+// active revisions, learning grants and rollback receipts.
+function showPersonaDetail(kind){personaModal.value={kind}}
 function closePersonaDetail(){personaModal.value=null}
 const personaTabs=Object.freeze([{id:'pending',label:'待审规则'},{id:'current',label:'当前人格'},{id:'versions',label:'版本'}]);
 const expertTabs=Object.freeze([{id:'experts',label:'专家 10'},{id:'tasks',label:'任务'},{id:'skills',label:'Skills / MCP'}]);
@@ -307,52 +303,47 @@ defineExpose({refresh});
    </section>
    <section v-else-if="activeWorkspace==='PERSONA'" class="w46-r4-feature w46-r4-persona" data-test="w46-persona-studio">
     <header class="w46-r4-feature-toolbar" data-test="w46-persona-toolbar">
-     <div class="w46-r4-feature-title"><strong>人格与学习</strong><small>规则 · 记忆 · 版本</small></div>
+     <div class="w46-r4-feature-title"><strong>人格与学习</strong><small>让闺蜜大脑更懂你的表达习惯</small></div>
      <nav class="w46-r4-feature-tabs" aria-label="人格与学习">
       <button v-for="tab in personaTabs" :key="tab.id" type="button" :class="{active:personaTab===tab.id}" :aria-pressed="personaTab===tab.id" :data-test="'w46-persona-tab-'+tab.id" @click="personaTab=tab.id">{{tab.label}}</button>
-      <button type="button" class="w46-persona-learning-status" data-test="w46-persona-learning-status" @click="showPersonaDetail('learning')">学习状态 <span aria-hidden="true">ⓘ</span></button>
+      <button type="button" class="w46-persona-learning-status" data-test="w46-persona-learning-status" @click="showPersonaDetail('learning')">学习说明 <span aria-hidden="true">ⓘ</span></button>
      </nav>
     </header>
     <div class="w46-r4-feature-body w46-r4-persona-layout">
-     <section class="w46-r4-feature-card" data-test="w46-persona-main-card">
+     <section class="w46-r4-feature-card w46-persona-main-card" data-test="w46-persona-main-card">
       <div class="w46-r4-card-head">
-       <strong>{{personaTab==='pending'?'待审规则 · 设计示例':personaTab==='current'?'当前人格':'版本历史'}}</strong>
-       <span class="w46-persona-approval-status">{{personaTab==='pending'?'未执行审批':'来源待核验'}}</span>
+       <strong>{{personaTab==='pending'?'待审核的学习建议':personaTab==='current'?'当前人格':'版本历史'}}</strong>
+       <span class="w46-persona-approval-status">等待同步</span>
       </div>
-      <div v-if="personaTab==='pending'" class="w46-persona-design-list" data-test="w46-persona-design-list">
-       <div v-for="(rule,index) in personaExamples" :key="rule.title" class="w46-persona-design-row" :data-test="'w46-persona-rule-example-'+index">
-        <span class="w46-persona-example-icon" aria-hidden="true">{{rule.symbol}}</span>
-        <div class="w46-persona-example-copy"><strong>{{rule.title}}</strong><small>{{rule.description}}</small></div>
-        <button type="button" class="w46-persona-small-action" :data-test="'w46-persona-rule-view-'+index" @click="showPersonaDetail('rule',index)">查看</button>
-       </div>
-       <p class="w46-persona-design-note" role="status" data-test="w46-persona-source-hold">仅展示设计中的规则入口，审批、版本与学习必须连接已有服务端并经过真实读回。</p>
-      </div>
-      <div v-else class="w46-r4-feature-empty" role="status" data-test="w46-persona-source-hold">
-       <strong>{{personaTab==='current'?'当前人格版本尚未取得权威回读':'尚无经核验的历史版本'}}</strong>
-       <p>本人事实、联系人推断和学习建议必须由原W43/W45权威来源分别核实；此处不把设计示例当作真实历史。</p>
+      <div class="w46-persona-verified-empty" role="status" data-test="w46-persona-source-hold">
+       <span class="w46-persona-empty-icon" aria-hidden="true">{{personaTab==='pending'?'✦':personaTab==='current'?'◈':'↺'}}</span>
+       <h3>{{personaTab==='pending'?'尚未获取学习建议':personaTab==='current'?'暂时无法查看当前人格':'暂时无法查看版本记录'}}</h3>
+       <p>{{personaTab==='pending'?'待审核规则必须来自真实的学习记录。在数据接通之前，不会把示例当成待审核建议。':personaTab==='current'?'已生效的表达规则和个人记忆，需要从现有服务读取后才能显示。':'只有取得真实版本记录，才能查看差异、撤回或回滚。'}}</p>
+       <button type="button" data-test="w46-persona-open-brain" @click="choose('BRAIN')">前往闺蜜大脑</button>
       </div>
      </section>
-     <aside class="w46-r4-feature-card w46-r4-details" data-test="w46-persona-details-card">
+     <aside class="w46-r4-feature-card w46-r4-details w46-persona-guide" data-test="w46-persona-details-card">
       <div class="w46-r4-card-head">
-       <strong>人格版本与控制</strong>
-       <button type="button" class="w46-persona-details-link" data-test="w46-persona-details-open" @click="showPersonaDetail('version')">详情</button>
+       <strong>学习与人格管理</strong>
+       <button type="button" class="w46-persona-details-link" data-test="w46-persona-details-open" @click="showPersonaDetail('version')">了解更多</button>
       </div>
-      <p>已生效版本、规则来源、冲突、撤回和回滚在这里按需展示。</p>
-      <p>原R4中的技术状态面板与大幅说明文字不长期占据核心操作区域。</p>
-      <button type="button" class="w46-persona-details-button" data-test="w46-persona-rule-details" @click="showPersonaDetail('version')">打开规则详情</button>
+      <div class="w46-persona-guide-list">
+       <div><span aria-hidden="true">01</span><section><strong>学习建议</strong><p>先查看建议，再决定是否采用。</p></section></div>
+       <div><span aria-hidden="true">02</span><section><strong>个性化表达</strong><p>保留你的沟通偏好，不混淆联系人信息。</p></section></div>
+       <div><span aria-hidden="true">03</span><section><strong>版本控制</strong><p>已确认的改动才会进入版本记录。</p></section></div>
+      </div>
+      <p class="w46-persona-guide-note">目前尚未接通可核验的人格数据，这里不会显示演示规则或虚假的学习进度。</p>
      </aside>
     </div>
     <div v-if="personaModal" class="w46-persona-modal-mask" data-test="w46-persona-example-details" @click.self="closePersonaDetail">
      <section class="w46-persona-modal" role="dialog" aria-modal="true" aria-labelledby="w46-persona-modal-title">
-      <header><strong id="w46-persona-modal-title">{{personaModal.kind==='rule'?personaExamples[personaModal.index]?.title:personaModal.kind==='learning'?'学习状态':'人格版本与规则详情'}}</strong>
+      <header><strong id="w46-persona-modal-title">{{personaModal.kind==='learning'?'学习说明':'人格版本与控制'}}</strong>
        <button type="button" data-test="w46-persona-detail-close" aria-label="关闭详情" @click="closePersonaDetail">关闭</button>
       </header>
       <div class="w46-persona-modal-body">
-       <span class="w46-persona-approval-status">设计示例 · 未执行审批</span>
-       <p v-if="personaModal.kind==='rule'">{{personaExamples[personaModal.index]?.description}}</p>
-       <p v-else-if="personaModal.kind==='learning'">学习状态尚未获得服务端有效版本、授权范围和历史事件回读，此处仅显示设计中的状态入口，未开启学习。</p>
-       <p v-else>已生效版本、规则来源、冲突、撤回和回滚须由原W43/W45及版本授权接口真实读回。当前没有可核验的规则详情或版本操作。</p>
-       <p class="w46-persona-modal-caution">该内容为只读界面示例，并非真实已批准规则、持久记忆或已完成的版本变更。</p>
+       <p v-if="personaModal.kind==='learning'">人格学习用于整理表达偏好和规则建议，正式采用前应由你审核。当前页面未取得服务端学习状态，不能确认学习是否已开启。</p>
+       <p v-else>规则版本、撤回和回滚需要真实的版本记录及当前授权。服务端尚未返回这些记录时，不提供假版本和无效操作。</p>
+       <p class="w46-persona-modal-caution">本页只展示可说明的功能范围，不代表学习、规则审批或版本变更已执行。</p>
       </div>
      </section>
     </div>
@@ -690,4 +681,30 @@ defineExpose({refresh});
 @media(max-width:600px){.w46-r4-channel-grid{grid-template-columns:1fr;padding:10px}.w46-r4-channel-title small{display:none}.w46-add-account-global{padding:5px 9px}}
 @media(prefers-reduced-motion:reduce){.w46-add-account-panel,.w46-add-platform{transition:none!important}}
 
+/* W09-3 PERSONA product empty state: no simulated learning/approvals. */
+.w46-r4-persona .w46-r4-persona-layout{grid-template-rows:auto!important;align-content:start!important;gap:14px;padding:clamp(12px,2.2vw,24px);grid-template-columns:minmax(0,1fr) minmax(245px,315px)}
+.w46-r4-persona-layout>.w46-r4-feature-card{align-self:start!important}
+.w46-persona-main-card{display:flex;flex-direction:column;min-height:385px}
+.w46-persona-main-card>.w46-r4-card-head{min-height:57px!important;padding:16px 20px}
+.w46-persona-main-card>.w46-r4-card-head strong{font-size:15px}
+.w46-persona-main-card .w46-persona-approval-status{font-size:11px}
+.w46-persona-verified-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;box-sizing:border-box;padding:40px 30px;min-height:300px}
+.w46-persona-empty-icon{display:grid;place-items:center;width:62px;height:62px;flex:0 0 62px;border-radius:18px;border:1px solid var(--border);background:rgba(var(--accent-rgb),.1);color:var(--accent);font-size:30px}
+.w46-persona-verified-empty h3{margin:4px 0 0;font-size:20px;letter-spacing:-.03em;color:var(--ink)}
+.w46-persona-verified-empty p{margin:0;max-width:450px;line-height:1.75;font-size:14px;color:var(--muted)}
+.w46-persona-verified-empty button{min-height:39px;margin-top:8px;padding:9px 18px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font-size:13px;font-weight:650;cursor:pointer}
+.w46-persona-guide>.w46-r4-card-head{padding:16px}
+.w46-persona-guide>.w46-r4-card-head strong{font-size:14px}
+.w46-persona-guide-list{display:grid;padding:8px 16px 0}
+.w46-persona-guide-list>div{display:flex;gap:10px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--border)}
+.w46-persona-guide-list>div:last-child{border-bottom:0}
+.w46-persona-guide-list>div>span{font-size:11px;font-weight:700;color:var(--accent);width:27px;flex:0 0 27px;padding-top:3px}
+.w46-persona-guide-list section{min-width:0}
+.w46-persona-guide-list section strong{font-size:13px;font-weight:650;color:var(--ink)}
+.w46-persona-guide-list section p{margin:5px 0 0;font-size:12px;line-height:1.65;color:var(--muted)}
+.w46-persona-guide>.w46-persona-guide-note{margin:6px 16px 16px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;line-height:1.65}
+.w46-r4-persona .w46-r4-feature-title small{color:var(--muted)}
+.w46-r4-persona .w46-r4-feature-tabs button{font-size:12px}
+@media(max-width:950px){.w46-r4-persona .w46-r4-persona-layout{grid-template-columns:minmax(0,1fr) minmax(215px,250px);gap:10px;padding:12px}.w46-persona-verified-empty{padding:30px 18px}}
+@media(max-width:719px){.w46-r4-persona .w46-r4-persona-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto!important;padding:10px}.w46-persona-main-card{min-height:360px}.w46-persona-main-card>.w46-r4-card-head{padding:14px}.w46-persona-verified-empty h3{font-size:18px}.w46-persona-verified-empty p{font-size:13px}.w46-r4-persona .w46-r4-feature-tabs button{font-size:11px}}
 </style>
