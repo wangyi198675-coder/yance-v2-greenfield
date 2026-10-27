@@ -40,7 +40,19 @@ async function refresh(){
    const snap=await readWorkspaceSnapshot({fetchImpl:request});
    if(alive&&t===seq)data.value=snap;
   }else if(category.value==='model'||category.value==='accounts'||category.value==='privacy'){
-   const s=await getJson('/api/v2/local-session/status');
+   let s=await getJson('/api/v2/local-session/status');
+   // Reuse the ORIGINAL PRIVATE local-only bootstrap. Settings cannot
+   // invent a secondary login/pairing ceremony or authorize paid inference.
+   // W47 refuses this POST outside its installed localhost single-user mode.
+   if(category.value==='model'&&s?.authorized!==true&&alive&&t===seq&&
+       typeof window!=='undefined'&&window.location.hostname==='127.0.0.1'){
+    try{
+     const started=await request('/api/v2/local-session/web-private-start',{
+      method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+     if(started.ok&&alive&&t===seq)
+      s=await getJson('/api/v2/local-session/status');
+    }catch{} // Native mode without signed W54/W47 remains unauthorized.
+   }
    if(alive&&t===seq){
     session.value=s;
     // The existing PRIVATE key settings accepts current signed local session CSRF only.
