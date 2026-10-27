@@ -299,12 +299,97 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!themeScope||!wowDeltaValid||!notifyDeltaValid||dirtySource||
+ // A W09 reviewed additive R4 MODEL delta on the latest true 44751 Web.
+ // Never use this alternative for unrelated source mutations, arbitrary
+ // descendants, or an unreviewed checkout. Original W46/W42 provenance is
+ // still required for every unchanged component.
+ const modelBase='53536380b7ce517cc4733c6966a7a549942f363d';
+ const modelHead='3449ed665eebb9110c4a60016ca4379b5b0cb967';
+ const modelReview='apps/web/evidence/W09_SCOPED_MODEL_DELTA_REVIEW_20261028.md';
+ const modelChanged=Object.freeze([
+  'apps/web/src/BCFunctionModelRouting.vue',
+  'apps/web/src/BCNativeCloudKeySettings.vue',
+  'apps/web/src/BCSettingsWorkspace.vue',
+  'apps/web/tests/w09-r4-approved-visual-fidelity.test.mjs',
+  'apps/web/tests/w46-function-model-routing.test.mjs',
+  'apps/web/tests/w46-model-settings-auto-private-session.test.mjs',
+  'apps/web/tests/w46-private-simple-rule.test.mjs',
+  'services/api/runtime/function-model-routing-http.mjs',
+  'services/api/runtime/function-model-routing.mjs',
+  'services/api/runtime/function-model-routing.test.mjs',
+  'services/api/runtime/function-model-w55-lease.test.mjs',
+  'services/api/runtime/openrouter-model-catalog.mjs',
+  'services/api/runtime/openrouter-model-catalog.test.mjs',
+  'services/api/runtime/private-brain-http.mjs',
+  'services/api/runtime/server.mjs',
+  'services/api/runtime/web-private-cloud-byok.mjs'
+ ]);
+ // The model delta intentionally modifies Settings, so HEAD cannot match the
+ // former theme Settings hash. Verify that the exact pre-delta 44751 base
+ // DID contain the formerly W46-attested theme/no-pair Settings and test.
+ // Never infer a new W46 signature from an old source blob.
+ const scopedOriginalNoPairValid=(()=>{
+  try{
+   git('merge-base','--is-ancestor',newestNoPairApprovedSha,modelBase);
+   return git('rev-parse',modelBase+':'+settingsPath)==='77c1bcc6728fa17a548fbcbf92da710438bd2464'&&
+    git('rev-parse',modelBase+':'+settingsTestPath)==='592708bc0484a4b164ddb6ad106021f7d4d53142'&&
+    git('rev-parse',newestNoPairApprovedSha+':'+settingsPath)===ownerFiles[settingsPath]&&
+    git('rev-parse',expectedOwnerSha+':'+settingsPath)===previousSettingsBlob&&
+    ownerAck.includes(previousSettingsBlob)&&
+    noPairReview.includes('W46_PR110_SETTINGS_UI_OWNER_REVIEW_ACK_PASS')&&
+    noPairReview.includes(newestNoPairApprovedSha)&&
+    noPairReview.includes('d470a9c38df937bbe3dbe170e6d628671e43fc99')&&
+    noPairReview.includes('700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
+    !git('show',modelBase+':'+settingsPath).includes('<BCLocalSessionConnector');
+  }catch{return false}
+ })();
+ const scopedModelReviewed=(()=>{
+  try{
+   if(signedSha!==expectedOwnerSha||dirtySource||!receiptTracked||
+      !signedAncestor||!originalW46BlobsValid||!w46ReviewValid||
+      !(noPairReviewValid||scopedOriginalNoPairValid)||!w42VisualValid||!mediaDesignValid)return false;
+   git('merge-base','--is-ancestor',modelBase,'HEAD');
+   git('merge-base','--is-ancestor',modelHead,'HEAD');
+   const originalPaths=git('diff','--name-only',modelBase,modelHead)
+     .split('\n').filter(Boolean);
+   if(originalPaths.length!==modelChanged.length||
+      originalPaths.some(p=>!modelChanged.includes(p)))return false;
+   const additional=git('diff','--name-only',modelHead,'HEAD')
+     .split('\n').filter(Boolean);
+   const hitTestFix='apps/web/src/BCVisualThemeSystem.css';
+   const reviewedHitTestBlob='934d4402942d0fe9b07a09583aaed33f9bdda8b6';
+   const nativeQrTest='apps/web/tests/w46-r4-channel-compact.test.mjs';
+   const reviewedNativeQrTestBlob='2084a4ff5d10bc49bc14c56ed59c23cc25413c19';
+   if(additional.length!==4||
+      !additional.includes(modelReview)||
+      !additional.includes(hitTestFix)||
+      !additional.includes(nativeQrTest)||
+      !additional.includes('apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(git('rev-parse','HEAD:'+nativeQrTest)!==reviewedNativeQrTestBlob||
+      git('hash-object','--',nativeQrTest)!==reviewedNativeQrTestBlob)return false;
+   if(git('rev-parse','HEAD:'+hitTestFix)!==reviewedHitTestBlob||
+      git('hash-object','--',hitTestFix)!==reviewedHitTestBlob)return false;
+   const review=readAck(modelReview);
+   if(!review.includes('W09_MODEL_SOURCE_DIFF_REVIEW_PASS')||
+      !review.includes(modelBase)||!review.includes(modelHead)||
+      !review.includes('Strict release addendum'))return false;
+   // No old R4 view can drift: every one of the 16 reviewed changed blobs
+   // is bitwise identical to the explicit W09 source pass head.
+   return modelChanged.every(path=>
+     existsSync(join(w46Root,path))&&
+     git('rev-parse','HEAD:'+path)===git('rev-parse',modelHead+':'+path)&&
+     git('hash-object','--',path)===git('rev-parse',modelHead+':'+path));
+  }catch{return false}
+ })();
+
+ const legacyR4Reviewed=!(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!themeScope||!wowDeltaValid||!notifyDeltaValid||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
     !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
-   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
+;
+ if(!legacyR4Reviewed&&!scopedModelReviewed)
+  throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
 }
 // This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
 // Keep 47182 as the default for unchanged signed B_88DED, never accept remote host.
