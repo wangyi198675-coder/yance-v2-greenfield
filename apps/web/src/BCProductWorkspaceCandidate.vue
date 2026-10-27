@@ -6,12 +6,15 @@ import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
 import BCLiveChatWorkspace from './BCLiveChatWorkspace.vue';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeHostSession from './BCNativeHostSession.vue';
+import BCMediaWorkspace from './BCMediaWorkspace.vue';
+import BCSettingsWorkspace from './BCSettingsWorkspace.vue';
 import {WORKSPACES,CHANNELS,R4_SETTINGS_CATEGORIES,R4_STOP_FAILURE_STATES,
  readWorkspaceSnapshot,explainCapability} from './product-workspace-contract.mjs';
 const props=defineProps({
  activeWorkspace:{type:String,default:'CHAT'},
  enabled:{type:Boolean,default:false},
  fetchImpl:{type:Function,default:null},
+ mediaAuthorityPort:{type:Object,default:null},
  appearance:{type:String,default:'dark'},
  theme:{type:String,default:'Obsidian Lime'}
 });
@@ -103,7 +106,7 @@ defineExpose({refresh});
     <span class="w46-inactive" data-test="w46-capability-status">
      {{explainCapability(snapshot,activeWorkspace)}}</span>
    </div>
-   <BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl" @navigate="choose"/>
+   <BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" @navigate="choose"/>
    <section v-if="activeWorkspace==='ACCOUNTS'" class="w46-r4-channel-workspace" data-test="w46-channel-workspace" aria-label="连接社交账号">
     <header class="w46-r4-channel-toolbar">
      <strong>连接社交账号</strong>
@@ -220,41 +223,11 @@ defineExpose({refresh});
      </aside>
     </div>
    </section>
-   <div v-else-if="activeWorkspace==='SETTINGS'" class="w46-settings" data-test="w46-settings-nine">
-    <label class="w46-settings-mobile" for="w46-settings-picker">设置分类 · 共 9 项
-     <select id="w46-settings-picker" v-model="settingCategory" aria-label="选择设置分类">
-      <option v-for="item in R4_SETTINGS_CATEGORIES" :key="item.id" :value="item.id">{{item.label}}</option>
-     </select>
-    </label>
-    <nav class="w46-settings-nav" aria-label="R4 设置九分类">
-      <Button v-for="item in R4_SETTINGS_CATEGORIES" :key="item.id" size="sm"
-       :data-test="'settings-'+item.id" :aria-pressed="settingCategory===item.id"
-       :variant="settingCategory===item.id?'secondary':'ghost'" @click="settingCategory=item.id">
-       {{item.label}}
-      </Button>
-    </nav>
-    <div class="w46-settings-main">
-     <h3>{{category.label}}</h3><p class="w46-note">当前没有可用的已授权设置写接口。本分类仅显示可信只读状态。</p>
-     <div class="w46-status-grid">
-    <div><strong>Web/API</strong><span>{{snapshot?.runtimeSha?.slice(0,12)||'不可用'}}</span></div>
-    <div><strong>可信会话</strong><span>{{snapshot?.trustedSession?'已验证':'未建立'}}</span></div>
-    <div><strong>账号连接</strong><span>{{readonlyAccount}}</span></div>
-    <div><strong>发送资格</strong><span>禁用 · W25 独立审批</span></div>
-     </div>
-     <div v-if="settingCategory==='accounts'" class="w46-auth-summary" data-test="w46-chatgpt-auth">
-      <h3>ChatGPT 官方授权</h3>
-      <p>ChatGPT 身份：未授权 · 套餐权益：未核验 · 模型费用资格：未核验。</p>
-      <Button disabled variant="outline" size="sm">使用 ChatGPT 登录 · 未接入官方授权</Button>
-     </div>
-     <BCNativeHostSession v-if="settingCategory==='diagnostics'" :fetch-impl="fetchImpl"/>
-     <div v-if="settingCategory==='diagnostics'||settingCategory==='privacy'" class="w46-danger-grid" data-test="w46-diagnostics-failclosed">
-      <div v-for="item in R4_STOP_FAILURE_STATES" :key="item.id" class="w46-danger">
-       <strong>{{item.id}}</strong><p>{{item.effect}}</p>
-       <span>未取得该状态的授权来源，此处仅定义禁用规则</span>
-      </div>
-     </div>
-    </div>
-   </div>
+   <BCSettingsWorkspace v-else-if="activeWorkspace==='SETTINGS'" :fetch-impl="fetchImpl"
+    :active="activeWorkspace==='SETTINGS'" :theme="theme" :appearance="appearance"
+    @navigate="choose" @cycle-theme="emit('cycle-theme')" @toggle-theme="emit('toggle-theme')"/>
+   <BCMediaWorkspace v-else-if="activeWorkspace==='MEDIA'" :fetch-impl="fetchImpl"
+    :active="activeWorkspace==='MEDIA'" :media-authority-port="mediaAuthorityPort"/>
    <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">
     <BCPrivateBrainWorkspace :fetch-impl="fetchImpl"/>
    </div>
