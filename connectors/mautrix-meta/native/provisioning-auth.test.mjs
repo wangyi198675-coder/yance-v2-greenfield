@@ -12,10 +12,20 @@ function upstream({principal='@owner:yance-w26.invalid',bot='@facebookbot:yance-
     if(url.includes('/account/whoami'))return Response.json(
       denyMatrix?{errcode:'M_UNKNOWN_TOKEN'}:{user_id:principal},
       {status:denyMatrix?401:200});
-    if(url.endsWith('/v3/whoami'))return Response.json({bridge_bot:bot,logins});
-    if(url.endsWith('/v3/login/flows'))return Response.json({flows:flows.map(id=>({id,name:id}))});
-    if(url.includes('/v3/logout/')){
-      const id=decodeURIComponent(url.split('/').pop());
+    if(new URL(url).pathname.endsWith('/v3/whoami')){
+      if(new URL(url).searchParams.get('user_id')!==principal)
+        return Response.json({error:'Matrix principal missing or changed'},{status:401});
+      return Response.json({bridge_bot:bot,logins});
+    }
+    if(new URL(url).pathname.endsWith('/v3/login/flows')){
+      if(new URL(url).searchParams.get('user_id')!==principal)
+        return Response.json({error:'Matrix principal missing or changed'},{status:401});
+      return Response.json({flows:flows.map(id=>({id,name:id}))});
+    }
+    if(new URL(url).pathname.includes('/v3/logout/')){
+      if(new URL(url).searchParams.get('user_id')!==principal)
+        return Response.json({error:'Matrix principal missing or changed'},{status:401});
+      const id=decodeURIComponent(new URL(url).pathname.split('/').pop());
       if(method!=='POST')return Response.json({}, {status:405});
       const n=logins.findIndex(l=>l.id===id);
       if(n<0)return Response.json({}, {status:404});
@@ -55,6 +65,9 @@ test('verified but never social-authorized local principal yields WAITING_USER_A
   assert.equal(s.canSend,false);
   assert.equal(s.w24ChannelAccountBindingVerified,false);
   assert.equal(seen.filter(c=>c.url.includes('/_matrix/provision/v3/')).length,1);
+  const nativeCall=seen.find(c=>c.url.includes('/_matrix/provision/v3/'));
+  assert.equal(new URL(nativeCall.url).searchParams.get('user_id'),
+    '@owner:yance-w26.invalid');
 });
 test('read original upstream login flows; never fabricate QR or start Meta login',async()=>{
   const seen=[];

@@ -35,6 +35,15 @@ export async function assertOfficialMatrixPrincipal(token,{fetchImpl=fetch}={}){
     || principal===EXPECTED_BOT)deny('INVALID_MATRIX_PRINCIPAL');
   return principal;
 }
+function officialBridgePath(path,principal){
+  if(typeof principal!=='string'||!/^@[^\s:]+:yance-w26\.invalid$/.test(principal)
+     ||principal===EXPECTED_BOT)deny('INVALID_MATRIX_PRINCIPAL',403);
+  // Official mautrix/go bridgev2 provisioning.go uses URL query "user_id"
+  // to resolve the Matrix user after verifying the bearer token.
+  const url=new URL(BRIDGE+path);
+  url.searchParams.set('user_id',principal);
+  return url.toString();
+}
 function normalizeLogin(l){
   const id=safeString(l?.id);
   const name=safeString(l?.name);
@@ -55,7 +64,8 @@ function normalizeLogin(l){
 }
 export async function readNativeAccountStatus(token,{fetchImpl=fetch}={}){
   const principal=await assertOfficialMatrixPrincipal(token,{fetchImpl});
-  const reply=await jsonRequest(BRIDGE+'/_matrix/provision/v3/whoami',token,{fetchImpl});
+  const reply=await jsonRequest(
+    officialBridgePath('/_matrix/provision/v3/whoami',principal),token,{fetchImpl});
   if(reply?.bridge_bot!==EXPECTED_BOT || !Array.isArray(reply?.logins))
     deny('PROVISIONING_BRIDGE_IDENTITY_MISMATCH',503);
   const logins=reply.logins.map(normalizeLogin);
@@ -70,7 +80,8 @@ export async function readNativeAccountStatus(token,{fetchImpl=fetch}={}){
 }
 export async function readNativeLoginFlows(token,{fetchImpl=fetch}={}){
   const status=await readNativeAccountStatus(token,{fetchImpl});
-  const reply=await jsonRequest(BRIDGE+'/_matrix/provision/v3/login/flows',token,{fetchImpl});
+  const reply=await jsonRequest(
+    officialBridgePath('/_matrix/provision/v3/login/flows',status.matrixPrincipal),token,{fetchImpl});
   if(!Array.isArray(reply.flows))deny('INVALID_NATIVE_LOGIN_FLOWS',503);
   const permitted=new Set(['facebook','messenger','messenger-lite','messenger-lite-android']);
   return Object.freeze({matrixPrincipal:status.matrixPrincipal,
@@ -97,7 +108,8 @@ export async function revokeNativeLogin(token,loginID,{confirmLoginID,explicitUs
   const authority=await authorizeDurableRevocation({principal:current.matrixPrincipal,loginId:loginID});
   if(authority?.committed!==true||!Number.isSafeInteger(authority.accountRevocationEpoch)
     ||authority.accountRevocationEpoch<1)deny('W24_DURABLE_REVOCATION_NOT_COMMITTED',409);
-  await jsonRequest(BRIDGE+'/_matrix/provision/v3/logout/'+encodeURIComponent(loginID),
+  await jsonRequest(officialBridgePath(
+    '/_matrix/provision/v3/logout/'+encodeURIComponent(loginID),current.matrixPrincipal),
     token,{method:'POST',fetchImpl});
   const after=await readNativeAccountStatus(token,{fetchImpl});
   if(after.logins.some(l=>l.loginId===loginID))deny('LOGOUT_POST_VERIFY_FAILED',503);
