@@ -9,7 +9,8 @@ import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
 import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
-import {createPrivateBrainHttp,createPrivateNativeInspectionHttp} from './private-brain-http.mjs';
+import {createPrivateBrainHttp,createPrivateNativeInspectionHttp,
+ createPrivateNativeExpertHttp,createContactNativeAuthorityHoldHttp} from './private-brain-http.mjs';
 import {createW43PythonPrivatePort} from './private-python-port.mjs';
 import {createW43NativeLedgerAdapter} from './private-native-ledger-port.mjs';
 import {readW54LocalBoot,createNativeStartupSession} from './native-private-startup.mjs';
@@ -130,6 +131,12 @@ const privateBrainHttp=createPrivateBrainHttp({
 const privateInspectionHttp=createPrivateNativeInspectionHttp({
  sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,w43Port
 });
+const privateExpertHttp=createPrivateNativeExpertHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,w43Port
+});
+const contactNativeAuthorityHttp=createContactNativeAuthorityHoldHttp({
+ sessionAuthority:localSessionAuthority,webOrigin
+});
 // W24 + W26..W29 provider SDK authority is absent, not a zero-contact
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
@@ -212,9 +219,18 @@ const handler=(req,res)=>{
       });
       return;
     }
+    if(url.pathname.startsWith('/api/v2/contact-context/')){
+      void contactNativeAuthorityHttp(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'CONTACT_CONTEXT_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'CONTACT_NATIVE_AUTHORITY_UNAVAILABLE');
+       else res.destroy();
+      });return;
+    }
     if(url.pathname.startsWith('/api/v2/private-brain/')){
-      // Existing W43 native read methods share this single W47 API / Session.
-      void privateInspectionHttp(req,res,url).then(handled=>
+      // W43's one Agno expert directory+Run/Trace uses the existing session.
+      void privateExpertHttp(req,res,url).then(handled=>
+        handled?true:privateInspectionHttp(req,res,url)).then(handled=>
         handled?true:privateBrainHttp(req,res,url)).then(handled=>{
          if(!handled&&!res.writableEnded)deny(res,404,'PRIVATE_BRAIN_ROUTE_NOT_FOUND');
         }).catch(()=>{
