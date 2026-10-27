@@ -15,7 +15,7 @@ export function createW47WhatsAppW24Bridge({
     typeof w54?.assertCurrentNativeUser!=='function'||
     typeof sdkEvidence?.verifySdkSelf!=='function'||
     typeof sdkEvidence?.verifySdkPeer!=='function'||
-    nativeBoot?.source!=='W54_NATIVE_CURRENT_USER')return null;
+    !['W54_NATIVE_CURRENT_USER','WEB_LOCAL_PRIVATE'].includes(nativeBoot?.source))return null;
  const binding=Object.freeze({
   channel,tenantId:'local-'+hash(nativeBoot.principalRef),
   accountId:'wa-'+hash(nativeBoot.installationRef+'|'+nativeBoot.principalRef),

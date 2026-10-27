@@ -10,18 +10,22 @@ export function createW47WhatsAppCurrentSessionPort({
  sessionAuthority,nativeBoot,nativeSession,webOrigin
 }={}){
  if(typeof sessionAuthority?.sessionFor!=='function'||
-    nativeBoot?.source!=='W54_NATIVE_CURRENT_USER'||nativeBoot.verified!==true||
+    !['W54_NATIVE_CURRENT_USER','WEB_LOCAL_PRIVATE'].includes(nativeBoot?.source)||nativeBoot.verified!==true||
     typeof nativeBoot.principalRef!=='string'||
     typeof nativeBoot.installationRef!=='string'||
     !Number.isSafeInteger(nativeBoot.nativeRevocationGeneration)||
-    !/^[a-f0-9]{64}$/.test(nativeSession?.binding??'')||
+    (nativeBoot.source==='W54_NATIVE_CURRENT_USER'&&
+     !/^[a-f0-9]{64}$/.test(nativeSession?.binding??''))||
     typeof webOrigin!=='string')return null;
  let liveWitness=null;
  function checked(req,operation){
   if(!req||!operations.has(operation))refuse('W54_WHATSAPP_ACTION_INVALID');
   const session=sessionAuthority.sessionFor(req);
-  if(session?.record?.kind!=='NATIVE_FIRST_PARTY'||
-     session.record.nativeHostBinding!==nativeSession.binding)
+  if(!session||
+     (nativeBoot.source==='WEB_LOCAL_PRIVATE'?
+       session.record.kind!=='WEB_LOCAL_PRIVATE':
+       (session.record.kind!=='NATIVE_FIRST_PARTY'||
+        session.record.nativeHostBinding!==nativeSession.binding)))
    refuse('W54_SIGNED_NATIVE_SESSION_REQUIRED');
   if(req.headers.origin&&req.headers.origin!==webOrigin)
    refuse('W54_WHATSAPP_ORIGIN_DENIED');
@@ -51,7 +55,8 @@ export function createW47WhatsAppCurrentSessionPort({
   const current=checked(issued.request,operation);
   if(current.id!==issued.sessionRef||current.record!==issued.sessionRecord)
    refuse('W54_SESSION_REVOKED_DURING_ACTION');
-  return Object.freeze({verified:true,kind:'NATIVE_FIRST_PARTY',
+  return Object.freeze({verified:true,kind:nativeBoot.source==='WEB_LOCAL_PRIVATE'?
+    'WEB_LOCAL_PRIVATE':'NATIVE_FIRST_PARTY',
    principalRef:nativeBoot.principalRef,
    installationRef:nativeBoot.installationRef,
    sessionRef:current.id,
@@ -62,7 +67,9 @@ export function createW47WhatsAppCurrentSessionPort({
   const {request,sessionId,record}=liveWitness;
   const now=sessionAuthority.sessionFor(request);
   return now?.id===sessionId&&now.record===record&&
-   record.nativeHostBinding===nativeSession.binding;
+   (nativeBoot.source==='WEB_LOCAL_PRIVATE'?
+     record.kind==='WEB_LOCAL_PRIVATE':
+     record.nativeHostBinding===nativeSession.binding);
  };
  return Object.freeze({resolveSignedNativeSession,verifyNativeSession,
   assertCurrentNativeUser});

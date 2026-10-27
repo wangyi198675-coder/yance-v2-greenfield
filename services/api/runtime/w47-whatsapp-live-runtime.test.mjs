@@ -64,3 +64,53 @@ test('actual W47+W44 SQLite+W25 SQLite+original W28 Controller mount read-only a
   rmSync(root,{recursive:true,force:true,maxRetries:12,retryDelay:100});
  }
 });
+
+test('actual WEB_LOCAL_PRIVATE opens W47 W44 W25 Baileys without W54 nativeBoot/binding, QR only after user click',async()=>{
+ const root=mkdtempSync(join(tmpdir(),'w47-whatsapp-web-'));
+ const authority=createLocalSessionAuthority();
+ const boot={source:'WEB_LOCAL_PRIVATE',verified:true,appLocalDataRoot:root,
+  principalRef:'web_private_local_owner_001',
+  installationRef:'web_install_private_local_001',nativeRevocationGeneration:0};
+ let runtime=null,server=null;
+ try{
+  runtime=await createW47WhatsAppLiveRuntime({
+   nativeBoot:boot,nativeSession:null,sessionAuthority:authority,
+   webOrigin:origin,w55Executable:process.env.W55_SIGNAL_EXE||
+    'C:\\\\uninstalled\\\\w55-signal-exe-not-used.exe',
+  });
+  assert.equal(typeof runtime.handler,'function');
+  server=createServer(async(req,res)=>{
+   const url=new URL(req.url,'http://127.0.0.1');
+   if(await runtime.handler(req,res,url))return;
+   res.writeHead(404);res.end();
+  });
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));
+  const base='http://127.0.0.1:'+server.address().port;
+  let resp=await fetch(base+'/api/v2/providers/whatsapp-personal/native/status');
+  assert.equal(resp.status,401);
+  const created=authority.issueWebPrivate();
+  const cookie='yance_web_private_session='+created.id;
+  resp=await fetch(base+'/api/v2/providers/whatsapp-personal/native/status',{
+   headers:{origin,cookie}});
+  assert.equal(resp.status,200);
+  const status=await resp.json();
+  assert.equal(status.state,'WAITING_USER_AUTH');
+  assert.equal(status.connected,false);
+  resp=await fetch(base+'/api/v2/providers/whatsapp-personal/native/qr',{
+   headers:{origin,cookie}});
+  assert.equal(resp.status,409);
+  resp=await fetch(base+'/api/v2/providers/whatsapp-personal/native/authorize',{
+   method:'POST',headers:{origin,cookie,'Content-Type':'application/json',
+   'x-yance-csrf':'f'.repeat(64)},
+   body:JSON.stringify({accountLocator:'current-own-whatsapp'})});
+  assert.equal(resp.status,401); // wrong CSRF: NEVER create SDK socket
+  authority.revokeAll();
+  resp=await fetch(base+'/api/v2/providers/whatsapp-personal/native/status',{
+   headers:{origin,cookie}});
+  assert.equal(resp.status,401);
+ }finally{
+  if(server)await new Promise(r=>server.close(r));
+  runtime?.close();
+  rmSync(root,{recursive:true,force:true,maxRetries:12,retryDelay:100});
+ }
+});

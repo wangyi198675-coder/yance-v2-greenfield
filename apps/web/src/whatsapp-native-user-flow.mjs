@@ -29,7 +29,16 @@ async function authorizedCsrf(fetchImpl){
     method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error',
     referrerPolicy:'no-referrer'});
   if(!response?.ok)fail('WHATSAPP_LOCAL_SESSION_REQUIRED');
-  const r=await response.json();
+  let r=await response.json();
+  if(r?.ok===true&&r.paired===false){
+    // Start the EXISTING same-origin WEB_LOCAL_PRIVATE session automatically.
+    // This is only a local browser cookie, NOT WhatsApp pairing/consent.
+    const activated=await fetchImpl('/api/v2/local-session/web-private-start',{
+      method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',
+      referrerPolicy:'no-referrer',headers:{'Content-Type':'application/json'},body:'{}'
+    });
+    if(activated?.ok)r=await activated.json();
+  }
   if(r?.ok!==true||r.paired!==true||
     !['NATIVE_FIRST_PARTY','WEB_LOCAL_PRIVATE'].includes(r.sessionKind)||
     !/^[a-f0-9]{64}$/.test(r.csrfToken??'')||
@@ -38,7 +47,8 @@ async function authorizedCsrf(fetchImpl){
   // browser token never authorizes WhatsApp pairing on its own.
   return r.csrfToken;
 }
-export async function readWhatsAppNative({fetchImpl}={}){
+export async function readWhatsAppNative({fetchImpl=globalThis.fetch}={}){
+  await authorizedCsrf(fetchImpl);
   const value=await request(prefix+'/status',{fetchImpl});
   if(value.channel!=='WHATSAPP_PERSONAL'||value.source!=='BAILEYS_NATIVE_SDK'||
     !allowedStates.has(value.state)||value.connected!==(value.state==='ONLINE')||

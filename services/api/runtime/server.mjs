@@ -3,7 +3,7 @@
 import {createServer} from 'node:http';
 import {homedir} from 'node:os';
 import {join} from 'node:path';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
@@ -50,7 +50,12 @@ const localSessionAuthority=createLocalSessionAuthority({ttlMs:customTtl?Number(
 // child stdin. No HTTP request, localhost Origin or frontend-supplied profile
 // supplies these private current-user fields or receives the HttpOnly cookie.
 const nativeBoot=readW54LocalBoot();
-const webPrivateMode=process.env.YANCE_W47_WEB_PRIVATE_SINGLE_USER==='1';
+// Highest rule §2A/6A: local single-user Web is usable without W54/NSIS.
+// Explicit 0 disables automatic local Web mode; loopback+same-origin only.
+const webPrivateMode=process.env.YANCE_W47_WEB_PRIVATE_SINGLE_USER==='1'||
+ (process.env.YANCE_W47_WEB_PRIVATE_SINGLE_USER!=='0'&&
+  config.mode==='development'&&!nativeBoot&&
+  /^http:\/\/127\.0\.0\.1:[0-9]{4,5}$/.test(webOrigin));
 if(webPrivateMode&&(config.mode!=='development'||nativeBoot||
    !/^http:\/\/127\.0\.0\.1:[0-9]{4,5}$/.test(webOrigin)))
  throw Error('W47_WEB_PRIVATE_QA_LOOPBACK_DEVELOPMENT_ONLY');
@@ -154,11 +159,21 @@ const nativeSettingsCatalog=createW47NativeSettingsCatalog({
 // only after providers are actually running, never synthetic adapter objects.
 // The actual W28/W24/W44/W25/W55 graph is installed ONLY under the
 // existing signed W54 native launch, never localhost or a test-only actor.
-const whatsAppLive=nativeBoot&&nativeSession&&process.env.YANCE_W55_SIGNAL_NATIVE_EXE?
+// Web users click WhatsApp themselves; the existing local Web private session
+// binds the original SDK controller. Windows DPAPI is discovered in background,
+// never a terminal pairing/installer prerequisite for a browser visit.
+const whatsAppLocalBoot=nativeBoot??(webPrivatePrincipal?Object.freeze({
+ ...webPrivatePrincipal,nativeRevocationGeneration:0
+}):null);
+const packagedSignal=webPrivateRoot?
+ join(webPrivateRoot,'NativeOwners','whatsapp_signal_auth.exe'):null;
+const whatsAppSignalExecutable=process.env.YANCE_W55_SIGNAL_NATIVE_EXE||
+ (packagedSignal&&existsSync(packagedSignal)?packagedSignal:null);
+const whatsAppLive=whatsAppLocalBoot&&whatsAppSignalExecutable?
  await import('./w47-whatsapp-live-runtime.mjs').then(({createW47WhatsAppLiveRuntime})=>
-  createW47WhatsAppLiveRuntime({nativeBoot,nativeSession,
+  createW47WhatsAppLiveRuntime({nativeBoot:whatsAppLocalBoot,nativeSession,
    sessionAuthority:localSessionAuthority,webOrigin,
-   w55Executable:process.env.YANCE_W55_SIGNAL_NATIVE_EXE})):null;
+   w55Executable:whatsAppSignalExecutable})):null;
 const nativeOwnerReads=createNativeOwnerReadHttp({
  sessionAuthority:localSessionAuthority,webOrigin,
  ...(whatsAppLive?{

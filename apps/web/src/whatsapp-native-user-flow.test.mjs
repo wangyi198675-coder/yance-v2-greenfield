@@ -34,15 +34,17 @@ test('normal click goes to ORIGINAL W28 native POST with only selector + valid W
 test('do not create WhatsApp Socket without real native current session',async()=>{
  const a=fake(async()=>({ok:true,paired:false,canSend:false,providerAuthorized:false}));
  await assert.rejects(connectWhatsAppNative({fetchImpl:a.fetchImpl}),/WHATSAPP_LOCAL_SESSION_REQUIRED/);
- assert.equal(a.calls.length,1);
+ assert.equal(a.calls.length,2);
+ assert.equal(a.calls[1].url,'/api/v2/local-session/web-private-start');
+ assert.equal(a.calls.some(c=>c.url.endsWith('/native/authorize')),false);
 });
 test('native status must be truly online and have verified real account JID',async()=>{
- const a=fake(async()=>waState);
+ const a=fake(async(url)=>url.includes('local-session')?authenticated:waState);
  const s=await readWhatsAppNative({fetchImpl:a.fetchImpl});
  assert.equal(s.online,false);assert.equal(s.qrAvailable,true);
- const bad=fake(async()=>({...waState,state:'ONLINE',connected:true,accountIdentityVerified:true}));
+ const bad=fake(async(url)=>url.includes('local-session')?authenticated:({...waState,state:'ONLINE',connected:true,accountIdentityVerified:true}));
  await assert.rejects(readWhatsAppNative({fetchImpl:bad.fetchImpl}),/WHATSAPP_NATIVE_STATUS_INVALID/);
- const online=fake(async()=>({...waState,state:'ONLINE',connected:true,accountIdentityVerified:true,
+ const online=fake(async(url)=>url.includes('local-session')?authenticated:({...waState,state:'ONLINE',connected:true,accountIdentityVerified:true,
   account:{platformJid:'555200@s.whatsapp.net'}}));
  assert.equal((await readWhatsAppNative({fetchImpl:online.fetchImpl})).online,true);
 });
@@ -69,6 +71,7 @@ test('native revoke needs original server CSRF and no provider credentials in br
   /WHATSAPP_UNSUPPORTED_ACTION/);
 });
 test('HTTP 503 surfaces actual not-connected reason; never downgrade to fake docs PASS',async()=>{
- const a=fake(async()=>({http:503,body:{ok:false,error:'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED'}}));
+ const a=fake(async(url)=>url.includes('local-session')?authenticated:
+  ({http:503,body:{ok:false,error:'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED'}}));
  await assert.rejects(readWhatsAppNative({fetchImpl:a.fetchImpl}),/WHATSAPP_HTTP_503/);
 });

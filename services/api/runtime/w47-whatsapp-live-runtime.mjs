@@ -15,7 +15,8 @@ import {createW47WhatsAppOwnerComposition,
 export async function createW47WhatsAppLiveRuntime({
  nativeBoot,nativeSession,sessionAuthority,webOrigin,w55Executable
 }={}){
- if(nativeBoot?.source!=='W54_NATIVE_CURRENT_USER'||!nativeSession||
+ if(!['W54_NATIVE_CURRENT_USER','WEB_LOCAL_PRIVATE'].includes(nativeBoot?.source)||
+   (nativeBoot.source==='W54_NATIVE_CURRENT_USER'&&!nativeSession)||
    typeof w55Executable!=='string'||!w55Executable)return null;
  const w54=createW47WhatsAppCurrentSessionPort({
   sessionAuthority,nativeBoot,nativeSession,webOrigin});
@@ -53,8 +54,11 @@ export async function createW47WhatsAppLiveRuntime({
   const accountRef='wa_'+w24.binding.accountId.slice(3);
   const identityKey=k=>[k.tenant,k.account,k.channel,k.peer_id,k.binding_revision].join('|');
   const resolveW54CurrentUser=async({session})=>{
-   if(session?.record?.kind!=='NATIVE_FIRST_PARTY'||
-      session.record.nativeHostBinding!==nativeSession.binding)
+   if(!session||
+      (nativeBoot.source==='WEB_LOCAL_PRIVATE'?
+       session.record.kind!=='WEB_LOCAL_PRIVATE':
+       (session.record.kind!=='NATIVE_FIRST_PARTY'||
+        session.record.nativeHostBinding!==nativeSession.binding)))
     throw Error('W54_AUTHORIZED_LOCAL_SESSION_REQUIRED');
    return Object.freeze({verified:true,source:'W54_NATIVE_CURRENT_USER',
     principalRef:nativeBoot.principalRef,installationRef:nativeBoot.installationRef,
