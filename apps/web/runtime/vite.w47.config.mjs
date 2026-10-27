@@ -128,7 +128,7 @@ if(r4IsolatedPreview){
  })();
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'c1d54e10f9ccfb4f4afb3b99b5a04e81128fe2fc',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'40253f78f33f329aeb950a45c99739abffc867c6',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'ea1577aabcba2b11bba091321f007fd1c45cda75'
  });
  // Reuse the exact already-running 6b0118d multi-account UI: no new authority.
@@ -176,7 +176,7 @@ if(r4IsolatedPreview){
   &&[...themeEvidence].every(path=>existsSync(join(w46Root,path))&&
      git('hash-object','--',path)===git('rev-parse','HEAD:'+path))
   &&git('rev-parse','HEAD:apps/web/src/BCProductWorkspaceCandidate.vue')===
-    'c1d54e10f9ccfb4f4afb3b99b5a04e81128fe2fc';
+    '40253f78f33f329aeb950a45c99739abffc867c6';
  // Only user-approved MIT visual layer on top of fixed-44751 Persona SHA; zero business rewrites.
  const wowBase='02764244af7ae329085c4bb0c1cec939780d5a20';
  const wowFiles=Object.freeze({"apps/web/src/BCProductWorkspaceCandidate.vue":"34a02c2b9a42940e0a3174de633c8ae095e07475","apps/web/src/BCVisualAurora.vue":"0b2a805c9dee236a02cd9c7954146eb7c6ee5056","apps/web/src/BCVisualThemeSystem.css":"4b700fa0e41f1c2ee25210017bb42563195ba1a6","apps/web/tests/w09-wow-visual-themes.test.mjs":"d5d8b6997f3595dc9e11c0144cfb031f6e4328a4"});
