@@ -12,9 +12,14 @@ const features=Object.freeze([
 ]);
 const labels=Object.freeze({LLAMACPP_LOCAL_QWEN3_8B_FREE:'本地Qwen3',OPENROUTER_USER_API:'OpenRouter',CHATGPT_PLAN_SIWC:'ChatGPT会员'});
 const state=ref(null),busy=ref(false),error=ref(''),notice=ref(''),drafts=ref({}),pendingPaid=ref('');
+const search=ref(''),searchModels=ref([]),searchBusy=ref(false),totalMatches=ref(0);
 let requestEpoch=0;
 const isReady=computed(()=>state.value?.authoritative===true);
-const options=computed(()=>state.value?.availableModels?.filter(m=>m.available&&m.configured)||[]);
+const options=computed(()=>{
+ const entries=[...(state.value?.availableModels||[]),...searchModels.value];
+ const unique=new Map(entries.filter(m=>m.available&&m.configured).map(m=>[m.provider+'|'+m.modelId,m]));
+ return [...unique.values()];
+});
 const fetcher=(url,opt={})=>(props.fetchImpl||globalThis.fetch)(url,{credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',...opt});
 const key=x=>x.provider+'|'+x.modelId;
 const describe=code=>code==='CURRENT_USER_SESSION_REQUIRED'?'当前尚未建立有效私人会话':code==='MODEL_ROUTING_VERSION_CONFLICT'?'模型设置已更新，请刷新后再操作':code==='MODEL_NOT_AVAILABLE_FOR_ASSIGNMENT'?'原生模型或账号已失效，请核实来源':code==='OPENROUTER_COST_CONFIRMATION_REQUIRED'?'需要先确认OpenRouter单独计费':'模型分配服务暂不可用';
@@ -26,11 +31,24 @@ async function load(){
   if(ticket!==requestEpoch)return;
   if(!r.ok||result?.ok!==true||result?.authoritative!==true||
    !Array.isArray(result?.assignments)||!Array.isArray(result?.availableModels))throw Error(result?.error||('HTTP_'+r.status));
-  state.value=result;
+  state.value=result;searchModels.value=[];totalMatches.value=0;
   drafts.value=Object.fromEntries(result.assignments.map(a=>[a.functionId,
    a.choice?key(a.choice):'']));
  }catch(e){if(ticket===requestEpoch){state.value=null;error.value=describe(String(e?.message||e))}}
  finally{if(ticket===requestEpoch)busy.value=false}
+}
+async function lookup(){
+ if(!state.value||searchBusy.value)return;
+ searchBusy.value=true;error.value='';
+ try{
+  const route='/api/v2/model-routing/catalog?q='+encodeURIComponent(search.value.trim())+'&limit=100';
+  const response=await fetcher(route);
+  const data=await response.json();
+  if(!response.ok||data?.authoritative!==true||!Array.isArray(data?.models))
+   throw Error(data?.error||'MODEL_CATALOG_UNAVAILABLE');
+  searchModels.value=data.models;totalMatches.value=data.total;
+ }catch(e){error.value=describe(String(e?.message||e))}
+ finally{searchBusy.value=false}
 }
 watch([()=>props.active,()=>props.csrf],([yes])=>{if(yes)void load();else{requestEpoch++;state.value=null;drafts.value={}}},{immediate:true});
 async function save(feature){
@@ -76,6 +94,13 @@ const saved=id=>state.value?.assignments?.find(a=>a.functionId===id)||null;
    <div><strong>OpenRouter</strong><span>{{options.some(x=>x.provider==='OPENROUTER_USER_API')?'有已确认Key的可选模型':'需要本人Key及模型选择'}}</span></div>
    <div><strong>ChatGPT会员</strong><span>官方套餐授权及模型目录尚未接通</span></div>
   </div>
+  <form class="bc-routing-search" data-test="model-routing-search" @submit.prevent="lookup">
+   <label for="bc-function-model-search">搜索真实可用模型</label>
+   <input id="bc-function-model-search" v-model.trim="search" type="search" autocomplete="off"
+    placeholder="例如 Claude、GPT、Gemini…" maxlength="96" :disabled="!isReady||searchBusy"/>
+   <button type="submit" :disabled="!isReady||searchBusy">{{searchBusy?'搜索中':'查找模型'}}</button>
+   <small v-if="totalMatches">匹配 {{totalMatches}} 个官方模型，可继续输入关键词缩小范围</small>
+  </form>
   <div class="bc-routing-rows" data-test="model-routing-rows">
    <div v-for="f in features" :key="f.id" class="bc-routing-row" :data-feature="f.id">
     <div class="bc-routing-row-name"><strong>{{f.name}}</strong>
@@ -85,10 +110,14 @@ const saved=id=>state.value?.assignments?.find(a=>a.functionId===id)||null;
      :value="drafts[f.id]||''" :disabled="!isReady||busy||options.length===0"
      @change="e=>{drafts[f.id]=e.target.value;pendingPaid=''}">
      <option value="">请选择真实可用模型</option>
-     <option v-for="m in options" :key="key(m)" :value="key(m)">{{labels[m.provider]}} · {{m.modelId}}</option>
+     <option v-for="m in options" :key="key(m)" :value="key(m)"
+      :disabled="f.id==='MEDIA_UNDERSTANDING'&&m.capabilities?.vision!==true">{{labels[m.provider]}} · {{m.name||m.modelId}}</option>
+     <option v-if="saved(f.id)?.choice&&saved(f.id)?.eligible&&
+      !options.some(m=>key(m)===key(saved(f.id).choice))"
+      :value="key(saved(f.id).choice)">{{labels[saved(f.id).choice.provider]}} · {{saved(f.id).choice.modelId}}</option>
     </select>
     <button type="button" :data-test="'model-routing-save-'+f.id"
-     :disabled="!isReady||busy||!drafts[f.id]||drafts[f.id]=== (saved(f.id)?.choice?key(saved(f.id).choice):'')"
+      :disabled="!isReady||busy||!csrf||!drafts[f.id]||drafts[f.id]=== (saved(f.id)?.choice?key(saved(f.id).choice):'')"
      @click="save(f.id)">{{pendingPaid===f.id?'确认OpenRouter费用':'保存'}}</button>
    </div>
   </div>
@@ -104,6 +133,13 @@ const saved=id=>state.value?.assignments?.find(a=>a.functionId===id)||null;
 .bc-routing-sources{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
 .bc-routing-sources>div{display:grid;gap:6px;padding:13px;border:1px solid var(--border);border-radius:13px;background:var(--surface-soft);box-shadow:0 5px 25px #00000014}
 .bc-routing-sources strong{font-size:13px}.bc-routing-sources span{font-size:11px;color:var(--muted);line-height:1.45}
+.bc-routing-search{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bc-routing-search label{font-size:12px;color:var(--muted)}
+.bc-routing-search input{flex:1;min-width:140px;max-width:500px;min-height:38px;
+ border:1px solid var(--border);background:var(--surface-soft);color:var(--ink);border-radius:22px;padding:8px 12px}
+.bc-routing-search button{border:1px solid var(--border);background:var(--surface-soft);color:var(--ink);
+ border-radius:10px;min-height:38px;padding:8px 11px;cursor:pointer}
+.bc-routing-search button:disabled{opacity:.5}.bc-routing-search small{width:100%;color:var(--muted)}
 .bc-routing-rows{display:grid;gap:2px}
 .bc-routing-row{display:grid;grid-template-columns:minmax(140px,1fr) minmax(170px,1.3fr) 73px;gap:12px;align-items:center;border-bottom:1px solid var(--border);padding:11px 0}
 .bc-routing-row-name{display:grid;gap:4px}.bc-routing-row-name strong{font-size:13px}.bc-routing-row-name small{font-size:11px;color:var(--muted)}
