@@ -61,7 +61,13 @@ if(r4IsolatedPreview){
  })();
  const receiptTracked=[canonicalAck,visualAck,legacyAck].every(path=>
    git('ls-tree','-r','--name-only','HEAD','--',path)===path);
- const dirtySource=git('status','--porcelain');
+ // Vite 7 writes a transient bundled config beside this file WHILE it
+ // imports the config. It is not a source edit; its exact generated filename
+ // is the sole exclusion. Any other tracked/untracked change remains RED.
+ const dirtySource=git('status','--porcelain','--untracked-files=all')
+   .split('\n').filter(line=>line&&
+     !/^\?\? apps\/web\/runtime\/vite\.w47\.config\.mjs\.timestamp-[0-9]+-[a-f0-9]+\.mjs$/.test(line))
+   .join('\n');
  const validSignedBlobs=Object.entries(ownerFiles).every(([path,sha])=>
    existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&
    git('rev-parse','HEAD:'+path)===sha);
