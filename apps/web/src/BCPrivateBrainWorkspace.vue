@@ -200,9 +200,9 @@ function checkedModelCatalog(dto){
  return modelCatalog(dto,publicProviders.value);
 }
 const providers=computed(()=>publicProviders.value.map(p=>({
- id:p.id,name:p.name,desc:p.id==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?'选装。不安装也不阻止云端模型':
- p.id==='OPENAI_USER_API'?'API Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度':
- '用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key'
+ id:p.id,name:p.name,desc:p.id==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?'在电脑上运行的本地模型（可选）':
+ p.id==='OPENAI_USER_API'?'使用你自己的 OpenAI API Key':
+ '使用你自己的 OpenRouter API Key'
 })));
 function clearSession(){
  session.value=null;catalog.value=null;chosen.value='';
@@ -244,7 +244,7 @@ async function refresh(){
   if(!s.authorized){
    // Ordinary PRIVATE use never asks the person for a terminal pair code.
    // The original W47 process/session owner must establish local access on app startup.
-   loadState.value='setup-required';setupOpen.value=true;return
+   loadState.value='setup-required';return
   }
   session.value=s;armExpiry(s.expiresAt);
   let models;
@@ -259,9 +259,9 @@ async function refresh(){
   // Existing Agno History must load with NO model configured.
   await loadHistory(id);
   if(!safeCurrent(id))return;
-  if(!models.configured){loadState.value='no-model';setupOpen.value=true;return}
+  if(!models.configured){loadState.value='no-model';return}
  }catch(e){if(safeCurrent(id)){
-   loadState.value='service-unavailable';setupOpen.value=true;notice.value=reason(e)
+   loadState.value='service-unavailable';notice.value=reason(e)
   }}
  finally{if(safeCurrent(id))busy.value=false}
 }
@@ -331,9 +331,9 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
 <template>
  <section ref="brainRoot" class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
   <header class="bc-private-brain-head">
-   <div class="bc-private-brain-heading"><strong>闺蜜大脑</strong><span>私人 Agno · 独立会话</span>
-    <p class="bc-private-brain-state" role="status" data-test="brain-state">
-   {{loadState==='checking'?'正在核实服务端':loadState==='ready'?'历史已由服务端恢复':
+   <div class="bc-private-brain-heading"><strong>闺蜜大脑</strong><span>你的私人 AI 助手</span>
+    <p v-if="loadState==='checking'||loadState==='service-unavailable'||loadState==='history-unavailable'" class="bc-private-brain-state" role="status" data-test="brain-state">
+   {{loadState==='checking'?'正在连接':loadState==='ready'?'':
     loadState==='no-model'?'尚未配置 AI 模型':
     loadState==='setup-required'?'先设置 AI 模型；本机服务连接后即可聊天':
     loadState==='service-unavailable'?'AI 服务暂时不可用，仍可查看模型设置':
@@ -363,10 +363,11 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
     <p v-else-if="traceReadState==='unavailable'">此Run的原生Trace未授权或不可用。</p>
     <p v-else-if="traceReadState==='ready'&&nativeTrace">Run {{nativeTrace.runId}}：{{nativeTrace.count}} 条有来源Trace（{{nativeTrace.status}}）</p>
    </template></details>
-  <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings" id="w46-brain-model-menu" role="menu" aria-label="当前私人模型选择">
-   <h3>选择 AI 模型</h3>
+  <div v-if="setupOpen" class="bc-brain-model-backdrop" @click.self="closeBrainMenu()">
+  <section class="bc-private-settings" data-test="brain-model-settings" id="w46-brain-model-menu" role="dialog" aria-modal="true" aria-labelledby="brain-model-dialog-title">
+   <div class="bc-brain-model-header"><div><h3 id="brain-model-dialog-title">选择 AI 模型</h3><p>选择已配置的模型，开始与闺蜜大脑聊天</p></div><button type="button" class="bc-brain-model-close" aria-label="关闭模型设置" @click="closeBrainMenu(true)">✕</button></div>
    <BCNativeCloudKeySettings :web-csrf="session?.csrf" @changed="refresh"/>
-   <p>可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。</p>
+   <p class="bc-brain-model-section-label">可用模型</p>
    <div v-for="provider in providers" :key="provider.id" class="bc-provider">
     <strong>{{provider.name}}</strong><small>{{provider.desc}}</small>
     <template v-for="m in catalog?.models.filter(x=>x.provider===provider.id)||[]" :key="m.modelId">
@@ -381,12 +382,16 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
     <span>{{selected?.billingNotice||'该云端模型可能按调用收费。'}}我确认选择此云端模型并了解可能产生的费用。</span>
    </label>
    <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy||!modelChangeRequired||(paidChangeRequiresConsent&&!modelCostApproved)" @click="selectModel">{{modelChangeRequired?'确认使用此模型':'当前正在使用'}}</Button>
-   <p class="bc-private-notice" data-test="brain-native-key-hold">
-    云端 API Key 仅在服务端确认安全保存接口可用时才能提交。暂未接通时不会在浏览器内保存密钥，也不会要求安装桌面版。
-   </p>
-  </div>
+   <p class="bc-brain-model-footer-note" data-test="brain-native-key-hold">密钥仅在本机受保护的服务端保存。模型未配置时不会调用付费 API。</p>
+  </section>
+ </div>
   <div class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
-   <p v-if="!messages.length">暂无经过服务端确认的历史消息</p>
+   <div v-if="!messages.length" class="bc-brain-empty-state" data-test="brain-empty-state">
+    <div class="bc-brain-empty-symbol" aria-hidden="true">✦</div>
+    <h2>{{loadState==='ready'?'有什么想聊的？':'开始和闺蜜大脑聊天'}}</h2>
+    <p>{{loadState==='checking'?'正在载入会话…':loadState==='ready'?'随时向我提问，或从下面输入你想做的事情。':'选择一个 AI 模型，随后就可以开始对话。'}}</p>
+    <button v-if="loadState!=='ready'&&loadState!=='checking'" type="button" @click="toggleBrainModel">选择 AI 模型</button>
+   </div>
    <article v-for="(m,i) in messages" :key="i" :data-role="m.role">
     <strong>{{m.role==='user'?'你':m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
     <p>{{m.content}}</p>
@@ -422,13 +427,13 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
    <small v-if="catalog?.configured&&catalog.selectedProvider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
    <textarea id="bc-private-question" v-model="text" rows="2" maxlength="4000"
-     data-test="brain-question" placeholder="向闺蜜大脑提问；可召唤专家或执行已授权任务" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
+     data-test="brain-question" :placeholder="loadState==='ready'?'给闺蜜大脑发消息…':'选择 AI 模型后开始聊天'" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
    <div class="bc-brain-compose-toolbar">
     <div class="bc-brain-compose-tools">
      <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert" aria-haspopup="menu" aria-controls="w46-brain-expert-menu">＋ 专家</Button>
      <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model" aria-haspopup="menu" aria-controls="w46-brain-model-menu">模型</Button>
      <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toggleBrainTools" data-test="brain-compose-tools" aria-haspopup="menu" aria-controls="w46-brain-tools-menu">工具</Button>
-     <Button type="button" size="sm" variant="ghost" disabled title="附件尚待W23原生媒体资格接线" data-test="brain-attachment">附件</Button>
+
     </div>
     <Button type="submit" data-test="brain-send"
      :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送 ↗'}}</Button>
@@ -518,4 +523,35 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
 .bc-private-settings{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 64px));bottom:103px;width:min(410px,calc(100vw - 24px));max-height:min(67vh,540px)}
 .bc-brain-trace{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 115px));bottom:103px;width:min(320px,calc(100vw - 24px));max-height:65vh}
 @media(max-width:719px){.bc-brain-context-menu,.bc-private-settings,.bc-brain-trace{left:10px!important;bottom:96px;width:min(340px,calc(100vw - 20px))}}
+/* W09-3 44751 PRIVATE model setup: visual only, original authority preserved. */
+.bc-brain-model-backdrop{position:absolute;inset:0;z-index:80;display:grid;place-items:center;padding:20px;background:rgba(4,10,13,.64);backdrop-filter:blur(3px)}
+.bc-private-brain .bc-private-settings{position:relative!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;box-sizing:border-box;width:min(620px,100%);max-width:620px;max-height:min(620px,calc(100dvh - 76px));min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;gap:14px;align-content:start;padding:20px 22px;background:var(--surface-raised,var(--surface));border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 72px rgba(0,0,0,.38);color:var(--ink);font-size:13px;line-height:1.55}
+.bc-brain-model-header{position:sticky;top:-20px;z-index:2;display:flex;align-items:start;justify-content:space-between;gap:20px;padding:2px 0 13px;background:var(--surface-raised,var(--surface));border-bottom:1px solid var(--border)}
+.bc-brain-model-header h3{font-size:19px;margin:0 0 4px;font-weight:700;letter-spacing:-.02em}
+.bc-brain-model-header p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.bc-brain-model-close{display:grid;place-items:center;width:34px;height:34px;min-width:34px;min-height:34px;flex:0 0 34px;background:var(--surface-soft)!important;color:var(--ink)!important;border:1px solid var(--border);border-radius:9px;cursor:pointer}
+.bc-brain-model-section-label{font-size:13px;font-weight:700;margin:2px 0 0}
+.bc-private-brain .bc-provider{padding:12px 14px;gap:5px;border-radius:11px;background:var(--surface);font-size:13px}
+.bc-private-brain .bc-provider small{font-size:12px;line-height:1.6}
+.bc-private-brain .bc-provider label{font-size:13px}
+.bc-brain-model-footer-note{font-size:12px;color:var(--muted);line-height:1.6;margin:2px 0 0}
+.bc-private-settings :deep(.cloud-key-panel){gap:9px;padding:14px 15px;border-radius:11px;background:var(--surface)}
+.bc-private-settings :deep(.cloud-key-panel p){font-size:12px;line-height:1.55}
+.bc-private-settings :deep(.cloud-key-panel input),.bc-private-settings :deep(.cloud-key-panel select){font-size:13px;min-height:38px}
+.bc-private-history .bc-brain-empty-state{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:28px 18px;box-sizing:border-box}
+.bc-brain-empty-symbol{font-size:42px;color:var(--accent);text-shadow:0 0 26px rgba(var(--accent-rgb),.35)}
+.bc-brain-empty-state h2{margin:0;font-size:22px;letter-spacing:-.03em;color:var(--ink);font-weight:650}
+.bc-brain-empty-state p{margin:0;max-width:440px;font-size:14px;line-height:1.7;color:var(--muted)}
+.bc-brain-empty-state button{border:1px solid var(--accent);border-radius:10px;background:rgba(var(--accent-rgb),.15);color:var(--ink);padding:10px 18px;margin-top:7px;font-size:13px;cursor:pointer}
+.bc-private-brain-heading>span{font-size:12px}
+.bc-private-brain-actions button{font-size:12px}
+@media(max-width:719px){
+ .bc-brain-model-backdrop{padding:10px}
+ .bc-private-brain .bc-private-settings{width:100%;max-height:calc(100dvh - 45px);padding:15px 14px;gap:10px}
+ .bc-brain-model-header{top:-15px}
+ .bc-brain-model-header h3{font-size:17px}
+ .bc-brain-model-header p{font-size:12px}
+ .bc-brain-empty-state h2{font-size:19px}
+ .bc-brain-empty-state p{font-size:13px}
+}
 </style>
