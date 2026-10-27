@@ -37,8 +37,11 @@ test('UI never displays raw SDK / WAITING_USER_AUTH as ordinary user-facing stat
  assert.match(card,/data-test="native-provider-details"/);
 });
 test('unverified account count is not invented and technical details are not permanently visible',()=>{
- assert.match(parent,/snapshot\?\.trustedSession\?'已验证账号 '/);
- assert.match(parent,/账号状态待验证/);
+ assert.match(parent,/v-if="snapshot\?\.trustedSession"/);
+ assert.match(parent,/已验证 \{\{readonlyAccount\}\} 个/);
+ assert.match(parent,/w46-add-account-global/);
+ assert.match(parent,/w46-account-add-dialog/);
+ assert.match(parent,/w46-add-platform-/);
  assert.match(parent,/v-if="channelDetailsOpen"/);
  assert.match(parent,/data-test="w46-channel-details-toggle"/);
 });

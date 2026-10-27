@@ -268,9 +268,14 @@ void fetch('/api/v2/contacts',{credentials:'omit',redirect:'error'}).then(async 
            !code.includes('<div v-if="!w46WorkspaceEnabled" class="lab-strip">'))
           throw Error('W47_BC_LAB_STRIP_CONTRACT_CHANGED');
         if(w46R4Candidate&&!r4IsolatedPreview){
-          const activation="const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'";
+          // Exact reviewed W46 source uses an opt-out (?productDraft=0) for
+          // the compact R4 view, plus Tauri asset-host support. The older
+          // opt-in string is obsolete on the currently deployed bf99216 base.
+          // Keep an exact fail-closed activation contract; this intentional
+          // user-authorized local 44751 build shows the existing R4 view.
+          const activation="const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')!=='0'||w46InstalledAssetHost";
           failUnless(code,activation);
-          code=code.replace(activation,'const w46WorkspaceEnabled=false');
+          code=code.replace(activation,'const w46WorkspaceEnabled=true');
         }
         code=code.replace(/const accounts=\[[^\n]*\]/,"const accounts=['ALL']");
         code=code.replace(/const queue=\[[\s\S]*?\n\]\nconst currentException/,

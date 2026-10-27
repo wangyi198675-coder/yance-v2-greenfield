@@ -23,6 +23,14 @@ const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
 const channelDetailsOpen=ref(false);
+const addAccountOpen=ref(false);
+const connectTrigger=ref({});
+function connectAnother(channelId){
+ if(!CHANNELS.some(item=>item.id===channelId))return;
+ connectTrigger.value={...connectTrigger.value,[channelId]:(connectTrigger.value[channelId]||0)+1};
+ addAccountOpen.value=false;
+}
+
 const contentScroller=ref(null);
 const settingCategory=ref('general');
 // Design tabs are navigation only until authoritative Persona/Expert APIs are signed.
@@ -58,6 +66,7 @@ async function refresh(){
 watch(()=>props.enabled,refresh,{immediate:true});
 watch(()=>props.activeWorkspace,async()=>{
  menuOpen.value=false;
+ addAccountOpen.value=false;
  closePersonaDetail();
  await nextTick();
  if(contentScroller.value)contentScroller.value.scrollTop=0;
@@ -109,17 +118,33 @@ defineExpose({refresh});
    <BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" @navigate="choose"/>
    <section v-if="activeWorkspace==='ACCOUNTS'" class="w46-r4-channel-workspace" data-test="w46-channel-workspace" aria-label="连接社交账号">
     <header class="w46-r4-channel-toolbar">
-     <strong>连接社交账号</strong>
+     <div class="w46-r4-channel-title"><strong>我的聊天账号</strong><small>连接多个账号，所有消息仍在「聊天」中查看</small></div>
      <div class="w46-r4-channel-actions">
-      <span class="w46-r4-channel-count" data-test="w46-authoritative-account-count">{{snapshot?.trustedSession?'已验证账号 '+readonlyAccount:'账号状态待验证'}}</span>
+      <span v-if="snapshot?.trustedSession" class="w46-r4-channel-count" data-test="w46-authoritative-account-count">已验证 {{readonlyAccount}} 个</span>
+      <button type="button" class="w46-add-account-global" data-test="w46-add-account-global" :aria-expanded="addAccountOpen"
+       @click="addAccountOpen=!addAccountOpen">＋ 添加账号</button>
       <button type="button" class="w46-r4-channel-details-toggle" data-test="w46-channel-details-toggle"
        :aria-expanded="channelDetailsOpen" aria-controls="w46-channel-details"
-       @click="channelDetailsOpen=!channelDetailsOpen">{{channelDetailsOpen?'收起详情':'账号详情'}} <span aria-hidden="true">{{channelDetailsOpen?'⌃':'⌄'}}</span></button>
+       @click="channelDetailsOpen=!channelDetailsOpen">{{channelDetailsOpen?'收起详情':'帮助'}}</button>
      </div>
     </header>
     <div class="w46-r4-channel-grid" data-test="w46-channel-grid" aria-label="四平台原生连接入口">
      <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
-      :channel="channel" :fetch-impl="fetchImpl"/>
+      :channel="channel" :fetch-impl="fetchImpl" :connect-trigger="connectTrigger[channel.id]||0"/>
+    </div>
+    <div v-if="addAccountOpen" class="w46-add-account-backdrop" data-test="w46-account-add-dialog" @click.self="addAccountOpen=false">
+     <section class="w46-add-account-panel" role="dialog" aria-modal="true" aria-label="添加聊天账号">
+      <header><div><strong>添加聊天账号</strong><p>选择平台，在言策中连接你自己的账号</p></div>
+       <button type="button" aria-label="关闭添加账号" @click="addAccountOpen=false">✕</button>
+      </header>
+      <button v-for="channel in CHANNELS" :key="channel.id" type="button" class="w46-add-platform"
+       :data-test="'w46-add-platform-'+channel.id" @click="connectAnother(channel.id)">
+       <span class="w46-add-platform-icon"><BCBrandIcon :name="channel.id" :size="30"/></span>
+       <span class="w46-add-platform-label"><strong>{{channel.id==='FB_PERSONAL'?'Facebook Messenger':channel.id==='FB_PAGE'?'Facebook Page':channel.id==='WHATSAPP_PERSONAL'?'WhatsApp':'Telegram'}}</strong>
+        <small>{{channel.id==='FB_PAGE'?'添加你管理的公共主页':'添加你的个人账号'}}</small></span>
+       <span aria-hidden="true">›</span>
+      </button>
+     </section>
     </div>
     <section v-if="channelDetailsOpen" id="w46-channel-details" class="w46-r4-channel-details"
      data-test="w46-multi-account" role="region" aria-label="账号连接详情">
@@ -432,4 +457,43 @@ defineExpose({refresh});
 .w46-r4-channel-details p{color:var(--muted);margin:7px 0 0}
 @media(max-width:1099px){.w46-r4-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.w46-r4-channel-grid{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}.w46-r4-channel-details{margin:0 10px 10px}.w46-r4-channel-toolbar{padding:4px 10px}.w46-r4-channel-toolbar>strong{font-size:13px}.w46-r4-channel-count{display:none}}
+
+/* R4 four-column personal account view, preserving existing nav and theme tokens. */
+.w46-r4-channel-workspace{position:relative}
+.w46-r4-channel-grid{gap:12px;padding:14px;align-items:start}
+.w46-r4-channel-title{display:grid;gap:2px;min-width:0}
+.w46-r4-channel-title strong{font-size:14px;letter-spacing:-.02em}
+.w46-r4-channel-title small{font-size:10px;color:var(--muted)}
+.w46-r4-channel-actions{gap:9px}
+.w46-add-account-global{min-height:31px;padding:5px 12px;border:1px solid rgba(var(--accent-rgb),.65);
+ border-radius:9px;background:rgba(var(--accent-rgb),.14);color:var(--accent);
+ font-size:11px;font-weight:750;white-space:nowrap;cursor:pointer}
+.w46-add-account-global:hover,.w46-add-account-global:focus-visible{background:rgba(var(--accent-rgb),.23);
+ outline:2px solid rgba(var(--accent-rgb),.24);outline-offset:2px}
+.w46-r4-channel-details-toggle{min-height:31px;padding:4px 10px;font-size:11px}
+.w46-add-account-backdrop{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.66);
+ display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
+.w46-add-account-panel{width:min(412px,100%);max-height:min(640px,90vh);overflow-y:auto;
+ border:1px solid rgba(var(--accent-rgb),.26);border-radius:19px;
+ background:var(--bg2);box-shadow:0 24px 64px rgba(0,0,0,.38);padding:18px}
+.w46-add-account-panel>header{display:flex;align-items:start;justify-content:space-between;
+ margin-bottom:14px;padding:0 0 12px;border-bottom:1px solid var(--border)}
+.w46-add-account-panel>header strong{font-size:17px;color:var(--ink)}
+.w46-add-account-panel>header p{font-size:11px;color:var(--muted);margin:5px 0 0}
+.w46-add-account-panel>header button{border:0;background:var(--surface-soft);border-radius:9px;
+ color:var(--ink);font-size:13px;width:30px;height:30px;cursor:pointer}
+.w46-add-platform{display:flex;align-items:center;gap:12px;width:100%;padding:11px 10px;
+ margin-bottom:7px;background:var(--surface-soft);border:1px solid var(--border);
+ border-radius:12px;color:var(--ink);text-align:left;cursor:pointer}
+.w46-add-platform:hover,.w46-add-platform:focus-visible{border-color:var(--accent);
+ background:rgba(var(--accent-rgb),.07);outline-offset:2px}
+.w46-add-platform-icon{display:grid;place-items:center;width:35px;height:35px;border-radius:10px;
+ border:1px solid var(--border);flex:0 0 35px}
+.w46-add-platform-label{display:grid;gap:4px;min-width:0;flex:1}
+.w46-add-platform-label strong{font-size:12px}
+.w46-add-platform-label small{font-size:10px;color:var(--muted)}
+.w46-add-platform>span:last-child{font-size:22px;color:var(--muted)}
+@media(max-width:1099px){.w46-r4-channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.w46-r4-channel-grid{grid-template-columns:1fr;padding:10px}.w46-r4-channel-title small{display:none}.w46-add-account-global{padding:5px 9px}}
+@media(prefers-reduced-motion:reduce){.w46-add-account-panel,.w46-add-platform{transition:none!important}}
 </style>
