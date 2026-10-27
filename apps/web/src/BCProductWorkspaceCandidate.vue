@@ -21,6 +21,11 @@ const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref
 const menuOpen=ref(false);
 const contentScroller=ref(null);
 const settingCategory=ref('general');
+// Design tabs are navigation only until authoritative Persona/Expert APIs are signed.
+const personaTab=ref('pending'),expertTab=ref('experts');
+const personaTabs=Object.freeze([{id:'pending',label:'待审规则'},{id:'current',label:'当前人格'},{id:'versions',label:'版本'}]);
+const expertTabs=Object.freeze([{id:'experts',label:'专家 10'},{id:'tasks',label:'任务'},{id:'skills',label:'Skills / MCP'}]);
+const designExpertCatalog=Object.freeze(['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家']);
 const category=computed(()=>R4_SETTINGS_CATEGORIES.find(c=>c.id===settingCategory.value)||R4_SETTINGS_CATEGORIES[0]);
 let epoch=0;
 const selected=computed(()=>WORKSPACES.find(x=>x.id===props.activeWorkspace)||WORKSPACES[0]);
@@ -119,22 +124,48 @@ defineExpose({refresh});
     </div>
     <small>安全状态说明：当前未收到真实 REVOKED / 过期 / 预算不足事件，不将演示状态冒充线上告警。</small>
    </div>
-   <div v-else-if="activeWorkspace==='PERSONA'" class="w46-native-catalog" data-test="w46-persona-studio">
-     <header><h2>人格 Studio</h2><small>真实学习与审批待接线</small></header>
-     <div class="w46-persona-panel"><strong>规则与历史版本</strong><p>等待 W43/W45 提供原生规则、学习历史和版本状态，不显示虚构规则。</p>
-      <div class="w46-native-actions"><Button disabled size="sm">批准规则 · 暂未接通</Button><Button disabled size="sm">暂停</Button><Button disabled size="sm">撤销</Button><Button disabled size="sm">版本回滚</Button></div>
-     </div>
-   </div>
-   <div v-else-if="activeWorkspace==='TASKS'" class="w46-native-catalog" data-test="w46-tools-experts">
-    <header><h2>工具与任务</h2><small>唯一 Agno 工具、运行和专家</small></header>
-    <details class="w46-native-panel"><summary>专家中心 · 十类设计候选</summary>
-     <p>原 W43 专家注册与联系人作用域尚未返回可核验清单，当前不可调用。</p>
-     <div class="w46-experts-grid">
-      <div v-for="name in ['人格与真人表达专家','德国 WhatsApp 自然聊天专家','欧洲语言文化专家','长期关系记忆专家','聊天目标规划专家','回复质量成长专家','多媒体对话专家','系统健康安全专家','开源能力发现专家','安全修复升级专家']" :key="name" class="w46-expert-item"><strong>{{name}}</strong><small>待W43核实安装与授权</small></div>
-     </div>
-    </details>
-    <details class="w46-native-panel"><summary>工具运行 / Skills / MCP / Trace</summary><p>尚无此工作区经服务端签署的任务与运行回读，不模拟执行成功。</p></details>
-   </div>
+   <section v-else-if="activeWorkspace==='PERSONA'" class="w46-r4-feature" data-test="w46-persona-studio">
+    <header class="w46-r4-feature-toolbar">
+     <div class="w46-r4-feature-title"><strong>人格与学习</strong><small>规则 · 记忆 · 版本</small></div>
+     <nav class="w46-r4-feature-tabs" aria-label="人格与学习"><button v-for="tab in personaTabs" :key="tab.id" type="button" :class="{active:personaTab===tab.id}" :aria-pressed="personaTab===tab.id" :data-test="'w46-persona-tab-'+tab.id" @click="personaTab=tab.id">{{tab.label}}</button></nav>
+    </header>
+    <div class="w46-r4-feature-body w46-r4-persona-layout">
+     <section class="w46-r4-feature-card">
+      <div class="w46-r4-card-head"><strong>{{personaTab==='pending'?'待审规则':personaTab==='current'?'当前人格':'版本历史'}}</strong><small>无已核验数据</small></div>
+      <div class="w46-r4-feature-empty" role="status" data-test="w46-persona-source-hold">
+       <strong>{{personaTab==='pending'?'暂无经服务端核验的待审规则':personaTab==='current'?'当前人格版本尚未取得权威回读':'尚无经核验的历史版本'}}</strong>
+       <p>本人事实、联系人推断和学习建议必须按原W43/W45权威来源分别读取。不会把设计示例自动写成人格规则。</p>
+      </div>
+     </section>
+     <aside class="w46-r4-feature-card w46-r4-details"><div class="w46-r4-card-head"><strong>人格版本与控制</strong><small>需真实版本资格</small></div>
+      <p>批准、暂停、撤权及版本回滚必须取得原生CAS与版本回读；未接通不能显示已生效。</p>
+      <div class="w46-native-actions"><Button disabled size="sm">批准规则</Button><Button disabled size="sm">暂停</Button><Button disabled size="sm">撤销</Button><Button disabled size="sm">版本回滚</Button></div>
+     </aside>
+    </div>
+   </section>
+   <section v-else-if="activeWorkspace==='TASKS'" class="w46-r4-feature" data-test="w46-tools-experts">
+    <header class="w46-r4-feature-toolbar">
+     <div class="w46-r4-feature-title"><strong>工具与任务</strong><small>已完成 ≠ 已启用</small></div>
+     <nav class="w46-r4-feature-tabs" aria-label="工具与任务"><button v-for="tab in expertTabs" :key="tab.id" type="button" :class="{active:expertTab===tab.id}" :aria-pressed="expertTab===tab.id" :data-test="'w46-expert-tab-'+tab.id" @click="expertTab=tab.id">{{tab.label}}</button></nav>
+    </header>
+    <div class="w46-r4-feature-body w46-r4-expert-layout">
+     <section class="w46-r4-feature-card">
+      <div class="w46-r4-card-head"><strong>{{expertTab==='experts'?'专家目录 · 十类设计候选':expertTab==='tasks'?'任务与运行':'Skills / MCP'}}</strong><small>待W43核实安装与授权</small></div>
+      <div v-if="expertTab==='experts'" class="w46-r4-expert-list" data-test="w46-r4-expert-list">
+       <div v-for="(name,index) in designExpertCatalog" :key="name" class="w46-r4-expert-row">
+        <span class="w46-r4-expert-glyph" aria-hidden="true">{{index===0?'◈':index===8?'⌕':'✧'}}</span>
+        <div><strong>{{name}}</strong><small>{{index===8?'原W43本地只读源码已接入；当前Web启用与权限尚未回读':'设计目录候选，尚无真实安装与执行资格'}}</small></div>
+        <Button size="sm" variant="outline" disabled :title="'等待W43/W47原生身份及启用状态确认'">待核验</Button>
+       </div>
+      </div>
+      <div v-else class="w46-r4-feature-empty"><strong>尚无经本机服务确认的{{expertTab==='tasks'?'任务执行记录':'Skills / MCP 能力'}}</strong><p>只能由原Agno工具、运行和Trace返回真实来源，未接通时不模拟结果。</p></div>
+     </section>
+     <aside class="w46-r4-feature-card w46-r4-details"><div class="w46-r4-card-head"><strong>任务与执行详情</strong><small>按需查看</small></div>
+      <p>选择合法安装的专家或任务后，才显示Agno Run、Tool与Trace。未完成身份和能力签署前不允许调用。</p>
+      <div class="w46-r4-feature-empty" role="status">已验证执行：暂无 · 授权范围：未获得原生回读</div>
+     </aside>
+    </div>
+   </section>
    <div v-else-if="activeWorkspace==='SETTINGS'" class="w46-settings" data-test="w46-settings-nine">
     <label class="w46-settings-mobile" for="w46-settings-picker">设置分类 · 共 9 项
      <select id="w46-settings-picker" v-model="settingCategory" aria-label="选择设置分类">
@@ -173,7 +204,7 @@ defineExpose({refresh});
    <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">
     <BCPrivateBrainWorkspace :fetch-impl="fetchImpl"/>
    </div>
-   <div v-else class="w46-blank">
+   <div v-else-if="activeWorkspace!=='CHAT'" class="w46-blank">
     <strong>{{selected.label}}尚未授权</strong>
     <p>已保留单一 Agno／现有 W25 契约，不会为界面另建 Agent 或消息发送链。</p>
     <p v-if="activeWorkspace==='BRAIN'">唯一闺蜜大脑仍使用原产品右栏/工作区，未获可信 Run 前不产生模型回复。</p>
@@ -281,10 +312,40 @@ defineExpose({refresh});
 .w46-native-catalog{display:grid;align-content:start;gap:12px;flex:1;overflow:auto;padding:16px clamp(12px,3vw,28px)}
 .w46-native-catalog header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;justify-content:space-between}.w46-native-catalog h2{font-size:18px;margin:0}.w46-native-catalog small{color:var(--muted)}
 .w46-persona-panel,.w46-native-panel{display:grid;gap:12px;max-width:1100px;border:1px solid var(--border);border-radius:15px;padding:16px;background:var(--bg2)}
-.w46-native-actions{display:flex;flex-wrap:wrap;gap:8px}.w46-native-actions button:disabled{opacity:.62}
+.w46-native-actions{display:flex;flex-wrap:wrap;gap:8px}.w46-native-actions button:disabled{opacity:.42;filter:grayscale(.5);cursor:not-allowed}
 .w46-experts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:8px}.w46-expert-item{display:grid;gap:5px;border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface)}
 .w46-native-panel summary{cursor:pointer}.w46-native-catalog p{font-size:12px;color:var(--muted);margin:0}
+/* Approved R4 Expert and Persona structure: visible list first; no fabricated
+   installed expert, persona rule, run or grant. 43px contextual toolbar. */
+.w46-r4-feature{display:flex;min-height:0;min-width:0;flex:1;flex-direction:column;background:var(--bg)}
+.w46-r4-feature-toolbar{box-sizing:border-box;display:flex;flex:0 0 43px;min-height:43px;align-items:center;justify-content:space-between;padding:0 17px;gap:10px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.w46-r4-feature-title{display:flex;gap:9px;align-items:center;white-space:nowrap}
+.w46-r4-feature-title strong{font-size:15px}.w46-r4-feature-title small{font-size:11px;color:var(--muted)}
+.w46-r4-feature-tabs{display:flex;align-items:center;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.w46-r4-feature-tabs button{flex-shrink:0;padding:6px 9px;border:0;border-radius:8px;color:var(--muted);background:transparent;cursor:pointer;font-size:11px}
+.w46-r4-feature-tabs button.active{background:rgba(var(--accent-rgb),.13);color:var(--accent)}
+.w46-r4-feature-tabs button:focus-visible{outline:2px solid var(--accent)}
+.w46-r4-feature-body{box-sizing:border-box;display:grid;flex:1;min-height:0;min-width:0;gap:12px;padding:13px 15px;overflow:auto;align-content:start}
+.w46-r4-expert-layout{grid-template-columns:minmax(0,1fr) 315px}
+.w46-r4-persona-layout{grid-template-columns:minmax(0,1fr) 290px}
+.w46-r4-feature-card{min-width:0;border:1px solid var(--border);background:var(--bg2);border-radius:12px;overflow:hidden;align-self:start}
+.w46-r4-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px;border-bottom:1px solid var(--border)}
+.w46-r4-card-head strong{font-size:13px}.w46-r4-card-head small{color:var(--muted);font-size:10px}
+.w46-r4-expert-list{padding:3px 13px}
+.w46-r4-expert-row{display:flex;align-items:center;gap:11px;min-height:59px;padding:10px 2px;border-bottom:1px solid var(--border)}
+.w46-r4-expert-row:last-child{border:0}
+.w46-r4-expert-glyph{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border-radius:10px;color:var(--accent);background:var(--surface-soft);border:1px solid var(--border)}
+.w46-r4-expert-row>div{min-width:0;display:grid;gap:4px;flex:1}
+.w46-r4-expert-row strong{font-size:12px}.w46-r4-expert-row small{font-size:10px;color:var(--muted);line-height:1.5}
+.w46-r4-expert-row button:disabled{opacity:.56;cursor:not-allowed}
+.w46-r4-details{padding:0 0 13px}.w46-r4-details>p,.w46-r4-details>.w46-r4-feature-empty,.w46-r4-details>.w46-native-actions{margin:12px 13px}
+.w46-r4-details p{font-size:12px;line-height:1.7;color:var(--muted)}
+.w46-r4-feature-empty{padding:20px 14px;color:var(--muted);font-size:12px;line-height:1.65}
+.w46-r4-feature-empty strong{display:block;color:var(--ink);font-size:13px}.w46-r4-feature-empty p{margin-top:8px}
+@media(max-width:1000px){.w46-r4-expert-layout{grid-template-columns:minmax(0,1fr) 260px}.w46-r4-persona-layout{grid-template-columns:minmax(0,1fr) 250px}}
+@media(max-width:719px){.w46-r4-feature-toolbar{padding:0 9px}.w46-r4-feature-title small{display:none}.w46-r4-feature-body{padding:8px;grid-template-columns:minmax(0,1fr)}.w46-r4-details{display:none}.w46-r4-feature-tabs button{padding:6px}.w46-r4-expert-row{gap:8px}}
 .w46-candidate-content>.w46-operator-grid,.w46-candidate-content>.w46-channel-grid,.w46-candidate-content>.w46-settings,.w46-candidate-content>.w46-blank{padding:16px;overflow:auto;min-height:0}
+@media(min-width:720px) and (max-width:1099px){.w46-main-links button{padding:7px 9px!important}}
 @media(max-width:719px){.w46-compact-global{display:flex;padding:0 7px;gap:4px}.w46-compact-brand strong{display:none}.w46-brand-glyph{height:27px;width:27px}.w46-main-links{flex:1;justify-content:flex-start;gap:0}.w46-main-links button{font-size:11px;padding:7px 6px!important}.w46-global-tools button{padding:5px!important;min-width:26px}.w46-compact-global .w46-workspace-menu{left:7px;transform:none}.w46-brain-one{padding:0}}
 @media(max-width:360px){.w46-main-links button{font-size:10px;padding:6px 4px!important}.w46-global-tools{gap:0}.w46-compact-brand{margin:0}}
 @media(prefers-reduced-motion:reduce){.w46-brand-glyph{box-shadow:none}}
