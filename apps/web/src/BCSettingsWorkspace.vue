@@ -114,7 +114,7 @@ function requestNotificationPermission(){
    </template>
    <template v-else-if="category==='accounts'">
     <article data-test="settings-panel-accounts"><h3>账号与官方授权</h3>
-     <p>本机用户：{{data?.authorized?'已授权本机会话':'未取得有效会话'}}</p>
+     <p>只有真人社交账号连接需要按对应平台的官方流程授权。使用本地聊天和私人闺蜜大脑，不需要额外登录或验证。</p>
      <p>本机会话绝不等同于四渠道官方登录。</p>
      <div class="bc-settings-channel-grid"><BCChannelAccountSetup v-for="x in channels" :key="x.id" :channel="x" :fetch-impl="fetchImpl"/></div>
      <p data-test="settings-accounts-no-terminal-pair">直接选择需要连接的社交平台，并按对应平台的官方步骤授权；本地聊天与私人助手无需额外验证。</p>
@@ -160,7 +160,7 @@ function requestNotificationPermission(){
    </template>
    <template v-else-if="category==='privacy'">
     <article data-test="settings-panel-privacy"><h3>本机会话与隐私</h3>
-     <p>当前会话：{{data?.authorized?'已由原W47确认':'未授权或不可用'}}</p>
+     <p>本机私人会话由应用内部安全管理，不代表已经获得社交账号、联系人隐私或真人发送权限。</p>
      <p>所有联系人K、密钥、Grant撤销需以原Owner服务端权限及版本回读为准；不会将本地会话注销冒充全部渠道撤权。</p>
      <p data-test="settings-privacy-no-terminal-pair">私人本地会话由言策应用内部管理，无需额外操作。社交账号、隐私资料和真人发送仍按现有授权进行保护。</p>
      <p data-test="settings-local-session-state">私人本机会话：{{session?.paired===true?"已建立":"未建立；私人助手会按原有安全流程处理"}}</p>
