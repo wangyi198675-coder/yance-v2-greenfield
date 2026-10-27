@@ -205,7 +205,7 @@ if(r4IsolatedPreview){
   &&[...themeEvidence].every(path=>existsSync(join(w46Root,path))&&
      git('hash-object','--',path)===git('rev-parse','HEAD:'+path))
   &&git('rev-parse','HEAD:apps/web/src/BCProductWorkspaceCandidate.vue')===
-    '40253f78f33f329aeb950a45c99739abffc867c6';
+    chatUiFiles['apps/web/src/BCProductWorkspaceCandidate.vue'];
  // Only user-approved MIT visual layer on top of fixed-44751 Persona SHA; zero business rewrites.
  const wowBase='02764244af7ae329085c4bb0c1cec939780d5a20';
  const wowFiles=Object.freeze({"apps/web/src/BCProductWorkspaceCandidate.vue":"34a02c2b9a42940e0a3174de633c8ae095e07475","apps/web/src/BCVisualAurora.vue":"0b2a805c9dee236a02cd9c7954146eb7c6ee5056","apps/web/src/BCVisualThemeSystem.css":"4b700fa0e41f1c2ee25210017bb42563195ba1a6","apps/web/tests/w09-wow-visual-themes.test.mjs":"d5d8b6997f3595dc9e11c0144cfb031f6e4328a4"});
@@ -333,7 +333,7 @@ if(r4IsolatedPreview){
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
     !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
-   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED '+JSON.stringify({signedAncestor,chatUiDeltaValid,toolsUiTestValid,multiScope,pageUiScope,waUxVerified,themeScope,wowDeltaValid,notifyDeltaValid,dirtySource,receiptTracked,galleryScope,validSignedBlobs,w46ReviewValid,noPairReviewValid,w42VisualValid,mediaDesignValid}));
+   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
 }
 // This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
 // Keep 47182 as the default for unchanged signed B_88DED, never accept remote host.
