@@ -1,4 +1,5 @@
 // Original W24 IdentityConsent to existing W47 authorized-contact GET.
+import {canonicalK} from './identity-consent.mjs';
 // No second account store; all native platform inventory callbacks come from
 // W26-29 and must check REAL SDK account authorization and peer provenance.
 const required=s=>typeof s==='string'&&s.length>0&&s.length<=200;
@@ -72,7 +73,7 @@ export function createW24NativeOwnerReadPorts({
     currentKey.get(a.accountRef).accountAnchorPeerId!==a.accountAnchorPeerId||
     currentKey.get(a.accountRef).bindingRevision!==a.bindingRevision))
     deny('ACCOUNT_BINDING_CHANGED_DURING_READ');
-  const seen=new Set(),result=[];
+  const seen=new Set(),result=[],finalPeers=[];
   for(const account of accounts){
    const original=currentKey.get(account.accountRef);
    const w44=readW44IdentityAuthority({actor:native.principalRef,
@@ -105,12 +106,19 @@ export function createW24NativeOwnerReadPorts({
       input_domain:'CONTACT'};
     const read=identityConsent.assertCurrent(ctx,k);
     const epoch=identityConsent.readConsentEpoch(ctx,k);
+    const identityKey=canonicalK(k);
     if(read?.binding_revision!==peer.bindingRevision||
+       read?.identity_key!==identityKey||
        !Number.isSafeInteger(epoch)||epoch<=0)
       deny('W24_CONTACT_CONSENT_OR_BINDING_STALE');
+    // Keep ALL five native identity segments; displayName and peerRef alone
+    // are not conversation identifiers, even when two contacts share a name.
+    finalPeers.push({k,ctx,identityKey,epoch,accountRef:account.accountRef});
     result.push(Object.freeze({accountRef:account.accountRef,
       channel:account.channel,peerRef:peer.peerRef,
       bindingRevision:peer.bindingRevision,displayName:peer.displayName,
+      identity:Object.freeze({...k}),identityKey,
+      accountEpoch:read.account_revocation_epoch,consentEpoch:epoch,
       w24CurrentKVerified:true,w24ConsentCurrent:true}));
    }
   }
@@ -139,6 +147,17 @@ export function createW24NativeOwnerReadPorts({
    if(w44?.account?.active!==true||w44.account.owner!==native.principalRef||
      w44.bindingRevision!==account.bindingRevision||w44.accountEpoch!==account.accountEpoch)
     deny('W24_ACCOUNT_CHANGED_BEFORE_CONTACT_RESPONSE');
+  }
+  // A peer may be revoked/rebound while SDK account inventory is awaited.
+  // Final per-Peer strict W24/W44 read ensures no revoked/stale K escapes.
+  for(const item of finalPeers){
+   const currentPeer=identityConsent.assertCurrent(item.ctx,item.k);
+   const consentEpoch=identityConsent.readConsentEpoch(item.ctx,item.k);
+   if(currentPeer?.identity_key!==item.identityKey||
+     consentEpoch!==item.epoch||
+     currentPeer.account_revocation_epoch!==
+       result.find(x=>x.identityKey===item.identityKey)?.accountEpoch)
+    deny('PEER_CHANGED_BEFORE_CONTACT_RESPONSE');
   }
   const latest=await resolveNativePrincipal({session,operation:'READ_CONTACTS'});
   if(!samePrincipal(latest,native))deny('NATIVE_PRINCIPAL_REVOKED_DURING_READ');

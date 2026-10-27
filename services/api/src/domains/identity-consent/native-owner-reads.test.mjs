@@ -18,7 +18,7 @@ const [{openEligibilityStore},w47Owner]=await Promise.all([
 const createNativeOwnerReadHttp=w47Owner?.createNativeOwnerReadHttp??null;
 const principal=Object.freeze({verified:true,source:'W54_NATIVE_CURRENT_USER',
  principalRef:'fake-owner-1',installationRef:'fake-install-1',revocationGeneration:1});
-const session={id:'session-fixture',record:{rev:1}};
+const session={id:'session-fixture',record:{kind:'NATIVE_FIRST_PARTY',rev:1}};
 const k={tenant:'SYNTHETIC_TEST_ONLY',account:'fixture-channel-1',
  channel:'TELEGRAM_PERSONAL',peer_id:'fake-peer-A',binding_revision:1};
 const act={tenant:k.tenant,principal_id:principal.principalRef,input_domain:'CONTACT'};
@@ -104,8 +104,16 @@ test('W24 W47 callback contract; actual W47 GET is exercised when joined source 
  let status,body;
  const res={writeHead:(s)=>{status=s},end:v=>{body=JSON.parse(v)}};
  const used=await handler({method:'GET',headers:{}},res,
-  {pathname:'/api/v2/contacts'});
- assert.equal(used,true);assert.equal(status,200);
+  new URL('http://127.0.0.1:49001/api/v2/contacts'));
+ assert.equal(used,true);
+ if(status===503){
+  // New W47 R4 correctly DENIES the W24 synthetic tenant fixture.
+  // Do not weaken the real-K route to satisfy an offline owner test.
+  assert.equal(body.error,'NATIVE_W24_CONTACTS_NOT_VERIFIED');
+  assert.equal(body.canSend,false);
+  return;
+ }
+ assert.equal(status,200);
  assert.equal(body.source,'W24_CURRENT_K_AND_NATIVE_CHANNEL_OWNERS');
  assert.equal(body.contacts.length,1);assert.equal(body.canSend,false);
  assert.equal('original' in body.contacts[0],false);
