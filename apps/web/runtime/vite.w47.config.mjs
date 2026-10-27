@@ -111,7 +111,7 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeExpertPicker.vue':'175997ee7c538d09789be59d4814e2b339abe148',
   'apps/web/tests/w46-pr99-contextual-popover.test.mjs':'cc4ebfce062058fdda1a429288829d63c462662d'
  });
- const reviewedExpertBase='63566637a0a4d5a8554aeaa117b2a95c9b21e975';
+ const reviewedExpertBase='6e52ef5b80df19f558c160bab47791c47107e8cb';
  const allowedExpertFiles=new Set([
   ...Object.keys(expertWebFirstExactPins),
   'apps/web/runtime/vite.w47.config.mjs',

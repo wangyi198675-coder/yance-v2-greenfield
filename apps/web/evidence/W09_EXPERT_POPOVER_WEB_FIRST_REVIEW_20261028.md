@@ -19,3 +19,7 @@
 - 本轮未触发任何真实社交账号登录、用户收费 API、真人消息发送、Windows 打包或对 44751 的覆盖。
 
 完整运行 JSON：`EXPERT_POPUP_CDP_QA_20261028.json`。最新 Git SHA、真实固定地址资源读取和 rollback 在 Web 发布后另行回写。
+
+## 最新并行版本重定位
+切换固定44767前现场发现运行版本已由635666变更为6e52ef5b80df19f558c160bab47791c47107e8cb，新版仅在 services/api/runtime/local-session.mjs 及同名测试新增真实本机PRIVATE会话资格。本轮绝不覆盖该成果。
+已在严格以6e52为父提交的隔离分支 cherry-pick 专家前端增量，不改动该新API；W47安全构建钉住最新6e52完整基线与四项经实测的前端Blob。原W46及W42 Owner正式证据继续保留，未放宽来源与发送门禁。
