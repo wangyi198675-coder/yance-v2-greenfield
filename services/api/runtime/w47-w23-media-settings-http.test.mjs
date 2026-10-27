@@ -80,7 +80,7 @@ test('nine original settings endpoint contracts are read-only truth, no shadow p
   assert.equal(all.data.authoritative,true);
   assert.equal(all.data.noSyntheticWrites,true);
   assert.deepEqual(all.data.categories.map(x=>x.id),
-   ['general','accounts','model','translation','media','theme','notify','privacy','diagnostics']);
+   ['general','accounts','model','translate','media','theme','notify','privacy','diagnostics']);
   const model=all.data.categories.find(x=>x.id==='model');
   assert.equal(model.write.find(x=>x.path.endsWith('/model-selection')).method,'POST');
   assert.equal(model.read.find(x=>x.path.endsWith('/model-config')).scope,'CURRENT_PRIVATE_SESSION');
@@ -89,6 +89,9 @@ test('nine original settings endpoint contracts are read-only truth, no shadow p
   assert.equal(theme.write.length,0);
   const notify=all.data.categories.find(x=>x.id==='notify');
   assert.equal(notify.persistedWrite,false);
+  const translate=await send('/api/v2/settings/translate');
+  assert.equal(translate.status,200);
+  assert.equal(translate.data.categories[0].status,'W45_NATIVE_TRANSLATION_AND_ATTESTOR_NOT_CONNECTED');
   const media=await send('/api/v2/settings/media');
   assert.equal(media.status,200);
   assert.equal(media.data.categories[0].status,'REAL_ACCOUNT_MEDIA_UPLOAD_HOLD');

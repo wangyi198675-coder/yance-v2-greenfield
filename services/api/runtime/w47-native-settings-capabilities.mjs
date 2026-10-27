@@ -19,7 +19,7 @@ const catalog=Object.freeze([
    {method:'POST',path:'/api/v2/private-brain/cloud-keys',scope:'W55_NATIVE_WIN_CRED_CSRF_AND_PAID_APPROVAL'},
    {method:'DELETE',path:'/api/v2/private-brain/cloud-keys',scope:'W55_NATIVE_WIN_CRED_CSRF_REVOKE'}],
   persistedWrite:true,status:'ORIGINAL_PRIVATE_MODEL_PORT_ONLY'},
- {id:'translation',read:[{method:'GET',path:'/api/v2/translations',scope:'W45_VERIFIED_SOURCE_MESSAGE'}],
+ {id:'translate',read:[{method:'GET',path:'/api/v2/translations',scope:'W45_VERIFIED_SOURCE_MESSAGE'}],
   write:[],persistedWrite:false,status:'W45_NATIVE_TRANSLATION_AND_ATTESTOR_NOT_CONNECTED'},
  {id:'media',read:[{method:'GET',path:'/api/v2/media/capabilities',scope:'LOCAL_SESSION_W23_NATIVE_FORMATS'}],
   write:[],persistedWrite:false,status:'REAL_ACCOUNT_MEDIA_UPLOAD_HOLD'},
