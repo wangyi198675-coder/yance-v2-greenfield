@@ -868,4 +868,6 @@ defineExpose({refresh});
 .w46-tools-aside-brain{margin:0 18px 18px}
 @media(max-width:900px){.w46-real-tools .w46-r4-expert-layout{grid-template-columns:minmax(0,1fr) minmax(185px,220px);gap:10px;padding:12px}}
 @media(max-width:719px){.w46-real-tools .w46-r4-expert-layout{grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}.w46-tools-main{min-height:350px}.w46-tools-empty{min-height:270px}.w46-tools-empty h3{font-size:18px}.w46-tools-empty p{font-size:13px}.w46-tools-filters{flex-wrap:wrap}.w46-tools-search{flex-basis:100%}.w46-tools-aside{margin-bottom:16px}}
+/* Keep the visible compact navigation menu above the WOW visual content layer. */
+.w46-product-candidate>.w46-compact-global{z-index:65!important}
 </style>
