@@ -192,7 +192,7 @@ if(r4IsolatedPreview){
    noPairReview.includes('700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsPath)===ownerFiles[settingsPath]&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
-   git('rev-parse','HEAD:'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
+   git('rev-parse','HEAD:'+settingsTestPath)===expertWebFirstExactPins[settingsTestPath]&&
    !readFileSync(join(w46Root,settingsPath),'utf8').includes('<BCLocalSessionConnector');
  // W42 independently closed only the QR layout/status RED with actual
  // NONSCANNABLE synthetic Chrome DOM, not a real user account authorization.
