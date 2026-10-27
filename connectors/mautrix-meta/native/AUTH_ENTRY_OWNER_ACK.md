@@ -1,0 +1,42 @@
+# W26 → W09-2 | Issue #77 FB_PERSONAL: real upstream authorization owner handoff
+
+**W26 scoped native owner boundary only**: `connectors/mautrix-meta/native/**`. No W46/W47 editing, no main/44751/44767 deployment, no real Facebook login/sending/recovery of removed credentials, no new Messenger client/AI/Outbox. Based on prior genuine official mautrix-meta v26.10/Tuwunel v1.9.4, **not** synthetic integration.
+
+## Native authorization entry: actual upstream application
+
+- **Official upstream GUI:** [mautrix/manager v0.2.1](https://github.com/mautrix/manager/releases/tag/v0.2.1) (AGPL-3.0), the official bridgev2 provisioning login manager. Its original Windows `mautrix-manager-0.2.1.Setup.exe` was actually downloaded, size **148,660,736**, SHA256 **`a2b086b3f5af386d5dfa56cffeed4f8eff484ea9ce47c795809a4e86474c87a9`** matches release metadata. Installer exit=0, installed **`%LOCALAPPDATA%\mautrix_manager\mautrix-manager.exe`** and real responsive `mautrix-manager` Windows GUI process `24040` observed (PID ephemeral).
+- **System-native clickable protocol:** Windows HKCU `mautrix-manager://` is genuinely registered to the installed executable. Actual `Start-Process 'mautrix-manager://open/'` brought up/resumed real `mautrix-manager` GUI. This deep link **opens the official GUI only**; does NOT start Messenger login.
+- **Real owner channel click page:** `GET http://127.0.0.1:29321/api/v2/providers/fb-personal/connect` serves immutable non-secret HTML with clickable `<a href="mautrix-manager://open/">` launcher, not external documentation alone; the real installed app is invoked only after user click/OS confirmation. Windows Chrome headless live capture: `C:\Users\1\Documents\YanceV2\NativeProviders\W26\evidence\w26-official-manager-click-entry.png` (61,035 bytes). This is isolated channel onboarding, not a duplicate W46 B+C UI.
+- `GET .../setup`: now returns `action:'OPEN_NATIVE_MANAGER'`, `officialManagerInstalled:true`, `nextUserClick:'mautrix-manager://open/'`, `clickableAuthorizationURL`, actual `homeserverURL:http://127.0.0.1:28438` and `bridgeURL:http://127.0.0.1:29319`, `authorizedSocialAccount:'MATRIX_AUTH_REQUIRED'`, `realAccountState:'WAITING_USER_AUTH'`. Real local status still `RUNNING_OFFICIAL_APP_SERVICE_REGISTERED`; Bridge and homeserver remain active.
+- After entering a valid **local Matrix user identity**, user adds existing bridge URL in official manager, chooses the actual native meta flows (`facebook`, `messenger`, `messenger-lite`, `messenger-lite-android` from exact mautrix-meta v26.10 `pkg/connector/login.go`) and **personally** completes official challenge/cookie/mobile verification. No W26 custom cookie/password storage. This Meta upstream does **not** specify a Facebook QR login flow. No fake QR allowed.
+- An ordinary first-time user must have a **real W47 trusted local Matrix Principal / Matrix operator session** to use the official manager. This bridge-specific authorization owner cannot silently create an unbound Matrix principal or disable W47 identity safety. While absent, the manager genuinely opens, but Matrix sign-in and Meta login remain `WAITING_USER_AUTH / MATRIX_USER_SESSION_HOLD` — **not** USER_DELIVERED.
+
+## W26 real readback APIs (all local 127.0.0.1:29321; no CORS/third-party Origins)
+
+| Method / URL path (prefix `/api/v2/providers/fb-personal`) | Source and authority | Actual capability |
+|---|---|---|
+| `GET /status` | Verifies running exact official WSL2 binary SHA/PID/AS listener and genuine Matrix bot; public non-user data only | reports Bridge RUNNING but no social ACCOUNT claims |
+| `GET /setup` | Real official-manager installation and registered protocol URL | valid local user click path; NO login initiated |
+| `GET /connect` | static minimal setup page with native clickable manager link | user click → real GUI, no credentials |
+| `GET /account/status` | requires `Authorization: Bearer <valid Matrix user access token>`; W26 checks `/_matrix/client/v3/account/whoami` then **official BridgeV2 provisioning `/_matrix/provision/v3/whoami`**, exact bot MXID | returns real upstream personal logins, their login ID/name/state and connected count, NEVER `canSend:true` before W24 binding |
+| `GET /auth/flows` | same Matrix principal; official `/_matrix/provision/v3/login/flows` | returns actual four approved native Messenger flows to W47, NO login initiation |
+| `POST /auth/revoke` | valid Matrix token, explicit `X-Yance-User-Intent: REVOKE_THIS_FACEBOOK_LOGIN`, matching target ID + confirm ID, upstream ownership check, **must inject W24/W44 atomic durable revocation callback** | only **after** W24/W44 commits accountRevocationEpoch does W26 use official `POST /_matrix/provision/v3/logout/{loginID}`, then re-read whoami to verify logout. Without callback the live endpoint fails `W24_DURABLE_REVOCATION_FENCE_REQUIRED`; user-level revocation still HOLD |
+| Reconnect | official manager user manual Logout → Login; reauthentication is a native upstream process | no automatic credential reuse, no fake reconnection, old binding must be revoked/re-signed |
+
+W26 does not accept/social password, Cookie, QR, user-supplied remote IDs or customer-provided `ONLINE` Boolean. Native manager owns its UI and upstream v3 login/start/step SDK contracts; W26 leaves the login mechanics **unmodified**.
+
+## Actual evidence and safety tests
+
+- Official BridgeV2 actual network `GET http://127.0.0.1:29319/_matrix/provision/v3/whoami` and `.../login/flows` without a valid Matrix user token returned **HTTP 401**. Local native W26 `GET .../account/status` and `GET .../auth/flows` also returned **HTTP 401** without token; public `GET /connect` returned **HTTP 200 text/html** and `GET /setup` real installed-manager URI. Neither escalated Facebook state.
+- New `provisioning-auth.test.mjs` and `provisioning-http.test.mjs` exercise exact official v3 schema, authenticated principal binding, refused arbitrary user, per-user session and 401, no fake QR, explicit manual logout and W24 revision fence, CSRF/Host/Origin deny. **Unit fixtures are not proof of actual Facebook login.** Original W26 synthetic tests inherited unchanged.
+- The official GUI is installed and process running; no real Facebook account has been entered. Current account identities, peer IDs, inbound MID and delivery ACK remain **NO AUTHORIZATION / NOT_RUN**. No real sends, external API, paid calls.
+
+## W47/W46/W24/W25 minimal handoff (Owner boundary preserved)
+
+- **W47** should call the channel owner `GET /setup` under existing first-party native session, expose `clickableAuthorizationURL` in original setup button and invoke URI via existing native OS shell method (do not expose arbitrary shell requests). Must provide the current user's genuine local Matrix session/token in its protected native custody so owner `/account/status` and `/auth/flows` can verify upstream. Never deliver Matrix bearer tokens in browser query, logs or static JS. Do **not** proxy unauthenticated identity details to any localhost-origin website.
+- **W46** existing B+C `ACCOUNTS` button should open this actual channel setup/official manager GUI using W47 existing trusted local action. W26 has not changed Vue. W09-2 owns 44767 real Opera/Chrome click UAT.
+- **W24/W44** must commit verified ChannelAccount+Peer/K/revision/epoch on authenticated upstream identity; add a durable revocation fence callback for W26 `POST /auth/revoke` and owner proof validation. Actual upstream Manager logout can also be triggered directly by user; that disconnect must invalidate W24/W44 eligibility before any W25 sending, via existing event/readback supervision. Current W26 native API does **not** pretend that is already joined.
+- **W25** remains sole physical sender. It must check current Provider connected state and W24 K/epoch at ADMISSION and PRE_NETWORK, including when user logs out in manager directly or rebinds account. W26 has no send function and no new Outbox.
+- **W09-2** integrates only independent reviewed Owner SHA in existing W47/W46 native app; do not merge main or redeploy 44767/44751 from W26.
+
+**States:** `W26_OFFICIAL_MANAGER_NATIVE_GUI_PASS` / `W26_CHANNEL_AUTH_ENTRY_SOURCE_PASS` / `MATRIX_PRINCIPAL_SESSION_HOLD` / `FACEBOOK_WAITING_USER_AUTH` / `NO_REAL_PEER_OR_MESSAGE` / `W24_REVOKE_FENCE_OWNER_HOLD` / `INTEGRATED_WEB_HOLD`. Neither synthetic tests nor local native manager launch counts as real FB social authorization.
