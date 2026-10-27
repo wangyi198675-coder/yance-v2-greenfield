@@ -139,12 +139,22 @@ if(r4IsolatedPreview){
   'apps/web/tests/w46-personal-multi-account.test.mjs':'cdf3f0da475afadcde27285d6b94d2059e02b1c3',
   'apps/web/tests/w46-r4-channel-compact.test.mjs':'113fd98e48a08f4e8b82ee37d5487560adf20f0a'
  });
+ // User-authorized LOCAL UI-only Page choice. Original W24/W44 grants and W55 credential
+ // API remain untouched and deny by default; this is NOT an original Owner authorization.
+ const pageUiSource='6a01deb568f4033080c68e7410d925115a494d38';
+ const pageUiFiles=Object.freeze({"apps/web/src/BCChannelAccountSetup.vue":"b6753e25a57524dbb11a75bc29590416a2c71810","apps/web/src/BCPancakeMultiPageSetup.vue":"391c1c7980651de3e53c84ebff2c595792f272cc","apps/web/src/pancake-multi-browser.mjs":"5801bb2690297c0f8a5e8e7e8193a105aa86e980","apps/web/tests/pancake-multi-browser.test.mjs":"05a5a3130a4da6bd6c770db45f2dd60e2fb840f9"});
+ const pageUiScope=(()=>{try{
+  return Object.entries(pageUiFiles).every(([p,h])=>
+   existsSync(join(w46Root,p))&&git('hash-object','--',p)===h&&
+   git('rev-parse','HEAD:'+p)===h&&git('rev-parse',pageUiSource+':'+p)===h);
+ }catch{return false}})();
+ const pageUiOriginalBase='96535d5bde1945ebdfec10b303fd3b0227519f38';
  const multiScope=(()=>{
   try{
    git('merge-base','--is-ancestor',multiAccountBase,'HEAD');
    return Object.entries(multiUiFiles).every(([path,sha])=>
     git('rev-parse',multiAccountBase+':'+path)===sha&&
-    git('rev-parse','HEAD:'+path)===sha&&git('hash-object','--',path)===sha);
+    git('rev-parse','HEAD:'+path)===(pageUiFiles[path]||sha)&&git('hash-object','--',path)===(pageUiFiles[path]||sha));
   }catch{return false}
  })();
  // Preserve original R4 signed parent and the exact two review deltas for browser-only appearance.
@@ -177,7 +187,7 @@ if(r4IsolatedPreview){
    git('merge-base','--is-ancestor',wowBase,'HEAD');
    git('merge-base','--is-ancestor',wowRelease,'HEAD');
    const delta=git('diff','--name-only',wowBase,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(delta.length<5||!delta.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(wowFiles).every(([p,h])=>{
     const expected=p==='apps/web/src/BCProductWorkspaceCandidate.vue'?chatUiFiles[p]:h;
     return git('rev-parse',wowRelease+':'+p)===h&&existsSync(join(w46Root,p))&&
@@ -190,7 +200,7 @@ if(r4IsolatedPreview){
   try{
    git('merge-base','--is-ancestor',chatUiBase,'HEAD');
    const changed=git('diff','--name-only',chatUiBase,'HEAD').split('\n').filter(Boolean);
-   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(chatUiFiles).every(([p,sha])=>
     git('rev-parse','HEAD:'+p)===sha&&git('hash-object','--',p)===sha&&
     git('rev-parse',chatUiBase+':'+p)===(expertPins[p]||ownerFiles[p]));
@@ -208,7 +218,7 @@ if(r4IsolatedPreview){
      git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
  const validSignedBlobs=wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
-   const expected=chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha));
+   const expected=pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
      git('rev-parse','HEAD:'+path)===expected;
  });
@@ -274,7 +284,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!themeScope||!wowDeltaValid||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!themeScope||!wowDeltaValid||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
