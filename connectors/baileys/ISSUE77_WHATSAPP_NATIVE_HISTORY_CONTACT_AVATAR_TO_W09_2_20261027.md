@@ -9,7 +9,7 @@
 - 实际 SDK 历史事件可能早于W24自有JID/LID完成核验：仅对已批准历史授权最多缓存8批、每批至多300条；等待本次账号核验后按顺序提交原W25。溢出保留`HOLD_EARLY_HISTORY_OVERFLOW`而不假报完全恢复。来自原Baileys的`messaging-history.status`只报告官方进度，绝不把它冒充W25数据库持久化完成。
 - 头像：`worker.readAvatar({remoteJid})`必须同一在线SDK、当前W24真实账户/Peer、`avatarReadApproved:true`，调用原Baileys的`sock.profilePictureUrl(jid,'preview',5000)`，返回前再次校验同一绑定/撤权；只认可HTTPS官方whatsapp.net域，未授权或无头像不伪造。
 - 原W28 `createBaileysNativeSetupController.readAvatar`通过既有W54原生session验权；`createBaileysNativeSetupHttpHandler`可供**原W47挂载**新`GET /api/v2/providers/whatsapp-personal/native/avatar?remoteJid=<urlencoded>`，不提供第二服务器、页面或账号登录系统。
-- 本轮测试`native-history-avatar.test.mjs`和原HTTP测试验证W25双向历史事件、原生来源、联系人W24回执、头像跨账号、失效权限、历史没授权、缺W25接口提前失败、SDK批次越界保持HOLD和无session HTTP。Windows Node24、原`npm ci`依赖未变，`npm test` **55/55 PASS**。模拟账号及历史均是隔离fixture，**无真实社交登录**。
+- 本轮测试`native-history-avatar.test.mjs`和原HTTP测试验证W25双向历史事件、原生来源、联系人W24回执、头像跨账号、失效权限、历史没授权、缺W25接口提前失败、SDK批次越界保持HOLD和无session HTTP。Windows Node24、原`npm ci`依赖未变，`npm test` **56/56 PASS**。模拟账号及历史均是隔离fixture，**无真实社交登录**。
 
 ## 仍待真正跨Owner接线（禁止报USER_DELIVERED）
 1. W25原有`services/api/src/domains/message-delivery/native-channel-owners.mjs`仅公开`baileys.acceptInbound`和`recordReceipt`；W25现有`native-inbound.mjs`仅原入站，不存在历史**双向**`acceptHistory`。**W25原Owner必须最小扩展原持久MessageDelivery历史导入口**：严格校验W24当前账号/Peer/Consent、原SDK事件真实性、fromMe、唯一MID、时间、双向旧消息、重启可见，返回`{persisted:true}`或`{duplicate:true}`。不得复用`acceptInbound`写旧已发送或建第二发送器。
@@ -25,3 +25,7 @@
 - W28无WhatsApp账号扫码、无真实用户联系人/头像、无真人消息/收费调用。合并/CI和真实浏览器验收请以最新HEAD复验，不能引用旧W28 44测试结果冒充用户验收。
 
 **交付级别：W28_NATIVE_HISTORY_AVATAR_OWNER_SOURCE_PASS（待独立复核）；W25_HISTORY_PERSISTENCE_PORT_HOLD / W24_CONTACT_OWNER_BIND_HOLD / W47_WEB_NATIVE_ROUTE_404 / W46_VISIBLE_AVATAR_HISTORY_HOLD / USER_WHATSAPP_WAITING_USER_AUTH / NO_DEPLOY。**
+
+## GitHub正式CI触发后的真实W28竞态定点修复（非改测试掩盖失败）
+
+第一轮准确PR #80原HEAD `922b8172dd6e599ef25c903071af37dde8ca337d` Actions run `40436484216` completed/failure。已读取GitHub `native-node-contracts` job `121966238954`真实日志：依赖实际加载正常，唯一已证失败是上游QR事件变为可用后，`qrcode.toDataURL`尚在异步渲染，初次GET `readQr` 抛出`SDK_QR_NOT_AVAILABLE`。这是授权界面真实竞态，不是缺Baileys包。只在原W28 `native-authorization-setup.mjs` 的QR读取动作加入最长500ms的受限等待：**仅**SDK `WAITING_QR_SCAN && qrAvailable`时等待真实PNG内存回调；无SDK二维码立即拒绝，过期/撤权/跨Principal仍阻断，不生成模拟码。新增原测试`native-authorization-setup.test.mjs`的立即读取正向回归，Windows完整`npm test` 56/56 PASS、0 FAIL。正式CI仅以新提交真实run为准，未通过不得报告CI绿。
