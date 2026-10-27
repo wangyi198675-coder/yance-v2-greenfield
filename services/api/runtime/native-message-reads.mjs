@@ -20,7 +20,23 @@ const validMessage=(m,k)=>m&&m.k&&inboundK(m.k)===fullK(k)&&
  typeof m.providerMid==='string'&&m.providerMid.length>0&&m.providerMid.length<=250&&
  typeof m.original==='string'&&m.original.length<=64000&&
  ['mautrix-meta','pancake','baileys','tdlib-json'].includes(m.source)&&
- typeof m.id==='string'&&/^[a-f0-9]{64}$/.test(m.id);
+ typeof m.id==='string'&&/^[a-f0-9]{64}$/.test(m.id)&&
+ // W25's original durable history uniquely authenticates fromMe. Never
+ // show the user's sent messages as inbound or treat history as a sent ACK.
+ (m.isHistory===undefined||typeof m.isHistory==='boolean')&&
+ (m.fromMe===undefined||typeof m.fromMe==='boolean')&&
+ (m.direction===undefined||['INBOUND','OUTBOUND'].includes(m.direction))&&
+ (m.fromMe!==true||m.isHistory===true)&&
+ (m.fromMe===undefined||m.direction===undefined||
+  m.direction===(m.fromMe?'OUTBOUND':'INBOUND'))&&
+ (m.messageAt===undefined||(Number.isSafeInteger(m.messageAt)&&m.messageAt>0))&&
+ (m.timeSource===undefined||['VERIFIED_PROVIDER_TIMESTAMP','LOCAL_RECEIPT_FALLBACK'].includes(m.timeSource))&&
+ (m.isHistory!==true||
+   typeof m.fromMe==='boolean'&&
+   m.direction===(m.fromMe?'OUTBOUND':'INBOUND')&&
+   Number.isSafeInteger(m.messageAt)&&m.messageAt>0&&
+   (m.fromMe?m.deliveryState==='PROVIDER_HISTORY_UNRECONCILED':
+    m.deliveryState==='NOT_REQUESTED'));
 export function createNativeMessageReadHttp({
  sessionAuthority,webOrigin,resolveW54Principal=null,
  resolveW24CurrentFullK=null,readW25OriginalInbound=null
@@ -78,7 +94,12 @@ export function createNativeMessageReadHttp({
    if(seen.has(m.providerMid)){deny(res,409,'DUPLICATE_NATIVE_MID');return true}
    seen.add(m.providerMid);
    result.push({identityKey:selector,mid:m.providerMid,original:m.original,
-    direction:'INBOUND',providerSource:m.source,delivery:'NOT_REQUESTED'});
+    direction:m.isHistory===true&&m.fromMe===true?'OUTBOUND':'INBOUND',
+    providerSource:m.source,
+    delivery:m.isHistory===true&&m.fromMe===true?
+     'PROVIDER_HISTORY_UNRECONCILED':'NOT_REQUESTED',
+    ...(m.isHistory===true?{isHistory:true,messageAt:m.messageAt,
+      timeSource:m.timeSource??'LOCAL_RECEIPT_FALLBACK'}:{})});
   }
   tell(res,200,{ok:true,authoritative:true,identityKey:selector,messages:result,canSend:false});
   return true;

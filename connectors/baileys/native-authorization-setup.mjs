@@ -23,7 +23,8 @@ export function createBaileysNativeSetupController({createWorker,verifyNativeSes
   const check=async(nativeSession,operation)=>{
     // nativeSession comes from W47 authenticated local-session middleware, not client JSON.
     const verified=await verifyNativeSession({nativeSession,operation,channel:'WHATSAPP_PERSONAL'});
-    if(verified?.verified!==true||verified.kind!=='NATIVE_FIRST_PARTY'||
+    if(verified?.verified!==true||
+      !['NATIVE_FIRST_PARTY','WEB_LOCAL_PRIVATE'].includes(verified.kind)||
       !valid(verified.principalRef)||!valid(verified.installationRef)||
       !valid(verified.sessionRef)||!Number.isSafeInteger(verified.revocationGeneration)||
       verified.revocationGeneration<0)fail('W54_SIGNED_NATIVE_SESSION_REQUIRED');

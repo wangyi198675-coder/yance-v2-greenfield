@@ -52,7 +52,8 @@ export function createW25NativeChannelOwnerPorts({
   // verifyNativeSource AND W24's strict K/current Consent read before INSERT.
   const stored=await nativeInboundPort.acceptInbound({
    k:canonical,source:sources[owner],sourceEventId,
-   providerMid:mid,original,synthetic:false,nativeEvidence:a.evidenceRef
+   providerMid:mid,providerRemoteJid:event?.providerRemoteJid,
+   original,synthetic:false,nativeEvidence:a.evidenceRef
   });
   return Object.freeze({accepted:true,ingressId:stored.id,providerMid:mid,
    duplicate:stored.duplicate===true,canSend:false});

@@ -3,9 +3,41 @@ import {ref,onMounted,onBeforeUnmount,computed} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
 import {checkChannel,setupChannel,channelError} from './channel-setup-contract.mjs';
+import {readWhatsAppNative,connectWhatsAppNative,readWhatsAppNativeQr,
+  changeWhatsAppNativeConnection,whatsappNativeError} from './whatsapp-native-user-flow.mjs';
 const props=defineProps({channel:{type:Object,required:true},fetchImpl:{type:Function,default:null}});
 const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
-let alive=true,revision=0,expiryTimer=null;
+let alive=true,revision=0,expiryTimer=null,nativeTimer=null;
+const isWhatsApp=computed(()=>props.channel.id==='WHATSAPP_PERSONAL');
+function clearNativePoll(){if(nativeTimer){clearTimeout(nativeTimer);nativeTimer=null}}
+function nativePoll(id){
+ clearNativePoll();
+ if(!alive||id!==revision||['ONLINE_VERIFIED','REVOKED','unavailable'].includes(state.value))return;
+ nativeTimer=setTimeout(async()=>{
+  if(!alive||id!==revision)return;
+  try{await updateWhatsApp(id)}catch(e){
+   if(alive&&id===revision){state.value='unavailable';notice.value=whatsappNativeError(e);}
+  }
+  if(alive&&id===revision&&!['ONLINE_VERIFIED','REVOKED','unavailable'].includes(state.value))nativePoll(id);
+ },1800);
+}
+async function updateWhatsApp(id){
+ const status=await readWhatsAppNative({fetchImpl:fetcher()});
+ if(!alive||id!==revision)return;
+ state.value=status.online?'ONLINE_VERIFIED':status.state;
+ if(status.online){clearReceipt();clearNativePoll();notice.value='WhatsApp已连接，正在同步已获授权的联系人和消息';return}
+ if(status.qrAvailable){
+  try{const qr=await readWhatsAppNativeQr({fetchImpl:fetcher()});
+   if(!alive||id!==revision)return;
+   receipt.value={qr};notice.value='请在自己的WhatsApp已关联设备中扫描当前二维码';
+  }catch(e){if(!String(e?.message??'').includes('409'))throw e;}
+ }else if(status.state==='WAITING_USER_AUTH'){
+  notice.value='尚未连接WhatsApp，请点击连接账号';
+ }else if(status.state==='STARTING_NATIVE_SDK'){
+  notice.value='正在连接WhatsApp，请使用手机准备扫码';
+ }else if(status.lastError){notice.value='WhatsApp尚未成功连接，请检查连接状态';}
+}
+
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const providerCopy=Object.freeze({
  FB_PERSONAL:{title:'Facebook Messenger',description:'连接你的个人 Messenger'},
@@ -21,19 +53,28 @@ const statusLabel=computed(()=>state.value==='ONLINE_VERIFIED'?'已连接':
  state.value==='unavailable'?'暂不可用':'未连接');
 function clearReceipt(){receipt.value=null;if(expiryTimer){clearTimeout(expiryTimer);expiryTimer=null}}
 async function refresh(){
- const id=++revision;clearReceipt();busy.value=true;state.value='checking';notice.value='';
+ const id=++revision;clearReceipt();clearNativePoll();busy.value=true;state.value='checking';notice.value='';
  try{
+  if(isWhatsApp.value){await updateWhatsApp(id);if(alive&&id===revision&&['STARTING_NATIVE_SDK','WAITING_QR_SCAN'].includes(state.value))nativePoll(id);return}
   const v=await checkChannel({channel:props.channel.id,fetchImpl:fetcher()});
   if(!alive||id!==revision)return;
   state.value=v.state;
   notice.value=v.online?'原生服务确认已连接':'尚未完成本人授权';
  }catch(e){
-  if(alive&&id===revision){state.value='unavailable';notice.value=channelError(e)}
+  if(alive&&id===revision){state.value='unavailable';notice.value=isWhatsApp.value?whatsappNativeError(e):channelError(e)}
  }finally{if(alive&&id===revision)busy.value=false}
 }
 async function setup(){
- const id=++revision;clearReceipt();busy.value=true;notice.value='';
+ const id=++revision;clearReceipt();clearNativePoll();busy.value=true;notice.value='';
  try{
+  if(isWhatsApp.value){
+   const started=await connectWhatsAppNative({fetchImpl:fetcher()});
+   if(!alive||id!==revision)return;
+   state.value=started.state;notice.value='已开始WhatsApp原生连接，正在等待手机扫码';
+   await updateWhatsApp(id);
+   if(alive&&id===revision&&state.value!=='ONLINE_VERIFIED')nativePoll(id);
+   return;
+  }
   const v=await setupChannel({channel:props.channel.id,fetchImpl:fetcher()});
   if(!alive||id!==revision)return;
   receipt.value=v;state.value='WAITING_USER_AUTH';
@@ -44,11 +85,21 @@ async function setup(){
    },Math.max(0,v.qr.expiresAt-Date.now()));
   }
  }catch(e){
-  if(alive&&id===revision){state.value='unavailable';notice.value=channelError(e)}
+  if(alive&&id===revision){state.value='unavailable';notice.value=isWhatsApp.value?whatsappNativeError(e):channelError(e)}
  }finally{if(alive&&id===revision)busy.value=false}
 }
 onMounted(refresh);
-onBeforeUnmount(()=>{alive=false;revision++;clearReceipt()});
+async function whatsappDisconnect(action){
+ const id=++revision;clearNativePoll();clearReceipt();busy.value=true;
+ try{
+  const result=await changeWhatsAppNativeConnection(action,{fetchImpl:fetcher()});
+  if(!alive||id!==revision)return;
+  state.value=result.state;
+  notice.value=action==='revoke'?'此WhatsApp账号授权已撤销':'WhatsApp已断开连接';
+ }catch(e){if(alive&&id===revision){notice.value=whatsappNativeError(e);state.value='unavailable'}}
+ finally{if(alive&&id===revision)busy.value=false}
+}
+onBeforeUnmount(()=>{alive=false;revision++;clearReceipt();clearNativePoll()});
 </script>
 <template>
  <article class="w46-channel" data-test="w46-native-provider" :data-provider="channel.id">
@@ -62,9 +113,9 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt()});
   </div>
   <div class="w46-channel-bottom">
    <Button class="w46-channel-connect" size="sm"
-    data-test="native-provider-setup" :disabled="busy||state==='ONLINE_VERIFIED'"
+    data-test="native-provider-setup" :disabled="busy||state==='ONLINE_VERIFIED'||(isWhatsApp&&['STARTING_NATIVE_SDK','WAITING_QR_SCAN'].includes(state))"
     @click="setup">{{busy?'正在处理…':state==='ONLINE_VERIFIED'?'已连接':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':'重新获取授权'):'连接账号'}} <span v-if="!busy&&state!=='ONLINE_VERIFIED'" aria-hidden="true">›</span></Button>
-   <p v-if="(receipt||state==='unavailable'||state==='EXPIRED')&&notice"
+   <p v-if="(receipt||isWhatsApp||state==='unavailable'||state==='EXPIRED')&&notice"
     class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{notice}}</p>
    <div v-if="receipt" class="w46-channel-auth-result" data-test="native-provider-auth-result">
     <a v-if="receipt.officialConnectUrl" :href="receipt.officialConnectUrl"
@@ -76,6 +127,10 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt()});
      <small>本人扫码后请检查实际连接状态。二维码过期后须重新获取。</small>
     </div>
     <p v-if="!receipt.officialConnectUrl&&!receipt.officialDocs&&!receipt.qr">当前平台尚未返回可操作的本人授权步骤。</p>
+   </div>
+   <div v-if="isWhatsApp&&['ONLINE_VERIFIED','WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)" class="w46-channel-native-actions">
+    <Button variant="outline" size="sm" :disabled="busy" @click="whatsappDisconnect('disconnect')">断开</Button>
+    <Button v-if="state==='ONLINE_VERIFIED'" variant="outline" size="sm" :disabled="busy" @click="whatsappDisconnect('revoke')">移除账号</Button>
    </div>
    <details class="w46-channel-extra" data-test="native-provider-details">
     <summary>连接详情与检查</summary>
@@ -104,6 +159,7 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt()});
 .w46-channel-auth-result a{color:var(--accent);font-size:12px;text-decoration:underline;overflow-wrap:anywhere}
 .w46-channel-auth-result p,.w46-channel-auth-result small{color:var(--muted);font-size:11px;line-height:1.5}
 .w46-channel-auth-result img{width:min(240px,100%);height:auto}
+.w46-channel-native-actions{display:flex;gap:8px;flex-wrap:wrap}
 .w46-channel-extra{border-top:1px solid var(--border);padding-top:9px;color:var(--muted);font-size:11px}
 .w46-channel-extra summary{cursor:pointer;font-size:11px;line-height:1.8;list-style:revert}
 .w46-channel-extra p{font-size:11px;line-height:1.5;margin:8px 0;overflow-wrap:anywhere}
