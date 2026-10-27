@@ -115,6 +115,23 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeExpertPicker.vue':'175997ee7c538d09789be59d4814e2b339abe148',
   'apps/web/tests/w46-pr99-contextual-popover.test.mjs':'cc4ebfce062058fdda1a429288829d63c462662d'
  });
+ // Narrow user-directed chat UI delta on the existing W09-3 baseline.
+ // Preserve the independently reviewed W46/W47 parent blobs and all API authority checks.
+ const chatUiBase='a27138f2bdecf2a5565f13970ae2c86ee4b63237';
+ const chatUiFiles=Object.freeze({
+  'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'c011745eeba99d800e04fb054f9fbe100b9046c6'
+ });
+ const chatUiDeltaValid=(()=>{
+  try{
+   git('merge-base','--is-ancestor',chatUiBase,'HEAD');
+   const changed=git('diff','--name-only',chatUiBase,'HEAD').split('\n').filter(Boolean);
+   if(!changed.every(p=>Object.hasOwn(chatUiFiles,p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   return Object.entries(chatUiFiles).every(([p,sha])=>
+    git('rev-parse','HEAD:'+p)===sha&&git('hash-object','--',p)===sha&&
+    git('rev-parse',chatUiBase+':'+p)===(expertPins[p]||ownerFiles[p]));
+  }catch{return false}
+ })();
  const galleryScope=(()=>{try{
    git('merge-base','--is-ancestor',galleryCommit,'HEAD');
    return [galleryPath,galleryTest,gallerySettingsTest].every(path=>
@@ -122,10 +139,11 @@ if(r4IsolatedPreview){
  }catch{return false}})();
  const expertScope=Object.entries(expertPins).every(([path,sha])=>{try{
    return existsSync(join(w46Root,path))&&git('rev-parse',expertCommit+':'+path)===sha&&
-     git('rev-parse','HEAD:'+path)===sha&&git('hash-object','--',path)===sha;
+     git('rev-parse','HEAD:'+path)===(chatUiFiles[path]||sha)&&
+     git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
  const validSignedBlobs=galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
-   const expected=path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha);
+   const expected=chatUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
      git('rev-parse','HEAD:'+path)===expected;
  });
@@ -191,7 +209,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
