@@ -120,14 +120,34 @@ if(r4IsolatedPreview){
  const chatUiBase='a27138f2bdecf2a5565f13970ae2c86ee4b63237';
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'c9bc510b8fb1505268acb472f9b2563d80d403e4',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'d661cd1c4da70aad07357286e74261ae502aea82',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'ea1577aabcba2b11bba091321f007fd1c45cda75'
  });
+ // Preserve original R4 signed parent and the exact two review deltas for browser-only appearance.
+ const themeUiFiles=Object.freeze({
+  'apps/web/src/BCSettingsWorkspace.vue':'60b2bff8621c06abcc233aeb6f2ff23703d34054',
+  'apps/web/src/BCThemeChooser.vue':'6cfd5c572e82b9663e14d93a05af847f37180b02',
+  'apps/web/tests/w46-r4-media-settings-native.test.mjs':'628cdfa552b5574b0edafad940cd15b7d818d933'
+ });
+ const themeEvidence=new Set([
+  'apps/web/evidence/THEME_WEB_FIRST_1360.png',
+  'apps/web/evidence/THEME_WEB_FIRST_430.png',
+  'apps/web/evidence/THEME_WEB_FIRST_CHROME_20261028.json',
+  'apps/web/evidence/W09_THEME_WEB_FIRST_REVIEW_20261028.md',
+  'apps/web/evidence/THEME_PERSISTENCE_CDP_20261028.json',
+  'apps/web/evidence/W09_THEME_PERSIST_REUSE_NATIVE_BROWSER_STORE_20261028.md'
+ ]);
+ const themeScope=Object.entries(themeUiFiles).every(([path,sha])=>
+  existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&git('rev-parse','HEAD:'+path)===sha)
+  &&[...themeEvidence].every(path=>existsSync(join(w46Root,path))&&
+     git('hash-object','--',path)===git('rev-parse','HEAD:'+path))
+  &&git('rev-parse','HEAD:apps/web/src/BCProductWorkspaceCandidate.vue')===
+    'd661cd1c4da70aad07357286e74261ae502aea82';
  const chatUiDeltaValid=(()=>{
   try{
    git('merge-base','--is-ancestor',chatUiBase,'HEAD');
    const changed=git('diff','--name-only',chatUiBase,'HEAD').split('\n').filter(Boolean);
-   if(!changed.every(p=>Object.hasOwn(chatUiFiles,p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(!changed.every(p=>Object.hasOwn(chatUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(chatUiFiles).every(([p,sha])=>
     git('rev-parse','HEAD:'+p)===sha&&git('hash-object','--',p)===sha&&
     git('rev-parse',chatUiBase+':'+p)===(expertPins[p]||ownerFiles[p]));
@@ -136,7 +156,8 @@ if(r4IsolatedPreview){
  const galleryScope=(()=>{try{
    git('merge-base','--is-ancestor',galleryCommit,'HEAD');
    return [galleryPath,galleryTest,gallerySettingsTest].every(path=>
-     git('rev-parse','HEAD:'+path)===git('rev-parse',galleryCommit+':'+path));
+     git('rev-parse','HEAD:'+path)===(path===gallerySettingsTest&&themeScope?
+       themeUiFiles[path]:git('rev-parse',galleryCommit+':'+path)));
  }catch{return false}})();
  const expertScope=Object.entries(expertPins).every(([path,sha])=>{try{
    return existsSync(join(w46Root,path))&&git('rev-parse',expertCommit+':'+path)===sha&&
@@ -144,7 +165,7 @@ if(r4IsolatedPreview){
      git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
  const validSignedBlobs=galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
-   const expected=chatUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha));
+   const expected=chatUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
      git('rev-parse','HEAD:'+path)===expected;
  });
@@ -202,7 +223,7 @@ if(r4IsolatedPreview){
    noPairReview.includes('700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsPath)===ownerFiles[settingsPath]&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
-   git('rev-parse','HEAD:'+settingsTestPath)===(galleryScope?git('rev-parse',galleryCommit+':'+settingsTestPath):'700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
+   git('rev-parse','HEAD:'+settingsTestPath)===(themeScope?themeUiFiles[settingsTestPath]:(galleryScope?git('rev-parse',galleryCommit+':'+settingsTestPath):'700fa2d653cd207b54de6f7061083cb5f9826ceb'))&&
    !readFileSync(join(w46Root,settingsPath),'utf8').includes('<BCLocalSessionConnector');
  // W42 independently closed only the QR layout/status RED with actual
  // NONSCANNABLE synthetic Chrome DOM, not a real user account authorization.
@@ -210,7 +231,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!themeScope||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
