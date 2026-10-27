@@ -74,7 +74,7 @@ async function refresh(){
   if(!s.authorized){
    // Ordinary PRIVATE use never asks the person for a terminal pair code.
    // The original W47 process/session owner must establish local access on app startup.
-   loadState.value='setup-required';setupOpen.value=false;return
+   loadState.value='setup-required';setupOpen.value=true;return
   }
   session.value=s;armExpiry(s.expiresAt);
   let models;
@@ -89,9 +89,9 @@ async function refresh(){
   // Existing Agno History must load with NO model configured.
   await loadHistory(id);
   if(!safeCurrent(id))return;
-  if(!models.configured){loadState.value='no-model';setupOpen.value=false;return}
+  if(!models.configured){loadState.value='no-model';setupOpen.value=true;return}
  }catch(e){if(safeCurrent(id)){
-   loadState.value='service-unavailable';setupOpen.value=false;notice.value=reason(e)
+   loadState.value='service-unavailable';setupOpen.value=true;notice.value=reason(e)
   }}
  finally{if(safeCurrent(id))busy.value=false}
 }
@@ -279,7 +279,7 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
 .bc-brain-compose-tools button:disabled{opacity:.43;cursor:not-allowed}
 .bc-brain-compose-toolbar>[data-test=brain-send]{margin-left:auto;white-space:nowrap;border-radius:8px;color:var(--accent-ink);background:var(--accent)}
 .bc-brain-trace{position:absolute;right:12px;top:48px;z-index:25;width:min(310px,calc(100vw - 24px));max-height:65vh;overflow:auto;box-shadow:0 15px 35px rgba(0,0,0,.2);background:var(--surface-raised);border-color:var(--border)}
-.bc-private-settings{box-sizing:border-box;max-width:880px;width:calc(100% - 28px);align-self:center}
+.bc-private-settings{box-sizing:border-box;position:absolute;top:49px;right:12px;z-index:27;max-width:410px;width:min(410px,calc(100vw - 24px));max-height:min(72vh,620px);overflow:auto;box-shadow:0 15px 38px rgba(0,0,0,.24);background:var(--surface-raised);border-color:var(--border)}
 @media(max-width:719px){
  .bc-private-brain-head{padding:0 8px;gap:5px}
  .bc-private-brain-heading{gap:4px}.bc-private-brain-heading>span{display:none}
