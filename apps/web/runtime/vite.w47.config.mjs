@@ -117,7 +117,8 @@ if(r4IsolatedPreview){
   'apps/web/src/BCProductWorkspaceCandidate.vue',
   'apps/web/src/BCLiveChatWorkspace.vue',
   'apps/web/src/BCNativeComposer.vue',
-  'apps/web/src/BCPrivateBrainWorkspace.vue',
+  // PRIVATE Brain itself is unchanged in this W46 delta; it remains protected
+  // by its prior independent expert Owner ACK and the original five-blob pin.
   'apps/web/src/w23-media-browser-consumer.mjs'
  ];
  const originalW46BlobsValid=[...new Set([...fiveW46Vue,...mediaSourceFiles])].every(path=>{
