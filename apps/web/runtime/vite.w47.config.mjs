@@ -289,9 +289,12 @@ void fetch('/api/v2/contacts',{credentials:'omit',redirect:'error'}).then(async 
            !code.includes('<div v-if="!w46WorkspaceEnabled" class="lab-strip">'))
           throw Error('W47_BC_LAB_STRIP_CONTRACT_CHANGED');
         if(w46R4Candidate&&!r4IsolatedPreview){
-          const activation="const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'";
+          // Exact reviewed W46 R4 source now uses an opt-out predicate.
+          // Preserve fail-closed string matching while activating the existing
+          // view in this explicit user-authorized LOCAL 44751 candidate.
+          const activation="const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')!=='0'||w46InstalledAssetHost";
           failUnless(code,activation);
-          code=code.replace(activation,'const w46WorkspaceEnabled=false');
+          code=code.replace(activation,'const w46WorkspaceEnabled=true');
         }
         code=code.replace(/const accounts=\[[^\n]*\]/,"const accounts=['ALL']");
         code=code.replace(/const queue=\[[\s\S]*?\n\]\nconst currentException/,

@@ -29,7 +29,27 @@ export function parseChannelState(channel,payload){
    !['WAITING_USER_AUTH','OFFLINE','ONLINE_VERIFIED'].includes(payload.status)||
    (payload.status==='ONLINE_VERIFIED'&&payload.authorizedByNativeOwner!==true))
   deny('CHANNEL_OWNER_UNVERIFIED_STATE');
- return Object.freeze({state:payload.status,online:payload.status==='ONLINE_VERIFIED'});
+ // Only accept account identities from a positively attested native owner.
+ // Never infer a verified account from channel status, login button or mock data.
+ let accounts=null;
+ if(payload.status==='ONLINE_VERIFIED'&&payload.authorizedByNativeOwner===true&&
+    Array.isArray(payload.accounts)&&payload.accounts.length<=100){
+  const seen=new Set();
+  const accepted=[];
+  for(const item of payload.accounts){
+   const accountId=typeof item?.accountId==='string'?item.accountId.trim():'';
+   const displayName=typeof item?.displayName==='string'?item.displayName.trim():'';
+   if(!accountId||accountId.length>160||!displayName||displayName.length>130||
+      seen.has(accountId)||item?.identityVerified!==true){
+    accounts=null;break;
+   }
+   seen.add(accountId);
+   accepted.push(Object.freeze({accountId,displayName,
+     state:item?.state==='ONLINE_VERIFIED'?'ONLINE_VERIFIED':'OFFLINE'}));
+  }
+  if(accepted.length===payload.accounts.length)accounts=Object.freeze(accepted);
+ }
+ return Object.freeze({state:payload.status,online:payload.status==='ONLINE_VERIFIED',accounts});
 }
 export function parseChannelSetup(channel,payload,now=Date.now()){
  const owner=CHANNEL_OWNER[channel];
