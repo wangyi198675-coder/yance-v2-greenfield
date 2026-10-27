@@ -253,8 +253,8 @@ if(r4IsolatedPreview){
  const galleryScope=(()=>{try{
    git('merge-base','--is-ancestor',galleryCommit,'HEAD');
    return [galleryPath,galleryTest,gallerySettingsTest].every(path=>
-     git('rev-parse','HEAD:'+path)===(path===gallerySettingsTest&&themeScope?
-       themeUiFiles[path]:git('rev-parse',galleryCommit+':'+path)));
+     git('rev-parse','HEAD:'+path)===(notifyThemePins[path]||(path===gallerySettingsTest&&themeScope?
+       themeUiFiles[path]:git('rev-parse',galleryCommit+':'+path))));
  }catch{return false}})();
  const expertScope=Object.entries(expertPins).every(([path,sha])=>{try{
    return existsSync(join(w46Root,path))&&git('rev-parse',expertCommit+':'+path)===sha&&
@@ -333,7 +333,7 @@ if(r4IsolatedPreview){
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
     !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
-   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
+   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED '+JSON.stringify({signedAncestor,chatUiDeltaValid,toolsUiTestValid,multiScope,pageUiScope,waUxVerified,themeScope,wowDeltaValid,notifyDeltaValid,dirtySource,receiptTracked,galleryScope,validSignedBlobs,w46ReviewValid,noPairReviewValid,w42VisualValid,mediaDesignValid}));
 }
 // This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
 // Keep 47182 as the default for unchanged signed B_88DED, never accept remote host.
