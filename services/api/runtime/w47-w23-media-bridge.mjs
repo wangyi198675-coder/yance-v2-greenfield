@@ -100,7 +100,9 @@ export function createW47WebMediaHttp({
    const eligible=joined&&(await getAuthorized(req))!==null;
    send(res,200,{ok:true,authoritative:true,source:'W23_NATIVE_WEB_MEDIA',
     ...mediaCapabilities(),
-    attachment_store:eligible?'LOCAL_ENCRYPTED_AVAILABLE_WITH_AUTHORITY':
+    // W23's ORIGINAL capability enum describes installed formats/storage.
+    // Real current-user access is an INDEPENDENT fail-closed entitlement.
+    accessStatus:eligible?'W24_W44_CURRENT_ACCOUNT_AUTHORIZED':
      'REAL_ACCOUNT_MEDIA_UPLOAD_HOLD',
     currentAccountAuthorized:eligible,canUpload:eligible,canRead:eligible,canDelete:eligible,
     libraryListing:{available:false,reason:'W23_PRINCIPAL_SCOPED_LIST_API_NOT_IMPLEMENTED'},

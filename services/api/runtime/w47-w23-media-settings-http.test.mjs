@@ -41,7 +41,8 @@ test('W47 W23 real MIME capabilities, unauthenticated 401, no protected account 
   assert.equal(capabilities.data.source,'W23_NATIVE_WEB_MEDIA');
   assert.equal(capabilities.data.authoritative,true);
   assert.equal(capabilities.data.currentAccountAuthorized,false);
-  assert.equal(capabilities.data.attachment_store,'REAL_ACCOUNT_MEDIA_UPLOAD_HOLD');
+  assert.equal(capabilities.data.attachment_store,'LOCAL_ENCRYPTED_AVAILABLE_WITH_AUTHORITY');
+  assert.equal(capabilities.data.accessStatus,'REAL_ACCOUNT_MEDIA_UPLOAD_HOLD');
   assert.equal(capabilities.data.canUpload,false);
   assert.equal(capabilities.data.canSend,false);
   assert.equal(capabilities.data.accepted.length,8);
