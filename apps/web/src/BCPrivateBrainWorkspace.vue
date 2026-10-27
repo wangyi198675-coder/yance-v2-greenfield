@@ -11,12 +11,14 @@ const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=re
 const chosen=ref(''),requestInFlight=ref(false);
 const modelCostApproved=ref(false),brainExpertOpen=ref(false),brainRoot=ref(null);
 const nativeTools=ref([]),nativeRuns=ref([]),nativeReadState=ref('idle'),nativeTrace=ref(null),traceReadState=ref('idle');
+const experts=ref([]),expertsState=ref('idle'),expertError=ref(''),expertBusy=ref(false),expertStableId=ref(''),chosenExpertId=ref(''),expertConsent=ref(false),expertVerified=ref(null);
+let expertEpoch=0;
 let nativeReadRevision=0;
 const brainTrigger={experts:'brain-expert',model:'brain-compose-model',tools:'brain-compose-tools'};
 function brainActiveMenu(){return brainExpertOpen.value?'experts':setupOpen.value?'model':toolsOpen.value?'tools':null}
 function closeBrainMenu(restoreFocus=false){
  const prior=brainActiveMenu();
- brainExpertOpen.value=false;setupOpen.value=false;toolsOpen.value=false;nativeReadRevision++;
+ brainExpertOpen.value=false;setupOpen.value=false;toolsOpen.value=false;nativeReadRevision++;expertEpoch++;
  if(restoreFocus&&prior)nextTick(()=>brainRoot.value?.querySelector('[data-test="'+brainTrigger[prior]+'"]')?.focus());
 }
 async function focusBrainPopup(){
@@ -25,8 +27,102 @@ async function focusBrainPopup(){
 }
 async function toggleBrainExpert(){
  if(brainExpertOpen.value){closeBrainMenu(true);return}
- closeBrainMenu();brainExpertOpen.value=true;await focusBrainPopup();
+ closeBrainMenu();brainExpertOpen.value=true;await focusBrainPopup();void loadExperts();
 }
+
+function verifyExpertDirectory(dto){
+ if(dto?.authoritative!==true||dto.source!=='W43_NATIVE_AGNO_EXPERT'||
+  dto.status!=='NATIVE_EXPERT_DIRECTORY_READ'||dto.canSend!==false||
+  dto.cataloguedCount!==10||dto.installedReadOnlyCount!==1||dto.registeredCount!==1||
+  !Array.isArray(dto.experts)||dto.experts.length!==10||
+  dto.experts.filter(x=>x.installed).length!==1||
+  dto.experts.filter(x=>x.installed&&x.registered).length!==1||
+  dto.experts.filter(x=>x.canInvoke).length>1||
+  !dto.experts.every(x=>typeof x.expertId==='string'&&/^[a-z0-9-]{3,64}$/.test(x.expertId)&&
+   typeof x.label==='string'&&typeof x.installed==='boolean'&&typeof x.registered==='boolean'&&
+   typeof x.enabled==='boolean'&&typeof x.canInvoke==='boolean'&&
+   (!x.canInvoke||(x.expertId==='oss-discovery'&&x.registered&&x.installed&&x.enabled&&
+    x.availableMode==='READ_ONLY_STABLE252_INSPECTION'))))
+  throw Error('EXPERT_DIRECTORY_NOT_VERIFIED');
+ return dto.experts.map(x=>({
+   expertId:x.expertId,label:x.label,installed:x.installed,registered:x.registered,
+   enabled:x.enabled,canInvoke:x.canInvoke,availableMode:x.availableMode,
+   qualification:String(x.qualification||''),revision:x.revision
+ }));
+}
+async function loadExperts(){
+ const ticket=++expertEpoch;
+ experts.value=[];expertVerified.value=null;expertConsent.value=false;chosenExpertId.value='';expertError.value='';
+ expertsState.value='loading';
+ try{
+  ensureCurrent();
+  const rows=verifyExpertDirectory(await api('/api/v2/private-brain/experts'));
+  if(ticket!==expertEpoch||!mounted||!brainExpertOpen.value)return;
+  experts.value=rows;expertsState.value='ready';
+ }catch{
+  if(ticket===expertEpoch&&mounted){expertsState.value='unavailable';expertError.value='原W43专家目录暂不可用或未授权'}
+ }
+}
+const expertEligible=computed(()=>{
+ const x=experts.value.find(v=>v.expertId==='oss-discovery');
+ const m=catalog.value?.models?.find(v=>v.provider===catalog.value.selectedProvider&&v.modelId===catalog.value.selectedModelId);
+ return expertsState.value==='ready'&&x?.registered===true&&x.installed===true&&
+  x.enabled===true&&x.canInvoke===true&&
+  x.availableMode==='READ_ONLY_STABLE252_INSPECTION'&&
+  loadState.value==='ready'&&catalog.value?.configured===true&&
+  m?.available===true&&m?.configured===true&&!!session.value&&
+  session.value.expiresAt>Date.now();
+});
+async function runExpert(){
+ const stableId=expertStableId.value.trim();
+ if(expertBusy.value||chosenExpertId.value!=='oss-discovery'||!expertEligible.value||!expertConsent.value||
+  !/^(?:[A-Z]{1,3}[0-9]{2,3}|UIE-[0-9]{3})$/.test(stableId))return;
+ const ticket=++expertEpoch;expertBusy.value=true;expertError.value='';expertVerified.value=null;
+ const id=revision;
+ try{
+  ensureCurrent();
+  const fresh=verifyExpertDirectory(await api('/api/v2/private-brain/experts'));
+  const x=fresh.find(v=>v.expertId==='oss-discovery');
+  if(!x?.installed||!x.enabled||!x.canInvoke||!safeCurrent(id)||ticket!==expertEpoch||!brainExpertOpen.value)
+   throw Error('EXPERT_CURRENT_SCOPE_REVOKED');
+  const model=checkedModelCatalog(await api(PRIVATE_ROUTES.config));
+  if(!model.configured||model.selectedProvider!==catalog.value?.selectedProvider||
+   model.selectedModelId!==catalog.value?.selectedModelId||!safeCurrent(id))
+   throw Error('EXPERT_MODEL_QUALIFICATION_CHANGED');
+  const requestId='expert_'+Array.from(crypto.getRandomValues(new Uint8Array(16)),n=>n.toString(16).padStart(2,'0')).join('');
+  const receipt=await api('/api/v2/private-brain/experts/oss-discovery/turn',{
+   method:'POST',headers:{'content-type':'application/json','x-yance-csrf':session.value.csrf},
+   body:JSON.stringify({requestId,stableId,threadId:'personal',usageScope:'THIS_TASK'})
+  });
+  if(!safeCurrent(id)||ticket!==expertEpoch||!brainExpertOpen.value)return;
+  if(receipt?.authoritative!==true||receipt.source!=='W43_NATIVE_AGNO_EXPERT'||
+   receipt.status!=='COMPLETED_READ_ONLY_CATALOG_INSPECTION'||receipt.expertId!=='oss-discovery'||
+   receipt.stableId!==stableId||receipt.usageScope!=='THIS_TASK'||
+   receipt.businessExecuted!==false||receipt.qualityQualified!==false||receipt.canSend!==false||
+   !/^[A-Za-z0-9_-]{6,128}$/.test(receipt.runId||'')||
+   typeof receipt.assistantText!=='string'||!receipt.assistantText)
+   throw Error('EXPERT_RECEIPT_NOT_AUTHENTICATED');
+  const runId=receipt.runId;
+  const [run,trace]=await Promise.all([
+   api('/api/v2/private-brain/runs/'+encodeURIComponent(runId)+'?threadId=personal'),
+   api('/api/v2/private-brain/runs/'+encodeURIComponent(runId)+'/trace?threadId=personal')
+  ]);
+  if(!safeCurrent(id)||ticket!==expertEpoch||!brainExpertOpen.value)return;
+  if(run?.authoritative!==true||run.source!=='W43_NATIVE_AGNO_SDK'||
+   run.runId!==runId||run.canSend!==false||run.status!=='COMPLETED'||
+   !Array.isArray(run.tools)||!run.tools.length||
+   trace?.authoritative!==true||trace.source!=='W43_NATIVE_AGNO_SDK'||
+   trace.runId!==runId||trace.canSend!==false||trace.noTraceFabricated!==true||
+   trace.status!=='NATIVE_TRACES_FOUND'||!Array.isArray(trace.traces)||
+   !Number.isSafeInteger(trace.traceCount)||trace.traceCount<1)
+    throw Error('EXPERT_RUN_TRACE_GET_MISMATCH');
+  expertVerified.value={runId,stableId,traceCount:trace.traceCount,text:receipt.assistantText.slice(0,1400)};
+  expertConsent.value=false;
+  // Do NOT inject this expert receipt as an invented chat assistant turn.
+ }catch(e){if(ticket===expertEpoch&&safeCurrent(id))expertError.value='专家执行未完整核实：'+reason(e)}
+ finally{if(ticket===expertEpoch)expertBusy.value=false}
+}
+
 async function toggleBrainModel(){
  if(setupOpen.value){closeBrainMenu(true);return}
  closeBrainMenu();setupOpen.value=true;await focusBrainPopup();
@@ -230,7 +326,7 @@ async function send(){
 }
 onMounted(()=>{document.addEventListener('keydown',brainMenuKeyboard);document.addEventListener('pointerdown',brainOutsideClick);void refresh()});
 onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);document.removeEventListener('pointerdown',brainOutsideClick);
- mounted=false;revision++;nativeReadRevision++;clearSession();text.value=''});
+ mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value=''});
 </script>
 <template>
  <section ref="brainRoot" class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
@@ -297,10 +393,30 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    </article>
   </div>  <div v-if="brainExpertOpen" class="bc-brain-context-menu" data-test="brain-expert-popup" id="w46-brain-expert-menu" role="menu" aria-label="闺蜜大脑专家选择">
     <div class="bc-brain-popup-head"><strong>选择专家</strong><button type="button" data-test="brain-expert-close" @click="toggleBrainExpert">关闭</button></div>
-    <p>原W43十类专家目录尚未通过W47正式HTTP资格回读。可显示目录，不伪称已经安装或运行。</p>
-    <button type="button" disabled>任务专家 · 待真实注册和本人授权</button>
-    <button type="button" disabled>当前联系人专家 · 待联系人身份K</button>
-    <button type="button" disabled>全局默认专家 · 待持续授权</button>
+    <p v-if="expertsState==='loading'">正在读取W47原生专家目录…</p>
+    <p v-else-if="expertsState==='unavailable'" role="alert">{{expertError}}</p>
+    <template v-else-if="expertsState==='ready'">
+     <p data-test="brain-experts-authoritative-count">服务端登记 {{experts.length}} 类，实际安装 {{experts.filter(x=>x.installed).length}} 类。仅PRIVATE本次任务，不授予联系人权限。</p>
+     <div v-for="expert in experts" :key="expert.expertId" class="bc-native-expert-row">
+      <strong>{{expert.label}}</strong>
+      <small>{{expert.installed?(expert.enabled?'已安装启用':'已安装但停用'):'未安装'}} · {{expert.qualification}}</small>
+      <button type="button" :data-test="'native-expert-'+expert.expertId" :disabled="!expertEligible||expert.expertId!=='oss-discovery'||!expert.canInvoke||expertBusy" @click="chosenExpertId=expert.expertId;expertConsent=false;expertVerified=null"> {{chosenExpertId===expert.expertId?'本次已选择':expert.canInvoke?'选择本次只读专家':'暂不可用'}}</button>
+     </div>
+     <label class="bc-native-expert-label">本次只读查询的Stable ID
+      <input v-model="expertStableId" data-test="brain-expert-stable-id" maxlength="7" placeholder="例如 A01" :disabled="!expertEligible||chosenExpertId!=='oss-discovery'||expertBusy"/>
+     </label>
+     <label class="bc-native-expert-label"><input type="checkbox" v-model="expertConsent" data-test="brain-expert-consent" :disabled="!expertEligible||chosenExpertId!=='oss-discovery'||expertBusy"/>
+       我明确批准调用当前已选模型，仅查询本次任务的Stable ID；如模型收费按原供应商结算。不授权社交发送或自动托管。
+     </label>
+     <button type="button" data-test="brain-expert-run" :disabled="!expertEligible||chosenExpertId!=='oss-discovery'||!expertConsent||expertBusy||!/^(?:[A-Z]{1,3}[0-9]{2,3}|UIE-[0-9]{3})$/.test(expertStableId.trim())" @click="runExpert">确认执行只读专家</button>
+     <p v-if="expertBusy">正在等待W43原生Run与Trace核验…</p>
+     <p v-if="expertError" role="alert">{{expertError}}</p>
+     <article v-if="expertVerified" data-test="brain-expert-verified-run">
+      <strong>已核验原生Run</strong>
+      <small>{{expertVerified.runId}} · Trace {{expertVerified.traceCount}} · Stable ID {{expertVerified.stableId}}</small>
+      <p>{{expertVerified.text}}</p>
+     </article>
+    </template>
   </div>
   <form class="bc-private-compose" @submit.prevent="send">
    <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
@@ -394,6 +510,11 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
 .bc-brain-context-menu p{margin:0;font-size:11px;line-height:1.55;color:var(--muted)}
 .bc-brain-context-menu button{border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface-soft);color:var(--ink);font-size:11px;text-align:left}
 .bc-brain-context-menu button:disabled{opacity:.6}
+.bc-native-expert-row{display:grid;gap:4px;border-bottom:1px solid var(--border);padding:5px 0}
+.bc-native-expert-row small{color:var(--muted);overflow-wrap:anywhere}
+.bc-native-expert-label{display:flex;align-items:start;gap:6px;font-size:11px}
+.bc-native-expert-label input:not([type]){max-width:145px;border-radius:7px;border:1px solid var(--border);padding:5px;background:var(--surface);color:var(--ink)}
+.bc-brain-context-menu article{overflow-wrap:anywhere;border:1px solid var(--border);border-radius:8px;padding:8px}
 .bc-private-settings{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 64px));bottom:103px;width:min(410px,calc(100vw - 24px));max-height:min(67vh,540px)}
 .bc-brain-trace{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 115px));bottom:103px;width:min(320px,calc(100vw - 24px));max-height:65vh}
 @media(max-width:719px){.bc-brain-context-menu,.bc-private-settings,.bc-brain-trace{left:10px!important;bottom:96px;width:min(340px,calc(100vw - 20px))}}

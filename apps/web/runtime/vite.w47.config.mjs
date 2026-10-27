@@ -16,12 +16,15 @@ if(r4IsolatedPreview){
  // resolve a different developer worktree or trust a browser query as authority.
  const w46Root=root;
  const signedSha=process.env.W47_W46_CANDIDATE_SHA||'';
- const expectedOwnerSha='2765a7600e1562df658cad67faab371fee243ea2';
- const signedUnionSha='5730d390861865126e4a4748d05a92aafad5f917';
+ const expectedOwnerSha='cdfea6313c0b17cb1a641f2b376f51fd586b49d2';
+ const signedUnionSha='8967e106a186494df82733b39ff81080db6d41e3';
+ const priorVueOwnerSha='2765a7600e1562df658cad67faab371fee243ea2';
+ const w47ExpertBridgeFixSha='dba877b30c56235dd849980f282701ef78817d5a';
  const previousSignedSha='376277cbc61fe8946e0d26aac163eea04cb50e05';
  // Original W42/W46 ACK files are byte-for-byte copies of their actual
  // independent MasterController receipts; their Git blobs are pinned below.
- const canonicalAck='apps/web/evidence/W46_PR99_2765A760_CONTEXTUAL_POPOVER_OWNER_REVIEW_ACK.md';
+ const canonicalAck='apps/web/evidence/W46_PR102_PRIVATE_EXPERT_NATIVE_CONSUMER_REVIEW_ACK.md';
+ const priorUiAck='apps/web/evidence/W46_PR99_2765A760_CONTEXTUAL_POPOVER_OWNER_REVIEW_ACK.md';
  const previousOwnerAck='apps/web/evidence/W46_PR97_376277C_FIVE_VUE_OWNER_REVIEW_ACK.md';
  const visualAck='apps/web/evidence/W42_PR97_376277C_QR_VISUAL_DELTA_ACK.md';
  const legacyAck='apps/web/evidence/TO_W09_2_W46_R4_CANDIDATE_OWNER_HANDOFF.md';
@@ -34,7 +37,7 @@ if(r4IsolatedPreview){
   'apps/web/src/channel-setup-contract.mjs':'308400756e9363972310fc6c059fa7df96ff985a',
   'apps/web/src/native-host-status-port.mjs':'339f78a5ea0c81db23875b479ffa1cf627e1f70f',
   'apps/web/src/BCNativeComposer.vue':'ba846b3f8acaa84fe4f7bccdcd75874df5dbc7fd',
-  'apps/web/src/BCPrivateBrainWorkspace.vue':'2247e83d0925642bf3b82433c76be6adf49395cc',
+  'apps/web/src/BCPrivateBrainWorkspace.vue':'b89129629899dd110a1c6c9d1b0560207696f477',
   'apps/web/src/BCNativeCloudKeySettings.vue':'93788ef4abf859bfb470223dad49a8a5e57905b0',
   'apps/web/src/private-brain-ui-contract.mjs':'674307159167361edf9f769408e0c399764aaff5',
   'apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md':'2aedb0b4673117999575273079ffc2b5c542de5c',
@@ -48,7 +51,8 @@ if(r4IsolatedPreview){
   'apps/web/vite.w46.config.mjs':'c4d79e2cb25f60dc0eedf1f355bc936ef2ac915b',
   [legacyAck]:'45893dca88309c678bc7b232f12809d879890c9e',
   [previousOwnerAck]:'bc95c1a2232bad01bd9f818c1d148e3aee53c5c6',
-  [canonicalAck]:'495aa0ac679239f299b1aa3ae9c4f708730a0ba2',
+  [priorUiAck]:'495aa0ac679239f299b1aa3ae9c4f708730a0ba2',
+  [canonicalAck]:'5e5bfff0edb584a838772e671a3a501e4754c976',
   [visualAck]:'08cf4de4d9229ff396c58e01bc4cdf9fcfdce472'
  };
  const git=(...args)=>execFileSync('git',args,{cwd:w46Root,encoding:'utf8'}).trim();
@@ -58,18 +62,23 @@ if(r4IsolatedPreview){
  const visualOwnerAck=readAck(visualAck);
  const oldOwnerAck=readAck(legacyAck);
  const previousOwnerReview=readAck(previousOwnerAck);
+ const priorUiReview=readAck(priorUiAck);
  // A descendant W47 config-signing commit must retain the EXACT reviewed
  // original W46 review and the merged W09 PR102; no unrelated source can reuse these ACKs.
  const signedAncestor=(()=>{
    try{
     git('merge-base','--is-ancestor',previousSignedSha,'HEAD');
-    git('merge-base','--is-ancestor',expectedOwnerSha,'HEAD');
+    // PR105 cherry-picked W46's original commit; do not require the
+    // original owner SHA to be an ancestor of the integration branch.
+    // Its exact five original Git blobs are checked below instead.
+    git('merge-base','--is-ancestor',priorVueOwnerSha,'HEAD');
+    git('merge-base','--is-ancestor',w47ExpertBridgeFixSha,'HEAD');
     git('merge-base','--is-ancestor',signedUnionSha,'HEAD');
     return true
    }
    catch{return false}
  })();
- const receiptTracked=[canonicalAck,previousOwnerAck,visualAck,legacyAck].every(path=>
+ const receiptTracked=[canonicalAck,priorUiAck,previousOwnerAck,visualAck,legacyAck].every(path=>
    git('ls-tree','-r','--name-only','HEAD','--',path)===path);
  // Vite 7 writes a transient bundled config beside this file WHILE it
  // imports the config. It is not a source edit; its exact generated filename
@@ -90,10 +99,20 @@ if(r4IsolatedPreview){
   'apps/web/src/BCNativeComposer.vue',
   'apps/web/src/BCPrivateBrainWorkspace.vue'
  ];
- const w46ReviewValid=ownerAck.includes('W46_POPOVER_UI_AND_PRIVATE_NATIVE_INSPECTION_OWNER_REVIEW_ACK_PASS')&&
+ // W46 UI source is independently signed; its earlier native HTTP E2E RED
+ // has since been repaired in the original W47 bridge (required ancestor).
+ // The signed W46 original commit is a cherry-pick source, not an ancestor.
+ const originalW46BlobsValid=fiveW46Vue.every(path=>{
+   try{return git('rev-parse',expectedOwnerSha+':'+path)===ownerFiles[path]}
+   catch{return false}
+ });
+ const w46ReviewValid=ownerAck.includes('W46_UI_NATIVE_DIRECTORY_OWNER_REVIEW_ACK_PASS')&&
    ownerAck.includes(expectedOwnerSha)&&
+   priorUiReview.includes('W46_POPOVER_UI_AND_PRIVATE_NATIVE_INSPECTION_OWNER_REVIEW_ACK_PASS')&&
+   priorUiReview.includes(priorVueOwnerSha)&&
    previousOwnerReview.includes('OWNER_REVIEW_ACK_PASS')&&
    previousOwnerReview.includes(previousSignedSha)&&
+   originalW46BlobsValid&&
    fiveW46Vue.every(path=>ownerAck.includes(path.slice('apps/web/src/'.length))&&
      ownerAck.includes(ownerFiles[path]));
  // W42 independently closed only the QR layout/status RED with actual

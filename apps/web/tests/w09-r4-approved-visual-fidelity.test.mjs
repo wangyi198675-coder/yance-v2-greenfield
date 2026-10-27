@@ -108,5 +108,10 @@ test('PRIVATE Agno model and tools remain original authority while expert menu r
  assert.match(b,/selectModel\(\)/);
  assert.match(b,/PRIVATE_ROUTES.selection/);
  assert.match(b,/data-test="cloud-model-cost-confirm"/);
- assert.match(b,/type="button" disabled>.*任务专家/);
+ // PR102: replace unsigned design-only disabled menu with real W47 authority.
+ assert.match(b,/api\('\/api\/v2\/private-brain\/experts'\)/);
+ assert.match(b,/x\.installed&&x\.registered/);
+ assert.match(b,/data-test="brain-expert-consent"/);
+ assert.match(b,/data-test="brain-expert-run"/);
+ assert.match(b,/EXPERT_RUN_TRACE_GET_MISMATCH/);
 });
