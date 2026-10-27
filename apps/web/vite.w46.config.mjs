@@ -43,7 +43,7 @@ import {createLoopbackTakeoverPort} from '../../../../apps/web/src/native-takeov
 // In the installed B+C app only W54/W47 native Session may authorize actions.
 // Never instantiate synthetic W24/W44 test ports on the installed renderer.
 const w46InstalledAssetHost=window.location.protocol==='http:'&&window.location.hostname==='tauri.localhost'
-const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')==='1'||w46InstalledAssetHost
+const w46WorkspaceEnabled=new URLSearchParams(window.location.search).get('productDraft')!=='0'||w46InstalledAssetHost
 const w46LegacyLoopbackLab=!w46WorkspaceEnabled&&
   ['localhost','127.0.0.1','::1','[::1]'].includes(window.location.hostname)
 const w46Port=w46LegacyLoopbackLab?createLoopbackTakeoverPort({baseUrl:window.location.origin,enabled:true,
@@ -117,7 +117,9 @@ watch([w46Identity,w46SourceMid],async([identity,mid],_,onCleanup)=>{
    if(!header.includes(lab))throw Error('ORIGINAL_BC_LAB_STRIP_CHANGED');
    return header.replace(lab,`<BCProductWorkspaceCandidate v-if="isBC&&w46WorkspaceEnabled"
       :enabled="w46WorkspaceEnabled" :active-workspace="w46Workspace"
-      :appearance="state.appearance" @select="w46Workspace=$event"/>
+      :appearance="state.appearance" :theme="state.theme" @select="w46Workspace=$event"
+      @toggle-theme="state.appearance=state.appearance==='dark'?'light':'dark'"
+      @cycle-theme="state.theme=THEMES[(THEMES.indexOf(state.theme)+1)%THEMES.length]"/>
   <div v-if="!w46WorkspaceEnabled" class="lab-strip">`)
      .replace('<section v-if="isPulse"','<section v-if="!w46WorkspaceEnabled&&isPulse"')
      .replace('<main v-else class="workspace"',

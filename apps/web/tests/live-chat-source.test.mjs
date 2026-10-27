@@ -5,8 +5,11 @@ import {validateLiveContacts,validateNativeTimeline,readLiveContacts,readLiveTim
 import {fullK} from '../src/composer-bridge.mjs';
 const health={ok:true,service:'Yance V2 local API',runtimeSha:'W47_NATIVE_SOURCE_PIN',
  trustedSession:true,canSend:false};
+const k={tenant:'nativeTenant001',account:'nativeAccount001',
+ channel:'WHATSAPP_PERSONAL',peer_id:'wd_user_01333',binding_revision:4};
 const c={accountRef:'W28_REAL_ACCOUNT_0001',channel:'WHATSAPP_PERSONAL',
- peerRef:'wd_user_01333',bindingRevision:4,displayName:'Verified upstream contact'};
+ peerRef:'wd_user_01333',bindingRevision:4,displayName:'Verified upstream contact',
+ identity:k,identityKey:fullK(k)};
 const signed={ok:true,authoritative:true,canSend:false,
  source:'W24_CURRENT_K_AND_NATIVE_CHANNEL_OWNERS',
  connectedAccountCount:1,contacts:[c]};
@@ -14,8 +17,9 @@ test('consume actual W47 signed Issue61 accountRef/peerRef contact list, not fak
  const r=validateLiveContacts(health,signed);
  assert.equal(r.realContacts,1);assert.equal(r.contacts[0].peerRef,c.peerRef);
  assert.equal(r.contacts[0].contactRef,'W28_REAL_ACCOUNT_0001|WHATSAPP_PERSONAL|wd_user_01333|4');
- assert.equal(r.contacts[0].identity,null);
- assert.equal(r.contacts[0].identityKey,null);
+ assert.deepEqual(r.contacts[0].identity,k);
+ assert.equal(r.contacts[0].identityKey,fullK(k));
+ assert.equal(r.contacts[0].unread,null);
  assert.equal(r.canSend,false);
 });
 test('read actual W47 same-origin GET only; no caller Actor or message send',async()=>{
@@ -41,6 +45,9 @@ test('W47 contacts refuse duplicates, unknown account, tampered K, forged send a
   {...signed,contacts:[c,c]},
   {...signed,contacts:[{...c,accountRef:'fixture-account-1'}]},
   {...signed,contacts:[{...c,identityKey:'SYNTHETIC'}]},
+  {...signed,contacts:[{...c,identity:null}]},
+  {...signed,contacts:[{...c,identity:{...k,tenant:'SYNTHETIC_TEST_ONLY'}}]},
+  {...signed,contacts:[{...c,identity:{...k,peer_id:'not-my-peer'}}]},
   {...signed,contacts:[{...c,tenant:'SYNTHETIC_TEST_ONLY'}]},
   {...signed,contacts:[{...c,bindingRevision:-1}]},
   {...signed,contacts:[{...c,channel:'UNSUPPORTED'}]},
@@ -49,15 +56,25 @@ test('W47 contacts refuse duplicates, unknown account, tampered K, forged send a
  ])assert.throws(()=>validateLiveContacts(health,v));
  assert.throws(()=>validateLiveContacts({...health,trustedSession:false},signed));
 });
-test('W47 contactRef has no W24 full canonical K; no message HTTP attempted',async()=>{
+test('verified W24 full K flows contact to W25 timeline GET and original Composer selector',async()=>{
  const selected=validateLiveContacts(health,signed).contacts[0];
- let called=0;
- await assert.rejects(()=>readLiveTimeline({contact:selected,fetchImpl:async()=>{
-  called++;return {ok:true};
- }}),/W24_FULL_K_NOT_SIGNED/);
- assert.equal(called,0);
+ let url=null;
+ const result=await readLiveTimeline({contact:selected,fetchImpl:async(path,opts)=>{
+  url=path;
+  assert.equal(opts.method,'GET');
+  return {ok:true,json:async()=>({
+   ok:true,authoritative:true,canSend:false,
+   identityKey:fullK(k),messages:[{
+    identityKey:fullK(k),mid:'real_mid_0001',
+    original:'Hello',direction:'INBOUND',providerSource:'baileys'}]
+  })};
+ }});
+ assert.equal(url,'/api/v2/messages?identityKey='+encodeURIComponent(fullK(k)));
+ assert.equal(result.messages[0].mid,'real_mid_0001');
  assert.throws(()=>validateNativeTimeline({ok:true,authoritative:true,
   canSend:false,identityKey:'pretend',messages:[]},selected));
+ await assert.rejects(()=>readLiveTimeline({contact:{...selected,identityKey:null},
+  fetchImpl:async()=>{throw Error('NO_HTTP')}}),/W24_FULL_K_NOT_SIGNED/);
 });
 test('later signed full W24 K still checks exact MID, source and translation Run',()=>{
  const identity={tenant:'real-native',account:'native_account_008',

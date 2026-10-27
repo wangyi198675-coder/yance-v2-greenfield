@@ -7,9 +7,9 @@ const shell=readFileSync(new URL('../src/BCProductWorkspaceCandidate.vue',import
 const A={tenant:'SYNTHETIC_TEST_ONLY',account:'fixture-account-1',
  channel:'FB_PERSONAL',peer_id:'fake-peer-001',binding_revision:1};
 const B={...A,peer_id:'fake-peer-002'};
-test('CHAT reveals original v-else B+C main, others hide with v-show and never v-if destroy it',()=>{
+test('R4 compact keeps the original B+C Composer and keeps live contact state mounted while navigating',()=>{
  assert.match(config,/v-else-if="!w46WorkspaceEnabled"/);
- assert.match(shell,/<BCLiveChatWorkspace v-if="activeWorkspace==='CHAT'"/);
+ assert.match(shell,/<BCLiveChatWorkspace v-show="activeWorkspace==='CHAT'"/);
  assert.match(config,/CHAT/);
  assert.ok(!config.includes('<main v-else v-show=\\"!w46WorkspaceEnabled\\" class='));
  assert.ok(!config.includes('<main v-else v-if='));

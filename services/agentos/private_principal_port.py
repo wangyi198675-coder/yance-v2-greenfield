@@ -347,6 +347,113 @@ class W43NativePrivateBrainPort:
         except Exception:
             raise W47PrivateAccessError("NATIVE_AGNO_READ_FAILED", 503) from None
 
+    def expert_directory(self, context):
+        """Ten approved design categories, only original SDK-qualified modes live."""
+        from native_experts import NativeExpertDirectory
+        claim = self._verified(context, "PRIVATE_HISTORY")
+        scope, file = self._native_storage(claim)
+        result = NativeExpertDirectory(file).list(scope)
+        self._recheck(context, "PRIVATE_HISTORY", claim)
+        return result
+
+    def expert_set_enabled(self, context, *, expert_id, enabled):
+        """User-owned toggle, in the SAME original Agno SQLite, no second DB."""
+        from native_experts import NativeExpertDirectory, ExpertNotReady
+        claim = self._verified(context, "PRIVATE_TURN")
+        scope, file = self._native_storage(claim)
+        self._recheck(context, "PRIVATE_TURN", claim)
+        try:
+            result = NativeExpertDirectory(file).toggle(scope, expert_id, enabled)
+        except ExpertNotReady as err:
+            raise W47PrivateAccessError(
+                err.code, 409 if err.code=="EXPERT_UPSTREAM_NOT_INSTALLED" else 422
+            ) from None
+        except Exception:
+            raise W47PrivateAccessError("EXPERT_PREFERENCE_STORAGE_UNAVAILABLE",503) from None
+        self._recheck(context, "PRIVATE_TURN", claim)
+        return result
+
+    def expert_turn(self, context, *, thread_id, request_id, expert_id, stable_id,
+                    usage_scope="THIS_TASK"):
+        """Single registered safe expert delegates to the SAME original Agno Agent.
+
+        Uses original W43 request ledger claim/begin_execute/native Run/finish.
+        W45 contact/global bindings are NOT accepted here until signed by
+        their owner. We will not invent K/MID or a second sending path.
+        """
+        from native_experts import NativeExpertDirectory,ExpertNotReady
+        import re
+        if usage_scope != "THIS_TASK":
+            raise W47PrivateAccessError("W45_CONTACT_SCOPE_BINDING_NOT_CONNECTED",503)
+        if not isinstance(stable_id,str) or not re.fullmatch(
+                r"(?:[A-Z]{1,3}[0-9]{2,3}|UIE-[0-9]{3})",stable_id):
+            raise W47PrivateAccessError("EXPERT_STABLE_ID_INVALID",422)
+        claim = self._verified(context, "PRIVATE_TURN")
+        scope, file = self._native_storage(claim)
+        try:
+            desc = NativeExpertDirectory(file).require_active(scope, expert_id)
+        except ExpertNotReady as err:
+            raise W47PrivateAccessError(
+                err.code,409 if err.code in {"EXPERT_UPSTREAM_NOT_INSTALLED","EXPERT_DISABLED"} else 422
+            ) from None
+        if desc.expert_id != "oss-discovery":
+            raise W47PrivateAccessError("EXPERT_UPSTREAM_NOT_INSTALLED",409)
+        # This stableID task selects ONE proven read-only tool. It does NOT
+        # grant registry search, repair, chat contacts, side-effecting tools.
+        from capability_catalog import stable_catalog
+        if stable_id not in stable_catalog():
+            raise W47PrivateAccessError("STABLE_ID_NOT_REGISTERED",422)
+        prompt = (
+            "Only use the original read-only Agno tool "
+            "describe_yance_capability for StableID "
+            + stable_id +
+            ". This is the V2 catalogue inspection expert oss-discovery "
+            "(READ_ONLY_STABLE252_INSPECTION), not an external OSS search. "
+            "Invoke the tool and report its actual status clearly. "
+            "Do not invent upstream installation or successful business actions."
+        )
+        self._recheck(context, "PRIVATE_TURN", claim)
+        from private_request_ledger import NativePrivateRequestLedger
+        ledger = NativePrivateRequestLedger(self)
+        receipt = ledger.claim(context, thread_id=thread_id, request_id=request_id, text=prompt)
+        if receipt["state"] == "COMPLETED":
+            actual = receipt["receipt"]
+        elif receipt["state"] == "CLAIMED":
+            try:
+                actual = self.turn(
+                    context,thread_id=thread_id,request_id=request_id,text=prompt)
+            except Exception:
+                # No retry: executor might have completed a chargeable model
+                # Run but failed before its durable receipt returned.
+                ledger.mark_unknown(
+                    context,thread_id=thread_id,request_id=request_id,text=prompt)
+                raise
+        else:
+            raise W47PrivateAccessError("EXPERT_RUN_ALREADY_CLAIMED_OR_UNKNOWN",409)
+        detail=self.native_run(context,thread_id=thread_id,run_id=actual["runId"])
+        proven=[t for t in detail["tools"] if
+                t["toolName"]=="describe_yance_capability"
+                and t["status"]=="SDK_TOOL_RESULT_PERSISTED"
+                and t.get("stableId")==stable_id
+                and "DECLARED_NOT_AUTHORIZED_FOR_EXECUTION" in t.get("result","")]
+        if not proven:
+            if receipt["state"]=="CLAIMED":
+                ledger.mark_unknown(context,thread_id=thread_id,request_id=request_id,text=prompt)
+            raise W47PrivateAccessError("EXPERT_NATIVE_TOOL_RESULT_UNVERIFIED",503)
+        if receipt["state"]=="CLAIMED":
+            ledger.finish(context,thread_id=thread_id,request_id=request_id,
+                          text=prompt,receipt=actual)
+        self._recheck(context, "PRIVATE_TURN", claim)
+        return {
+            "status":"COMPLETED_READ_ONLY_CATALOG_INSPECTION",
+            "expertId":expert_id,"usageScope":usage_scope,
+            "stableId":stable_id,"toolCallId":proven[0]["toolCallId"],
+            "runId":actual["runId"],"sessionId":actual["sessionId"],
+            "assistantText":actual["assistantText"],"modelId":actual["modelId"],
+            "modelProvider":actual["modelProvider"],
+            "businessExecuted":False,"canSend":False,"qualityQualified":False,
+        }
+
     def native_tools(self, context):
         """Registered SDK tools vs all 252 declared, never implied executable."""
         from native_inspection import native_tool_directory

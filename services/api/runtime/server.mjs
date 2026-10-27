@@ -9,7 +9,7 @@ import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
 import {createOperatorConsoleIssuer} from './local-operator-console.mjs';
-import {createPrivateBrainHttp} from './private-brain-http.mjs';
+import {createPrivateBrainHttp,createPrivateNativeInspectionHttp} from './private-brain-http.mjs';
 import {createW43PythonPrivatePort} from './private-python-port.mjs';
 import {createW43NativeLedgerAdapter} from './private-native-ledger-port.mjs';
 import {readW54LocalBoot,createNativeStartupSession} from './native-private-startup.mjs';
@@ -127,6 +127,9 @@ const privateBrainHttp=createPrivateBrainHttp({
  sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,
  w43Port,requestLedger
 });
+const privateInspectionHttp=createPrivateNativeInspectionHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,w43Port
+});
 // W24 + W26..W29 provider SDK authority is absent, not a zero-contact
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
@@ -210,7 +213,11 @@ const handler=(req,res)=>{
       return;
     }
     if(url.pathname.startsWith('/api/v2/private-brain/')){
-      void privateBrainHttp(req,res,url).catch(()=>{
+      // Existing W43 native read methods share this single W47 API / Session.
+      void privateInspectionHttp(req,res,url).then(handled=>
+        handled?true:privateBrainHttp(req,res,url)).then(handled=>{
+         if(!handled&&!res.writableEnded)deny(res,404,'PRIVATE_BRAIN_ROUTE_NOT_FOUND');
+        }).catch(()=>{
         if(!res.headersSent)deny(res,503,'PRIVATE_BRAIN_UNAVAILABLE');
         else res.destroy();
       });
@@ -222,6 +229,12 @@ const handler=(req,res)=>{
       return serial(res,200,{...state(req),webSource:'SEE_INSTALLED_LOCAL_WEB_VERSION',apiGitSha:sha});
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/capabilities')
       return serial(res,200,{ok:true,authoritative:true,canSend:false,capabilities:endpoints});
+    if(/^\/api\/v2\/providers\/(fb-page|whatsapp-personal|telegram-personal)\/native\//.test(url.pathname)){
+      // Original W27/W28/W29 SDK owners are present in source, but the
+      // W24 account lifecycle/W55 user-approved credential consumers are
+      // not yet injected here. Do not turn an HTTP 404 into a fake QR/login.
+      return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
+    }
     if(url.pathname.startsWith('/api/v2/providers/')){
       void nativeProviders(req,res,url).then(handled=>{
        if(!handled&&!res.writableEnded)deny(res,404,'ROUTE_NOT_FOUND');
@@ -245,12 +258,24 @@ const handler=(req,res)=>{
       });
       return;
     }
-    if(req.method==='GET' && url.pathname==='/api/v2/translations')
-      return deny(res,401,'NO_AUTHORIZED_SOURCE_MESSAGE');
+    if(req.method==='GET' && url.pathname==='/api/v2/translations'){
+      return localSessionAuthority.sessionFor(req)?
+       deny(res,503,'W45_NATIVE_TRANSLATION_AND_ATTESTOR_NOT_CONNECTED'):
+       deny(res,401,'NO_AUTHORIZED_SOURCE_MESSAGE');
+    }
+    if(['/api/v2/persona-policy','/api/v2/persona/learning',
+         '/api/v2/media/capabilities'].includes(url.pathname)){
+      if(req.method!=='GET')return deny(res,405,'READ_ONLY_CAPABILITIES');
+      if(!localSessionAuthority.sessionFor(req))return deny(res,401,'LOCAL_SESSION_REQUIRED');
+      return deny(res,503,url.pathname.startsWith('/api/v2/persona')?
+       'PERSONA_POLICY_NATIVE_DB_OWNER_NOT_SIGNED':'W23_MEDIA_OWNER_PORT_NOT_CONNECTED');
+    }
     if(url.pathname==='/api/v2/identity-consent/takeover-state' ||
        url.pathname==='/api/v2/identity-consent/takeover' ||
        url.pathname==='/api/v2/managed-stop')
-      return deny(res,401,'TRUSTED_SESSION_AND_CURRENT_BINDING_REQUIRED');
+      return localSessionAuthority.sessionFor(req)?
+       deny(res,503,'W44_NATIVE_CUSTODY_AND_CURRENT_K_PORT_NOT_CONNECTED'):
+       deny(res,401,'TRUSTED_SESSION_AND_CURRENT_BINDING_REQUIRED');
     if(url.pathname.startsWith('/w46-native-test/'))
       return deny(res,410,'SYNTHETIC_TEST_ROUTE_NOT_AVAILABLE');
     if(['/api/v2/send','/api/v2/outbox','/api/v2/agent/run'].includes(url.pathname))

@@ -48,3 +48,29 @@ Uses Node's built-in test runner, no npm installation, env secrets or dependency
 - No second sender, Telegram Bot API, alternate TDLib implementation, login, account reauthorization, model call, download of dependencies, or production deploy.
 
 The code intentionally lacks any native/client transport; **passing tests does not mean a real Telegram account has received or sent a message**.
+
+## 2026-10-27 R4 compact Smart Inbox: official native extension
+
+The original Issue #13 text above documents ONLY the old synthetic adapter.
+Official Windows TDLib JSON 1.8.69 was subsequently compiled from upstream
+ea3f69ce11aef458bfbb09869b809ede4447486f; actual tdjson.dll SHA256:
+ae286549e2abc071acf67a3423468e8a5a8b488b4cdc368d6f203b2bf1d355e0.
+See evidence/ISSUE61_NATIVE_OWNER_HANDOFF.md and the Issue #77 owner evidence.
+
+R4 SOURCE PORTS, NOT YET W47/W46 APP INTEGRATION:
+- src/native-telegram-auth-flow.mjs: existing user-click official authorization and logout.
+- src/native-tdjson.mjs: same official TDLib worker, now requestRead with
+  correlated @extra native responses, W47 private session rechecks,
+  native close/revocation cancellation, bounded timeout and no sendMessage.
+- src/native-telegram-chat-data.mjs: createW29TelegramChatDataPort
+  with listChats/getChats+getChat, listContacts/getContacts+getUser,
+  readHistory/getChatHistory forwarded to original W25 persistence,
+  readChatAvatar/getChat+downloadFile forwarded to original W47 asset consumer.
+  Original W24 active ChannelAccount+Peer K and Consent are required.
+  No new contacts store, timeline DB, public file URL or second sender.
+
+New real native pre-login test proves all 5 private SDK reads are denied.
+Other data tests use synthetic DTO fixtures and cannot prove real account
+or real chat/avatar data. W47 and W46 own original API/UI and plus-menu wiring.
+Real Telegram user consent, SDK QR, contacts, history and UI remain HOLD until
+the account owner actually connects legally; no automatic V1 restoration.

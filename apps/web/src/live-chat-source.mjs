@@ -1,6 +1,6 @@
-// W46 / Issue61: actual W47 native-authoritative-reads source, never synthetic.
-// W47 does not disclose the complete W24 five-part K; accountRef/peerRef only
-// identify the READ-ONLY contact row and must never become a takeover grant.
+// Actual W47 -> original W24 5-part native K -> W25 timeline -> one Composer.
+// Native K is a locator and version selector, NOT a user grant or send right.
+// Original W24/W25 must recheck current principal, consent and binding for use.
 import {fullK} from './composer-bridge.mjs';
 const channels=new Set(['FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL']);
 const account=/^[A-Za-z0-9_-]{8,150}$/;
@@ -29,16 +29,25 @@ export function validateLiveContacts(health,result){
      !Number.isSafeInteger(c.bindingRevision)||
      c.bindingRevision<1||typeof c.displayName!=='string'||
      !c.displayName.trim()||c.displayName.length>180||
-     c.identityKey!==undefined||c.tenant!==undefined||
-     c.canSend!==undefined||c.accessToken!==undefined)
+     !c.identity||typeof c.identity!=='object'||
+     c.identity.channel!==c.channel||c.identity.peer_id!==c.peerRef||
+     c.identity.binding_revision!==c.bindingRevision||
+     typeof c.identity.tenant!=='string'||!c.identity.tenant||
+     typeof c.identity.account!=='string'||!c.identity.account||
+     c.identity.tenant==='SYNTHETIC_TEST_ONLY'||
+     c.identity.account.startsWith('fixture-')||
+     c.identity.peer_id.startsWith('fake-')||
+     typeof c.identityKey!=='string'||fullK(c.identity)!==c.identityKey||
+     c.tenant!==undefined||c.canSend!==undefined||c.accessToken!==undefined)
    deny('LIVE_NATIVE_CONTACT_RECORD_INVALID');
   const contactRef=[c.accountRef,c.channel,c.peerRef,c.bindingRevision].join('|');
   if(seen.has(contactRef))deny('LIVE_CONTACT_DUPLICATED');
   seen.add(contactRef);
   return Object.freeze({contactRef,accountRef:c.accountRef,channel:c.channel,
     peerRef:c.peerRef,bindingRevision:c.bindingRevision,
-    displayName:c.displayName,unread:0,
-    identity:null,identityKey:null,canSend:false});
+    displayName:c.displayName,unread:null,
+    identity:Object.freeze({...c.identity}),identityKey:c.identityKey,
+    canSend:false});
  });
  if(contacts.length&&!result.connectedAccountCount)deny('LIVE_CONTACT_ACCOUNT_COUNT_INVALID');
  return Object.freeze({trustedSession:true,source:result.source,
@@ -88,7 +97,7 @@ export async function readLiveTimeline({fetchImpl=globalThis.fetch,contact}={}){
 export const explainNativeFailure=e=>{
  const msg=String(e?.message||e||'');
  if(msg.includes('W24_FULL_K_NOT_SIGNED'))
-  return 'W47 已核验联系人，但没有可用于 W24 人工接管的完整身份 K；消息与发送禁用';
+  return 'W24 原生五段身份尚未核验，无法读取此联系人消息或接管';
  if(msg.includes('NATIVE_HTTP_401'))return 'WAITING_USER_AUTH · 尚未建立可信应用会话或联系人授权';
  if(msg.includes('NATIVE_HTTP_403'))return '授权已撤销或账号访问权限不足';
  if(msg.includes('NATIVE_HTTP_409'))return '绑定或撤权版本变化，请重试';

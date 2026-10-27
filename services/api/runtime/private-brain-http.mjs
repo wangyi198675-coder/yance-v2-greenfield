@@ -291,3 +291,76 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
   return true;
  };
 }
+
+
+/**
+ * Read the ORIGINAL W43 Agno Tools / persisted Runs / Trace from exactly
+ * the same current PRIVATE session, SQLite scope and native Python port.
+ * No second Agent, execution endpoint, approval flow, or trace database.
+ */
+export function createPrivateNativeInspectionHttp({
+ sessionAuthority,webOrigin,resolveNativePrincipal=null,w43Port=null
+}={}){
+ if(typeof sessionAuthority?.sessionFor!=='function'||typeof webOrigin!=='string')
+  throw Error('W47_PRIVATE_INSPECTION_SESSION_REQUIRED');
+ return async(req,res,url)=>{
+  const name=url.pathname;
+  const runMatch=/^\/api\/v2\/private-brain\/runs\/([A-Za-z0-9_-]{6,128})(\/trace)?$/.exec(name);
+  const kind=name==='/api/v2/private-brain/tools'?'nativeTools':
+   name==='/api/v2/private-brain/runs'?'nativeRuns':
+   runMatch?(runMatch[2]?'nativeTrace':'nativeRun'):null;
+  if(!kind)return false;
+  if(req.method!=='GET'){reject(res,405,'INSPECTION_READ_ONLY');return true}
+  const session=sessionAuthority.sessionFor(req);
+  if(!session){reject(res,401,'LOCAL_SESSION_REQUIRED');return true}
+  if(req.headers.origin&&req.headers.origin!==webOrigin){
+   reject(res,403,'ORIGIN_NOT_ALLOWED');return true
+  }
+  const allowed=kind==='nativeRuns'?new Set(['threadId','limit']):
+   kind==='nativeTools'?new Set():new Set(['threadId']);
+  if([...url.searchParams.keys()].some(k=>!allowed.has(k)||
+      url.searchParams.getAll(k).length!==1)){
+   reject(res,422,'INSPECTION_QUERY_INVALID');return true
+  }
+  const threadId=url.searchParams.get('threadId')??'personal';
+  if(!validThread(threadId)){reject(res,422,'PRIVATE_THREAD_INVALID');return true}
+  const rawLimit=url.searchParams.get('limit')??'25';
+  if(!/^[1-9][0-9]?$/.test(rawLimit)||+rawLimit>25){
+   reject(res,422,'RUN_LIST_LIMIT_INVALID');return true
+  }
+  if(!resolveNativePrincipal||typeof w43Port?.[kind]!=='function'){
+   reject(res,503,'W43_NATIVE_TOOLS_RUN_TRACE_NOT_CONNECTED');return true
+  }
+  const principal=async()=>{
+   const s=sessionAuthority.sessionFor(req);
+   if(!s)throw {httpStatus:401};
+   const p=await resolveNativePrincipal({session:s,operation:'PRIVATE_HISTORY'});
+   if(!principalValid(p))throw {httpStatus:503};
+   return sessionSeal(s,p);
+  };
+  let old;try{old=await principal()}
+  catch(e){const mapped=errorMap(e);reject(res,mapped.status,mapped.code);return true}
+  const context={serverScope:old,checkCurrent:principal};
+  let data;
+  try{
+   data=kind==='nativeTools'?await w43Port.nativeTools(context):
+    kind==='nativeRuns'?await w43Port.nativeRuns(context,threadId,+rawLimit):
+    kind==='nativeTrace'?await w43Port.nativeTrace(context,threadId,runMatch[1]):
+    await w43Port.nativeRun(context,threadId,runMatch[1]);
+  }catch(e){
+   if(e?.httpStatus===404){reject(res,404,'RUN_NOT_FOUND_IN_PRIVATE_SCOPE');return true}
+   const mapped=errorMap(e);reject(res,mapped.status,mapped.code);return true
+  }
+  if(!data||typeof data!=='object'||Array.isArray(data)||data.canSend===true){
+   reject(res,503,'W43_NATIVE_INSPECTION_UNVERIFIED');return true
+  }
+  let fresh;try{fresh=await principal()}
+  catch(e){const mapped=errorMap(e);reject(res,mapped.status,mapped.code);return true}
+  if(!sameContext(old,fresh)){
+   reject(res,409,'LOCAL_SESSION_REVISION_CONFLICT');return true
+  }
+  reply(res,200,{ok:true,authoritative:true,source:'W43_NATIVE_AGNO_SDK',
+   ...data,canSend:false});
+  return true;
+ };
+}
