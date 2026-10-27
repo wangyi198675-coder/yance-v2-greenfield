@@ -1,0 +1,46 @@
+{
+  "status": "PASS",
+  "port": 44774,
+  "classification": "ISOLATED_BROWSER_UI_ONLY",
+  "steps": [
+    {
+      "phase": "NO_OLD_PREFERENCE_DEFAULT",
+      "theme": "0",
+      "mode": "dark",
+      "storage": null,
+      "allKeys": []
+    },
+    {
+      "phase": "SELECT_AND_SAVED_ONLY_DISPLAY_FIELDS",
+      "theme": "2",
+      "mode": "light",
+      "storage": "{\"theme\":\"Ocean Electric\",\"appearance\":\"light\"}",
+      "allKeys": [
+        "yance.ui.theme.appearance.v1"
+      ]
+    },
+    {
+      "phase": "RELOAD_PRESERVED",
+      "theme": "2",
+      "mode": "light",
+      "storage": "{\"theme\":\"Ocean Electric\",\"appearance\":\"light\"}",
+      "allKeys": [
+        "yance.ui.theme.appearance.v1"
+      ]
+    },
+    {
+      "phase": "REOPEN_PRESERVED",
+      "theme": "2",
+      "mode": "light",
+      "storage": "{\"theme\":\"Ocean Electric\",\"appearance\":\"light\"}",
+      "allKeys": [
+        "yance.ui.theme.appearance.v1"
+      ]
+    },
+    {
+      "phase": "INVALID_STORAGE_REJECTED",
+      "theme": "0",
+      "mode": "dark"
+    }
+  ]
+}
