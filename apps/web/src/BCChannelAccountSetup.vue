@@ -50,6 +50,10 @@ onBeforeUnmount(()=>{alive=false;revision++;clearReceipt()});
   </div>
   <template v-if="receipt">
    <small>原生流程：{{receipt.nextAction}}</small>
+   <a v-if="receipt.officialConnectUrl" :href="receipt.officialConnectUrl"
+      target="_blank" rel="noopener noreferrer" data-test="native-provider-connect-real">
+     打开已安装的 Facebook 官方授权程序
+   </a>
    <a v-if="receipt.officialDocs" :href="receipt.officialDocs" target="_blank"
       rel="noopener noreferrer" data-test="native-provider-docs">查看官方授权步骤</a>
    <div v-if="receipt.qr" data-test="native-provider-qr">

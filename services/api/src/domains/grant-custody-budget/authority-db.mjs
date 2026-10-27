@@ -11,7 +11,8 @@ const str=x=>typeof x==='string'&&x.length>0&&x.length<=180&&
 const refuse=(reason,other={})=>({ok:false,status:'CONFLICT',reason,...other});
 const frozen=x=>Object.freeze(x);
 const KINDS=new Set(['REGISTER_ACCOUNT','BIND_PEER','CREATE_CONSENT',
- 'REVOKE_CONSENT','REVOKE_ACCOUNT','RELINK_ACCOUNT','HUMAN_TAKEOVER','REVOKE_GRANT']);
+ 'REVOKE_CONSENT','REVOKE_ACCOUNT','RELINK_ACCOUNT','HUMAN_TAKEOVER',
+ 'REVOKE_GRANT','ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT']);
 const GLOBAL=new Set(['REGISTER_ACCOUNT','REVOKE_ACCOUNT','RELINK_ACCOUNT']);
 const CONTACT=new Set(['BIND_PEER','CREATE_CONSENT','REVOKE_CONSENT','HUMAN_TAKEOVER']);
 const aj=k=>JSON.stringify([k.tenant,k.account,k.channel]);
@@ -29,6 +30,7 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
   "CREATE TABLE IF NOT EXISTS identity_peers(tenant TEXT NOT NULL, account TEXT NOT NULL, channel TEXT NOT NULL, peer_id TEXT NOT NULL, binding_revision INTEGER NOT NULL, bound INTEGER NOT NULL, proof_ref TEXT NOT NULL, revocation_epoch INTEGER NOT NULL, PRIMARY KEY(tenant,account,channel,peer_id));",
   "CREATE TABLE IF NOT EXISTS identity_consent_epochs(tenant TEXT NOT NULL, account TEXT NOT NULL, channel TEXT NOT NULL, peer_id TEXT NOT NULL, epoch INTEGER NOT NULL, PRIMARY KEY(tenant,account,channel,peer_id));",
   "CREATE TABLE IF NOT EXISTS identity_consents(consent_id TEXT PRIMARY KEY, tenant TEXT NOT NULL, account TEXT NOT NULL, channel TEXT NOT NULL, peer_id TEXT NOT NULL, binding_revision INTEGER NOT NULL, owner TEXT NOT NULL, subject_id TEXT NOT NULL, purpose TEXT NOT NULL, operation TEXT NOT NULL, proof_ref TEXT NOT NULL, expires_at INTEGER NOT NULL, status TEXT NOT NULL, consent_revision INTEGER NOT NULL, revocation_epoch INTEGER NOT NULL);",
+  "CREATE TABLE IF NOT EXISTS grant_pauses(scope_key TEXT PRIMARY KEY,paused INTEGER NOT NULL,epoch INTEGER NOT NULL);",
   "CREATE TABLE IF NOT EXISTS authority_mutation_requests(request_id TEXT PRIMARY KEY, idempotency_key TEXT UNIQUE NOT NULL, scope_key TEXT NOT NULL, full_k TEXT NOT NULL, kind TEXT NOT NULL, actor TEXT NOT NULL, generation INTEGER NOT NULL, expected_json TEXT NOT NULL, payload_json TEXT NOT NULL, state TEXT NOT NULL, result_json TEXT, created_at INTEGER NOT NULL, committed_at INTEGER, UNIQUE(scope_key,generation));",
   "CREATE TABLE IF NOT EXISTS authority_privacy_audit(event_id TEXT PRIMARY KEY, request_id TEXT UNIQUE NOT NULL, kind TEXT NOT NULL, full_k TEXT NOT NULL, actor TEXT NOT NULL, epoch_json TEXT NOT NULL, at INTEGER NOT NULL);"
  ].join('\n'));
@@ -110,7 +112,8 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
    if(!payload||typeof payload!=='object'||Array.isArray(payload))throw Error('INVALID_TYPED_PAYLOAD');
    // Stop scope and fence scope MUST match: CONTACT must never silently
    // revoke GLOBAL while other contacts still have active W25 leases.
-   if(kind==='REVOKE_GRANT'&&payload.grantScope!==scope)
+   if(['REVOKE_GRANT','ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT'].includes(kind)&&
+     payload.grantScope!==scope)
      return refuse('STOP_SCOPE_MISMATCH');
    checkActor(actor,k,kind);
    const full=canonicalK(k),scopeId=sj(k,scope,canonicalK);
@@ -137,6 +140,33 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
        (current.bindingRevision!==k.binding_revision||!current.account))
        return refuse('ACCOUNT_OR_BINDING_NOT_CURRENT');
      if(kind==='REGISTER_ACCOUNT'&&current.account)return refuse('ACCOUNT_ALREADY_EXISTS');
+     // Known invalid grant operations must be rejected BEFORE the PENDING
+     // barrier is written. Otherwise an invalid budget/proof could strand
+     // legitimate conversation traffic until manual database intervention.
+     if(['ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT'].includes(kind)){
+       if(typeof verifyOwnerMutation!=='function')return refuse('W24_MUTATION_VALIDATOR_REQUIRED');
+       const proof=verifyOwnerMutation({actor,kind,identity:k,mutation:payload,requestId:idempotencyKey});
+       if(proof&&typeof proof.then==='function')throw Error('ASYNC_W24_PROOF_NOT_ATOMIC');
+       if(proof?.verified!==true)return refuse('W24_MUTATION_PROOF_REJECTED');
+       const g=db.prepare('SELECT * FROM grants WHERE scope_key=?').get(scopeId);
+       const state=db.prepare('SELECT paused FROM grant_pauses WHERE scope_key=?').get(scopeId);
+       if(kind==='ISSUE_GRANT'){
+         if(!nonnegative(payload.expectedGrantEpoch)||
+            payload.expectedGrantEpoch!==(g?.epoch??0))return refuse('STALE_GRANT_EPOCH');
+         if(!positive(payload.budgetUnits)||payload.budgetUnits>1000000000||
+           !positive(payload.expiresAt)||payload.expiresAt<=now()||
+           (g&&payload.budgetUnits<g.spent+g.reserved))
+           return refuse('INVALID_GRANT_BUDGET_OR_EXPIRY');
+       }
+       if(kind==='PAUSE_GRANT'&&state?.paused===1)return refuse('GRANT_ALREADY_PAUSED');
+       if(kind==='RESUME_GRANT'){
+         if(state?.paused!==1)return refuse('GRANT_NOT_PAUSED');
+         const original=g??(scope==='CONTACT'?
+           db.prepare('SELECT * FROM grants WHERE scope_key=?').get(sj(k,'GLOBAL',canonicalK)):null);
+         if(original&&(!original.enabled||original.expires_at<=now()))
+           return refuse('NO_VALID_GRANT_TO_RESUME');
+       }
+     }
      const generation=expectedGeneration+1,requestId=idempotencyKey,at=now();
      db.prepare('INSERT INTO authority_mutation_requests(request_id,idempotency_key,scope_key,full_k,kind,actor,generation,expected_json,payload_json,state,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
        .run(requestId,idempotencyKey,scopeId,full,kind,actor,generation,json(exp),json(payload),'PENDING',at);
@@ -210,12 +240,44 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
      if(!a?.active||!pr?.bound||p.action!=='USER_EDIT')return refuse('NOT_AN_ACTUAL_USER_EDIT');
      const key=canonicalK(k);
      db.prepare("INSERT INTO custody(k,mode,epoch) VALUES(?,'HUMAN',1) ON CONFLICT(k) DO UPDATE SET mode='HUMAN',epoch=epoch+1").run(key);
-   } else if(kind==='REVOKE_GRANT'){
-     const key=sj(k,p.grantScope||'CONTACT',canonicalK),scope=p.grantScope||'CONTACT';
-     if(scope!==p.grantScope||!['CONTACT','GLOBAL'].includes(scope))return refuse('GRANT_SCOPE_REQUIRED');
-     const g=db.prepare('SELECT epoch FROM grants WHERE scope_key=?').get(key);
-     if(g)db.prepare('UPDATE grants SET enabled=0,epoch=epoch+1 WHERE scope_key=?').run(key);
-     else db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,0,1,8640000000000000,0,0,0)').run(key,scope);
+   } else if(['ISSUE_GRANT','PAUSE_GRANT','RESUME_GRANT','REVOKE_GRANT'].includes(kind)){
+     const scope=JSON.parse(row.scope_key)[0]==='G'?'GLOBAL':'CONTACT';
+     if(p.grantScope!==scope)return refuse('GRANT_SCOPE_MISMATCH');
+     // A legitimate W24 actor/proof must be rechecked by verifyOwnerMutation.
+     // The strict W44 repository never mints a grant from a UI boolean alone.
+     if(!a?.active||a.binding_revision!==k.binding_revision||
+       (scope==='CONTACT'&&(!pr?.bound||pr.binding_revision!==k.binding_revision)))
+       return refuse('ACCOUNT_OR_PEER_UNBOUND');
+     const key=sj(k,scope,canonicalK);
+     const g=db.prepare('SELECT * FROM grants WHERE scope_key=?').get(key);
+     const pause=db.prepare('SELECT paused,epoch FROM grant_pauses WHERE scope_key=?').get(key);
+     if(kind==='ISSUE_GRANT'){
+       if(!nonnegative(p.expectedGrantEpoch)||p.expectedGrantEpoch!==(g?.epoch??0))
+         return refuse('STALE_GRANT_EPOCH');
+       if(!positive(p.budgetUnits)||p.budgetUnits>1000000000||
+         !positive(p.expiresAt)||p.expiresAt<=now()||
+         (g&&p.budgetUnits<g.spent+g.reserved))
+         return refuse('INVALID_GRANT_BUDGET_OR_EXPIRY');
+       db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,1,?,?,?,0,0) ON CONFLICT(scope_key) DO UPDATE SET enabled=1,epoch=grants.epoch+1,expires_at=excluded.expires_at,budget_limit=excluded.budget_limit')
+         .run(key,scope,(g?.epoch??0)+1,p.expiresAt,p.budgetUnits);
+       // A new explicit, independently verified issue clears only its own pause.
+       if(pause?.paused===1)db.prepare('UPDATE grant_pauses SET paused=0,epoch=epoch+1 WHERE scope_key=?').run(key);
+     } else if(kind==='PAUSE_GRANT'){
+       if(pause?.paused===1)return refuse('GRANT_ALREADY_PAUSED');
+       // Scope pause works even when a CONTACT is using a GLOBAL grant.
+       db.prepare('INSERT INTO grant_pauses(scope_key,paused,epoch) VALUES(?,1,1) ON CONFLICT(scope_key) DO UPDATE SET paused=1,epoch=grant_pauses.epoch+1').run(key);
+     } else if(kind==='RESUME_GRANT'){
+       if(!pause?.paused)return refuse('GRANT_NOT_PAUSED');
+       const grant=(scope==='GLOBAL'?g:g??db.prepare('SELECT * FROM grants WHERE scope_key=?').get(sj(k,'GLOBAL',canonicalK)));
+       if(!grant?.enabled||grant.expires_at<=now())
+         return refuse('NO_VALID_GRANT_TO_RESUME');
+       db.prepare('UPDATE grant_pauses SET paused=0,epoch=epoch+1 WHERE scope_key=?').run(key);
+     } else {
+       if(g)db.prepare('UPDATE grants SET enabled=0,epoch=epoch+1 WHERE scope_key=?').run(key);
+       else db.prepare('INSERT INTO grants(scope_key,scope,enabled,epoch,expires_at,budget_limit,spent,reserved) VALUES(?,?,0,1,8640000000000000,0,0,0)').run(key,scope);
+       // Revoke must stay a durable DENY even if the grant was paused earlier.
+       if(pause?.paused===1)db.prepare('UPDATE grant_pauses SET paused=0,epoch=epoch+1 WHERE scope_key=?').run(key);
+     }
    }
    return {ok:true};
  }

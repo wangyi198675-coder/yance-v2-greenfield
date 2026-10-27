@@ -208,8 +208,13 @@ internal sealed class Host
                     var state = stateRaw as Dictionary<string,object>;
                     string name = state == null ? null : TypeOf(state);
                     ready = name == "authorizationStateReady";
+                    // The original official AuthorizationState payload is carried
+                    // only over parent-owned private stdin/stdout IPC. In particular
+                    // authorizationStateWaitOtherDeviceConfirmation.link is the
+                    // *real TDLib-generated* QR login link, never a fake image.
+                    // No event content is written to diagnostic logs or public HTTP.
                     Emit(new {kind="tdlib_auth_state", state=name,
-                      authorized=ready, canSend=false});
+                      details=state, authorized=ready, canSend=false});
                     if (name == "authorizationStateClosed") { alive = false; }
                 }
                 continue;

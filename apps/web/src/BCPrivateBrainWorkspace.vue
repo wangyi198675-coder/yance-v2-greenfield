@@ -9,14 +9,16 @@ const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
 const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),text=ref('');
 const chosen=ref(''),requestInFlight=ref(false);
-const modelCostApproved=ref(false),turnCostApproved=ref(false);
+const modelCostApproved=ref(false);
 let revision=0,mounted=true,sessionDeadline=null;
 const threadId='personal';
 const safeCurrent=id=>mounted&&revision===id;
 const selected=computed(()=>catalog.value?.models.find(m=>m.provider+'|'+m.modelId===chosen.value)||null);
 const cloudCandidate=computed(()=>!!selected.value?.keyRequired);
-const activeCloudModel=computed(()=>catalog.value?.models.find(m=>
- m.provider===catalog.value.selectedProvider&&m.modelId===catalog.value.selectedModelId&&m.keyRequired)||null);
+const modelChangeRequired=computed(()=>!!selected.value&&(!catalog.value?.configured||
+ selected.value.provider!==catalog.value.selectedProvider||
+ selected.value.modelId!==catalog.value.selectedModelId));
+const paidChangeRequiresConsent=computed(()=>cloudCandidate.value&&modelChangeRequired.value);
 function checkedModelCatalog(dto){
  // W47 Web PRIVATE may truthfully report protected WinCred attached.
  // Reuse the signed W46 model schema without claiming the browser owns a vault.
@@ -34,7 +36,7 @@ const providers=computed(()=>publicProviders.value.map(p=>({
 })));
 function clearSession(){
  session.value=null;catalog.value=null;chosen.value='';
- modelCostApproved.value=false;turnCostApproved.value=false;
+ modelCostApproved.value=false;
  if(sessionDeadline!==null){clearTimeout(sessionDeadline);sessionDeadline=null}
 }
 function ensureCurrent(){
@@ -107,7 +109,7 @@ async function loadHistory(id=revision){
 }
 async function selectModel(){
  if(busy.value||!catalog.value||!selected.value||!selected.value.available||!selected.value.configured||
-  (cloudCandidate.value&&!modelCostApproved.value))return;
+  !modelChangeRequired.value||(paidChangeRequiresConsent.value&&!modelCostApproved.value))return;
  const id=++revision;busy.value=true;notice.value='';
  try{
   ensureCurrent();
@@ -127,7 +129,7 @@ async function selectModel(){
   if(verified.selectedProvider!==m.provider||verified.selectedModelId!==m.modelId)
     throw Error('SELECTION_GET_NOT_CONFIRMED');
   catalog.value=verified;chosen.value=m.provider+'|'+m.modelId;
-  modelCostApproved.value=false;turnCostApproved.value=false;
+  modelCostApproved.value=false;
   setupOpen.value=false;await loadHistory(id);
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='model-selection-unavailable'}}
  finally{if(safeCurrent(id))busy.value=false}
@@ -137,7 +139,7 @@ async function send(){
     loadState.value!=='ready'||!catalog.value?.configured)return;
  const model=catalog.value.models.find(m=>m.modelId===catalog.value.selectedModelId&&
    m.provider===catalog.value.selectedProvider&&m.available&&m.configured);
- if(!model||(model.keyRequired&&!turnCostApproved.value))return;
+ if(!model)return; // Cloud fee consent was verified once at model selection by W47.
  const id=++revision;requestInFlight.value=true;notice.value='';
  try{
   ensureCurrent();
@@ -150,7 +152,7 @@ async function send(){
   text.value=''; // history is sole persisted authority
   await loadHistory(id); // if history unavailable, don't fabricate turn in timeline
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='history-unavailable'}}
- finally{if(safeCurrent(id)){requestInFlight.value=false;turnCostApproved.value=false}}
+ finally{if(safeCurrent(id))requestInFlight.value=false}
 }
 onMounted(refresh);
 onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
@@ -185,11 +187,11 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
     </template>
     <small v-if="!catalog?.models.some(m=>m.provider===provider.id)">尚无经服务端验证的可选模型</small>
    </div>
-   <label v-if="cloudCandidate" class="bc-cloud-cost-confirm" data-test="cloud-model-cost-confirm">
+   <label v-if="paidChangeRequiresConsent" class="bc-cloud-cost-confirm" data-test="cloud-model-cost-confirm">
     <input v-model="modelCostApproved" type="checkbox" :disabled="busy"/>
     <span>{{selected?.billingNotice||'该云端模型可能按调用收费。'}}我确认选择此云端模型并了解可能产生的费用。</span>
    </label>
-   <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy||(cloudCandidate&&!modelCostApproved)" @click="selectModel">确认使用此模型</Button>
+   <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy||!modelChangeRequired||(paidChangeRequiresConsent&&!modelCostApproved)" @click="selectModel">{{modelChangeRequired?'确认使用此模型':'当前正在使用'}}</Button>
    <p class="bc-private-notice" data-test="brain-native-key-hold">
     云端 API Key 仅在服务端确认安全保存接口可用时才能提交。暂未接通时不会在浏览器内保存密钥，也不会要求安装桌面版。
    </p>
@@ -203,14 +205,11 @@ onBeforeUnmount(()=>{mounted=false;revision++;clearSession();text.value=''});
   </div>
   <form class="bc-private-compose" @submit.prevent="send">
    <label for="bc-private-question">给闺蜜大脑发消息</label>
-   <label v-if="activeCloudModel" class="bc-cloud-cost-confirm" data-test="cloud-turn-cost-confirm">
-    <input v-model="turnCostApproved" type="checkbox" :disabled="busy||requestInFlight"/>
-    <span>{{activeCloudModel.billingNotice||'此云端模型可能按次收费。'}}我确认授权本次可能收费的 AI 提问。</span>
-   </label>
+   <small v-if="catalog?.configured&&catalog.selectedProvider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
    <textarea id="bc-private-question" v-model="text" rows="3" maxlength="4000"
      data-test="brain-question" placeholder="输入你的问题" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
    <Button type="submit" data-test="brain-send"
-     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()||(!!activeCloudModel&&!turnCostApproved)">{{requestInFlight?'正在等待真实模型回执':'发送给闺蜜大脑'}}</Button>
+     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送给闺蜜大脑'}}</Button>
   </form>
   <small>私人聊天不是 CONTACT Composer；不启用社交平台外发。没有受信任的 Agno Run 时不会生成模拟回复。</small>
  </section>
