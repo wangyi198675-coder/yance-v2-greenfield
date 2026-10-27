@@ -19,6 +19,7 @@ import {createWebPrivateCloudByok} from './web-private-cloud-byok.mjs';
 import {createWebPrivateCloudHttp} from './web-private-cloud-http.mjs';
 import {createW55WebNativeStdioPort} from './w55-web-native-stdio.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
+import {createFunctionModelRoutingHttp} from './function-model-routing-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
@@ -124,6 +125,31 @@ const privateModelHttp=createPrivateModelHttp({
 const privateCloudHttp=createWebPrivateCloudHttp({
  sessionAuthority:localSessionAuthority,webOrigin,webCloudPort:webCloudByok
 });
+// Function-level model preferences stay on the already-authorized current
+// user's original AppData. They do not replace the W43 PRIVATE runtime model.
+const functionModelRoutingHttp=createFunctionModelRoutingHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,
+ appLocalDataRoot:webPrivateRoot||nativeBoot?.appLocalDataRoot||null,
+ readEligibleModels:async()=>{
+  const local=webPrivateQwen?await webPrivateQwen.source():{models:[]};
+  const eligible=(local.models||[]).map(m=>({
+   provider:m.provider,modelId:m.modelId,
+   configured:m.configured===true,available:m.available===true
+  }));
+  if(webCloudByok){
+   // W55 original Key revision and existing user-confirmed private model
+   // are the ONLY Cloud candidate proof; never invent an OpenRouter list.
+   const current=await webCloudByok.current();
+   const statuses=await webCloudByok.statuses();
+   const key=statuses.find(k=>k.provider===current?.provider);
+   if(current&&key?.configured===true&&key?.revoked===false&&
+    key.revision===current.keyRevision)
+    eligible.push({provider:current.provider,modelId:current.modelId,
+     configured:true,available:true});
+  }
+  return eligible;
+ }
+});
 // Do not inject a synthetic W43 runtime or a self-declared Windows profile.
 // W54 protected AppData + W43 real PRIVATE Scope are not signed together yet.
 const privateBrainHttp=createPrivateBrainHttp({
@@ -213,6 +239,12 @@ const handler=(req,res)=>{
         else res.destroy();
       });
       return;
+    }
+    if(url.pathname==='/api/v2/model-routing'){
+      void functionModelRoutingHttp(req,res,url).catch(()=>{
+        if(!res.headersSent)deny(res,503,'FUNCTION_MODEL_ROUTING_UNAVAILABLE');
+        else res.destroy();
+      });return;
     }
     if(['/api/v2/private-brain/model-catalog',
         '/api/v2/private-brain/model-config',
