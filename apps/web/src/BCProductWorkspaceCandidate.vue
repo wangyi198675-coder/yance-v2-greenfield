@@ -732,7 +732,7 @@ defineExpose({refresh});
 .w46-autopilot-mode p{font-size:13px;line-height:1.65;color:var(--muted);margin:0}
 .w46-autopilot-readonly{margin-top:4px;font-size:12px;color:var(--muted)}
 .w46-autopilot-help{flex:0 0 auto;margin:0;padding:12px 14px;border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:12px;line-height:1.7}
-@media(max-width:719px){.w46-autopilot-toolbar{padding:11px 12px}.w46-autopilot-toolbar p{max-width:240px}.w46-autopilot-body{padding:14px;gap:12px;flex:1 0 auto;min-height:min-content}.w46-autopilot-overview{padding:17px;gap:12px;flex-wrap:wrap}.w46-autopilot-overview-copy strong{font-size:16px}.w46-autopilot-overview button{margin-left:0}.w46-autopilot-modes{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(125px,1fr));gap:12px}.w46-autopilot-mode{min-height:125px;padding:17px}}
+@media(max-width:719px){.w46-autopilot-toolbar{padding:11px 12px}.w46-autopilot-toolbar p{max-width:240px}.w46-autopilot-body{padding:14px;gap:12px;flex:1 0 auto;min-height:min-content}.w46-autopilot-overview{padding:17px;gap:12px;flex-wrap:wrap}.w46-autopilot-overview-copy strong{font-size:16px}.w46-autopilot-overview button{margin-left:0}.w46-autopilot-modes{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(125px,1fr));min-height:274px;gap:12px}.w46-autopilot-mode{min-height:125px;padding:17px}}
 
 /* W09-3 fixed 44751: verified-only contact directory, no fixture or new send path. */
 .w46-people{display:flex;flex:1 1 0;flex-direction:column;min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);color:var(--ink)}
