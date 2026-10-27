@@ -55,7 +55,8 @@ def main():
             emit({"kind": "W43_ERROR", "error": "MODEL_SELECTION_INVALID", "httpStatus": 422})
             return
     if method not in {
-        "turn", "history", "claim", "finish", "markUnknown", "reconcile"
+        "turn", "history", "claim", "finish", "markUnknown", "reconcile",
+        "nativeTools", "nativeRuns", "nativeRun", "nativeTrace"
     }:
         raise RuntimeError("W43_UNSUPPORTED_NATIVE_METHOD")
     thread = request.get("threadId")
@@ -153,6 +154,17 @@ def main():
             result = ledger.mark_unknown(context, **kwargs)
         elif method == "reconcile":
             result = ledger.reconcile(context, **kwargs)
+        elif method == "nativeTools":
+            result = original.native_tools(context)
+        elif method == "nativeRuns":
+            result = original.native_runs(
+                context, thread_id=thread, limit=request.get("limit", 25))
+        elif method == "nativeRun":
+            result = original.native_run(
+                context, thread_id=thread, run_id=request.get("runId"))
+        elif method == "nativeTrace":
+            result = original.native_trace(
+                context, thread_id=thread, run_id=request.get("runId"))
         emit({"kind": "RESULT", "result": result})
     except W47PrivateAccessError as e:
         emit({"kind": "W43_ERROR", "error": e.code, "httpStatus": e.http_status})

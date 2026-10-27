@@ -89,6 +89,8 @@ test('W24 exact W47 read callback shape from current durable K, never canSend',a
  assert.equal(accounts.length,1);assert.equal(accounts[0].authorization,'ONLINE_VERIFIED');
  assert.equal(contacts.length,1);assert.equal(contacts[0].w24CurrentKVerified,true);
  assert.equal(contacts[0].w24ConsentCurrent,true);
+ assert.deepEqual(contacts[0].identity,k);
+ assert.equal(contacts[0].identityKey,[k.tenant,k.account,k.channel,k.peer_id,k.binding_revision].join('|'));
 });
 test('W24 W47 callback contract; actual W47 GET is exercised when joined source is available',async t=>{
  const f=fixture(t),ports=f.bridge();
@@ -108,11 +110,13 @@ test('W24 W47 callback contract; actual W47 GET is exercised when joined source 
  let status,body;
  const res={writeHead:(s)=>{status=s},end:v=>{body=JSON.parse(v)}};
  const used=await handler({method:'GET',headers:{}},res,
-  {pathname:'/api/v2/contacts'});
- assert.equal(used,true);assert.equal(status,200);
- assert.equal(body.source,'W24_CURRENT_K_AND_NATIVE_CHANNEL_OWNERS');
- assert.equal(body.contacts.length,1);assert.equal(body.canSend,false);
- assert.equal('original' in body.contacts[0],false);
+  new URL('http://127.0.0.1:49001/api/v2/contacts'));
+ assert.equal(used,true);
+ // W24 can prove its original synthetic fixture K, but W47 MUST NOT
+ // upgrade SYNTHETIC_TEST_ONLY/fake-peer to a genuine user contact.
+ assert.equal(status,503);
+ assert.equal(body.error,'NATIVE_W24_CONTACTS_NOT_VERIFIED');
+ assert.equal(body.canSend,false);
 });
 test('native session revoke, platform disconnect and W24 account revocation never show authorized peer',async t=>{
  const f=fixture(t),p=f.bridge();
