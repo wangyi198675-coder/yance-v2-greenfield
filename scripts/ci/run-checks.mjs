@@ -33,6 +33,14 @@ check('committed-domain-tests',()=>{
   const pyt=filesUnder(prefix).filter(x=>/(^|\/)test_.*\.py$/.test(x));
   if(!changed(prefix)&&tests.length===0&&pyt.length===0)continue;
   must(tests.length>0||pyt.length>0,name+' touched without checked-in tests');
+  // W28's real Baileys/QR adapter imports locked npm packages; a clean hosted runner has none.
+  // Install the ORIGINAL committed lock with scripts disabled before executing its real tests.
+  if(name==='W28-Baileys'&&tests.length){
+   must(fs.existsSync(path.join(root,prefix,'package-lock.json')),'W28_NATIVE_PACKAGE_LOCK_REQUIRED');
+   const install=['ci','--ignore-scripts','--no-audit','--no-fund'];
+   if(process.platform==='win32')run('cmd.exe',['/d','/s','/c','npm',...install],path.join(root,prefix),360000);
+   else run('npm',install,path.join(root,prefix),360000);
+  }
   if(tests.length)run('node',['--test',...tests],root,150000);
   results.push({name,nodeTestFiles:tests.length,pythonTestFiles:pyt.length,pythonGate:pyt.length?'separate-python-job':'not_applicable'});
  }
