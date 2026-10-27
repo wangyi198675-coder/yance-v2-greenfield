@@ -106,11 +106,16 @@ export function createW24NativeOwnerReadPorts({
     const read=identityConsent.assertCurrent(ctx,k);
     const epoch=identityConsent.readConsentEpoch(ctx,k);
     if(read?.binding_revision!==peer.bindingRevision||
+       typeof read.identity_key!=='string'||!read.identity_key||
        !Number.isSafeInteger(epoch)||epoch<=0)
       deny('W24_CONTACT_CONSENT_OR_BINDING_STALE');
+    // Original W24 durable assertCurrent owns the five-part K. Only publish
+    // its canonical identity/key after account, peer, consent and epoch checks.
+    // A browser may use this key as a read selector, NEVER as an authority.
     result.push(Object.freeze({accountRef:account.accountRef,
       channel:account.channel,peerRef:peer.peerRef,
       bindingRevision:peer.bindingRevision,displayName:peer.displayName,
+      identity:Object.freeze({...k}),identityKey:read.identity_key,
       w24CurrentKVerified:true,w24ConsentCurrent:true}));
    }
   }
