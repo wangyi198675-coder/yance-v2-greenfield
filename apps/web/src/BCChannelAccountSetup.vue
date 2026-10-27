@@ -2,6 +2,7 @@
 import {ref,watch,onMounted,onBeforeUnmount,computed} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
+import BCPancakeMultiPageSetup from './BCPancakeMultiPageSetup.vue';
 import {checkChannel,setupChannel,channelError} from './channel-setup-contract.mjs';
 const props=defineProps({channel:{type:Object,required:true},fetchImpl:{type:Function,default:null},
  connectTrigger:{type:Number,default:0}});
@@ -10,6 +11,7 @@ const verifiedAccounts=ref(null);
 const userRequested=ref(false);
 let alive=true,revision=0,expiryTimer=null,pollTimer=null;
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
+const isFbPage=computed(()=>props.channel.id==='FB_PAGE');
 const providerCopy=Object.freeze({
  FB_PERSONAL:{title:'Facebook Messenger',description:'连接你的个人 Messenger'},
  FB_PAGE:{title:'Facebook Page',description:'连接你管理的 Facebook 主页'},
@@ -65,12 +67,13 @@ async function pollStatus(){
  }catch{if(!receipt.value&&id===revision){state.value='unavailable'}}
 }
 watch(()=>props.connectTrigger,(next,prev)=>{if(next>prev)setup()});
-onMounted(()=>{refresh();pollTimer=setInterval(pollStatus,15000)});
+onMounted(()=>{if(props.channel.id!=='FB_PAGE'){refresh();pollTimer=setInterval(pollStatus,15000)}});
 onBeforeUnmount(()=>{alive=false;revision++;clearReceipt();if(pollTimer)clearInterval(pollTimer)});
 defineExpose({setup,refresh});
 </script>
 <template>
- <article class="w46-channel" data-test="w46-native-provider" :data-provider="channel.id">
+ <BCPancakeMultiPageSetup v-if="isFbPage" :fetch-impl="fetcher()" />
+ <article v-else class="w46-channel" data-test="w46-native-provider" :data-provider="channel.id">
   <header class="w46-channel-top">
    <span class="w46-channel-icon"><BCBrandIcon :name="channel.id" :size="29"/></span>
    <span class="w46-channel-state" role="status" data-test="native-provider-state">{{statusLabel}}</span>
