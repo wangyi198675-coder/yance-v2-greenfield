@@ -1,6 +1,8 @@
 <script setup>
 import {ref,watch,computed,nextTick,onMounted} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
+import BCVisualAurora from './BCVisualAurora.vue';
+import './BCVisualThemeSystem.css';
 import BCBrandIcon from './BCBrandIcon.vue';
 import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
 import BCLiveChatWorkspace from './BCLiveChatWorkspace.vue';
@@ -143,6 +145,7 @@ defineExpose({refresh});
 </script>
 <template>
  <div v-if="enabled" class="w46-product-candidate" :data-mode="appearance" :data-active-workspace="activeWorkspace" data-test="w46-product-candidate">
+  <BCVisualAurora/>
   <header class="w46-compact-global" data-test="w46-compact-nav">
    <div class="w46-compact-brand"><span class="w46-brand-glyph">言</span><strong>言策</strong></div>
    <nav class="w46-main-links" aria-label="R4紧凑主导航">
