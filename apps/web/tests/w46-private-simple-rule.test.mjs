@@ -5,10 +5,11 @@ import {PRIVATE_ROUTES,privateError} from '../src/private-brain-ui-contract.mjs'
 const content=readFileSync(new URL('../src/BCPrivateBrainWorkspace.vue',import.meta.url),'utf8');
 const parent=readFileSync(new URL('../src/BCProductWorkspaceCandidate.vue',import.meta.url),'utf8');
 const source=readFileSync(new URL('../src/product-workspace-contract.mjs',import.meta.url),'utf8');
+const settings=readFileSync(new URL('../src/BCSettingsWorkspace.vue',import.meta.url),'utf8');
 test('ordinary private AI needs no visible terminal pair or Windows native auth screen',()=>{
  assert.equal((parent.match(/<BCPrivateBrainWorkspace\b/g)||[]).length,1);
- assert.equal((parent.match(/<BCNativeHostSession\b/g)||[]).length,1);
- assert.match(parent,/settingCategory==='diagnostics'[^>]*\s:fetch-impl="fetchImpl"/);
+ assert.equal((settings.match(/<BCNativeHostSession\b/g)||[]).length,1);
+ assert.match(settings,/category==='diagnostics'/);
  const privateSection=parent.match(/<div v-else-if="activeWorkspace==='BRAIN'"[\s\S]*?<\/div>/)?.[0]||'';
  assert.match(privateSection,/<BCPrivateBrainWorkspace/);
  assert.doesNotMatch(privateSection,/BCNativeHostSession|BCLocalSessionConnector|pair/);

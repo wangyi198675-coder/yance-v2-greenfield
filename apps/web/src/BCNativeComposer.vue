@@ -3,12 +3,14 @@ import {computed,ref,watch,nextTick,onMounted,onBeforeUnmount} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import {InputGroup,InputGroupTextarea} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/input-group';
 import {createComposerBridge,fullK} from './composer-bridge.mjs';
+import {createW23BrowserMediaClient} from './w23-media-browser-consumer.mjs';
 
 // Replacement seam for the ONE selected B+C CONTACT Composer; not a second sender.
 const props=defineProps({
   identity:{type:Object,default:null}, sourceMid:{type:String,default:''},
   suggestions:{type:Array,default:()=>[]}, nativeMessage:{type:Object,default:null},
-  takeoverPort:{type:Object,default:null}, draftCandidatePort:{type:Object,default:null}
+  takeoverPort:{type:Object,default:null}, draftCandidatePort:{type:Object,default:null},
+  mediaAuthorityPort:{type:Object,default:null},fetchImpl:{type:Function,default:null}
 });
 let bridge=createComposerBridge({takeoverPort:props.takeoverPort});
 const current=ref({key:null,status:'NO_CONTACT',draft:null,canSend:false});
@@ -82,21 +84,44 @@ function endIME(event){
   if(compositionK.value===current.value.key)action('IME_COMMIT',{text:event.target.value});
   compositionK.value=null;
 }
-function filesOf(list){return Array.from(list||[]).map(f=>({name:f.name,size:f.size}))}
-function onDrop(event){event.preventDefault();if(event.dataTransfer?.files?.length)
-  action('DROP',{attachments:filesOf(event.dataTransfer.files)})}
-function onAttach(event){if(event.target.files?.length)action('ATTACH',{attachments:filesOf(event.target.files)});
-  event.target.value=''}
-function onPaste(event){
-  if(event.clipboardData?.files?.length){event.preventDefault();
-    action('PASTE',{attachments:filesOf(event.clipboardData.files)});return}
-  const str=event.clipboardData?.getData('text/plain');
-  if(typeof str==='string'&&str.length){
-    event.preventDefault();const element=event.target,old=String(current.value.draft?.text||'');
-    const a=Number.isInteger(element.selectionStart)?element.selectionStart:old.length;
-    const b=Number.isInteger(element.selectionEnd)?element.selectionEnd:a;
-    action('PASTE',{text:old.slice(0,a)+str+old.slice(b)})
+const mediaUploading=ref(false);
+const mediaClient=computed(()=>props.mediaAuthorityPort?.currentScope?
+ createW23BrowserMediaClient({fetchImpl:props.fetchImpl||globalThis.fetch,scopePort:props.mediaAuthorityPort}):null);
+async function attachRealFiles(raw,kind){
+ const entries=Array.from(raw||[]);
+ if(!entries.length)return;
+ const id=safeIdentity(),k=id&&fullK(id);
+ if(!k||mediaUploading.value){why.value='当前联系人无有效W24身份K或上传正在进行';return}
+ if(!mediaClient.value){why.value='W23二进制附件接口与W47当前身份授权尚未接通，未上传任何文件';return}
+ mediaUploading.value=true;why.value='';
+ try{
+  const receipts=[];
+  for(const file of entries){
+   // The real original File/Blob is sent to W23; name and size are NEVER the upload payload.
+   const verified=await mediaClient.value.uploadFile(file,{purpose:'contact_draft'});
+   if(!safeIdentity()||fullK(safeIdentity())!==k)throw Error('W23_CONTACT_SELECTION_CHANGED');
+   receipts.push({name:verified.original_name,size:verified.byte_size});
   }
+  if(receipts.length)await action(kind,{attachments:receipts});
+  if(receipts.length)why.value='W23原生二进制上传与GET哈希回读已确认；真人发送仍由原W25独立授权';
+ }catch(e){why.value='附件未获得W23完整回读：'+String(e.message||e)}
+ finally{mediaUploading.value=false}
+}
+function onDrop(event){event.preventDefault();void attachRealFiles(event.dataTransfer?.files,'DROP')}
+function onAttach(event){
+ const files=Array.from(event.target.files||[]);event.target.value='';
+ void attachRealFiles(files,'ATTACH');
+}
+function onPaste(event){
+ if(event.clipboardData?.files?.length){event.preventDefault();
+  void attachRealFiles(event.clipboardData.files,'PASTE');return}
+ const str=event.clipboardData?.getData('text/plain');
+ if(typeof str==='string'&&str.length){
+  event.preventDefault();const element=event.target,old=String(current.value.draft?.text||'');
+  const a=Number.isInteger(element.selectionStart)?element.selectionStart:old.length;
+  const b=Number.isInteger(element.selectionEnd)?element.selectionEnd:a;
+  action('PASTE',{text:old.slice(0,a)+str+old.slice(b)})
+ }
 }
 async function chooseSuggestion(row){const id=safeIdentity();if(!id)return;
   try{
@@ -145,7 +170,7 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-haspopup="menu" aria-controls="w46-contact-experts-menu" :aria-expanded="expertsOpen" @click="toggleContactMenu('experts')">＋ 专家</Button>
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-model" aria-haspopup="menu" aria-controls="w46-contact-model-menu" :aria-expanded="contactMenu==='model'" @click="toggleContactMenu('model')">模型</Button>
       <button type="button" class="bc-mode-label bc-compact-menu-trigger" data-test="w46-contact-mode" aria-haspopup="menu" aria-controls="w46-contact-mode-menu" :aria-expanded="contactMenu==='mode'" @click="toggleContactMenu('mode')">人工 · 辅助 · 自动（待核验）⌄</button>
-      <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key"/></label>
+      <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key||mediaUploading||!mediaClient" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/wav,audio/mpeg,audio/ogg"/></label>
       <span class="bc-send-hold" title="真人发送仅允许原W25唯一MessageDelivery通过当前身份及ACK授权边界">未授权 · 不能发送</span>
       <Button disabled size="sm">发送不可用</Button>
     </div>
