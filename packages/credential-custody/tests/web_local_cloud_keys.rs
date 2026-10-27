@@ -57,7 +57,7 @@ impl FakeNamespace {
 }
 impl Drop for FakeNamespace {
     fn drop(&mut self) {
-        for provider in ["OPENROUTER", "OPENAI_API"] {
+        for provider in ["OPENROUTER", "OPENAI_API", "PANCAKE_PAIR"] {
             let _ = self.call(json!({"op":"qa_cleanup","provider":provider}));
         }
     }
@@ -144,4 +144,36 @@ fn web_byok_real_windows_child_os_user_dpapi_cas_provider_separation_and_revoke(
         assert_eq!(empty["revision"], 0);
     }
     println!("W55_WEB_REAL_OS_WINCRED_DPAPI_SEPARATE_CHILD_PASS providers=2 restart=true rotate=true revoke=true oldRevisionDenied=true redacted=true paidCalls=0");
+}
+
+#[test]
+fn web_fb_page_fake_pair_atomic_dpapi_isolated_from_model_leases() {
+    let scope = FakeNamespace::new();
+    const USER: &str = "FAKE-PANCAKE-USER-12345-NOT-REAL";
+    const PAGE: &str = "FAKE-PANCAKE-PAGE-98765-NOT-REAL";
+    let pair = json!({"userAccessToken":USER,"pages":{"1111":PAGE,"2222":"FAKE-PANCAKE-PAGE-22222"}}).to_string();
+    let first = scope.success(json!({"op":"status","provider":"PANCAKE_PAIR"}));
+    assert_eq!(first["configured"], false);
+    assert_eq!(first["revision"], 0);
+    let saved=scope.success(json!({"op":"store","provider":"PANCAKE_PAIR","secret":pair}));
+    assert_eq!(saved["configured"],true);
+    assert_eq!(saved["revision"],1);
+    assert!(!saved.to_string().contains(USER));
+    assert!(!saved.to_string().contains(PAGE));
+    let second=scope.success(json!({"op":"status","provider":"PANCAKE_PAIR"}));
+    assert_eq!(second["revision"],1);
+    // Social secrets must never be returned through private Brain/Agno key APIs.
+    scope.rejected(json!({"op":"lease_for_agno","provider":"PANCAKE_PAIR",
+        "expectedRevision":1}));
+    scope.rejected(json!({"op":"store","provider":"OPENROUTER","secret":pair}));
+    let revision=scope.success(json!({"op":"revoke","provider":"PANCAKE_PAIR",
+        "expectedRevision":1}));
+    assert_eq!(revision["configured"],false);
+    assert_eq!(revision["revoked"],true);
+    scope.rejected(json!({"op":"lease_for_agno","provider":"PANCAKE_PAIR",
+        "expectedRevision":2}));
+    assert_eq!(scope.success(json!({"op":"qa_cleanup","provider":"PANCAKE_PAIR"}))
+        ["qaCleaned"],true);
+    assert_eq!(scope.success(json!({"op":"status","provider":"PANCAKE_PAIR"}))
+        ["revision"],0);
 }

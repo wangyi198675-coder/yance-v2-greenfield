@@ -175,41 +175,12 @@ test('Web-first read-only readiness never lets a missing owner port forge a succ
  }finally{await f.close()}
 });
 
-test('Pancake configuration never accepts or echoes tokens without original W55 port',async()=>{
+test('old one-Page credential route is retired, no secret can be saved',async()=>{
  const f=await fixture({withPorts:false});
  try{
-  const caps=await f.send('capabilities',{method:'GET'});
-  assert.equal(caps.body.secureCredentialEnrollment,false);
-  const r=await f.send('configure',{body:JSON.stringify({
-   userAccessToken:'fake-user-token-12345',pagePublicApiToken:'fake-page-token-12345'
-  })});
-  assert.equal(r.status,503);
-  assert.equal(r.body.error,'W55_PANCAKE_CREDENTIAL_PORT_NOT_CONNECTED');
-  assert.equal(JSON.stringify(r.body).includes('fake-user-token-12345'),false);
- }finally{await f.close()}
-});
-test('configured original W55 port receives temporary credentials without returning secrets',async()=>{
- const f=await fixture({withVault:true});
- try{
-  const caps=await f.send('capabilities',{method:'GET'});
-  assert.equal(caps.body.secureCredentialEnrollment,true);
-  const r=await f.send('configure',{body:JSON.stringify({
-   userAccessToken:'fake-user-token-12345',pagePublicApiToken:'fake-page-token-12345'
-  })});
-  assert.equal(r.status,200);
-  assert.equal(r.body.status,'CREDENTIALS_SAVED_NOT_PAGE_AUTHORIZED');
-  assert.equal(r.body.credentialValueReturned,false);
-  assert.equal(r.body.canSend,false);
-  assert.equal(JSON.stringify(r.body).includes('fake-page-token-12345'),false);
- }finally{await f.close()}
-});
-test('credentials cannot be submitted cross-origin or with invalid CSRF',async()=>{
- const f=await fixture({withVault:true});
- try{
-  const body=JSON.stringify({userAccessToken:'fake-user-token-12345',
-   pagePublicApiToken:'fake-page-token-12345'});
-  assert.equal((await f.send('configure',{body,originHeader:'https://evil.test'})).status,403);
-  assert.equal((await f.send('configure',{body,csrf:'0'.repeat(64)})).status,403);
-  assert.equal((await f.send('configure',{body,cookieHeader:''})).status,401);
+  const r=await f.send('configure',{body:JSON.stringify({pageId:'111',pagePublicApiToken:'NEVER-SAVE-TOKEN'})});
+  assert.equal(r.status,410);
+  assert.equal(r.body.error,'USE_OFFICIAL_MULTI_PAGE_ONBOARDING');
+  assert.equal(f.calls,0);
  }finally{await f.close()}
 });

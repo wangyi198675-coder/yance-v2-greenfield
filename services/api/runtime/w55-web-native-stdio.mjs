@@ -43,6 +43,18 @@ export function createW55WebNativeStdioPort({executable,timeoutMs=12000}={}){
   child.stdin.end(JSON.stringify(message)+'\n');
  });
  return Object.freeze({
+  withPancake:async({expectedRevision},using)=>{
+   if(typeof using!=='function'||!Number.isSafeInteger(expectedRevision)||
+      expectedRevision<1)throw {code:'UNAVAILABLE'};
+   const r=await call({op:'lease_for_pancake',provider:'PANCAKE_PAIR',expectedRevision});
+   if(typeof r.privateKey!=='string'||r.privateKey.length>2000||
+      r.privateKey.length<35)throw {code:'UNAVAILABLE'};
+   let value;try{value=JSON.parse(r.privateKey)}catch{throw {code:'UNAVAILABLE'}}
+   if(!value||typeof value.userAccessToken!=='string'||
+      !value.pages||typeof value.pages!=='object')throw {code:'UNAVAILABLE'};
+   // Never serialize this callback's token-bearing argument to a Web response.
+   return using(value);
+  },
   status:async({provider})=>{
    const r=await call({op:'status',provider});
    return r;

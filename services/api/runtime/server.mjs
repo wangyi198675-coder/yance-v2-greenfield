@@ -22,6 +22,8 @@ import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeFbPageAuthorizationHttp} from './native-fb-page-authorization-http.mjs';
+import {createW55PancakeWebCustody} from './w55-pancake-web-custody.mjs';
+import {createPancakeMultiOnboardingHttp} from './pancake-multi-onboarding-http.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
 import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
 import {createW47WebMediaHttp} from './w47-w23-media-bridge.mjs';
@@ -66,9 +68,11 @@ const webPrivateQwen=webPrivateRoot&&existingLocalQwenKey?
 // W55's ORIGINAL Rust WinCred host is optional for a local-Qwen-only user.
 // W55 owns the executable, WinCred scope and OS checks, not the browser.
 let webCloudByok=null;
+let webNativeCredentialPort=null;
 if(webPrivateRoot&&process.env.YANCE_W55_WEB_NATIVE_EXE){
  const nativeWinCred=createW55WebNativeStdioPort({
   executable:process.env.YANCE_W55_WEB_NATIVE_EXE});
+ webNativeCredentialPort=nativeWinCred;
  webCloudByok=createWebPrivateCloudByok({
   appLocalDataRoot:webPrivateRoot,nativeKeyPort:nativeWinCred});
 }
@@ -161,7 +165,14 @@ const nativeMessages=createNativeMessageReadHttp({
 });
 // W27 FB Page protected action port: intentionally 503 until original W54/W55/W24
 // owners inject a signed adapter. GET setup is documentation, not consent.
-const nativeFbPageAuth=createNativeFbPageAuthorizationHttp({sessionAuthority:localSessionAuthority,webOrigin});
+const pancakeCustody=webPrivatePrincipal&&webNativeCredentialPort?
+ createW55PancakeWebCustody({nativeKeyPort:webNativeCredentialPort}):null;
+const pancakeOnboarding=createPancakeMultiOnboardingHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,custody:pancakeCustody
+});
+const nativeFbPageAuth=createNativeFbPageAuthorizationHttp({
+ sessionAuthority:localSessionAuthority,webOrigin
+});
 const nativeProviders=createNativeProviderGateway({
  sessionAuthority:localSessionAuthority,
  readW26Status:makeW26DiagnosticPort(process.env.YANCE_W47_W26_READONLY_PORT)
@@ -281,6 +292,15 @@ const handler=(req,res)=>{
       // W24 account lifecycle/W55 user-approved credential consumers are
       // not yet injected here. Do not turn an HTTP 404 into a fake QR/login.
       return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
+    }
+    if(url.pathname.startsWith('/api/v2/providers/fb-page/onboarding/')){
+      void pancakeOnboarding(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'PANCAKE_ONBOARDING_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
     }
     if(url.pathname.startsWith('/api/v2/providers/fb-page/authorization/')){
       void nativeFbPageAuth(req,res,url).then(handled=>{

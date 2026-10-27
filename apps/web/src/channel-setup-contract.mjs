@@ -140,18 +140,32 @@ export async function invokeFbPageNativeAuthorization({
 // Token bytes exist only as a temporary user form value and one authenticated
 // same-origin POST to ORIGINAL W55 custody. Never cache, echo, or log secrets.
 export async function saveFbPageCredentialConfiguration({
- userAccessToken,pagePublicApiToken,fetchImpl=globalThis.fetch
+ pageId,pagePublicApiToken,fetchImpl=globalThis.fetch
 }={}){
  if(typeof fetchImpl!=='function')deny('W55_SECURE_FETCH_REQUIRED');
- if(![userAccessToken,pagePublicApiToken].every(x=>
-   typeof x==='string'&&x.length>=8&&x.length<=4096))
+ if(typeof pageId!=='string'||!/^[0-9]{1,40}$/.test(pageId)||
+   typeof pagePublicApiToken!=='string'||pagePublicApiToken.length<8||pagePublicApiToken.length>480)
    deny('W55_TOKEN_INPUT_REQUIRED');
  const auth=await fetchImpl('/api/v2/local-session/status',{
   method:'GET',credentials:'same-origin',cache:'no-store',
   redirect:'error',referrerPolicy:'no-referrer'
  });
  if(!auth?.ok)deny('W55_CURRENT_LOCAL_SESSION_UNAVAILABLE');
- const s=await auth.json();
+ let s=await auth.json();
+ if(s?.authorized!==true){
+  // Reuse original Web-private session on explicit Save; no extra login.
+  const started=await fetchImpl('/api/v2/local-session/web-private-start',{
+   method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',
+   referrerPolicy:'no-referrer',headers:{'content-type':'application/json'},body:'{}'
+  });
+  if(!started?.ok)deny('W55_EXISTING_WEB_SESSION_UNAVAILABLE');
+  const renewed=await fetchImpl('/api/v2/local-session/status',{
+   method:'GET',credentials:'same-origin',cache:'no-store',
+   redirect:'error',referrerPolicy:'no-referrer'
+  });
+  if(!renewed?.ok)deny('W55_EXISTING_WEB_SESSION_UNAVAILABLE');
+  s=await renewed.json();
+ }
  if(s?.authorized!==true||
    !['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(s.sessionKind)||
    !/^[a-f0-9]{64}$/.test(s.csrfToken??''))
@@ -160,7 +174,7 @@ export async function saveFbPageCredentialConfiguration({
   method:'POST',credentials:'same-origin',cache:'no-store',
   redirect:'error',referrerPolicy:'no-referrer',
   headers:{'content-type':'application/json','x-yance-csrf':s.csrfToken},
-  body:JSON.stringify({userAccessToken,pagePublicApiToken})
+  body:JSON.stringify({pageId,pagePublicApiToken})
  });
  if(!response?.ok)deny('W55_PANCAKE_CONFIG_HTTP_'+(response?.status??'UNAVAILABLE'));
  const receipt=await response.json();

@@ -44,6 +44,7 @@ fn main() {
     let material = match provider {
         CloudProvider::OpenRouter => concat!("sk-", "or-v1-", "W55-NOT-REAL-ONLY-FAKE-AGNO-QA"),
         CloudProvider::OpenAi => concat!("sk-", "proj-", "W55-NOT-REAL-ONLY-FAKE-AGNO-QA"),
+        CloudProvider::PancakePair => deny(),
     };
     let result = match args[1].as_str() {
         "seed" => match vault.status(provider) {

@@ -2,6 +2,7 @@
 import {ref,onMounted,onBeforeUnmount,computed} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCBrandIcon from './BCBrandIcon.vue';
+import BCPancakeMultiPageSetup from './BCPancakeMultiPageSetup.vue';
 import {checkChannel,setupChannel,channelError,invokeFbPageNativeAuthorization,
  saveFbPageCredentialConfiguration} from './channel-setup-contract.mjs';
 const props=defineProps({
@@ -11,7 +12,7 @@ const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
 const chosenPage=ref(''),pageChoices=ref([]),nativeReady=ref(false);
 // Credentials are transient local form state. Never store in localStorage,
 // URL, query params, browser profile, diagnostic log, or conversation history.
-const accountToken=ref(''),pageToken=ref(''),secureEnrollmentReady=ref(false);
+const pageId=ref(''),pageToken=ref(''),secureEnrollmentReady=ref(false);
 const configNotice=ref('');
 let alive=true,revision=0,expiryTimer=null;
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
@@ -54,7 +55,7 @@ async function refresh(){
    const capability=capabilityResponse?.ok?await capabilityResponse.json():null;
    secureEnrollmentReady.value=capability?.channel==='FB_PAGE'&&
     capability.secureCredentialEnrollment===true;
-   if(!secureEnrollmentReady.value){accountToken.value='';pageToken.value='';}
+   if(!secureEnrollmentReady.value){pageToken.value='';}
    if(capability?.channel!=='FB_PAGE'||capability.ownerPortConnected!==true){
     nativeReady.value=false;
     if(alive&&id===revision){
@@ -171,7 +172,7 @@ async function savePageConfig(){
  busy.value=true;configNotice.value='';
  try{
   const receipt=await saveFbPageCredentialConfiguration({
-   userAccessToken:accountToken.value,pagePublicApiToken:pageToken.value,
+   pageId:pageId.value.trim(),pagePublicApiToken:pageToken.value,
    fetchImpl:fetcher()
   });
   if(!alive)return;
@@ -182,17 +183,18 @@ async function savePageConfig(){
   if(alive)configNotice.value='凭据未保存。请检查本机安全保存服务后再试。';
  }finally{
   // Never retain social tokens after an attempted save.
-  accountToken.value='';pageToken.value='';busy.value=false;
+  pageToken.value='';busy.value=false;
  }
 }
-onMounted(refresh);
+onMounted(()=>{if(!isFbPage.value)refresh()});
 onBeforeUnmount(()=>{
  alive=false;revision++;clearReceipt();pageChoices.value=[];
- accountToken.value='';pageToken.value='';
+ pageToken.value='';
 });
 </script>
 <template>
- <article class="w46-channel" data-test="w46-native-provider" :data-provider="channel.id">
+ <BCPancakeMultiPageSetup v-if="isFbPage" :fetch-impl="fetcher()" />
+ <article v-else class="w46-channel" data-test="w46-native-provider" :data-provider="channel.id">
   <header class="w46-channel-top">
    <span class="w46-channel-icon"><BCBrandIcon :name="channel.id" :size="29"/></span>
    <span class="w46-channel-state" role="status" data-test="native-provider-state">{{statusLabel}}</span>
@@ -204,20 +206,19 @@ onBeforeUnmount(()=>{
    <section v-if="isFbPage" class="w46-page-config" data-test="fb-page-config">
     <div class="w46-page-config-head">
      <strong>Facebook Page 连接配置</strong>
-     <span>只需准备两个令牌</span>
+     <span>只需要一个主页令牌</span>
     </div>
-    <p class="w46-page-config-hint">你已在 Pancake 登录的账号无需重新注册。请从自己的 Pancake 账户和主页设置中获取以下凭据。</p>
+    <p class="w46-page-config-hint">你已在 Pancake 授权 Facebook Page，不用重新登录 Facebook。只需确认该主页 ID，并提供此主页专属的 Page Access Token。</p>
     <div class="w46-config-field">
-     <label for="w46-pancake-user-token">1. Pancake 账户 Access Token</label>
-     <p>打开 Pancake「账户设置 → 高级 → Access Token」。</p>
-     <a href="https://pancake.biz/account" target="_blank" rel="noopener noreferrer" data-test="pancake-account-settings">打开 Pancake 账户设置</a>
-     <input id="w46-pancake-user-token" type="password" v-model="accountToken"
-      autocomplete="off" autocapitalize="off" spellcheck="false"
-      placeholder="在安全录入启用后粘贴账户 Access Token"
-      :disabled="!secureEnrollmentReady||busy" data-test="fb-page-user-access-token"/>
+     <label for="w46-pancake-page-id">Facebook Page ID</label>
+     <p>直接复制 Pancake 主页地址中的数字，例如 pancake.biz/页面ID/setting/tools；不是另一枚授权令牌。</p>
+     <input id="w46-pancake-page-id" type="text" v-model.trim="pageId"
+      autocomplete="off" inputmode="numeric" pattern="[0-9]*"
+      placeholder="你的 Pancake 主页数字 ID"
+      :disabled="!secureEnrollmentReady||busy" data-test="fb-page-id"/>
     </div>
     <div class="w46-config-field">
-     <label for="w46-pancake-page-token">2. 主页 Public API access token</label>
+     <label for="w46-pancake-page-token">Page Access Token（唯一必需的令牌）</label>
      <p>在 Pancake 工作区「设置 → 工具 → Public API access token」创建令牌。</p>
      <a href="https://pancake.biz/" target="_blank" rel="noopener noreferrer" data-test="pancake-page-settings">打开我的 Pancake 工作区</a>
      <input id="w46-pancake-page-token" type="password" v-model="pageToken"
@@ -229,10 +230,10 @@ onBeforeUnmount(()=>{
      data-test="fb-page-credential-hold">安全保存接口尚未接入，当前不能输入或保存令牌。不要把令牌发到聊天里，也不要粘贴到公开表单。</p>
     <p v-else class="w46-page-config-hint">令牌仅通过言策同源请求提交给原 W55 系统凭据保护能力，不保存在浏览器本地。</p>
     <Button variant="outline" size="sm" data-test="fb-page-save-config"
-     :disabled="!secureEnrollmentReady||busy||accountToken.trim().length<8||pageToken.trim().length<8"
+     :disabled="!secureEnrollmentReady||busy||!(/^[0-9]{1,40}$/.test(pageId))||pageToken.trim().length<8"
      @click="savePageConfig">安全保存凭据，下一步验证主页</Button>
     <p v-if="configNotice" role="status" class="w46-page-config-hint" data-test="fb-page-config-result">{{configNotice}}</p>
-    <p class="w46-page-config-foot">保存成功后可通过官方接口读取可管理的主页供你选择；Page ID 不需要手动填写，尚未验证前不会显示“已连接”。</p>
+    <p class="w46-page-config-foot">保存后由言策核验所填主页的 Pancake 官方 API；未验证通过前不会显示“已连接”。不需要重新进行 Facebook 授权。</p>
    </section>
    <Button class="w46-channel-connect" size="sm" data-test="native-provider-setup"
     :disabled="busy||(isFbPage&&!nativeReady)||state==='ONLINE_VERIFIED'||state==='PAGE_SELECTION_REQUIRED'"
