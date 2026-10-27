@@ -95,12 +95,17 @@ export function createW55BaileysDpapiAuthStore({
    const initial=await native({op:'read',scope});
    if(initial.revoked)fail('W55_SIGNAL_ACCOUNT_REVOKED');
    if(initial.found&&!initial.creds)fail('W55_SIGNAL_CREDS_CORRUPT');
-   if(initial.found&&userAction==='PAIR_OWN_ACCOUNT')fail('W55_SIGNAL_EXPLICIT_RECONNECT_REQUIRED');
    if(!initial.found&&userAction==='RESUME_EXPLICITLY_APPROVED')
     fail('W55_SIGNAL_EXISTING_CREDENTIALS_REQUIRED');
    let creds;
-   if(initial.found)creds=deserialize(initial.creds);
-   else{
+   if(initial.found){
+    creds=deserialize(initial.creds);
+    // A user who closed an UNREGISTERED first QR must be able to click
+    // "Connect WhatsApp" again. Never resume a linked/registered account
+    // through the new-pairing path, and never resurrect a revoked tombstone.
+    if(userAction==='PAIR_OWN_ACCOUNT'&&creds?.registered===true)
+     fail('W55_SIGNAL_EXPLICIT_RECONNECT_REQUIRED');
+   }else{
     creds=initAuthCreds();
     await check(binding,'SIGNAL_NEW_PAIRING');
     await native({op:'put',scope,creds:serialize(creds)});

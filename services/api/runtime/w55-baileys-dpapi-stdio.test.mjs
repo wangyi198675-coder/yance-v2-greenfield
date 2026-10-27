@@ -106,3 +106,17 @@ test('W55 revoked account tombstone resists concurrent late Signal write and rep
     /W55_SIGNAL_ACCOUNT_REVOKED/);
  }finally{f.cleanup()}
 });
+
+test('W55 incomplete first WhatsApp QR may be retried only after a NEW explicit user click', {skip:!exe},async()=>{
+ const f=fixture();
+ try{
+  const port=f.make();
+  const first=await port.open({binding:f.binding,userAction:'PAIR_OWN_ACCOUNT'});
+  assert.equal(first.state.creds.registered,false);
+  const retry=await port.open({binding:f.binding,userAction:'PAIR_OWN_ACCOUNT'});
+  assert.equal(retry.state.creds.registrationId,first.state.creds.registrationId);
+  await port.revoke({binding:f.binding});
+  await assert.rejects(port.open({binding:f.binding,userAction:'PAIR_OWN_ACCOUNT'}),
+   /W55_SIGNAL_ACCOUNT_REVOKED/);
+ }finally{f.cleanup()}
+});
