@@ -192,8 +192,16 @@ if(r4IsolatedPreview){
   'apps/web/evidence/THEME_PERSISTENCE_CDP_20261028.json',
   'apps/web/evidence/W09_THEME_PERSIST_REUSE_NATIVE_BROWSER_STORE_20261028.md'
  ]);
- const themeScope=Object.entries(themeUiFiles).every(([path,sha])=>
-  existsSync(join(w46Root,path))&&git('hash-object','--',path)===sha&&git('rev-parse','HEAD:'+path)===sha)
+ // Current notification Owner supersedes only the two original settings blobs.
+ // The existing notifyDeltaValid further proves both against its signed source.
+ const notifyThemePins=Object.freeze({
+  'apps/web/src/BCSettingsWorkspace.vue':'77c1bcc6728fa17a548fbcbf92da710438bd2464',
+  'apps/web/tests/w46-r4-media-settings-native.test.mjs':'592708bc0484a4b164ddb6ad106021f7d4d53142'
+ });
+ const themeScope=Object.entries(themeUiFiles).every(([path,sha])=>{
+  const expected=notifyThemePins[path]||sha;
+  return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&git('rev-parse','HEAD:'+path)===expected;
+ })
   &&[...themeEvidence].every(path=>existsSync(join(w46Root,path))&&
      git('hash-object','--',path)===git('rev-parse','HEAD:'+path))
   &&git('rev-parse','HEAD:apps/web/src/BCProductWorkspaceCandidate.vue')===
@@ -254,7 +262,7 @@ if(r4IsolatedPreview){
      git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
  const validSignedBlobs=notifyDeltaValid&&wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
-   const expected=path===channelUxFile?channelUxSha:(pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha)));
+   const expected=path===channelUxFile?channelUxSha:(notifyFiles[path]||pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha)));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
      git('rev-parse','HEAD:'+path)===expected;
  });
@@ -312,7 +320,7 @@ if(r4IsolatedPreview){
    noPairReview.includes('700fa2d653cd207b54de6f7061083cb5f9826ceb')&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsPath)===ownerFiles[settingsPath]&&
    git('rev-parse',newestNoPairApprovedSha+':'+settingsTestPath)==='700fa2d653cd207b54de6f7061083cb5f9826ceb'&&
-   git('rev-parse','HEAD:'+settingsTestPath)===(themeScope?themeUiFiles[settingsTestPath]:(galleryScope?git('rev-parse',galleryCommit+':'+settingsTestPath):'700fa2d653cd207b54de6f7061083cb5f9826ceb'))&&
+   git('rev-parse','HEAD:'+settingsTestPath)===(notifyFiles[settingsTestPath]||(themeScope?themeUiFiles[settingsTestPath]:(galleryScope?git('rev-parse',galleryCommit+':'+settingsTestPath):'700fa2d653cd207b54de6f7061083cb5f9826ceb')))&&
    !readFileSync(join(w46Root,settingsPath),'utf8').includes('<BCLocalSessionConnector');
  // W42 independently closed only the QR layout/status RED with actual
  // NONSCANNABLE synthetic Chrome DOM, not a real user account authorization.
