@@ -355,6 +355,16 @@ if(r4IsolatedPreview){
 const stageApiTarget=process.env.W09_STAGE_API_TARGET||'http://127.0.0.1:47182';
 if(!/^http:\/\/127\.0\.0\.1:(?:[1-9][0-9]{3,4})$/.test(stageApiTarget))
   throw Error('W09_LOCAL_STAGE_API_TARGET_INVALID');
+// The W47 47183 read-only W26 port reports installation state only. It does
+// not grant a first-party session or expose private profile, MID or sends.
+const fbReadOnlyTarget=process.env.W09_FB_READONLY_STATUS_TARGET||null;
+if(fbReadOnlyTarget!==null&&fbReadOnlyTarget!=='http://127.0.0.1:47183')
+  throw Error('W09_FB_READONLY_TARGET_NOT_APPROVED');
+const fbReadOnlyProxy=fbReadOnlyTarget?{
+ '^/api/v2/providers/fb-personal/(?:setup|status)(?:\\?.*)?$':{
+  target:fbReadOnlyTarget,changeOrigin:true
+ }
+}:{};
 function failUnless(code,text){if(!code.includes(text))throw Error('W47_BC_CONTRACT_DRIFT: '+text)}
 function gate(){
   return {name:'w47-runtime-truth-gate',enforce:'pre',
@@ -486,6 +496,7 @@ export default {
  server:{...owner.server,proxy:{'/api/v2':stageApiTarget}},
 
  preview:{...owner.preview,host:'127.0.0.1',port:r4IsolatedPreview?44747:4399,strictPort:true,
-  proxy:{'/api/v2':{target:stageApiTarget,changeOrigin:true},
+  proxy:{...fbReadOnlyProxy,
+         '/api/v2':{target:stageApiTarget,changeOrigin:true},
          '/w46-native-test':{target:stageApiTarget,changeOrigin:true}}}
 };
