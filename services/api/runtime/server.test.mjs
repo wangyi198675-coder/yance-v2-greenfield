@@ -5,7 +5,7 @@ import test,{before,after} from 'node:test';
 import {request as rawHttpRequest} from 'node:http';
 import assert from 'node:assert/strict';
 import {spawn,execFileSync} from 'node:child_process';
-import {mkdtempSync,copyFileSync,writeFileSync,rmSync,mkdirSync} from 'node:fs';
+import {mkdtempSync,copyFileSync,writeFileSync,rmSync,mkdirSync,readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -23,7 +23,8 @@ const files=['server.mjs','runtime-config.mjs','runtime-provenance.mjs',
  'w54-native-child-frame.mjs','w54-native-webview-session.mjs',
  'w47-w43-private-child.py','w47-w23-media-bridge.mjs',
  'w47-native-settings-capabilities.mjs','w47-whatsapp-native-route.mjs',
- 'pancake-multi-onboarding-http.mjs','w55-pancake-web-custody.mjs'];
+ 'pancake-multi-onboarding-http.mjs','w55-pancake-web-custody.mjs',
+ 'fb-page-native-status-http.mjs'];
 let child,base,work;
 before(async()=>{
  work=mkdtempSync(join(tmpdir(),'w47-exact-native-test-'));
@@ -33,7 +34,11 @@ before(async()=>{
  const w23Dir=join(work,'src','domains','file-attachment');
  mkdirSync(runtimeDir,{recursive:true});
  mkdirSync(w23Dir,{recursive:true});
- for(const f of files)copyFileSync(join(here,f),join(runtimeDir,f));
+ // Copy original runtime modules from the *same checkout*, not stale test stubs.
+ // A new native source import must never make the ephemeral child fail with
+ // MODULE_NOT_FOUND while real security assertions remain untested.
+ for(const f of readdirSync(here).filter(n=>n.endsWith('.mjs')||n==='w47-w43-private-child.py'))
+  copyFileSync(join(here,f),join(runtimeDir,f));
  for(const f of ['web-media.mjs','web-media-http.mjs'])
   copyFileSync(resolve(here,'../src/domains/file-attachment',f),join(w23Dir,f));
  writeFileSync(join(runtimeDir,'runtime-build.json'),JSON.stringify({
