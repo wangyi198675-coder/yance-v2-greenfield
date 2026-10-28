@@ -73,14 +73,24 @@ fn current_sid() -> Result<Vec<u8>, VaultError> {
     }
 }
 fn namespace() -> Result<String, VaultError> {
-    #[cfg(debug_assertions)]
+    // SECURITY: a release build MUST NEVER ignore a QA namespace environment
+    // and silently operate on the production WinCred target. This previously
+    // allowed an ostensibly isolated test to write/revoke the live PANCAKE_PAIR.
     if let Some(v) = std::env::var_os("W55_WEB_QA_SCOPE") {
-        let s = v.to_str().ok_or(VaultError::Denied)?;
-        let suffix = s.strip_prefix("W55_WEB_QA_").ok_or(VaultError::Denied)?;
-        if suffix.len() != 32 || !suffix.bytes().all(|c| c.is_ascii_hexdigit()) {
+        #[cfg(debug_assertions)]
+        {
+            let s = v.to_str().ok_or(VaultError::Denied)?;
+            let suffix = s.strip_prefix("W55_WEB_QA_").ok_or(VaultError::Denied)?;
+            if suffix.len() != 32 || !suffix.bytes().all(|c| c.is_ascii_hexdigit()) {
+                return Err(VaultError::Denied);
+            }
+            return Ok(s.to_owned());
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            let _ = v;
             return Err(VaultError::Denied);
         }
-        return Ok(s.to_owned());
     }
     Ok("YANCE_V2_WEB_LOCAL_CLOUD_BYOK_V1".into())
 }
