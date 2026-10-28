@@ -46,6 +46,7 @@ def main():
         "LLAMACPP_LOCAL_QWEN3_8B_FREE": "llamacpp",
         "OPENROUTER_USER_API": "openrouter",
         "OPENAI_USER_API": "openai",
+        "CHATGPT_PLAN_SIWC": "siwc",
     }
     if selected is not None:
         if (not isinstance(selected, dict)
@@ -115,6 +116,16 @@ def main():
                 raise W47PrivateAccessError("CLOUD_PROTECTED_CREDENTIAL_INVALID",503)
             return key
 
+        def official_response(*, model_id, messages):
+            if verified.get("modelBackend") != "siwc" or model_id != verified.get("modelId"):
+                raise W47PrivateAccessError("SIWC_CURRENT_SELECTION_INVALID", 409)
+            emit({"kind": "SIWC_MODEL_REQUEST",
+                  "modelId": model_id, "messages": messages})
+            packet = read()
+            if packet.get("kind") != "SIWC_MODEL_RESULT" or not isinstance(packet.get("text"), str):
+                raise W47PrivateAccessError("SIWC_OFFICIAL_PROVIDER_UNAVAILABLE", 503)
+            return packet["text"]
+
         return W47VerifiedPrincipal(
             principal_ref=verified["principalRef"],
             installation_ref=verified["installationRef"],
@@ -129,6 +140,7 @@ def main():
                             if verified.get("cloudKeyFile") else None),
             cloud_secret_resolver=(native_secret if verified.get("cloudSecretMode") == "W55_NATIVE_CALLBACK" else
                                    native_cloud_secret if verified.get("cloudCredentialSource") == "W55_NATIVE_WIN_CRED" else None),
+            official_response_resolver=official_response if verified.get("modelBackend") == "siwc" else None,
             model_user_selected=verified.get("modelUserSelected") is True,
             extra_charge_approved=verified.get("extraChargeApproved") is True,
             protected_credential_attested=verified.get("protectedCredentialAttested") is True,

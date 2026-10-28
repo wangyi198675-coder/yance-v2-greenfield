@@ -22,7 +22,7 @@ function acceptable(c){
  */
 export function createW43PythonPrivatePort({
  pythonExecutable,w43ModuleRoot,protectedKeyFile,
- resolveNativeCloudSecret=null,nativeCloudKeyPort=null,timeoutMs=190000
+ resolveNativeCloudSecret=null,nativeCloudKeyPort=null,officialSiwcPort=null,timeoutMs=190000
 }={}){
  if(!pythonExecutable||!w43ModuleRoot||
     !isAbsolute(pythonExecutable)||!isAbsolute(w43ModuleRoot)||
@@ -33,6 +33,8 @@ export function createW43PythonPrivatePort({
   throw Error('W55_NATIVE_CLOUD_CREDENTIAL_CALLBACK_REQUIRED');
   if(nativeCloudKeyPort!==null&&typeof nativeCloudKeyPort?.withSecret!=='function')
   throw Error('W55_NATIVE_SECRET_PORT_INVALID');
+ if(officialSiwcPort!==null&&typeof officialSiwcPort?.invoke!=='function')
+  throw Error('SIWC_OFFICIAL_SDK_OWNER_PORT_REQUIRED');
  if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>300000)
   throw Error('W43_PYTHON_BRIDGE_TIMEOUT_INVALID');
  async function invoke(method,ctx,threadId,text,requestId,receipt,modelSelection,inspection={}){
@@ -176,6 +178,36 @@ export function createW43PythonPrivatePort({
       // unapproved model call. Never surface the secret/error to HTTP.
       send({kind:'CLOUD_SECRET_DENIED'});
      }finally{responding=false}
+    }else if(msg.kind==='SIWC_MODEL_REQUEST'){
+      if(responding||method!=='turn'||!officialSiwcPort||!verifiedClaim||
+         modelSelection?.provider!=='CHATGPT_PLAN_SIWC'||
+         modelSelection.modelId!==msg.modelId||!Array.isArray(msg.messages)||
+         msg.messages.length>24||JSON.stringify(msg.messages).length>32000){
+        finish({httpStatus:503,code:'SIWC_NATIVE_REQUEST_INVALID'});return;
+      }
+      responding=true;
+      try{
+        const before=await ctx.checkCurrent();
+        const fields=['principalRef','installationRef','sessionRef','sessionRevision',
+          'revocationGeneration','modelSelectionEpoch','modelBackend','modelId',
+          'siwcProfileRef'];
+        if(!acceptable(before)||fields.some(k=>before[k]!==verifiedClaim[k])||
+           before.modelBackend!=='siwc'||before.modelUserSelected!==true)
+          throw Error('SIWC_CURRENT_SELECTION_CHANGED');
+        const answer=await officialSiwcPort.invoke({
+          modelId:msg.modelId,messages:msg.messages,
+          profileRef:before.siwcProfileRef
+        });
+        const after=await ctx.checkCurrent();
+        if(!acceptable(after)||fields.some(k=>after[k]!==before[k]))
+          throw Error('SIWC_SESSION_REVOKED');
+        if(typeof answer!=='string'||!answer.trim())
+          throw Error('SIWC_EMPTY_PROVIDER_REPLY');
+        send({kind:'SIWC_MODEL_RESULT',text:answer.slice(0,18000)});
+      }catch{
+        send({kind:'SIWC_MODEL_DENIED'});
+        finish({httpStatus:503,code:'SIWC_OFFICIAL_PROVIDER_UNAVAILABLE'});return;
+      }finally{responding=false}
     }else if(msg.kind==='RESULT'){
      if(!msg.result||typeof msg.result!=='object'){
       finish({httpStatus:503,code:'W43_PYTHON_RESULT_INVALID'});return
@@ -195,7 +227,7 @@ export function createW43PythonPrivatePort({
   // Capability support is NOT model readiness or billable authorization.
   // W54/W55 native credential/consent and W43 live SDK verify separately.
   supportsSelection:async s=>!!s&&typeof s==='object'&&
-   ['OPENROUTER_USER_API','OPENAI_USER_API','LLAMACPP_LOCAL_QWEN3_8B_FREE'].includes(s.provider)&&
+   ['OPENROUTER_USER_API','OPENAI_USER_API','LLAMACPP_LOCAL_QWEN3_8B_FREE','CHATGPT_PLAN_SIWC'].includes(s.provider)&&
    typeof s.modelId==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}$/.test(s.modelId)&&
    (s.provider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'||s.modelId==='qwen3:8b'),
   turn:(ctx,thread_id,text,request_id,modelSelection)=>

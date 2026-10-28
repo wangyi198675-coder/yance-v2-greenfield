@@ -40,11 +40,12 @@ export function createW55PancakeWebCustody({nativeKeyPort}={}){
       !Number.isSafeInteger(out.revision)||out.revision<=rev)
    denial('W55_PANCAKE_STORE_NOT_VERIFIED');
   const after=await snapshot();
-  if(after.revision!==out.revision||after.configured!==true)
+  if(after.revision!==out.revision||after.configured!==true||after.revoked===true)
    denial('W55_PANCAKE_READBACK_NOT_VERIFIED');
   return out.revision;
  }
- async function saveAccount({session,userAccessToken,explicitUserEntry}={}){
+ async function saveAccount({session,userAccessToken,explicitUserEntry,
+  ownerReviewedRelink=false,expectedRevokedRevision=null}={}){
   if(!session||!['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(session.record?.kind)||
      !token(userAccessToken)||explicitUserEntry!==true)
    denial('PANCAKE_ACCOUNT_USER_INPUT_REQUIRED');
@@ -52,7 +53,17 @@ export function createW55PancakeWebCustody({nativeKeyPort}={}){
   // Never replace an existing active account silently: this could rebind
   // all previously verified Pages to a different Pancake account.
   if(prior.configured)denial('PANCAKE_ACCOUNT_ALREADY_CONFIGURED');
-  if(prior.revoked)denial('PANCAKE_REVOKED_RELINK_REQUIRES_OWNER_REVIEW');
+  // Only the current authenticated Windows user may explicitly re-enroll
+  // after a revoked tombstone. The original native W55 implements exact
+  // expectedRevision CAS and never resurrects the previous secret.
+  if(prior.revoked){
+   if(ownerReviewedRelink!==true||
+      !Number.isSafeInteger(expectedRevokedRevision)||
+      expectedRevokedRevision!==prior.revision||prior.revision<1)
+    denial('PANCAKE_REVOKED_RELINK_REQUIRES_OWNER_REVIEW');
+  }else if(ownerReviewedRelink||expectedRevokedRevision!==null){
+   denial('PANCAKE_RELINK_REVISION_MISMATCH');
+  }
   const rev=await store({userAccessToken,pages:{}},prior.revision);
   return Object.freeze({stored:true,revision:rev,
    source:'W55_OS_PROTECTED_CURRENT_USER',canSend:false});

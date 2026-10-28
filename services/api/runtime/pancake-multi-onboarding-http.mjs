@@ -161,8 +161,14 @@ export function createPancakeMultiOnboardingHttp({
   }
   if(route==='/capabilities'){
    if(req.method!=='GET'){send(res,405,{ok:false,error:'GET_ONLY'});return true}
-   send(res,200,{ok:true,channel:'FB_PAGE',multiPage:true,
-    credentialReady:!!custody,automaticRotation:false});return true;
+   if(!custody){send(res,503,{ok:false,error:'EXISTING_W55_CUSTODY_UNAVAILABLE'});return true}
+   try{
+    const current=await custody.status();
+    send(res,200,{ok:true,channel:'FB_PAGE',multiPage:true,
+     credentialReady:true,credentialRevoked:current.revoked===true,
+     credentialRevision:current.revision,automaticRotation:false});
+   }catch(e){send(res,e.status||503,{ok:false,error:e.code||'W55_PANCAKE_STATUS_UNVERIFIED'})}
+   return true;
   }
   if(!custody){send(res,503,{ok:false,error:'EXISTING_W55_CUSTODY_UNAVAILABLE'});return true}
   if(route==='/pages'){
@@ -188,11 +194,19 @@ export function createPancakeMultiOnboardingHttp({
   try{
    const v=await body(req);
    if(route==='/account'){
-    if(Object.keys(v).join('|')!=='userAccessToken'||!validToken(v.userAccessToken))
+    const keys=Object.keys(v).sort().join('|');
+    const relink=keys==='expectedRevokedRevision|ownerReviewedRelink|userAccessToken';
+    if((keys!=='userAccessToken'&&!relink)||!validToken(v.userAccessToken))
      throw fail('PANCAKE_ACCOUNT_TOKEN_REQUIRED',422);
+    if(relink&&(v.ownerReviewedRelink!==true||
+       !Number.isSafeInteger(v.expectedRevokedRevision)||
+       v.expectedRevokedRevision<1))
+      throw fail('PANCAKE_RELINK_EXPLICIT_OWNER_CONFIRMATION_REQUIRED',403);
     const pages=await ownedPages(v.userAccessToken,fetchImpl);
     const saved=await custody.saveAccount({
-      session,userAccessToken:v.userAccessToken,explicitUserEntry:true
+      session,userAccessToken:v.userAccessToken,explicitUserEntry:true,
+      ...(relink?{ownerReviewedRelink:true,
+        expectedRevokedRevision:v.expectedRevokedRevision}:{})
     });
     send(res,200,{ok:true,status:'OFFICIAL_ACCOUNT_DISCOVERED',
       userTokenStored:saved.stored,pages:pages.map(p=>({...p,

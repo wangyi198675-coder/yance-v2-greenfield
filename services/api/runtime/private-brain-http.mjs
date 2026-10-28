@@ -31,6 +31,9 @@ const principalValid=p=>p&&
   (p.source==='WEB_LOCAL_PRIVATE'&&p.webPrivateOnly===true&&
    ((['unconfigured','llamacpp'].includes(p.modelBackend)&&p.extraChargeApproved===false&&
     (p.modelBackend==='unconfigured'||(p.modelId==='qwen3:8b'&&p.modelUserSelected===true)))||
+    (p.modelBackend==='siwc'&&typeof p.siwcProfileRef==='string'&&
+     p.siwcProfileRef.length>=8&&p.modelUserSelected===true&&
+     p.extraChargeApproved===false&&p.protectedCredentialAttested===false)||
     (['openrouter','openai'].includes(p.modelBackend)&&
      p.cloudCredentialSource==='W55_NATIVE_WIN_CRED'&&
      p.cloudKeyFile===undefined&&p.modelUserSelected===true&&
@@ -49,7 +52,7 @@ const nativeModelClaim=p=>{
   modelUserSelected:false,extraChargeApproved:false,
   protectedCredentialAttested:false
  };
- if(!['llamacpp','openrouter','openai','unconfigured'].includes(backend)||
+ if(!['llamacpp','openrouter','openai','siwc','unconfigured'].includes(backend)||
     typeof p.modelId!=='string'||p.modelId.length>128||
     !Number.isSafeInteger(p.modelSelectionEpoch)||p.modelSelectionEpoch<0)
    throw {httpStatus:503};
@@ -74,6 +77,7 @@ const nativeModelClaim=p=>{
   modelUserSelected:p.modelUserSelected===true,
   extraChargeApproved:p.extraChargeApproved===true,
   protectedCredentialAttested:p.protectedCredentialAttested===true,
+  ...(backend==='siwc'&&typeof p.siwcProfileRef==='string'?{siwcProfileRef:p.siwcProfileRef}:{}),
   ...(cloud&&p.cloudSecretMode==='W55_NATIVE_CALLBACK'?{cloudSecretMode:'W55_NATIVE_CALLBACK'}:{}),
   ...(cloud&&nativeWinCred?{cloudCredentialSource:'W55_NATIVE_WIN_CRED'}:{}),
   ...(cloud&&p.cloudSecretMode===undefined&&p.cloudCredentialSource===undefined&&originalProtectedFile?{cloudKeyFile:p.cloudKeyFile}:{})
@@ -91,6 +95,7 @@ const sameContext=(a,b)=>a.principalRef===b.principalRef&&a.installationRef===b.
  a.revocationGeneration===b.revocationGeneration&&a.appLocalDataRoot===b.appLocalDataRoot&&
  a.modelBackend===b.modelBackend&&a.modelId===b.modelId&&
  a.modelSelectionEpoch===b.modelSelectionEpoch&&
+ a.siwcProfileRef===b.siwcProfileRef&&
  a.cloudKeyFile===b.cloudKeyFile&&a.cloudSecretMode===b.cloudSecretMode&&a.cloudCredentialSource===b.cloudCredentialSource&&
  a.modelUserSelected===b.modelUserSelected&&
  a.extraChargeApproved===b.extraChargeApproved&&
@@ -101,7 +106,8 @@ const w43Turn=(r,selection=null)=>r&&r.status==='COMPLETED'&&r.canSend===false&&
  (selection?(r.modelId===selection.modelId&&
    (selection.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?r.modelProvider==='LLAMACPP_LOCAL_QWEN3_8B_FREE':
     selection.provider==='OPENROUTER_USER_API'?r.modelProvider==='OPENROUTER_USER_API':
-    selection.provider==='OPENAI_USER_API'&&r.modelProvider==='OPENAI_USER_API')):
+    selection.provider==='OPENAI_USER_API'?r.modelProvider==='OPENAI_USER_API':
+    selection.provider==='CHATGPT_PLAN_SIWC'&&r.modelProvider==='CHATGPT_PLAN_SIWC')):
    r.modelProvider.startsWith('LLAMACPP_LOCAL_')&&r.modelId==='qwen3:8b');
 const w43History=r=>r&&['HISTORY_PRESENT','HISTORY_EMPTY','HISTORY_NOT_FOUND'].includes(r.status)&&
  r.canSend===false&&r.qualityQualified===false&&opaque(r.sessionId)&&
@@ -188,20 +194,22 @@ export function createPrivateBrainHttp({sessionAuthority,webOrigin,
   }
   let signedSelection=null;
   if(turn&&(resolveSignedModelSelection||
-    ['openrouter','openai'].includes(original.modelBackend))){
+    ['openrouter','openai','siwc'].includes(original.modelBackend))){
    // A configured local user's own native W54/W55 model claim is sufficient;
    // do not require a redundant selection service just to call original Agno.
    try{signedSelection=resolveSignedModelSelection?
     await resolveSignedModelSelection({verifiedContext:original,threadId}):{
-     provider:original.modelBackend==='openrouter'?'OPENROUTER_USER_API':'OPENAI_USER_API',
+     provider:original.modelBackend==='openrouter'?'OPENROUTER_USER_API':
+      original.modelBackend==='siwc'?'CHATGPT_PLAN_SIWC':'OPENAI_USER_API',
      modelId:original.modelId
     }}
    catch{reject(res,503,'W43_SIGNED_MODEL_SELECTION_UNAVAILABLE');return true}
-   const permitted=signedSelection&&['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENAI_USER_API','OPENROUTER_USER_API'].includes(signedSelection.provider)&&
+   const permitted=signedSelection&&['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENAI_USER_API','OPENROUTER_USER_API','CHATGPT_PLAN_SIWC'].includes(signedSelection.provider)&&
     typeof signedSelection.modelId==='string'&&signedSelection.modelId.length>1&&signedSelection.modelId.length<=128;
    if(!permitted){reject(res,503,'MODEL_CONFIGURATION_REQUIRED');return true}
    const expectedBackend={LLAMACPP_LOCAL_QWEN3_8B_FREE:'llamacpp',
-    OPENROUTER_USER_API:'openrouter',OPENAI_USER_API:'openai'}[signedSelection.provider];
+    OPENROUTER_USER_API:'openrouter',OPENAI_USER_API:'openai',
+    CHATGPT_PLAN_SIWC:'siwc'}[signedSelection.provider];
    // W54 current user + W55 credential/consent MUST bind the exact selected
    // model and its generation BEFORE native ledger claim or a billable Run.
    if(original.modelBackend!==expectedBackend||

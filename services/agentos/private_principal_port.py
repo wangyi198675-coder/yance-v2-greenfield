@@ -47,6 +47,7 @@ class W47VerifiedPrincipal:
     # Only W55's nonserializable native callback in the approved Agno
     # process may supply this. Ordinary HTTP/browser input can never mint it.
     cloud_secret_resolver: Callable[[], str] | None = None
+    official_response_resolver: Callable | None = None
     model_user_selected: bool = False
     extra_charge_approved: bool = False
     protected_credential_attested: bool = False
@@ -86,7 +87,7 @@ def _check_claim(value: W47VerifiedPrincipal) -> W47VerifiedPrincipal:
     root = value.app_local_data_root
     if not root.is_absolute() or not root.is_dir() or root.is_symlink():
         raise W47PrivateAccessError("W54_APPDATA_AUTHORITY_REQUIRED", 503)
-    if value.model_backend not in {"llamacpp", "openrouter", "openai", "unconfigured"}:
+    if value.model_backend not in {"llamacpp", "openrouter", "openai", "siwc", "unconfigured"}:
         raise W47PrivateAccessError("MODEL_PROVIDER_NOT_SUPPORTED", 422)
     # PRIVATE_HISTORY is independent of inference configuration, billing and
     # cloud-key availability. Never block the user's own original Agno
@@ -107,6 +108,7 @@ def _same_session(a: W47VerifiedPrincipal, b: W47VerifiedPrincipal) -> bool:
         and a.model_backend == b.model_backend
         and a.model_id == b.model_id
         and a.cloud_key_file == b.cloud_key_file
+        and bool(a.official_response_resolver) == bool(b.official_response_resolver)
         and a.model_user_selected == b.model_user_selected
         and a.extra_charge_approved == b.extra_charge_approved
         and a.protected_credential_attested == b.protected_credential_attested
@@ -195,6 +197,11 @@ class W43NativePrivateBrainPort:
                     raise W47PrivateAccessError("CLOUD_CREDENTIAL_SOURCE_AMBIGUOUS", 503)
             elif not isinstance(claim.cloud_key_file, Path):
                 raise W47PrivateAccessError("CLOUD_API_KEY_SETUP_REQUIRED", 503)
+        if claim.model_backend == "siwc" and (
+            not claim.model_user_selected or
+            not callable(claim.official_response_resolver)
+        ):
+            raise W47PrivateAccessError("SIWC_CURRENT_GRANT_REQUIRED", 409)
         scope, file = self._native_storage(claim)
         # Cache models separately, never histories: ALL selected models keep
         # the original same Agno db_file/private Agent ID/user/session.
@@ -209,6 +216,7 @@ class W43NativePrivateBrainPort:
                     purpose="QUALITY_EVAL", local_key_file=self._key_file,
                     cloud_key_file=claim.cloud_key_file,
                     cloud_secret_resolver=claim.cloud_secret_resolver,
+                    official_response_resolver=claim.official_response_resolver,
                     user_selected=claim.model_user_selected,
                     extra_charge_approved=claim.extra_charge_approved,
                     protected_credential_attested=claim.protected_credential_attested,

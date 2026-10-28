@@ -6,7 +6,8 @@ import {timingSafeEqual} from 'node:crypto';
 const catalog=Object.freeze([
  Object.freeze({provider:'OPENROUTER_USER_API',displayName:'OpenRouter',requiresUserApiKey:true,requiresLocalModel:false}),
  Object.freeze({provider:'OPENAI_USER_API',displayName:'OpenAI API',requiresUserApiKey:true,requiresLocalModel:false}),
- Object.freeze({provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true})
+ Object.freeze({provider:'LLAMACPP_LOCAL_QWEN3_8B_FREE',displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true}),
+ Object.freeze({provider:'CHATGPT_PLAN_SIWC',displayName:'ChatGPT',requiresUserApiKey:false,requiresLocalModel:false})
 ]);
 const maxBody=2048;
 // W43's original Agno OpenRouter/OpenAI SDK integration tests already exercise
@@ -24,7 +25,7 @@ const write=(res,status,value)=>{
  res.end(JSON.stringify(value))
 };
 const deny=(res,status,error)=>write(res,status,{ok:false,error,canSend:false});
-const isProvider=v=>['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENROUTER_USER_API','OPENAI_USER_API'].includes(v);
+const isProvider=v=>['LLAMACPP_LOCAL_QWEN3_8B_FREE','OPENROUTER_USER_API','OPENAI_USER_API','CHATGPT_PLAN_SIWC'].includes(v);
 const validModel=v=>typeof v==='string'&&v.length>=2&&v.length<=128&&
  /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(v);
 const validSelection=s=>s&&isProvider(s.provider)&&validModel(s.modelId);
@@ -64,7 +65,7 @@ const safeConfiguration=x=>{
 export function createPrivateModelHttp({
  sessionAuthority,webOrigin,resolveNativePrincipal=null,
  modelConfigPort=null,credentialVaultPort=null,w43ModelPort=null,
- localWebModelPort=null,webCloudModelPort=null
+ localWebModelPort=null,webCloudModelPort=null,webSiwcModelPort=null
 }={}){
  if(typeof sessionAuthority?.sessionFor!=='function'||typeof webOrigin!=='string')
   throw Error('W47_MODEL_SESSION_REQUIRED');
@@ -126,33 +127,51 @@ export function createPrivateModelHttp({
      selection=JSON.parse(Buffer.concat(chunks).toString('utf8'));
      if(!selection||typeof selection!=='object'||Array.isArray(selection))throw {status:422,code:'MODEL_SELECTION_INVALID'};
     }catch(e){deny(res,e.status??422,e.code??'MODEL_SELECTION_INVALID');return true}
-    if(selection.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'){
+    if(selection.provider==='CHATGPT_PLAN_SIWC'){
+     if(Object.keys(selection).sort().join('|')!=='modelId|provider'||!webSiwcModelPort){
+      deny(res,422,'SIWC_MODEL_SELECTION_INVALID');return true;
+     }
+     try{await webSiwcModelPort.select(selection);localWebModelPort?.clearSelection()}
+     catch(e){deny(res,e?.status??503,e?.code??'SIWC_MODEL_SELECTION_UNAVAILABLE');return true}
+    }else if(selection.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'){
      if(Object.keys(selection).sort().join('|')!=='modelId|provider'||!localWebModelPort){
       deny(res,422,'LOCAL_QWEN_SELECTION_INVALID');return true
      }
      const done=await localWebModelPort.select(selection);
      if(!done.ok){deny(res,done.status,done.error);return true}
      webCloudModelPort?.clearSelection();
+     webSiwcModelPort?.clearSelection();
     }else{
      if(Object.keys(selection).sort().join('|')!=='confirmPaidCost|modelId|provider'){
       deny(res,422,'CLOUD_MODEL_SELECTION_DTO_INVALID');return true
      }
      if(!webCloudModelPort){deny(res,503,'W55_WEB_NATIVE_WIN_CRED_HOST_NOT_CONNECTED');return true}
-     try{await webCloudModelPort.select(selection);localWebModelPort?.clearSelection()}
+     try{await webCloudModelPort.select(selection);localWebModelPort?.clearSelection();webSiwcModelPort?.clearSelection()}
      catch(e){deny(res,e?.status??503,e?.code??'CLOUD_MODEL_SELECTION_UNAVAILABLE');return true}
     }
    }
    const state=localWebModelPort?await localWebModelPort.source():
     {models:[],ready:false,choice:null};
-   let cloudSources=[],cloudSelected=null;
+   let cloudSources=[],cloudSelected=null,siwcModels=[],siwcSelected=null;
    if(webCloudModelPort){
     try{
      cloudSources=await webCloudModelPort.statuses();
      cloudSelected=await webCloudModelPort.current();
     }catch(e){deny(res,e?.status??503,e?.code??'W55_NATIVE_WIN_CRED_UNAVAILABLE');return true}
    }
-   const selectedLocal=!cloudSelected&&state.ready&&state.choice;
-   const models=[...state.models];
+   if(webSiwcModelPort){
+    try{
+     const siwc=await webSiwcModelPort.status();
+     siwcSelected=siwc.ready?siwc.choice:null;
+     siwcModels=siwc.models.map(m=>({
+      provider:'CHATGPT_PLAN_SIWC',modelId:m.modelId,
+      configured:true,available:true,keyRequired:false,
+      billingNotice:'使用你已授权共享的 ChatGPT 计划，使用额度按官方账户限制执行'
+     }));
+    }catch{siwcModels=[];siwcSelected=null}
+   }
+   const selectedLocal=!cloudSelected&&!siwcSelected&&state.ready&&state.choice;
+   const models=[...state.models,...siwcModels];
    // A first-time cloud user needs a real selectable model BEFORE selecting
    // it. Offer only the IDs already covered by original W43 Agno SDK tests,
    // and only after original W55 reports a configured, non-revoked Key.
@@ -173,8 +192,8 @@ export function createPrivateModelHttp({
      keyRequired:true,providerAvailability:'UNVERIFIED_UNTIL_RUN',
      billingNotice:'当前本人已选模型，实际服务可用性与费用以供应商回执为准'});
    write(res,200,{ok:true,authoritative:true,models,
-    selectedProvider:cloudSelected?.provider??(selectedLocal?'LLAMACPP_LOCAL_QWEN3_8B_FREE':''),
-    selectedModelId:cloudSelected?.modelId??(selectedLocal?'qwen3:8b':''),
+    selectedProvider:siwcSelected?.provider??cloudSelected?.provider??(selectedLocal?'LLAMACPP_LOCAL_QWEN3_8B_FREE':''),
+    selectedModelId:siwcSelected?.modelId??cloudSelected?.modelId??(selectedLocal?'qwen3:8b':''),
     cloudSources,
     // W55 current key revision and user-confirmed model selection already
     // authorize repeated private turns. No per-message fee checkbox is needed.
