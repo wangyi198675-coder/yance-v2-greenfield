@@ -176,8 +176,22 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
           return sendLaunchResult(res,result);
         }catch{return sendLaunchResult(res,{launched:false});}
       }
-      if(req.method==='GET'&&url.pathname===BASE+'/status')
-        return send(res,200,{ok:true,...await probe()});
+      if(req.method==='GET'&&url.pathname===BASE+'/status'){
+        // A real BridgeV2 login is NOT a W24 application-account binding.
+        // Read only a boolean from a trusted, DPAPI-protected Matrix session.
+        // Never expose the user ID, login ID, token, or provider profile.
+        let nativeProviderSessionConnected=false;
+        try{
+          const session=await getProtectedNativeMatrixSession();
+          const actual=await provider.readNativeAccountStatus(session.token);
+          nativeProviderSessionConnected=actual?.source===
+            'REAL_BRIDGE_V3_PROVISIONING_AUTHENTICATED'&&
+            actual.connectedCount>0&&
+            actual.realAccountState==='UPSTREAM_CONNECTED_W24_BINDING_PENDING';
+        }catch{}
+        return send(res,200,{ok:true,...await probe(),
+          nativeProviderSessionConnected,canSend:false});
+      }
       if(req.method==='GET'&&(url.pathname===BASE+'/setup' ||
          url.pathname===BASE+'/authorize')){
         const state=await probe();
