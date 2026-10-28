@@ -1,6 +1,7 @@
 <script setup>
 import {ref,watch,computed,nextTick,onMounted} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/dialog';
 import BCVisualAurora from './BCVisualAurora.vue';
 import './BCVisualThemeSystem.css';
 import BCBrandIcon from './BCBrandIcon.vue';
@@ -264,9 +265,9 @@ defineExpose({refresh});
      <BCChannelAccountSetup v-for="channel in CHANNELS" :key="channel.id"
       :channel="channel" :fetch-impl="fetchImpl" :connect-trigger="connectTrigger[channel.id]||0"/>
     </div>
-    <div v-if="addAccountOpen" class="w46-add-account-backdrop" data-test="w46-account-add-dialog" @click.self="addAccountOpen=false">
-     <section class="w46-add-account-panel" role="dialog" aria-modal="true" aria-label="添加聊天账号">
-      <header><div><strong>添加聊天账号</strong><p>选择平台，在言策中连接你自己的账号</p></div>
+    <Dialog v-model:open="addAccountOpen">
+     <DialogContent class="w46-oss-dialog w46-add-account-panel" :class="['theme-'+THEME_NAMES.indexOf(theme),appearance==='light'?'is-light':'is-dark']" data-test="w46-account-add-dialog" aria-label="添加聊天账号" :show-close-button="false">
+      <header><div><DialogTitle>添加聊天账号</DialogTitle><DialogDescription>选择平台，在言策中连接你自己的账号</DialogDescription></div>
        <button type="button" aria-label="关闭添加账号" @click="addAccountOpen=false">✕</button>
       </header>
       <button v-for="channel in CHANNELS" :key="channel.id" type="button" class="w46-add-platform"
@@ -276,8 +277,8 @@ defineExpose({refresh});
         <small>{{channel.id==='FB_PAGE'?'添加你管理的公共主页':'添加你的个人账号'}}</small></span>
        <span aria-hidden="true">›</span>
       </button>
-     </section>
-    </div>
+     </DialogContent>
+    </Dialog>
     <section v-if="channelDetailsOpen" id="w46-channel-details" class="w46-r4-channel-details"
      data-test="w46-multi-account" role="region" aria-label="账号连接详情">
      <strong>账号连接状态</strong>
@@ -410,9 +411,9 @@ defineExpose({refresh});
       <p class="w46-persona-guide-note">目前尚未接通可核验的人格数据，这里不会显示演示规则或虚假的学习进度。</p>
      </aside>
     </div>
-    <div v-if="personaModal" class="w46-persona-modal-mask" data-test="w46-persona-example-details" @click.self="closePersonaDetail">
-     <section class="w46-persona-modal" role="dialog" aria-modal="true" aria-labelledby="w46-persona-modal-title">
-      <header><strong id="w46-persona-modal-title">{{personaModal.kind==='learning'?'学习说明':'人格版本与控制'}}</strong>
+    <Dialog :open="Boolean(personaModal)" @update:open="value=>{if(!value)closePersonaDetail()}">
+     <DialogContent v-if="personaModal" class="w46-oss-dialog w46-persona-modal" :class="['theme-'+THEME_NAMES.indexOf(theme),appearance==='light'?'is-light':'is-dark']" data-test="w46-persona-example-details" aria-labelledby="w46-persona-modal-title" :show-close-button="false">
+      <header><DialogTitle id="w46-persona-modal-title">{{personaModal.kind==='learning'?'学习说明':'人格版本与控制'}}</DialogTitle>
        <button type="button" data-test="w46-persona-detail-close" aria-label="关闭详情" @click="closePersonaDetail">关闭</button>
       </header>
       <div class="w46-persona-modal-body">
@@ -420,8 +421,8 @@ defineExpose({refresh});
        <p v-else>规则版本、撤回和回滚需要真实的版本记录及当前授权。服务端尚未返回这些记录时，不提供假版本和无效操作。</p>
        <p class="w46-persona-modal-caution">本页只展示可说明的功能范围，不代表学习、规则审批或版本变更已执行。</p>
       </div>
-     </section>
-    </div>
+     </DialogContent>
+    </Dialog>
    </section>
    <section v-else-if="activeWorkspace==='TASKS'" class="w46-r4-feature w46-real-tools" data-test="w46-tools-experts">
     <header class="w46-r4-feature-toolbar">

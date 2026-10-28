@@ -196,7 +196,7 @@
  background-image:radial-gradient(circle,rgba(var(--wow-one),.10) .65px,transparent .8px);
  background-size:29px 29px;
  background-position:15px 12px;
- mask-image:linear-gradient(90deg,transparent,black 17%,black 83%,transparent);
+ /* Gradient is decorative only; never mask real message content. */
 }
 .w46-product-candidate .bc-real-message{
  filter:drop-shadow(0 3px 6px rgba(0,0,0,.05));
@@ -426,4 +426,189 @@
 .w46-product-candidate .w46-people-symbol{
  box-shadow:0 0 0 6px rgba(var(--wow-one),.055),0 0 40px rgba(var(--wow-one),.14);
  border:1px solid var(--wow-stroke);
+}
+
+/* W09-3 P0: readable native conversations + OSS UI visual upgrade.
+ * Visual primitives remain MIT Inspira UI Aurora, shadcn-vue / Reka UI
+ * Message, Bubble, Dialog, Button, ScrollArea and Popover. */
+.shell .w46-product-candidate {
+ --wow-chat-in:#1d2b2a;--wow-chat-out:#263e35;--wow-chat-ink:#f5fff8;
+ --wow-chat-sub:#dbffa0;--wow-chat-border:rgba(202,255,99,.27);
+ --wow-panel-glow:rgba(202,255,99,.14);
+}
+.shell[data-theme="1"] .w46-product-candidate {
+ --wow-chat-in:#30233c;--wow-chat-out:#503044;--wow-chat-ink:#fff8fa;
+ --wow-chat-sub:#ffca99;--wow-chat-border:rgba(255,160,113,.3);
+ --wow-panel-glow:rgba(250,72,174,.17);
+}
+.shell[data-theme="2"] .w46-product-candidate {
+ --wow-chat-in:#1a3042;--wow-chat-out:#16445a;--wow-chat-ink:#f0faff;
+ --wow-chat-sub:#91efff;--wow-chat-border:rgba(98,216,242,.31);
+ --wow-panel-glow:rgba(24,119,255,.18);
+}
+.shell[data-theme="3"] .w46-product-candidate {
+ --wow-chat-in:#35271f;--wow-chat-out:#543522;--wow-chat-ink:#fff9ee;
+ --wow-chat-sub:#ffe0a1;--wow-chat-border:rgba(255,192,101,.31);
+ --wow-panel-glow:rgba(245,117,56,.18);
+}
+.shell[data-theme="4"] .w46-product-candidate {
+ --wow-chat-in:#2d2a47;--wow-chat-out:#453660;--wow-chat-ink:#fcf9ff;
+ --wow-chat-sub:#e3d3ff;--wow-chat-border:rgba(206,185,255,.31);
+ --wow-panel-glow:rgba(247,125,205,.17);
+}
+.shell[data-mode="light"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#e2f0e6;--wow-chat-ink:#15332b;
+ --wow-chat-sub:#1b6250;--wow-chat-border:rgba(26,105,77,.22);
+ --wow-panel-glow:rgba(62,166,127,.11);
+}
+.shell[data-mode="light"][data-theme="1"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#ffe8f0;--wow-chat-ink:#38263c;
+ --wow-chat-sub:#8b3865;--wow-chat-border:rgba(158,58,104,.22);
+ --wow-panel-glow:rgba(250,72,174,.12);
+}
+.shell[data-mode="light"][data-theme="2"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#dff3fc;--wow-chat-ink:#193b51;
+ --wow-chat-sub:#126785;--wow-chat-border:rgba(18,103,133,.23);
+ --wow-panel-glow:rgba(24,119,255,.12);
+}
+.shell[data-mode="light"][data-theme="3"] .w46-product-candidate {
+ --wow-chat-in:#fffdfa;--wow-chat-out:#ffecd5;--wow-chat-ink:#462b1e;
+ --wow-chat-sub:#92551e;--wow-chat-border:rgba(146,85,30,.23);
+ --wow-panel-glow:rgba(245,117,56,.13);
+}
+.shell[data-mode="light"][data-theme="4"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#ece8fd;--wow-chat-ink:#33294c;
+ --wow-chat-sub:#76519a;--wow-chat-border:rgba(118,81,154,.23);
+ --wow-panel-glow:rgba(247,125,205,.12);
+}
+/* Styling existing OSS Message/Bubble slots. Never mask or dim the content. */
+.w46-product-candidate .bc-real-timeline {
+ mask-image:none!important;-webkit-mask-image:none!important;
+ background-image:radial-gradient(circle,rgba(var(--wow-one),.09) .65px,transparent .8px);
+ background-size:29px 29px;
+}
+.w46-product-candidate .bc-real-timeline [data-slot="bubble"],
+.w46-product-candidate .bc-real-timeline [data-slot="bubble-content"]{
+ opacity:1!important;filter:none!important;color:var(--wow-chat-ink)!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+}
+.w46-product-candidate .bc-real-timeline [data-slot="bubble-content"]{overflow:visible}
+.w46-product-candidate .bc-real-message{opacity:1!important;filter:none!important}
+.w46-product-candidate .bc-message-text{
+ display:block;opacity:1!important;font-size:14.5px!important;line-height:1.65!important;
+ font-weight:500!important;letter-spacing:.004em;color:var(--wow-chat-ink)!important;
+ background:var(--wow-chat-in)!important;border:1px solid var(--wow-chat-border)!important;
+ border-radius:18px 18px 18px 6px!important;padding:11px 15px!important;
+ box-shadow:0 9px 28px rgba(0,0,0,.14),inset 0 1px rgba(255,255,255,.065)!important;
+ text-shadow:none!important;
+}
+.w46-product-candidate .bc-message-text.is-outgoing{
+ background:var(--wow-chat-out)!important;
+ border-radius:18px 18px 6px 18px!important;
+ box-shadow:0 9px 28px rgba(0,0,0,.13),0 0 28px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate .bc-message-text :is(p,span,div){opacity:1!important;color:inherit}
+.w46-product-candidate .bc-message-text .bc-translation{
+ color:var(--wow-chat-sub)!important;font-size:13.5px!important;line-height:1.6!important;
+ font-weight:650!important;padding-top:8px;margin-top:9px!important;
+ border-top:1px solid var(--wow-chat-border);text-shadow:none!important;
+}
+.w46-product-candidate .bc-native-composer textarea,
+.w46-product-candidate .bc-search-capsule input{color:var(--ink)!important;font-size:14px!important}
+.w46-product-candidate :is(.bc-native-composer textarea,.bc-search-capsule input)::placeholder{
+ color:var(--muted);opacity:.8;
+}
+/* Inspira aurora stays decorative; add immersive depth to existing OSS surfaces. */
+.w46-product-candidate :is(.bc-settings-detail,.bc-settings-nav,.bc-media-pane,
+ .w46-r4-feature-card,.w46-persona-panel,.w46-native-panel,
+ .w46-people-search-panel,.w46-people-results){
+ box-shadow:0 20px 56px rgba(0,0,0,.16),0 0 47px var(--wow-panel-glow),
+ inset 0 1px 0 rgba(255,255,255,.10)!important;
+ border-color:rgba(var(--wow-one),.31)!important;
+ backdrop-filter:blur(16px) saturate(125%);
+}
+.w46-product-candidate :is(.bc-settings-detail,.w46-r4-feature-card){
+ background:linear-gradient(145deg,rgba(var(--wow-one),.11),transparent 40%,
+ rgba(var(--wow-three),.085)),var(--bg2)!important;
+}
+.w46-product-candidate :is(.w46-workspace-menu,.bc-private-settings,
+ .bc-brain-context-menu,.bc-brain-trace){
+ background:linear-gradient(128deg,rgba(var(--wow-one),.11),
+ rgba(var(--wow-three),.08)),var(--surface-raised)!important;
+ color:var(--ink)!important;
+ border:1px solid rgba(var(--wow-one),.42)!important;
+ box-shadow:0 26px 73px rgba(0,0,0,.28),0 0 39px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate .theme-card{
+ border-radius:19px!important;
+ box-shadow:0 12px 34px rgba(0,0,0,.16),0 0 19px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate .theme-card .preview{min-height:154px}
+.w46-product-candidate .theme-card:is(:hover,:focus-visible){
+ transform:translateY(-6px) scale(1.018)!important;
+ box-shadow:0 23px 56px rgba(0,0,0,.20),0 0 37px rgba(var(--wow-one),.2)!important;
+}
+.w46-product-candidate .theme-card.selected{
+ border-color:rgb(var(--wow-one))!important;
+ box-shadow:0 0 0 2px rgba(var(--wow-one),.48),0 0 45px rgba(var(--wow-one),.24)!important;
+}
+.w46-product-candidate .theme-hero{
+ border-radius:24px!important;
+ background:radial-gradient(ellipse at 90% 5%,rgba(var(--wow-one),.25),transparent 60%),
+ linear-gradient(115deg,rgba(var(--wow-three),.12),rgba(var(--wow-two),.09)),var(--surface-soft)!important;
+ box-shadow:0 25px 64px rgba(0,0,0,.12),0 0 42px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate :is(.w46-r4-feature-tabs button,.bc-settings-nav button):focus-visible{
+ outline:2px solid rgb(var(--wow-one))!important;outline-offset:3px;
+}
+/* Reka Dialog teleports to body; bind palette on the actual DialogContent root. */
+.w46-oss-dialog{
+ --oss-bg:#1c2529;--oss-ink:#f6fff9;--oss-sub:#c2d9d7;
+ --oss-accent:#caff63;--oss-glow:rgba(202,255,99,.22);
+ position:fixed!important;z-index:210!important;
+ width:min(500px,calc(100vw - 30px))!important;
+ max-height:min(85vh,700px)!important;overflow:auto!important;
+ border-radius:24px!important;padding:27px!important;
+ color:var(--oss-ink)!important;
+ background:radial-gradient(ellipse at 90% 0%,var(--oss-glow),transparent 60%),var(--oss-bg)!important;
+ border:1px solid var(--oss-glow)!important;
+ box-shadow:0 28px 95px rgba(0,0,0,.45),0 0 70px var(--oss-glow)!important;
+ backdrop-filter:blur(24px) saturate(140%);
+}
+.w46-oss-dialog.theme-1{--oss-bg:#30233b;--oss-ink:#fff7ff;--oss-sub:#e6cddd;--oss-accent:#ffa071;--oss-glow:rgba(250,72,174,.23)}
+.w46-oss-dialog.theme-2{--oss-bg:#162d40;--oss-ink:#f3fcff;--oss-sub:#cbe7f2;--oss-accent:#62d8f2;--oss-glow:rgba(24,119,255,.25)}
+.w46-oss-dialog.theme-3{--oss-bg:#35251c;--oss-ink:#fff8ed;--oss-sub:#e5d0b3;--oss-accent:#ffc065;--oss-glow:rgba(245,117,56,.23)}
+.w46-oss-dialog.theme-4{--oss-bg:#292941;--oss-ink:#fffaff;--oss-sub:#dcd3f0;--oss-accent:#ceb9ff;--oss-glow:rgba(247,125,205,.23)}
+.w46-oss-dialog.is-light{--oss-bg:#fff;--oss-ink:#18312f;--oss-sub:#42635f;--oss-glow:rgba(28,135,100,.18)}
+.w46-oss-dialog.is-light.theme-1{--oss-bg:#fff9fd;--oss-ink:#38263c;--oss-sub:#75546f;--oss-glow:rgba(250,72,174,.16)}
+.w46-oss-dialog.is-light.theme-2{--oss-bg:#f6fbff;--oss-ink:#193b51;--oss-sub:#426a7c;--oss-glow:rgba(24,119,255,.16)}
+.w46-oss-dialog.is-light.theme-3{--oss-bg:#fffaf4;--oss-ink:#462b1e;--oss-sub:#806249;--oss-glow:rgba(245,117,56,.16)}
+.w46-oss-dialog.is-light.theme-4{--oss-bg:#fdfaff;--oss-ink:#33294c;--oss-sub:#64547c;--oss-glow:rgba(206,185,255,.23)}
+.w46-oss-dialog :is(h1,h2,h3,strong,[data-slot="dialog-title"]){color:var(--oss-ink)!important}
+.w46-oss-dialog :is(p,small,[data-slot="dialog-description"]){color:var(--oss-sub)!important;line-height:1.65}
+.w46-oss-dialog .w46-add-platform{
+ display:flex;align-items:center;width:100%;margin-top:12px;
+ background:color-mix(in srgb,var(--oss-bg) 83%,var(--oss-accent) 17%)!important;
+ border:1px solid var(--oss-glow)!important;border-radius:16px!important;
+ color:var(--oss-ink)!important;padding:14px 16px!important;
+}
+.w46-oss-dialog .w46-add-platform:is(:hover,:focus-visible){
+ border-color:var(--oss-accent)!important;box-shadow:0 0 24px var(--oss-glow)!important;
+ transform:translateY(-2px);
+}
+.w46-oss-dialog .w46-add-platform small{color:var(--oss-sub)!important}
+.w46-oss-dialog :is(.w46-persona-modal-caution,.w46-persona-modal-body){color:var(--oss-sub)!important}
+.w46-oss-dialog :is(.w46-persona-modal button,.w46-add-account-panel button){cursor:pointer}
+.w46-oss-dialog :is(button,input,select):focus-visible{outline:2px solid var(--oss-accent)!important;outline-offset:3px}
+@media(max-width:719px){
+ .w46-product-candidate .bc-message-text{font-size:14px!important;padding:10px 12px!important}
+ .w46-product-candidate .bc-message-text .bc-translation{font-size:13px!important}
+ .w46-product-candidate .theme-card:is(:hover,:focus-visible){transform:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .w46-product-candidate .theme-card,.w46-oss-dialog *{transition:none!important;animation:none!important}
+}
+@media(prefers-contrast:more){
+ .w46-product-candidate .bc-message-text{border:2px solid currentColor!important;box-shadow:none!important}
+ .w46-product-candidate .bc-real-timeline{background-image:none!important}
 }
