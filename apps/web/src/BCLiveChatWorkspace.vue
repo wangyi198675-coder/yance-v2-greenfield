@@ -16,6 +16,29 @@ const unreadAuthoritative=computed(()=>contacts.value.some(c=>c.unreadAuthorized
 const api=computed(()=>props.fetchImpl||globalThis.fetch);
 const state=ref('checking'),error=ref(''),contacts=ref([]),accounts=ref(0),chosen=ref(null);
 const timeline=ref([]),timelineState=ref('none'),timelineError=ref('');
+const messengerManual=ref({roomId:'',ready:false});
+const manualMessengerSendPort=Object.freeze({
+ async send(roomId,text,businessMessageId){
+  const fetcher=api.value;
+  const local=await fetcher('/api/v2/local-session/status',{
+   credentials:'same-origin',cache:'no-store'});
+  const identity=await local.json();
+  if(!local.ok||identity.authorized!==true||
+    !['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(identity.sessionKind)||
+    typeof identity.csrfToken!=='string')throw Error('当前本机会话不可用');
+  const response=await fetcher('/api/v2/providers/fb-personal/manual-send',{
+   method:'POST',credentials:'same-origin',cache:'no-store',
+   headers:{'content-type':'application/json','x-yance-csrf-token':identity.csrfToken},
+   body:JSON.stringify({roomId,text,businessMessageId})
+  });
+  const data=await response.json();
+  if(!response.ok||data.ok!==true)throw Error('Messenger 暂时未接受发送，请检查连接');
+  return data;
+ }
+});
+async function onManualMessengerSent(){
+ const c=selected.value;if(c&&c.roomId)await chooseContact(c);
+}
 const incomingNotice=ref('');
 let refreshTimer=null,pollBusy=false;
 const search=ref(''),channel=ref('ALL'),account=ref('ALL');
@@ -115,11 +138,21 @@ async function chooseContact(contact){
  if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
+ messengerManual.value={roomId:'',ready:false};
  if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
   const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
   if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
   timeline.value=result.messages;timelineState.value='ready';
+  if(contact.readOnly===true&&contact.channel==='FB_PERSONAL'&&contact.roomId){
+   try{
+    const r=await api.value('/api/v2/providers/fb-personal/manual-send?roomId='+
+      encodeURIComponent(contact.roomId),{credentials:'same-origin',cache:'no-store'});
+    const x=await r.json();
+    if(mounted&&ticket===sourceRevision&&chosen.value?.contactRef===contact.contactRef)
+      messengerManual.value={roomId:contact.roomId,ready:r.ok&&x.readyForManualSend===true};
+   }catch{messengerManual.value={roomId:'',ready:false}}
+  }
  }catch(e){
   if(!mounted||ticket!==sourceRevision)return;
   timelineState.value='blocked';timelineError.value=explainNativeFailure(e);
@@ -266,7 +299,9 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
    <!-- One always-mounted original CONTACT Composer. Null K must leave input
         and expert/media operations disabled, not create a second renderer. -->
    <BCNativeComposer ref="composerRef" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
-    :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort" @navigate="navigate"/>
+    :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"
+    :native-messenger-room="messengerManual.ready?messengerManual.roomId:''" :native-messenger-send-port="manualMessengerSendPort"
+    @manual-sent="onManualMessengerSent" @navigate="navigate"/>
   </div>
  </section>
 </template>

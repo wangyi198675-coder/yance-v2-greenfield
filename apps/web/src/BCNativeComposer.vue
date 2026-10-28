@@ -11,9 +11,40 @@ const props=defineProps({
   identity:{type:Object,default:null}, sourceMid:{type:String,default:''},
   suggestions:{type:Array,default:()=>[]}, nativeMessage:{type:Object,default:null},
   takeoverPort:{type:Object,default:null}, draftCandidatePort:{type:Object,default:null},
-  mediaAuthorityPort:{type:Object,default:null},fetchImpl:{type:Function,default:null}
+  mediaAuthorityPort:{type:Object,default:null},fetchImpl:{type:Function,default:null},
+  nativeMessengerRoom:{type:String,default:''},nativeMessengerSendPort:{type:Object,default:null}
 });
-const emit=defineEmits(['navigate']);
+const emit=defineEmits(['navigate','manual-sent']);
+const manualDrafts=ref({}),manualSending=ref({}),manualPending=ref({}),manualNotices=ref({});
+const manualReady=computed(()=>Boolean(props.nativeMessengerRoom&&
+ typeof props.nativeMessengerSendPort?.send==='function'));
+const manualText=computed({
+ get:()=>manualDrafts.value[props.nativeMessengerRoom]||'',
+ set:value=>{manualDrafts.value={...manualDrafts.value,[props.nativeMessengerRoom]:String(value)}}
+});
+const manualBusy=computed(()=>Boolean(manualSending.value[props.nativeMessengerRoom]));
+const manualHold=computed(()=>Boolean(manualPending.value[props.nativeMessengerRoom]));
+async function sendManual(){
+ if(!manualReady.value||manualBusy.value||manualHold.value||!manualText.value.trim())return;
+ const room=props.nativeMessengerRoom,text=manualText.value.trim();
+ manualSending.value={...manualSending.value,[room]:true};
+ try{
+  const result=await props.nativeMessengerSendPort.send(room,text,crypto.randomUUID());
+  if(result.acceptedByW25!==true)throw Error('Messenger 未接受发送');
+  if(result.state==='UNKNOWN'){
+   manualPending.value={...manualPending.value,[room]:true};
+   manualNotices.value={...manualNotices.value,[room]:'已提交，等待 Messenger 确认'};
+   manualDrafts.value={...manualDrafts.value,[room]:''};
+   emit('manual-sent');
+  }else if(result.state==='REJECTED_NO_SEND'){
+   manualNotices.value={...manualNotices.value,[room]:'当前发送未被接受'};
+  }else{
+   manualNotices.value={...manualNotices.value,[room]:'消息状态：'+result.state};
+  }
+ }catch(error){manualNotices.value={...manualNotices.value,[room]:
+  String(error.message||'发送失败，请检查连接')};}
+ finally{manualSending.value={...manualSending.value,[room]:false}}
+}
 let bridge=createComposerBridge({takeoverPort:props.takeoverPort});
 const current=ref({key:null,status:'NO_CONTACT',draft:null,canSend:false});
 const composing=ref(false),compositionK=ref(null),why=ref('');
@@ -78,11 +109,17 @@ async function action(kind,patch){
     why.value=result.reason||'';update();}
   catch(e){why.value=String(e.message||e);update()}
 }
-function onInput(v){if(!composing.value)action('TYPE',{text:String(v)})}
-function startIME(){composing.value=true;compositionK.value=current.value.key}
+function onInput(v){
+ if(manualReady.value){if(!composing.value)manualText.value=String(v);return}
+ if(!composing.value)action('TYPE',{text:String(v)})
+}
+function startIME(){composing.value=true;compositionK.value=manualReady.value?
+ props.nativeMessengerRoom:current.value.key}
 function endIME(event){
   composing.value=false;
-  if(compositionK.value===current.value.key)action('IME_COMMIT',{text:event.target.value});
+  if(manualReady.value&&compositionK.value===props.nativeMessengerRoom)
+    manualText.value=event.target.value;
+  else if(compositionK.value===current.value.key)action('IME_COMMIT',{text:event.target.value});
   compositionK.value=null;
 }
 const mediaUploading=ref(false);
@@ -114,6 +151,14 @@ function onAttach(event){
  void attachRealFiles(files,'ATTACH');
 }
 function onPaste(event){
+ if(manualReady.value&&!event.clipboardData?.files?.length){
+  const paste=event.clipboardData?.getData('text/plain');
+  if(typeof paste==='string'&&paste){event.preventDefault();
+   const element=event.target,old=manualText.value;
+   const a=Number.isInteger(element.selectionStart)?element.selectionStart:old.length;
+   const b=Number.isInteger(element.selectionEnd)?element.selectionEnd:a;
+   manualText.value=old.slice(0,a)+paste+old.slice(b);return}
+ }
  if(event.clipboardData?.files?.length){event.preventDefault();
   void attachRealFiles(event.clipboardData.files,'PASTE');return}
  const str=event.clipboardData?.getData('text/plain');
@@ -135,7 +180,7 @@ async function chooseSuggestion(row){const id=safeIdentity();if(!id)return;
   }catch(e){why.value=String(e.message||e);update()}
 }
 function onSendAttempt(e){if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&!composing.value){
-  e.preventDefault();action('SEND_ATTEMPT',{})}}
+  e.preventDefault();if(manualReady.value)void sendManual();else action('SEND_ATTEMPT',{})}}
 function onVoiceReady(metadata){if(metadata?.size>=0)action('VOICE',{attachments:[metadata]})}
 // Voice is supplied by the existing capture/attachment owner, never fabricated here.
 function sourceQuote(source){const id=safeIdentity();if(!id)return false;
@@ -145,8 +190,9 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 
 <template>
   <section ref="composerRoot" class="bc-native-composer" aria-label="唯一 CONTACT Composer" @dragover.prevent @drop="onDrop">
-    <p class="bc-identity" :title="current.key?'当前联系人身份由原W24/W47接口核验':'尚未选择经平台授权的真实联系人'">{{current.key?'当前联系人 · '+current.status:'未选联系人 · 发送已禁用'}}</p>
+    <p class="bc-identity" :title="current.key?'当前联系人身份由原W24/W47接口核验':'尚未选择经平台授权的真实联系人'">{{manualReady?'Messenger · 人工发送':current.key?'当前联系人 · '+current.status:'未选联系人 · 发送已禁用'}}</p>
     <p v-if="why" role="alert" class="bc-warning">{{why}}</p>
+    <p v-if="manualNotices[nativeMessengerRoom]" role="status" class="bc-warning">{{manualNotices[nativeMessengerRoom]}}</p>
     <div v-if="sourceMessage" class="bc-source" data-test="native-message">
       <p>原文 · MID {{sourceMessage.mid}} · {{sourceMessage.original}}</p>
       <p v-if="sourceMessage.zh">有来源的译文（质量另行验收） · {{sourceMessage.zh}}</p>
@@ -161,9 +207,9 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
     </div>
     <div v-if="current.draft?.quote" class="bc-quote">引用 MID {{current.draft.quote.mid}}</div>
     <InputGroup>
-      <InputGroupTextarea :model-value="current.draft?.text||''"
-        :disabled="!current.key" aria-label="当前 CONTACT 私有草稿"
-        placeholder="输入消息后核验真实接管；未授权不会发送"
+      <InputGroupTextarea :model-value="manualReady?manualText:(current.draft?.text||'')"
+         :disabled="!current.key&&!manualReady" aria-label="当前 CONTACT 私有草稿"
+         :placeholder="manualReady?'输入消息…':'输入消息后核验真实接管；未授权不会发送'"
         @update:model-value="onInput" @compositionstart="startIME"
         @compositionend="endIME" @paste="onPaste" @keydown="onSendAttempt"/>
     </InputGroup>
@@ -172,8 +218,8 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-model" aria-haspopup="menu" aria-controls="w46-contact-model-menu" :aria-expanded="contactMenu==='model'" @click="toggleContactMenu('model')">模型</Button>
       <button type="button" class="bc-mode-label bc-compact-menu-trigger" data-test="w46-contact-mode" aria-haspopup="menu" aria-controls="w46-contact-mode-menu" :aria-expanded="contactMenu==='mode'" @click="toggleContactMenu('mode')">人工 · 辅助 · 自动（待核验）⌄</button>
       <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key||mediaUploading||!mediaClient" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/wav,audio/mpeg,audio/ogg"/></label>
-      <span class="bc-send-hold" title="真人发送仅允许原W25唯一MessageDelivery通过当前身份及ACK授权边界">未授权 · 不能发送</span>
-      <Button disabled size="sm">发送不可用</Button>
+      <span class="bc-send-hold" title="真人发送通过原 W25 唯一 MessageDelivery">{{manualReady?(manualHold?'待 Messenger 确认':manualBusy?'发送中…':'人工发送'):'未授权 · 不能发送'}}</span>
+      <Button size="sm" :disabled="!manualReady||!manualText.trim()||manualBusy||manualHold" @click="sendManual">{{manualReady?'发送':'发送不可用'}}</Button>
     </div>
     <BCNativeExpertPicker v-if="expertsOpen" :fetch-impl="fetchImpl"
       @close="closeContactMenu(true)" @navigate="section=>{closeContactMenu();emit('navigate',section)}"/>
