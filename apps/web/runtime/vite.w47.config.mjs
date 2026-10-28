@@ -343,12 +343,62 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
+ // Explicit QA-only extension on top of exact previously signed 5fff source.
+ // This is NOT an owner review or a production release signoff.
+ const modelQaBase='5fff8125f9e02ae1dc93ef2bf6cb1733cb06e854';
+ const modelQaHead='fe3b56b1bd6fdf66a6a3c6fd46444469ac32d3e4';
+ const modelQaReceipt='apps/web/evidence/W09_MODEL_5FFF_QA_SCOPE_20261028.md';
+ const modelQaFiles=Object.freeze([
+  'apps/web/src/BCFunctionModelRouting.vue',
+  'apps/web/src/BCNativeCloudKeySettings.vue',
+  'apps/web/src/BCSettingsWorkspace.vue',
+  'apps/web/src/BCVisualThemeSystem.css',
+  'apps/web/tests/w09-r4-approved-visual-fidelity.test.mjs',
+  'apps/web/tests/w46-function-model-routing.test.mjs',
+  'apps/web/tests/w46-model-settings-auto-private-session.test.mjs',
+  'apps/web/tests/w46-private-simple-rule.test.mjs',
+  'services/api/runtime/function-model-routing-http.mjs',
+  'services/api/runtime/function-model-routing.mjs',
+  'services/api/runtime/function-model-routing.test.mjs',
+  'services/api/runtime/function-model-w55-lease.test.mjs',
+  'services/api/runtime/openrouter-model-catalog.mjs',
+  'services/api/runtime/openrouter-model-catalog.test.mjs',
+  'services/api/runtime/private-brain-http.mjs',
+  'services/api/runtime/server.mjs',
+  'services/api/runtime/web-private-cloud-byok.mjs'
+ ]);
+ const modelScopedQA=(()=>{
+  try{
+   if(process.env.W09_MODEL_CONT_QA_ONLY!=='1'||dirtySource||
+      signedSha!==expectedOwnerSha||!signedAncestor||
+      !originalW46BlobsValid||!w46ReviewValid||!w42VisualValid||!mediaDesignValid)return false;
+   git('merge-base','--is-ancestor',modelQaBase,'HEAD');
+   git('merge-base','--is-ancestor',modelQaHead,'HEAD');
+   if(git('rev-parse',modelQaHead+'^')!==modelQaBase)return false;
+   const reviewedPaths=git('diff','--name-only',modelQaBase,modelQaHead)
+    .split('\n').filter(Boolean);
+   if(reviewedPaths.length!==modelQaFiles.length||
+      reviewedPaths.some(path=>!modelQaFiles.includes(path)))return false;
+   const extra=git('diff','--name-only',modelQaHead,'HEAD').split('\n').filter(Boolean);
+   if(extra.length!==2||!extra.includes(modelQaReceipt)||
+      !extra.includes('apps/web/runtime/vite.w47.config.mjs'))return false;
+   const receipt=readAck(modelQaReceipt);
+   if(!receipt.includes('STATUS=QA_ONLY_NOT_INDEPENDENTLY_SIGNED_NO_RELEASE')||
+      !receipt.includes('EXACT_BASE='+modelQaBase)||
+      !receipt.includes('EXACT_MODEL_SOURCE='+modelQaHead))return false;
+   return modelQaFiles.every(path=>existsSync(join(w46Root,path))&&
+      git('rev-parse','HEAD:'+path)===git('rev-parse',modelQaHead+':'+path)&&
+      git('hash-object','--',path)===git('rev-parse',modelQaHead+':'+path));
+  }catch{return false}
+ })();
+ if(!modelScopedQA){
  if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!themeScope||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
     !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
    throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
+ }
 }
 // This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
 // Keep 47182 as the default for unchanged signed B_88DED, never accept remote host.
