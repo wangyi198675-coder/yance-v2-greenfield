@@ -178,13 +178,13 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
       <button type="button" class="bc-group-title" :aria-expanded="pinnedExpanded" @click="pinnedExpanded=!pinnedExpanded">置顶 <span>{{pinnedExpanded?'⌄':'›'}}</span></button>
       <template v-if="pinnedExpanded">
        <button v-for="c in pinned" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-        <span class="bc-contact-avatar" aria-hidden="true">{{c.displayName.slice(0,1)}}</span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
+        <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
        </button>
       </template>
      </template>
      <button v-for="c in regular" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-      <span class="bc-contact-avatar" aria-hidden="true">{{c.displayName.slice(0,1)}}</span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
+      <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
       <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
      </button>
      <p v-if="!filtered.length" class="bc-inbox-state">没有匹配的当前授权联系人</p>
@@ -198,7 +198,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
    <template v-if="selected">
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
-     <span class="bc-contact-avatar" aria-hidden="true">{{selected.displayName.slice(0,1)}}</span>
+     <span class="bc-contact-avatar" aria-hidden="true"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span>
      <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnly?'官方 Messenger 入站已同步 · 只读':selected.channel+' · 绑定修订 '+selected.bindingRevision}}</small></div>
      <button type="button" :disabled="timelineState==='checking'" aria-label="从原生服务刷新消息" @click="chooseContact(selected)">刷新消息</button>
     </header>
@@ -248,7 +248,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
 .bc-inbox-list-scroll{min-height:0;flex:1 1 auto;overflow:auto;scrollbar-width:thin;overscroll-behavior:contain}
 .bc-real-contact{position:relative;min-height:68px;width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:0;border-left:2px solid transparent;border-bottom:1px solid var(--border);background:transparent;color:var(--ink);padding:10px 11px;cursor:pointer;transition:background .14s,box-shadow .14s}
 .bc-real-contact:hover{background:var(--surface-soft)}.bc-real-contact.selected{border-left-color:var(--accent);background:linear-gradient(96deg,rgba(var(--accent-rgb),.15),rgba(var(--accent-rgb),.025) 80%);box-shadow:inset 2px 0 0 rgba(var(--accent-rgb),.55)}
-.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
+.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700;position:relative;overflow:hidden}.bc-contact-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
 .bc-group-title{width:100%;padding:9px 13px;text-align:left;color:var(--muted);border:0;background:var(--surface-soft);cursor:pointer}.bc-group-title span{float:right}
 .bc-action-popover{position:absolute;right:10px;top:54px;width:min(285px,calc(100% - 20px));z-index:30;display:grid;gap:9px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised);box-shadow:0 14px 40px #0006}
 .bc-action-popover button,.bc-action-popover select{min-height:35px;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:9px;padding:8px}

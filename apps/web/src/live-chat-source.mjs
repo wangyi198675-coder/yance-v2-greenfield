@@ -99,6 +99,7 @@ export function validateFacebookReadOnlyInbox(dto){
   return Object.freeze({contactRef:'FB_ROOM|'+c.roomId,roomId:c.roomId,
     accountRef:'OFFICIAL_FB_MATRIX_READ_ONLY',channel:'FB_PERSONAL',
     peerRef:c.roomId,displayName:c.displayName,bindingRevision:0,
+    avatarUrl:'/api/v2/facebook-inbox/avatar?room='+encodeURIComponent(c.roomId),
     lastMessage:c.lastMessage||null,lastMessageTimestamp:c.lastMessageTimestamp||null,
     readOnly:true,identity:null,identityKey:null,unread:null,canSend:false});
  });

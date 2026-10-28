@@ -20,7 +20,7 @@ function createInboxBridge(){
   configurePreviewServer(server){
    server.middlewares.use((req,res,next)=>{
     const raw=req.url||'',path=new URL(raw,'http://127.0.0.1:44751');
-    if(![prefix,prefix+'/messages'].includes(path.pathname))return next();
+    if(![prefix,prefix+'/messages',prefix+'/avatar'].includes(path.pathname))return next();
     void (async()=>{
      if(!isAllowed(req)){json(res,401,{ok:false,error:'LOCAL_APP_SESSION_REQUIRED',canSend:false});return}
      const verify=await fetch(API+'/api/v2/local-session/status',{
@@ -33,13 +33,27 @@ function createInboxBridge(){
       json(res,401,{ok:false,error:'LOCAL_SESSION_NOT_CURRENT',canSend:false});return}
      if(path.pathname===prefix&&path.search){
       json(res,422,{ok:false,error:'INBOX_FILTER_UNSUPPORTED',canSend:false});return}
+     if(path.pathname===prefix+'/avatar'&&
+       (path.searchParams.size!==1||path.searchParams.getAll('room').length!==1)){
+      json(res,422,{ok:false,error:'INVALID_AVATAR_ROOM',canSend:false});return}
      if(path.pathname===prefix+'/messages'&&
        (path.searchParams.size!==1||path.searchParams.getAll('room').length!==1)){
       json(res,422,{ok:false,error:'INVALID_ROOM_SELECTOR',canSend:false});return}
-     const suffix=path.pathname===prefix+'/messages'?'/messages'+path.search:'';
+     const suffix=path.pathname===prefix+'/messages'?'/messages'+path.search:
+      path.pathname===prefix+'/avatar'?'/avatar'+path.search:'';
      const response=await fetch(BRIDGE+'/api/v2/providers/fb-personal/inbox'+suffix,{
       signal:AbortSignal.timeout(15000),redirect:'error',cache:'no-store'});
      if(!response.ok)throw Error('W56_MATRIX_BRIDGE_READ_FAILED');
+     if(path.pathname===prefix+'/avatar'){
+      const mime=String(response.headers.get('content-type')||'').split(';')[0];
+      if(!['image/jpeg','image/png','image/webp','image/gif'].includes(mime))
+       throw Error('AVATAR_MEDIA_NOT_IMAGE');
+      const raw=Buffer.from(await response.arrayBuffer());
+      if(!raw.length||raw.length>1500000)throw Error('AVATAR_MEDIA_OVERSIZE');
+      res.writeHead(200,{'content-type':mime,'content-length':raw.length,
+       'cache-control':'private, max-age=180','x-content-type-options':'nosniff'});
+      return res.end(raw);
+     }
      const text=await response.text();
      if(text.length>2000000)throw Error('INBOX_RESULT_TOO_LARGE');
      const data=JSON.parse(text);
