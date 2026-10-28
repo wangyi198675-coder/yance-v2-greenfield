@@ -129,10 +129,10 @@ async function readSelectedChannelStatus(){
 function onChannelFilterChange(){
  if(account.value!=='ALL'&&!accountIds.value.includes(account.value))account.value='ALL';
  reconcileFilter();filterOpen.value=false;
- void readSelectedChannelStatus();
 }
 function onAccountFilterChange(){reconcileFilter();filterOpen.value=false}
-function clearContactFilter(){channel.value='ALL';account.value='ALL';filterOpen.value=false;reconcileFilter();void readSelectedChannelStatus()}
+function clearContactFilter(){channel.value='ALL';account.value='ALL';filterOpen.value=false;reconcileFilter()}
+watch(channel,()=>{void readSelectedChannelStatus()});
 const pinned=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized===true&&c.pinned===true));
 const regular=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized!==true||c.pinned!==true));
 const availableUnread=computed(()=>unreadAuthoritative.value?
