@@ -97,7 +97,7 @@ export function createOfficialSiwcHttp({sessionAuthority,webOrigin}={}){
    },
    openBrowser:openOfficialBrowser});
  })();
- return async(req,res,url)=>{
+ const handler=async(req,res,url)=>{
   const route=url.pathname;
   if(!route.startsWith('/api/v2/chatgpt/'))return false;
   const s=sessionAuthority.sessionFor(req);
@@ -176,4 +176,46 @@ export function createOfficialSiwcHttp({sessionAuthority,webOrigin}={}){
    safeJson(res,503,{ok:false,error:err.code,message:err.message,canSend:false});return true;
   }
  };
+ // Internal-only SDK adapter. The same official client owns authentication,
+ // model discovery and inference. Agno owns its own Run and ChatHistory.
+ const modelPort=Object.freeze({
+  async profile(){
+   const state=await (await client()).getSession();
+   return state.status==='connected'&&state.sharing===true?
+    String(state.profileId||''):'';
+  },
+  async list(){
+   const sdk=await client();
+   const session=await sdk.getSession();
+   if(session.status!=='connected'||session.sharing!==true)return [];
+   const models=await sdk.listModels();
+   return models.filter(m=>typeof m.slug==='string'&&
+     /^[A-Za-z0-9][A-Za-z0-9._:-]{1,79}$/.test(m.slug))
+     .map(m=>({modelId:m.slug,name:String(m.displayName||m.slug)}));
+  },
+  async invoke({modelId,messages,profileRef}){
+   if(typeof modelId!=='string'||!Array.isArray(messages)||
+      messages.length>24||JSON.stringify(messages).length>32000||
+      !messages.every(m=>m&&['developer','user','assistant'].includes(m.role)&&
+       typeof m.content==='string'&&m.content.length<=16000))
+    throw Error('SIWC_NATIVE_TEXT_REQUEST_INVALID');
+   const sdk=await client();
+   const session=await sdk.getSession();
+   if(session.status!=='connected'||session.sharing!==true||
+      !profileRef||session.profileId!==profileRef)
+    throw Error('SIWC_CURRENT_PROFILE_NOT_SELECTED');
+   const models=await sdk.listModels();
+   if(!models.some(m=>m.slug===modelId))
+    throw Error('SIWC_SELECTED_MODEL_UNAVAILABLE');
+   const answer=await sdk.streamResponse({model:modelId,input:messages});
+   const after=await sdk.getSession();
+   if(after.status!=='connected'||after.sharing!==true||
+      after.profileId!==profileRef)
+    throw Error('SIWC_PROFILE_CHANGED_DURING_INFERENCE');
+   if(typeof answer?.text!=='string'||!answer.text.trim())
+    throw Error('SIWC_PROVIDER_TEXT_REQUIRED');
+   return answer.text.slice(0,18000);
+  }
+ });
+ return Object.assign(handler,{modelPort});
 }

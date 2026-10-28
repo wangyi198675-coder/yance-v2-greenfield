@@ -32,6 +32,7 @@ import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
 import {createW47WebMediaHttp} from './w47-w23-media-bridge.mjs';
 import {createW47NativeSettingsCatalog} from './w47-native-settings-capabilities.mjs';
 import {createOfficialSiwcHttp} from './w47-official-siwc.mjs';
+import {createWebPrivateSiwcChoice} from './web-private-siwc-choice.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -95,6 +96,9 @@ const webPrivatePrincipal=webPrivateRoot?Object.freeze({
  modelId:'',modelSelectionEpoch:0,modelUserSelected:false,
  extraChargeApproved:false,protectedCredentialAttested:false}):null;
 const nativeSession=createNativeStartupSession({authority:localSessionAuthority,boot:nativeBoot});
+const officialSiwcHttp=createOfficialSiwcHttp({sessionAuthority:localSessionAuthority,webOrigin});
+const webPrivateSiwc=webPrivateRoot?createWebPrivateSiwcChoice({
+ appLocalDataRoot:webPrivateRoot,officialPort:officialSiwcHttp.modelPort}):null;
 const resolveNativePrincipal=nativeBoot?async({session})=>{
  if(session?.record?.kind!=='NATIVE_FIRST_PARTY'||
     session.record.nativeHostBinding!==nativeSession.binding)
@@ -103,6 +107,12 @@ const resolveNativePrincipal=nativeBoot?async({session})=>{
 }:webPrivatePrincipal?async({session,operation})=>{
  if(session?.record?.kind!=='WEB_LOCAL_PRIVATE')
    throw {httpStatus:401,code:'WEB_PRIVATE_SESSION_REQUIRED'};
+ // The PRIVATE Brain's explicit canonical model selection takes priority
+ // over the historic per-function preference; never replace ChatGPT by Qwen.
+ if(operation!=='EXPERT_TURN'&&webPrivateSiwc?.hasSelection()){
+  const choice=await webPrivateSiwc.principalModel();
+  if(choice)return {...webPrivatePrincipal,...choice};
+ }
  // W43's original ONE Agno/History executor receives this server-side
  // model selection per genuine function; no browser identity/model override.
  if(functionStore&&['PRIVATE_TURN','EXPERT_TURN'].includes(operation)){
@@ -128,7 +138,9 @@ const resolveNativePrincipal=nativeBoot?async({session})=>{
  // A preference is optional. Never silently fallback once a saved preference
  // exists but its Key or model was revoked: resolve() above fails closed.
  // PRIVATE History remains available even with no valid inference source.
- let cloud=null;
+ let cloud=null,siwc=null;
+ try{siwc=webPrivateSiwc?.hasSelection()?await webPrivateSiwc.principalModel():null}catch{}
+ if(siwc)return {...webPrivatePrincipal,...siwc};
  try{cloud=webCloudByok?await webCloudByok.principalModel():null}catch{}
  return {...webPrivatePrincipal,
    ...(cloud??(webPrivateQwen?webPrivateQwen.principalModel():{}))};
@@ -144,7 +156,8 @@ const w43Port=(nativeBoot||webPrivatePrincipal)&&w43Python&&w43Root?
   protectedKeyFile:webPrivateQwen?existingLocalQwenKey:
    nativeBoot?.modelBackend==='llamacpp'?
    process.env.YANCE_W47_W43_LOCAL_KEY_FILE:undefined,
-  ...(webCloudByok?{nativeCloudKeyPort:webCloudByok}:{})}):null;
+  ...(webCloudByok?{nativeCloudKeyPort:webCloudByok}:{}),
+  officialSiwcPort:officialSiwcHttp.modelPort}):null;
 const requestLedger=w43Port?createW43NativeLedgerAdapter(w43Port):null;
 if(operatorMode==='console'){
   operatorIssuer=createOperatorConsoleIssuer({revokeSessions:()=>localSessionAuthority.revokeAll()});
@@ -158,7 +171,8 @@ const localSessionHttp=createLocalSessionHttpApi({authority:localSessionAuthorit
 // Never instantiate test-only model/credential adapters in this real server.
 const privateModelHttp=createPrivateModelHttp({
  sessionAuthority:localSessionAuthority,webOrigin,resolveNativePrincipal,
- localWebModelPort:webPrivateQwen,webCloudModelPort:webCloudByok
+ localWebModelPort:webPrivateQwen,webCloudModelPort:webCloudByok,
+ webSiwcModelPort:webPrivateSiwc
 });
 const privateCloudHttp=createWebPrivateCloudHttp({
  sessionAuthority:localSessionAuthority,webOrigin,webCloudPort:webCloudByok
@@ -221,7 +235,6 @@ const contactNativeAuthorityHttp=createContactNativeAuthorityHoldHttp({
 const nativeMediaHttp=createW47WebMediaHttp({
  sessionAuthority:localSessionAuthority,webOrigin
 });
-const officialSiwcHttp=createOfficialSiwcHttp({sessionAuthority:localSessionAuthority,webOrigin});
 const nativeSettingsCatalog=createW47NativeSettingsCatalog({
  sessionAuthority:localSessionAuthority,webOrigin
 });
