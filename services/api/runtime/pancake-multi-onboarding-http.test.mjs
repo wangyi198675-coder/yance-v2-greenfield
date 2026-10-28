@@ -102,6 +102,23 @@ test('official categorized pages activated/inactivated/hidden supported; nopermi
   assert.equal(JSON.stringify(after.body).includes('FAKE_ACCOUNT_USER'),false);
  }finally{await f.close()}
 });
+test('official nested/category maps preserve IDs and never grant nopermission',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,
+   pages:{activated:{'111':{name:'Mapped',platform:'FACEBOOK'}},
+    inactivated:{data:[{id:'222',name:'Nested',platform:'FACEBOOK'}]},
+    hidden:{pages:{'333':{name:'Hidden',platform:'FACEBOOK'}}},
+    nopermission:{'444':{name:'Unauthorized',platform:'FACEBOOK'}}
+   }})
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',body:{userAccessToken:'FAKE_ACCOUNT_USER_1234'}});
+  assert.equal(r.status,200);
+  assert.deepEqual(r.body.pages.map(p=>p.pageId),['111','222','333']);
+  assert.equal(f.writes,1);
+  assert.equal(JSON.stringify(r.body).includes('Unauthorized'),false);
+ }finally{await f.close()}
+});
 test('long authentic-shaped User token within W55 WinCred bound passes account API, no secret returned',async()=>{
  const long='FAKE_LONG_ACCOUNT_USER_TOKEN_'+('a'.repeat(1450));
  const f=await fixture({fetchImpl:async url=>{
@@ -120,7 +137,7 @@ test('long authentic-shaped User token within W55 WinCred bound passes account A
 test('malformed categorized response is not treated as confirmed authorized account and never stores',async()=>{
  const f=await fixture({fetchImpl:async()=>({
   status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,
-   pages:{activated:{id:'111'},nopermission:[{id:'888'}]}})
+   pages:{activated:{bogus:{id:'111'}},nopermission:[{id:'888'}]}})
  })});
  try{
   const r=await f.request('account',{method:'POST',body:{userAccessToken:'FAKE_ACCOUNT_USER_1234'}});

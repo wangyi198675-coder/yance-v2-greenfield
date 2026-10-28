@@ -51,15 +51,51 @@ async function ownedPages(token,fetchImpl){
  // pages.activated/inactivated/hidden/nopermission/activated_page_ids.
  // Older responses expose pages as an array. Do not interpret a categorized
  // object as an invalid User Access Token or grant access to nopermission.
+ // In production Pancake can return category arrays, category objects keyed
+ // by page ID, or nested page lists. Preserve explicit account ownership by
+ // accepting only the allowed categories; never include nopermission.
+ const items=value=>{
+  if(value===null)return [];
+  if(Array.isArray(value))return value;
+  if(!value||typeof value!=='object')return null;
+  if(validId(String(value.id??'')))return [value];
+  for(const key of ['data','pages','items','list','results']){
+   if(Object.hasOwn(value,key)){
+    const nested=value[key];
+    if(Array.isArray(nested))return nested;
+    if(nested&&typeof nested==='object'&&nested!==value)return items(nested);
+    return null;
+   }
+  }
+  const entries=Object.entries(value);
+  if(!entries.length)return [];
+  if(entries.length>500||entries.some(([id,p])=>
+    !validId(id)||!p||typeof p!=='object'||Array.isArray(p)))return null;
+  return entries.map(([id,p])=>({...p,id:p.id??id}));
+ };
+ const groups=['activated','inactivated','hidden'];
+ const rawPages=reply.pages??reply.data?.pages??(
+   reply.data&&groups.some(k=>Object.hasOwn(reply.data,k))?reply.data:null);
+ const invalidSchema=()=>{
+  // Strictly structural telemetry only: no token, page ID/name or raw response.
+  // Local QA flag is opt-in, never on by default.
+  if(process.env.P0_PANCAKE_SCHEMA_DIAG==='1'){
+   const kind=v=>Array.isArray(v)?'array':v===null?'null':typeof v;
+   process.stderr.write('[P0_PANCAKE_SCHEMA_ONLY] '+JSON.stringify({
+    hasPages:reply.pages!==undefined,hasData:reply.data!==undefined,
+    pagesKind:kind(rawPages),
+    groups:groups.map(k=>[k,kind(rawPages?.[k])])
+   })+'\n');
+  }
+  throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
+ };
  let source;
- if(Array.isArray(reply.pages))source=reply.pages;
- else if(reply.pages&&typeof reply.pages==='object'&&!Array.isArray(reply.pages)){
-  const groups=['activated','inactivated','hidden'];
-  const lists=groups.filter(k=>Object.hasOwn(reply.pages,k)).map(k=>reply.pages[k]);
-  if(!lists.length||lists.some(v=>!Array.isArray(v)))
-   throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
+ if(Array.isArray(rawPages))source=rawPages;
+ else if(rawPages&&typeof rawPages==='object'){
+  const lists=groups.filter(k=>Object.hasOwn(rawPages,k)).map(k=>items(rawPages[k]));
+  if(!lists.length||lists.some(v=>!Array.isArray(v)))invalidSchema();
   source=lists.flat();
- }else throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
+ }else invalidSchema();
  if(source.length>500)throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
  const seen=new Set();
  const pages=[];
