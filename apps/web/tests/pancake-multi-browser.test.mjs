@@ -11,7 +11,7 @@ function network(){
   calls.push({url,init});
   if(url==='/api/v2/local-session/status')
    return {ok:true,json:async()=>({authorized:true,
-    sessionKind:'WEB_LOCAL_PRIVATE',csrfToken:csrf})};
+    sessionKind:'WEB_LOCAL_PRIVATE',csrfToken:csrf,ok:true,paired:true})};
   if(url.endsWith('/account')){
    assert.equal(init.method,'POST');
    assert.equal(init.headers['x-yance-csrf'],csrf);
@@ -34,6 +34,10 @@ test('R4 Facebook Page frontend renders multi-page setup, never old single-Page 
  assert.match(ui,/v-for="p in pages"/);
  assert.match(ui,/data-test="pancake-account-save"/);
  assert.match(ui,/data-test="pancake-verify-page"/);
+ assert.match(ui,/data-test="pancake-independent-page-add"/);
+ assert.match(ui,/data-test="pancake-independent-page-id"/);
+ assert.match(ui,/data-test="pancake-select-independent-page"/);
+ assert.match(ui,/selectedPage=independentPageId/);
  assert.doesNotMatch(ui,/localStorage|sessionStorage/);
  assert.doesNotMatch(ui,/generate_page_access_token/);
 });
@@ -53,13 +57,14 @@ test('multiple managed pages can refresh without other Page token input',async()
 });
 test('untrusted session refuses all Pancake token requests before POST',async()=>{
  let calls=0;
- const fetchImpl=async()=>{
-  calls++;return {ok:true,json:async()=>({
-   authorized:true,sessionKind:'UNKNOWN',csrfToken:'x'.repeat(64)
+ const fetchImpl=async(path)=>{
+  calls++;if(path==='/api/v2/local-session/web-private-start')return {ok:true,json:async()=>({ok:true})};
+  return {ok:true,json:async()=>({
+   authorized:true,sessionKind:'UNKNOWN',csrfToken:'x'.repeat(64),ok:true,paired:true
   })};
  };
  await assert.rejects(pancakeMultiApi('account',{
   fetchImpl,userAccessToken:'USER-QA-12345678'
- }),/CURRENT_WEB_SESSION_NOT_VERIFIED/);
- assert.equal(calls,1);
+ }),/LOCAL_FIRST_PARTY_SESSION_NOT_VERIFIED/);
+ assert.equal(calls,3);
 });

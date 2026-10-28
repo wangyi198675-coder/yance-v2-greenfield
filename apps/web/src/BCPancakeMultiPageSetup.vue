@@ -4,7 +4,7 @@ import {pancakeMultiApi} from './pancake-multi-browser.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const busy=ref(false),initialized=ref(false),notice=ref(''),accountToken=ref('');
-const pages=ref([]),selectedPage=ref(''),pageToken=ref('');
+const pages=ref([]),selectedPage=ref(''),pageToken=ref(''),independentPageId=ref('');
 const accountConnected=ref(false),apiReady=ref(false);
 const credentialRevoked=ref(false),revokedRevision=ref(0),ownerRelinkConfirmed=ref(false);
 let alive=true,retryTimer=null,retryCount=0,lastFailureCode='';
@@ -82,7 +82,7 @@ async function refresh(){
  const existing=await execute('pages');
  if(!alive)return;
  if(existing){pages.value=existing.pages;accountConnected.value=true;
-  notice.value='已从 Pancake 官方账户读取主页。未单独验证的主页仍需自己的 Page Token。'}
+  notice.value='已列出当前账户的主页与另外单独验证的主页。其他账号管理的 Page 可在下方用各自的 Page Token 添加。'}
  else{
   accountConnected.value=false;pages.value=[];
   // No account provisioned yet. Stay on the real account setup step.
@@ -107,7 +107,7 @@ async function saveAccount(){
  if(!r||!alive)return;
  pages.value=r.pages;accountConnected.value=true;
  credentialRevoked.value=false;ownerRelinkConfirmed.value=false;
- notice.value='Pancake 账户已验证。请为需要在言策使用的主页分别添加现有 Page Token。';
+ notice.value='Pancake 账户已验证。你也可以在下方添加其他账号管理的主页，使用各自已有的 Page Token。';
 }
 async function connectPage(){
  if(busy.value||!apiReady.value||!accountConnected.value||
@@ -141,7 +141,7 @@ onBeforeUnmount(()=>{
  <article class="pancake-multi" data-test="pancake-multi-page-setup">
   <header class="pancake-heading">
    <div><h3>连接 Facebook Page</h3>
-    <p>一次配置 Pancake 账户，自动列出并管理多个主页。无需重新登录 Facebook。</p>
+    <p>一个账户可自动发现多个主页；不同账号管理的 Page 也可逐个独立接入。</p>
    </div>
    <span class="status">{{accountConnected?'账户已验证':'等待配置'}}</span>
   </header>
@@ -172,7 +172,7 @@ onBeforeUnmount(()=>{
   <section v-else class="pancake-section" data-test="pancake-page-list">
    <div class="pancake-section-head"><strong>第二步 · 选择要使用的主页</strong>
     <button type="button" @click="refresh" :disabled="busy">刷新主页</button></div>
-   <p>主页会自动发现，逐主页添加现有 Page Access Token。不会自动重生成令牌，也不会中断其他 Pancake 集成。</p>
+   <p>当前账户下的主页自动列出；其他 Pancake／Facebook 账号的 Page 用该主页自己的 Page ID 和现有 Page Token 添加，不会替换已有账户。</p>
    <div v-if="!pages.length" class="pancake-note">当前账户未返回可管理的 Facebook 主页。</div>
    <div v-for="p in pages" :key="p.pageId" class="pancake-page" :data-page-id="p.pageId">
     <div class="pancake-page-info">
@@ -184,6 +184,17 @@ onBeforeUnmount(()=>{
      @click="selectedPage=p.pageId;pageToken=''">
      {{p.tokenConfigured?'更新主页凭据':'连接此主页'}}
     </button>
+   </div>
+   <div class="pancake-token-panel" data-test="pancake-independent-page-add">
+    <strong>添加其他账号管理的 Facebook Page</strong>
+    <p>只使用该 Page 的独立官方令牌。不会切换或覆盖你已经接入的 Pancake 账号。</p>
+    <label for="pancake-independent-page-id">其他账号的 Page ID</label>
+    <input id="pancake-independent-page-id" v-model.trim="independentPageId" inputmode="numeric"
+      autocomplete="off" spellcheck="false" placeholder="输入 Facebook Page ID"
+      :disabled="busy" data-test="pancake-independent-page-id"/>
+    <button type="button" :disabled="busy||!/^[0-9]{1,40}$/.test(independentPageId)"
+      data-test="pancake-select-independent-page"
+      @click="selectedPage=independentPageId;pageToken=''">添加此主页的 Page Token</button>
    </div>
    <div v-if="selectedPage" class="pancake-token-panel" data-test="pancake-page-token-panel">
     <strong>主页 {{pages.find(p=>p.pageId===selectedPage)?.name||selectedPage}}</strong>
