@@ -42,6 +42,10 @@ test('R4 Facebook Page frontend renders multi-page setup, never old single-Page 
  assert.match(ui,/@click="connectIndependentPage"/);
  assert.match(ui,/data-test="pancake-independent-page-id-error"/);
  assert.match(ui,/onIndependentPageIdInput/);
+ assert.match(ui,/accountDiscoveryVerified/);
+ assert.match(ui,/existing\.discoveryError==='PANCAKE_OFFICIAL_AUTH_102'/);
+ assert.match(ui,/action==='page-token'/);
+ assert.match(ui,/action==='account'/);
  assert.doesNotMatch(ui,/data-test="pancake-select-independent-page"/);
  assert.match(ui,/existing\.accountVerified===false/);
  assert.doesNotMatch(ui,/localStorage|sessionStorage/);

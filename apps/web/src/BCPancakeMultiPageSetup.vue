@@ -5,7 +5,7 @@ const props=defineProps({fetchImpl:{type:Function,default:null}});
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const busy=ref(false),initialized=ref(false),notice=ref(''),accountToken=ref('');
 const pages=ref([]),selectedPage=ref(''),pageToken=ref(''),independentPageId=ref(''),independentPageToken=ref('');
-const accountConnected=ref(false),apiReady=ref(false);
+const accountConnected=ref(false),accountDiscoveryVerified=ref(false),apiReady=ref(false);
 const credentialRevoked=ref(false),revokedRevision=ref(0),ownerRelinkConfirmed=ref(false);
 let alive=true,retryTimer=null,retryCount=0,lastFailureCode='';
 function scheduleRetry(){
@@ -21,8 +21,11 @@ function humanError(e,action){
  if(code.includes('CURRENT_WEB_SESSION_NOT_VERIFIED'))return '本机会话 Cookie 未生效，请检查浏览器站点 Cookie 设置。';
  if(code.includes('PANCAKE_CAPABILITIES_HTTP_404'))return '当前 API 缺少 Facebook Page 接口，正在重试连接。';
  if(code.includes('_TIMEOUT_30S'))return 'Pancake 官方验证超过30秒，结果尚未确认。请先点击重新查询账户，不要重复提交 Token。';
- if(code.includes('PANCAKE_OFFICIAL_AUTH_102'))
-  return 'Pancake 官方账户验证未通过（错误码 102），令牌未保存。你已找到正确的账户令牌入口，请核对复制是否完整，以及当前登录的 Pancake 账户是否拥有这些主页。';
+ if(code.includes('PANCAKE_OFFICIAL_AUTH_102')){
+  if(action==='page-token')return '这个主页的 Page Token 经 Pancake 官方校验失败（102），尚未保存。请确认复制的是这个 Page 在 Pancake「设置 → 工具」中的 Page Access Token，而非「个人设置」中的 User Access Token，并核对 Page ID；这不代表其他账号或主页失效。';
+  if(action==='account')return '此 Pancake 账号的 User Access Token 验证失败（102），本次账号令牌未保存。已保存的其他主页凭据不会因此清除。';
+  return '原 Pancake 账号的 User Access Token 校验失败（102），但不代表各主页自己的 Page Token 失效。已保存主页继续保留，其他账号的 Page 可单独验证。';
+ }
  if(code.includes('PANCAKE_OFFICIAL_ERROR_'))return 'Pancake 官方返回业务错误码 '+(code.match(/PANCAKE_OFFICIAL_ERROR_([0-9]{1,5})/)?.[1]||'未知')+'，并非已确认 Token 错误；令牌未保存。';
  if(code.includes('PANCAKE_OFFICIAL_FAILURE_UNCLASSIFIED'))return 'Pancake 官方没有返回可识别的错误码，令牌未保存。';
  if(code.includes('PANCAKE_ACCOUNT_PAGES_INVALID'))
@@ -75,18 +78,21 @@ async function refresh(){
   return;
  }
  if(credentialRevoked.value){
-  accountConnected.value=false;pages.value=[];
+  accountConnected.value=false;accountDiscoveryVerified.value=false;pages.value=[];
   notice.value='本机 W55 中的旧 Pancake 凭据已撤销（版本 '+revokedRevision.value+'）。只有你本人明确确认后，才能保存新的账户授权；旧凭据不会恢复。';
   return;
  }
  const existing=await execute('pages');
  if(!alive)return;
  if(existing){pages.value=existing.pages;accountConnected.value=true;
+  accountDiscoveryVerified.value=existing.accountVerified===true;
   notice.value=existing.accountVerified===false?
-   'Pancake 官方账户列表暂时限流；已保存的主页仍然保留。你仍可用其他账号 Page 的独立 Token 继续添加，不会覆盖原连接。':
+   (existing.discoveryError==='PANCAKE_OFFICIAL_AUTH_102'||existing.discoveryError==='PANCAKE_TOKEN_REJECTED'?
+    '原 Pancake 账号的 User Access Token 当前无法验证（官方 102／401）。这不等于已保存的 Page Token 无效。其他 Facebook 账号的 Page 仍可使用自己的 Page ID＋Page Token 单独连接。':
+    '原 Pancake 账户的主页发现接口暂时不可用（'+(existing.discoveryError||'UNKNOWN')+'）。已保存的 Page 不会被删除，其他账号的 Page 仍可单独连接。'):
    '已列出当前账户的主页与另外单独验证的主页。其他账号管理的 Page 可在下方用各自的 Page Token 添加。'}
  else{
-  accountConnected.value=false;pages.value=[];
+  accountConnected.value=false;accountDiscoveryVerified.value=false;pages.value=[];
   // No account provisioned yet. Stay on the real account setup step.
   if(lastFailureCode.includes('PANCAKE_ACCOUNT_NOT_CONFIGURED'))
    notice.value='当前没有已保存的 Pancake 账户。请将账户 User Access Token 粘贴在下方验证一次。';
@@ -107,7 +113,7 @@ async function saveAccount(){
  // Wipe immediately after the protected save attempt; never persist in browser.
  accountToken.value='';
  if(!r||!alive)return;
- pages.value=r.pages;accountConnected.value=true;
+ pages.value=r.pages;accountConnected.value=true;accountDiscoveryVerified.value=true;
  credentialRevoked.value=false;ownerRelinkConfirmed.value=false;
  notice.value='Pancake 账户已验证。你也可以在下方添加其他账号管理的主页，使用各自已有的 Page Token。';
 }
@@ -169,7 +175,7 @@ onBeforeUnmount(()=>{
    <div><h3>连接 Facebook Page</h3>
     <p>一个账户可自动发现多个主页；不同账号管理的 Page 也可逐个独立接入。</p>
    </div>
-   <span class="status">{{accountConnected?'账户已验证':'等待配置'}}</span>
+   <span class="status">{{accountConnected?(accountDiscoveryVerified?'账户已验证':'已保存 Page · 账户发现待核验'):'等待配置'}}</span>
   </header>
   <p v-if="notice" class="pancake-note" role="status" data-test="pancake-multi-notice">{{notice}}</p>
   <button v-if="!apiReady" type="button" class="pancake-retry" :disabled="busy" data-test="pancake-retry-capabilities" @click="refresh">重新检测连接</button>
@@ -213,7 +219,7 @@ onBeforeUnmount(()=>{
    </div>
    <div class="pancake-token-panel" data-test="pancake-independent-page-add">
     <strong>添加其他账号管理的 Facebook Page</strong>
-    <p>只使用该 Page 的独立官方令牌。不会切换或覆盖你已经接入的 Pancake 账号。</p>
+    <p>两个不同 Facebook/Pancake 账号各有自己的主页。这里直接验证第二个主页的 Page ID＋Page Access Token，不使用第一个账号的 User Token，也不需要第二个账号的 User Token；个人设置中的 User Token 不能代替主页 Token。原账号保存内容不变。</p>
     <label for="pancake-independent-page-id">第一项：Facebook 主页 ID（只能输入数字）</label>
     <input id="pancake-independent-page-id" v-model.trim="independentPageId" inputmode="numeric"
       autocomplete="off" spellcheck="false" placeholder="例如：一串纯数字 Page ID，不是 Token"
