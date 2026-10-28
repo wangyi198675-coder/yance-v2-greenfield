@@ -11,6 +11,7 @@ const webCookieSuffix=process.env.YANCE_W47_WEB_COOKIE_SUFFIX;
 if(webCookieSuffix!==undefined&&!/^[a-z0-9]{8,24}$/.test(webCookieSuffix))
  throw Error('W47_WEB_COOKIE_SUFFIX_INVALID');
 const WEB_COOKIE='yance_web_private_session'+(webCookieSuffix?'_'+webCookieSuffix:'');
+const p0Trace=process.env.P0_LOCAL_SESSION_DIAG==='1';
 const TTL_MS=5*60*1000;
 const MAX_REQUEST_BYTES=2048;
 const digest=s=>createHash('sha256').update(s).digest('hex');
@@ -67,6 +68,7 @@ export function createLocalSessionAuthority({approvePairing=null,
    const id=cookieId(req,name);
    if(!id)continue;
    const record=sessions.get(digest(id));
+   if(p0Trace&&name===WEB_COOKIE)process.stderr.write('[P0_SESSION_BOOL] '+JSON.stringify({pid:process.pid,route:req.url,recordFound:!!record,revisionValid:record?.rev===revision,kind:record?.kind,sessionCount:sessions.size})+'\n');
    if(record&&record.rev===revision&&
       (record.kind==='WEB_LOCAL_PRIVATE')===(name===WEB_COOKIE))
     return {id,record};
@@ -126,6 +128,7 @@ export function createLocalSessionAuthority({approvePairing=null,
   const csrf=randomBytes(32).toString('hex');
   const expiresAt=now()+nativeTtlMs;
   sessions.set(digest(id),{csrf,expiresAt,rev:revision,kind:'WEB_LOCAL_PRIVATE'});
+  if(p0Trace)process.stderr.write('[P0_ISSUED_BOOL] '+JSON.stringify({pid:process.pid,sessionCount:sessions.size,revision})+'\n');
   return {id,csrf,expiresAt,ttlMs:nativeTtlMs};
  };
  const revokeNativeHost=(nativeHostBinding)=>{
