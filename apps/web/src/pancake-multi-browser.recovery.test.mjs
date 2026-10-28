@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {pancakeMultiApi} from './pancake-multi-browser.mjs';
 const ok=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json'}});
-const session={ok:true,authorized:true,sessionKind:'WEB_LOCAL_PRIVATE',csrfToken:'a'.repeat(64)};
+const session={ok:true,paired:true,authorized:true,sessionKind:'WEB_LOCAL_PRIVATE',csrfToken:'a'.repeat(64)};
 test('Page capability 401 from stale browser session renews first-party PRIVATE once, then returns verified credentialReady',async()=>{
  let capabilityRequests=0,renewals=0;
  const fetchImpl=async(url,options={})=>{

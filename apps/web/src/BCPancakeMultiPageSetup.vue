@@ -6,7 +6,7 @@ const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const busy=ref(false),initialized=ref(false),notice=ref(''),accountToken=ref('');
 const pages=ref([]),selectedPage=ref(''),pageToken=ref('');
 const accountConnected=ref(false),apiReady=ref(false);
-let alive=true,retryTimer=null,retryCount=0;
+let alive=true,retryTimer=null,retryCount=0,lastFailureCode='';
 function scheduleRetry(){
  if(!alive||apiReady.value||retryTimer||retryCount>=4)return;
  retryCount++;
@@ -20,6 +20,10 @@ function humanError(e,action){
  if(code.includes('CURRENT_WEB_SESSION_NOT_VERIFIED'))return '本机会话 Cookie 未生效，请检查浏览器站点 Cookie 设置。';
  if(code.includes('PANCAKE_CAPABILITIES_HTTP_404'))return '当前 API 缺少 Facebook Page 接口，正在重试连接。';
  if(code.includes('_TIMEOUT_30S'))return 'Pancake 官方验证超过30秒，结果尚未确认。请先点击重新查询账户，不要重复提交 Token。';
+ if(code.includes('PANCAKE_OFFICIAL_AUTH_102'))
+  return 'Pancake 官方账户验证未通过（错误码 102），令牌未保存。你已找到正确的账户令牌入口，请核对复制是否完整，以及当前登录的 Pancake 账户是否拥有这些主页。';
+ if(code.includes('PANCAKE_OFFICIAL_ERROR_'))return 'Pancake 官方返回业务错误码 '+(code.match(/PANCAKE_OFFICIAL_ERROR_([0-9]{1,5})/)?.[1]||'未知')+'，并非已确认 Token 错误；令牌未保存。';
+ if(code.includes('PANCAKE_OFFICIAL_FAILURE_UNCLASSIFIED'))return 'Pancake 官方没有返回可识别的错误码，令牌未保存。';
  if(code.includes('PANCAKE_TOKEN_REJECTED')||code.includes('PANCAKE_TOKEN_OR_PAGE_REJECTED'))
   return 'Pancake 官方拒绝此 Token。请确认复制的是账户个人设置里的 User Access Token，而不是主页 Page Token。';
  if(code.includes('PANCAKE_ACCOUNT_ALREADY_CONFIGURED'))
@@ -35,9 +39,9 @@ function humanError(e,action){
  return '连接尚未通过验证，请检查令牌和网络后重试。';
 }
 async function execute(action,args){
- busy.value=true;notice.value='';
+ busy.value=true;notice.value='';lastFailureCode='';
  try{return await pancakeMultiApi(action,{fetchImpl:fetcher(),...args})}
- catch(e){if(alive)notice.value=humanError(e,action);return null}
+ catch(e){lastFailureCode=String(e?.code||e?.message||'');if(alive)notice.value=humanError(e,action);return null}
  finally{if(alive)busy.value=false}
 }
 async function refresh(){
@@ -60,7 +64,10 @@ async function refresh(){
  else{
   accountConnected.value=false;pages.value=[];
   // No account provisioned yet. Stay on the real account setup step.
-  notice.value='尚未发现已配置的 Pancake 账户。只需配置一次账户令牌。';
+  if(lastFailureCode.includes('PANCAKE_ACCOUNT_NOT_CONFIGURED'))
+   notice.value='当前没有已保存的 Pancake 账户。请将账户 User Access Token 粘贴在下方验证一次。';
+  // For other errors, preserve the exact official/native failure from execute().
+  // Do not overwrite a 401/502/503 with a misleading generic token warning.
  }
 }
 async function saveAccount(){
