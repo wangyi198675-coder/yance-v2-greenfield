@@ -198,8 +198,22 @@ if(r4IsolatedPreview){
   'apps/web/src/BCSettingsWorkspace.vue':'77c1bcc6728fa17a548fbcbf92da710438bd2464',
   'apps/web/tests/w46-r4-media-settings-native.test.mjs':'592708bc0484a4b164ddb6ad106021f7d4d53142'
  });
+ // Exact user-authorized General-settings presentation delta.
+ // Preserve original de3 owner-verified Settings, W05 and notification blobs.
+ const settingsGeneralPath='apps/web/src/BCSettingsWorkspace.vue';
+ const settingsGeneralSha='bfe95b9c7697ae047561439b115b845c27945a80';
+ const settingsGeneralBase='de3c6b843449006b7a073ff58c2a7e5f033f7ac2';
+ const settingsGeneralValid=(()=>{
+  try{
+   git('merge-base','--is-ancestor',settingsGeneralBase,'HEAD');
+   return git('rev-parse',settingsGeneralBase+':'+settingsGeneralPath)===
+    notifyThemePins[settingsGeneralPath]&&
+    git('rev-parse','HEAD:'+settingsGeneralPath)===settingsGeneralSha&&
+    git('hash-object','--',settingsGeneralPath)===settingsGeneralSha;
+  }catch{return false}
+ })();
  const themeScope=Object.entries(themeUiFiles).every(([path,sha])=>{
-  const expected=notifyThemePins[path]||sha;
+  const expected=path===settingsGeneralPath?settingsGeneralSha:(notifyThemePins[path]||sha);
   return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&git('rev-parse','HEAD:'+path)===expected;
  })
   &&[...themeEvidence].every(path=>existsSync(join(w46Root,path))&&
@@ -234,8 +248,13 @@ if(r4IsolatedPreview){
    git('merge-base','--is-ancestor',notifyBase,'HEAD');
    const delta=git('diff','--name-only',notifyBase,'HEAD').split('\n').filter(Boolean);
    if(delta.length<4||!delta.every(p=>Object.hasOwn(notifyFiles,p)||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
-   return Object.entries(notifyFiles).every(([p,h])=>existsSync(join(w46Root,p))&&
-     git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
+   return Object.entries(notifyFiles).every(([p,h])=>{
+     const expected=p===settingsGeneralPath?settingsGeneralSha:h;
+     return existsSync(join(w46Root,p))&&
+       git('rev-parse',settingsGeneralBase+':'+p)===h&&
+       git('hash-object','--',p)===expected&&
+       git('rev-parse','HEAD:'+p)===expected;
+   })
      &&[...notifyEvidence].every(p=>existsSync(join(w46Root,p))&&
        git('hash-object','--',p)===git('rev-parse','HEAD:'+p));
   }catch{return false}
@@ -277,7 +296,8 @@ if(r4IsolatedPreview){
      git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
  const validSignedBlobs=w05Scope&&notifyDeltaValid&&wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
-   const expected=path===channelUxFile?channelUxSha:(notifyFiles[path]||pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha)));
+   const expected=path===settingsGeneralPath?settingsGeneralSha:
+    (path===channelUxFile?channelUxSha:(notifyFiles[path]||pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha))));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
      git('rev-parse','HEAD:'+path)===expected;
  });
@@ -343,7 +363,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!themeScope||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!themeScope||!settingsGeneralValid||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
