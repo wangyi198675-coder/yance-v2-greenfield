@@ -29,7 +29,18 @@ async function official(path,tokenParam,token,fetchImpl){
   const raw=await response.text();
   if(Buffer.byteLength(raw,'utf8')>2000000)throw fail('PANCAKE_RESPONSE_TOO_LARGE',502);
   let data;try{data=JSON.parse(raw)}catch{throw fail('PANCAKE_RESPONSE_INVALID',502)}
-  if(data?.success===false)throw fail('PANCAKE_TOKEN_OR_PAGE_REJECTED',401);
+  if(data?.success===false){
+   // Pancake may return HTTP 200 with a structured API error. Do not turn
+   // every failure (permissions, account state, upstream limits) into a claim
+   // that the user pasted the wrong token. Only bounded numeric codes cross
+   // the browser boundary; official raw messages and secrets never do.
+   const nativeCode=String(data.error_code??'');
+   if(/^[0-9]{1,5}$/.test(nativeCode)){
+    if(nativeCode==='102')throw fail('PANCAKE_OFFICIAL_AUTH_102',401);
+    throw fail('PANCAKE_OFFICIAL_ERROR_'+nativeCode,502);
+   }
+   throw fail('PANCAKE_OFFICIAL_FAILURE_UNCLASSIFIED',502);
+  }
   return data;
  }catch(e){if(e?.code)throw e;throw fail('PANCAKE_NETWORK_UNAVAILABLE',503)}
  finally{url.searchParams.delete(tokenParam);}

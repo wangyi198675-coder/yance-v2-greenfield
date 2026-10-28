@@ -5,7 +5,7 @@ import {once} from 'node:events';
 import {randomBytes} from 'node:crypto';
 import {createLocalSessionAuthority} from './local-session.mjs';
 import {createPancakeMultiOnboardingHttp} from './pancake-multi-onboarding-http.mjs';
-async function fixture(){
+async function fixture({fetchImpl}={}){
  const a=createLocalSessionAuthority(),origin='http://127.0.0.1:44767';
  let stored=null,writes=0,officialCalls=0;
  const proof=a.issueNativeWebView(randomBytes(32).toString('hex'));
@@ -41,7 +41,7 @@ async function fixture(){
   throw Error('UNEXPECTED_OFFICIAL_API');
  };
  const h=createPancakeMultiOnboardingHttp({
-  sessionAuthority:a,webOrigin:origin,custody:vault,fetchImpl:mockFetch
+  sessionAuthority:a,webOrigin:origin,custody:vault,fetchImpl:fetchImpl||mockFetch
  });
  const server=createServer((req,res)=>void h(req,res,
     new URL(req.url,'http://127.0.0.1')).then(ok=>{
@@ -108,5 +108,36 @@ test('forged origin/CSRF and unauthorized page cannot store credential',async()=
    body:{userAccessToken:'TEST-ACCOUNT-SYNTHETIC-123'}});
   assert.equal(r.status,403);
   assert.equal(f.writes,0);assert.equal(f.officialCalls,0);
+ }finally{await f.close()}
+});
+test('official HTTP 200 but success=false error 102 is explicit auth failure and never stores secret',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({
+   success:false,error_code:102,message:'SENSITIVE_UPSTREAM_MESSAGE_MUST_NOT_LEAK'
+  })
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',
+   body:{userAccessToken:'FAKE_ACCOUNT_TOKEN_NOT_REAL'}});
+  assert.equal(r.status,401);
+  assert.equal(r.body.error,'PANCAKE_OFFICIAL_AUTH_102');
+  assert.equal(f.writes,0);
+  assert.equal(JSON.stringify(r.body).includes('SENSITIVE_UPSTREAM_MESSAGE'),false);
+  assert.equal(JSON.stringify(r.body).includes('FAKE_ACCOUNT_TOKEN'),false);
+ }finally{await f.close()}
+});
+test('unrecognized official error is not falsely reported as invalid user token',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({
+   success:false,error_code:777,message:'Private upstream error'
+  })
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',
+   body:{userAccessToken:'FAKE_ACCOUNT_TOKEN_NOT_REAL'}});
+  assert.equal(r.status,502);
+  assert.equal(r.body.error,'PANCAKE_OFFICIAL_ERROR_777');
+  assert.equal(f.writes,0);
+  assert.equal(JSON.stringify(r.body).includes('Private upstream'),false);
  }finally{await f.close()}
 });
