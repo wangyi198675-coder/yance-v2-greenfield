@@ -6,7 +6,6 @@ import {Bubble,BubbleContent} from '../../../design/nonproduction/approved-click
 import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/message';
 import BCNativeComposer from './BCNativeComposer.vue';
 import metaBrandLogo from './assets/channels/meta.svg';
-import facebookBrandLogo from './assets/channels/facebook.svg';
 import messengerBrandLogo from './assets/channels/messenger.svg';
 import whatsappBrandLogo from './assets/channels/whatsapp.svg';
 import telegramBrandLogo from './assets/channels/telegram.svg';
@@ -116,13 +115,13 @@ const filtered=computed(()=>{
 const accountIds=computed(()=>['ALL',...new Set(contacts.value.filter(c=>channel.value==='ALL'||c.channel===channel.value).map(c=>c.accountRef))]);
 const filterActive=computed(()=>channel.value!=='ALL'||account.value!=='ALL'||search.value.trim()!=='');
 const platformName=c=>channels.find(x=>x.id===c)?.label||c;
-// Use real multi-color SVG brand assets from the open-source Iconify Logos set.
-// Meta is the parent-company mark, NOT the Facebook Page app mark.
+// Use the user-approved logo mapping: Facebook personal/Messenger use the
+// Messenger badge, Facebook Page uses the blue Meta infinity badge.
+// Each avatar gets one badge; do not add a second icon beside the name.
 const channelBrandIcon=channel=>({
- FB_PERSONAL:messengerBrandLogo,FB_PAGE:facebookBrandLogo,
+ FB_PERSONAL:messengerBrandLogo,FB_PAGE:metaBrandLogo,
  WHATSAPP_PERSONAL:whatsappBrandLogo,TELEGRAM_PERSONAL:telegramBrandLogo
 })[channel]||'';
-const headerBrandIcon=channel=>channel==='FB_PERSONAL'||channel==='FB_PAGE'?metaBrandLogo:channelBrandIcon(channel);
 const channelTooltip=c=>{
  if(!c)return '当前聊天渠道';
  if(c.channel==='FB_PAGE')return c.readOnlyPreview?
@@ -497,7 +496,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
      <span class="bc-contact-avatar-wrap bc-header-avatar" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(selected.channel)" class="bc-native-channel-badge" :src="channelBrandIcon(selected.channel)" alt=""/></span>
-     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><span class="bc-header-native-channel" role="img" :title="channelTooltip(selected)" :aria-label="channelTooltip(selected)"><img v-if="headerBrandIcon(selected.channel)" :src="headerBrandIcon(selected.channel)" alt="" decoding="async"/></span></div>
+     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong></div>
      <button type="button" :disabled="timelineState==='checking'" aria-label="刷新消息" title="刷新消息" @click="chooseContact(selected)">⟳</button>
     </header>
     <p v-if="timelineState==='checking'" class="bc-inbox-state">正在加载消息…</p>
@@ -549,7 +548,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
 .bc-inbox-list-scroll{min-height:0;flex:1 1 auto;overflow:auto;scrollbar-width:thin;overscroll-behavior:contain}
 .bc-real-contact{position:relative;min-height:68px;width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:0;border-left:2px solid transparent;border-bottom:1px solid var(--border);background:transparent;color:var(--ink);padding:10px 11px;cursor:pointer;transition:background .14s,box-shadow .14s}
 .bc-real-contact:hover{background:var(--surface-soft)}.bc-real-contact.selected{border-left-color:var(--accent);background:linear-gradient(96deg,rgba(var(--accent-rgb),.15),rgba(var(--accent-rgb),.025) 80%);box-shadow:inset 2px 0 0 rgba(var(--accent-rgb),.55)}
-.bc-contact-avatar-wrap{width:40px;height:40px;flex:none;display:block;position:relative;isolation:isolate}.bc-native-channel-badge{position:absolute;right:-4px;bottom:-4px;width:17px;height:17px;border-radius:50%;object-fit:contain;z-index:2;background:var(--bg2);border:2px solid var(--bg2);box-sizing:content-box}.bc-header-native-channel{display:flex;align-items:center;width:max-content;height:16px;max-width:100%;cursor:help}.bc-header-native-channel img{display:block;width:26px;height:16px;object-fit:contain;object-position:left center}.bc-chat-heading .bc-header-avatar{margin-right:1px}.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700;position:relative;overflow:hidden}.bc-contact-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
+.bc-contact-avatar-wrap{width:40px;height:40px;flex:none;display:block;position:relative;isolation:isolate}.bc-native-channel-badge{position:absolute;right:-4px;bottom:-4px;width:17px;height:17px;border-radius:50%;object-fit:contain;z-index:2;background:var(--bg2);border:2px solid var(--bg2);box-sizing:content-box}.bc-chat-heading .bc-header-avatar{margin-right:1px}.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700;position:relative;overflow:hidden}.bc-contact-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
 .bc-group-title{width:100%;padding:9px 13px;text-align:left;color:var(--muted);border:0;background:var(--surface-soft);cursor:pointer}.bc-group-title span{float:right}
 .bc-action-popover{position:absolute;right:10px;top:54px;width:min(285px,calc(100% - 20px));z-index:30;display:grid;gap:9px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised);box-shadow:0 14px 40px #0006}
 .bc-action-popover button,.bc-action-popover select{min-height:35px;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:9px;padding:8px}
