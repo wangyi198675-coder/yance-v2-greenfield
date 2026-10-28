@@ -195,6 +195,7 @@ defineExpose({setup,refresh});
     <Button variant="outline" size="sm" :disabled="busy" @click="waDisconnect('disconnect')">断开连接</Button>
     <Button v-if="state==='ONLINE_VERIFIED'" variant="outline" size="sm" :disabled="busy" @click="waDisconnect('revoke')">移除账号</Button>
    </div>
+   <Teleport to="body">
    <div v-if="qrOpen&&isWhatsApp" class="w46-qr-backdrop" data-test="native-provider-qr-dialog" @click.self="qrOpen=false">
     <section class="w46-qr-dialog" role="dialog" aria-modal="true" aria-label="连接 WhatsApp">
      <header><div><strong>连接 WhatsApp</strong><p>手机 WhatsApp → 已关联设备 → 关联设备</p></div>
@@ -210,6 +211,7 @@ defineExpose({setup,refresh});
      </div>
     </section>
    </div>
+   </Teleport>
    <details class="w46-channel-extra" data-test="native-provider-details">
     <summary>连接问题？查看帮助</summary>
     <p>连接状态由原生平台回读，不根据界面点击判定成功。</p>

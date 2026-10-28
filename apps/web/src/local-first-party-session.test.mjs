@@ -72,3 +72,13 @@ test('normal original native status still rejects fake provider data',async()=>{
  assert.equal(result.online,false);
  assert.equal(result.state,'WAITING_USER_AUTH');
 });
+
+test('WhatsApp QR modal uses document.body rather than card stacking context',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const vue=readFileSync(new URL('./BCChannelAccountSetup.vue',import.meta.url),'utf8');
+ const start=vue.indexOf('<Teleport to="body">');
+ const qr=vue.indexOf('class="w46-qr-backdrop"');
+ const end=vue.indexOf('</Teleport>');
+ assert.ok(start>=0&&qr>start&&end>qr);
+ assert.ok(vue.includes('data-test="native-provider-qr-dialog"'));
+});
