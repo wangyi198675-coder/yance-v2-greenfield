@@ -599,24 +599,28 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
  .bc-private-history article{max-width:92%!important}
  .bc-private-brain .bc-private-compose{width:calc(100% - 18px)}
 }
-/* Make the conversation readable without reviving empty left/right sidebars.
-   Use one centered message lane inside the full-width main workspace. */
+/* One original W43 Agno workspace fills its viewport. Keep only a modest
+   responsive reading gutter; never reintroduce empty side rails. */
 .bc-private-brain .bc-private-history{
- padding-left:max(16px,calc((100% - 940px)/2))!important;
- padding-right:max(16px,calc((100% - 940px)/2))!important;
+ max-width:none!important;
+ padding-left:clamp(12px,2.5vw,30px)!important;
+ padding-right:clamp(12px,2.5vw,30px)!important;
 }
 .bc-private-history article{
- max-width:min(82%,740px)!important;
+ max-width:min(86%,820px)!important;
  margin-top:4px;margin-bottom:8px;
  font-size:13px;line-height:1.65;
  padding:11px 15px;
 }
 .bc-private-history article p{font-size:13px;line-height:1.65;margin-top:4px}
 .bc-private-history article strong{font-size:11px}
-.bc-private-brain .bc-private-compose{max-width:940px!important}
+.bc-private-brain .bc-private-compose{
+ max-width:none!important;
+ width:calc(100% - clamp(24px,5vw,60px))!important;
+}
 .bc-brain-pending{
  display:flex;align-items:center;gap:10px;
- max-width:min(82%,740px);margin:9px 0 16px;
+ max-width:min(86%,820px);margin:9px 0 16px;
  border:1px solid var(--border);background:var(--surface);
  padding:13px 16px;border-radius:14px;
  color:var(--muted);font-size:12px;line-height:1.6;
@@ -639,7 +643,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
  .bc-brain-pending-dot{animation:none}
 }
 /* Input-adjacent R4 popovers retain original PRIVATE Agno model config and cost safety. */
-.bc-brain-context-menu{box-sizing:border-box;position:absolute;left:max(10px,calc((100% - 844px)/2 + 12px));bottom:103px;z-index:35;width:min(320px,calc(100vw - 24px));max-height:min(350px,65vh);overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised);color:var(--ink)}
+.bc-brain-context-menu{box-sizing:border-box;position:absolute;left:clamp(12px,2.5vw,30px);bottom:103px;z-index:35;width:min(320px,calc(100vw - 24px));max-height:min(350px,65vh);overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised);color:var(--ink)}
 .bc-brain-popup-head{display:flex;justify-content:space-between;align-items:center}
 .bc-brain-context-menu p{margin:0;font-size:11px;line-height:1.55;color:var(--muted)}
 .bc-brain-context-menu button{border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface-soft);color:var(--ink);font-size:11px;text-align:left}
