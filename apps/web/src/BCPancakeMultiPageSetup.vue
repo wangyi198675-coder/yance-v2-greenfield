@@ -15,8 +15,9 @@ function scheduleRetry(){
 function retryWhenVisible(){if(alive&&!apiReady.value&&!busy.value)refresh();}
 function humanError(e,action){
  const code=String(e?.code||e?.message||'');
- if(action==='capabilities'&&/HTTP_(?:401|403)/.test(code))return '当前浏览器的本机会话尚未恢复，请重新检测连接。';
- if(code.includes('EXISTING_WEB_LOCAL_SESSION_UNAVAILABLE')||code.includes('CURRENT_WEB_SESSION_NOT_VERIFIED'))return '本机会话尚未恢复，请重新检测连接。';
+ if(action==='capabilities'&&/HTTP_(?:401|403)/.test(code))return '本机会话未恢复（能力接口 '+(code.includes('401')?'401':'403')+'），请重新检测连接。';
+ if(code.includes('EXISTING_WEB_LOCAL_SESSION_UNAVAILABLE'))return '本机会话无法建立（'+(code.match(/HTTP_([0-9]+)/)?.[1]||'启动失败')+'），请检查浏览器站点 Cookie 设置。';
+ if(code.includes('CURRENT_WEB_SESSION_NOT_VERIFIED'))return '本机会话 Cookie 未生效，请检查浏览器站点 Cookie 设置。';
  if(code.includes('PANCAKE_CAPABILITIES_HTTP_404'))return '当前 API 缺少 Facebook Page 接口，正在重试连接。';
  if(code.includes('401'))return 'Pancake 账户令牌可能已失效，请检查账户设置。';
  if(code.includes('403'))return '该主页不属于当前账户，或 Token 无法访问。';
