@@ -6,16 +6,20 @@ const get=async(f,url)=>f(url,{
  method:'GET',credentials:'same-origin',cache:'no-store',
  redirect:'error',referrerPolicy:'no-referrer'
 });
+const renewWebPrivateSession=async f=>{
+ const started=await f('/api/v2/local-session/web-private-start',{
+  method:'POST',credentials:'same-origin',cache:'no-store',
+  redirect:'error',referrerPolicy:'no-referrer',
+  headers:{'content-type':'application/json'},body:'{}'
+ });
+ if(!started?.ok)error('EXISTING_WEB_LOCAL_SESSION_UNAVAILABLE_HTTP_'+(started?.status||0));
+ return started;
+};
 export async function currentPancakeWebSession(fetchImpl=globalThis.fetch){
  const status=await get(fetchImpl,'/api/v2/local-session/status');
  let session=status.ok?await status.json():null;
  if(session?.authorized!==true){
-  const started=await fetchImpl('/api/v2/local-session/web-private-start',{
-   method:'POST',credentials:'same-origin',cache:'no-store',
-   redirect:'error',referrerPolicy:'no-referrer',
-   headers:{'content-type':'application/json'},body:'{}'
-  });
-  if(!started.ok)error('EXISTING_WEB_LOCAL_SESSION_UNAVAILABLE');
+  await renewWebPrivateSession(fetchImpl);
   const after=await get(fetchImpl,'/api/v2/local-session/status');
   session=after.ok?await after.json():null;
  }
@@ -42,7 +46,15 @@ export async function pancakeMultiApi(action,{
    headers:{'content-type':'application/json','x-yance-csrf':session.csrfToken},
    body:JSON.stringify(body)};
  }else error('INVALID_PANCAKE_ACCOUNT_ACTION');
- const res=await fetchImpl(url,init);
+ let res=await fetchImpl(url,init);
+ // An older browser tab may retain a local-session cookie from a prior API
+ // process. Reissue the existing first-party PRIVATE session once, only on
+ // read-only capability discovery; never silently replay token writes.
+ if(action==='capabilities'&&[401,403].includes(res?.status)){
+  await renewWebPrivateSession(fetchImpl);
+  await currentPancakeWebSession(fetchImpl);
+  res=await fetchImpl(url,init);
+ }
  if(!res?.ok)error('PANCAKE_'+action.toUpperCase().replace('-','_')+'_HTTP_'+(res?.status||0));
  const reply=await res.json();
  if(reply?.ok!==true||reply.canSend!==false)
