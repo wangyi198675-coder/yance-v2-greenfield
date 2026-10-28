@@ -13,12 +13,12 @@ export async function currentPancakeWebSession(fetchImpl=globalThis.fetch){
 }
 export async function pancakeMultiApi(action,{
  fetchImpl=globalThis.fetch,userAccessToken,pageId,pageAccessToken,
- ownerReviewedRelink=false,expectedRevokedRevision=null
+ ownerReviewedRelink=false,expectedRevokedRevision=null,conversationId
 }={}){
  const session=await currentPancakeWebSession(fetchImpl);
  let url,init;
- if(action==='capabilities'||action==='pages'){
-  url=base+'/'+action;
+ if(action==='capabilities'||action==='pages'||action==='inbox'||action==='history'){
+  url=base+'/'+action+(action==='inbox'||action==='history'?'?pageId='+encodeURIComponent(pageId||'')+(action==='history'?'&conversationId='+encodeURIComponent(conversationId||''):''):'');
   init={method:'GET',credentials:'same-origin',cache:'no-store',
    redirect:'error',referrerPolicy:'no-referrer'};
  }else if(action==='account'||action==='page-token'){
@@ -62,5 +62,7 @@ export async function pancakeMultiApi(action,{
     reply.pages.some(p=>typeof p?.pageId!=='string'||!/^[0-9]{1,40}$/.test(p.pageId)))
    error('PANCAKE_ACCOUNT_PAGES_UNVERIFIED');
  }
+ if(action==='inbox'&&(reply.source!=='PANCAKE_OFFICIAL_INBOX_READ_ONLY'||reply.pageId!==pageId||!Array.isArray(reply.conversations)))error('PANCAKE_INBOX_SOURCE_UNVERIFIED');
+ if(action==='history'&&(reply.source!=='PANCAKE_OFFICIAL_HISTORY_READ_ONLY'||reply.pageId!==pageId||reply.conversationId!==conversationId||!Array.isArray(reply.messages)))error('PANCAKE_HISTORY_SOURCE_UNVERIFIED');
  return reply;
 }

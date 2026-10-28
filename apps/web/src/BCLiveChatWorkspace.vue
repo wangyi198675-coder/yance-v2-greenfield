@@ -7,6 +7,7 @@ import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/s
 import BCNativeComposer from './BCNativeComposer.vue';
 import {createTrustedTakeoverPort} from './native-takeover-port.mjs';
 import {readLiveContacts,readLiveTimeline,explainNativeFailure} from './live-chat-source.mjs';
+import {pancakeMultiApi} from './pancake-multi-browser.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null},mediaAuthorityPort:{type:Object,default:null}});
 const emit=defineEmits(['navigate']);
 const searchBox=ref(null),composerRef=ref(null);
@@ -55,12 +56,48 @@ function sourceQuote(m){
  });
 }
 const canShowData=computed(()=>state.value==='ready'&&accounts.value>0);
+async function readPancakeContacts(){
+ const inventory=await pancakeMultiApi('pages',{fetchImpl:api.value});
+ const pages=inventory.pages.filter(p=>p.tokenConfigured===true).slice(0,4);
+ if(!pages.length)throw Error('PANCAKE_NO_CONFIGURED_PAGE');
+ const rows=[];let verifiedPages=0;
+ for(const page of pages){
+  let inbox;
+  try{inbox=await pancakeMultiApi('inbox',{fetchImpl:api.value,pageId:page.pageId})}
+  catch{continue}
+  if(inbox?.source!=='PANCAKE_OFFICIAL_INBOX_READ_ONLY'||
+    inbox.pageId!==page.pageId||!Array.isArray(inbox.conversations))continue;
+  verifiedPages++;
+  for(const c of inbox.conversations){
+   if(typeof c.conversationId!=='string'||!/^[0-9]{1,40}$/.test(c.conversationId)||
+      typeof c.displayName!=='string')continue;
+   rows.push(Object.freeze({
+    contactRef:'PANCAKE_READ_ONLY|'+page.pageId+'|'+c.conversationId,
+    accountRef:page.name||page.pageId,channel:'FB_PAGE',peerRef:c.conversationId,
+    displayName:c.displayName,lastMessage:c.snippet||'',pageId:page.pageId,
+    conversationId:c.conversationId,readOnly:true,readOnlyPreview:true,
+    identity:null,identityKey:null,canSend:false,unread:null
+   }));
+  }
+ }
+ if(!verifiedPages)throw Error('PANCAKE_INBOX_UPSTREAM_UNAVAILABLE');
+ return {contacts:rows,connectedAccountCount:verifiedPages,trustedSession:true};
+}
 async function refresh(){
  const rev=++currentRevision;sourceRevision++;
  const selectedRef=chosen.value?.contactRef;
  state.value='checking';error.value=''; // Keep scroll, current draft, selection until verified new identity snapshot.
  try{
-  const snap=await readLiveContacts({fetchImpl:api.value});
+  let native=null,pancake=null,readError=null;
+  try{native=await readLiveContacts({fetchImpl:api.value})}catch(e){readError=e}
+  try{pancake=await readPancakeContacts()}catch(e){if(!native)readError=e}
+  if(!native&&!pancake)throw readError||Error('NO_CURRENT_PROVIDER_SOURCE');
+  const nativeContacts=native?.contacts||[];
+  const other=pancake?.contacts||[];
+  const existing=new Set(nativeContacts.map(c=>c.contactRef));
+  const snap={contacts:[...nativeContacts,...other.filter(c=>!existing.has(c.contactRef))],
+   connectedAccountCount:(native?.connectedAccountCount||0)+(pancake?.connectedAccountCount||0),
+   trustedSession:native?.trustedSession===true||pancake?.trustedSession===true};
   if(!mounted||rev!==currentRevision)return;
   contacts.value=snap.contacts;
   accounts.value=snap.connectedAccountCount;
@@ -80,7 +117,7 @@ async function chooseContact(contact){
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
  if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
-  const result=await readLiveTimeline({fetchImpl:api.value,contact});
+  const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
   if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
   timeline.value=result.messages;timelineState.value='ready';
  }catch(e){
@@ -116,7 +153,7 @@ async function pollVerifiedMessages(){
    if(document.hidden&&globalThis.Notification?.permission==='granted')
     new Notification('Facebook Messenger 新消息',{body:'言策已同步新的入站消息'});
   }
-  contacts.value=next.contacts;
+  contacts.value=[...next.contacts,...contacts.value.filter(c=>c.readOnlyPreview)];
   if(chosen.value){
    const same=next.contacts.find(c=>c.contactRef===chosen.value.contactRef);
    if(same){chosen.value=same;
@@ -199,7 +236,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
      <span class="bc-contact-avatar" aria-hidden="true"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span>
-     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnly?'Messenger':selected.channel==='FB_PERSONAL'?'Messenger':selected.channel==='FB_PAGE'?'Facebook Page':selected.channel==='WHATSAPP_PERSONAL'?'WhatsApp':selected.channel==='TELEGRAM_PERSONAL'?'Telegram':'聊天'}}</small></div>
+     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnlyPreview?'Pancake Facebook Page · 官方只读':selected.readOnly?'Messenger':selected.channel==='FB_PERSONAL'?'Messenger':selected.channel==='FB_PAGE'?'Facebook Page':selected.channel==='WHATSAPP_PERSONAL'?'WhatsApp':selected.channel==='TELEGRAM_PERSONAL'?'Telegram':'聊天'}}</small></div>
      <button type="button" :disabled="timelineState==='checking'" aria-label="刷新消息" title="刷新消息" @click="chooseContact(selected)">⟳</button>
     </header>
     <p v-if="timelineState==='checking'" class="bc-inbox-state">正在加载消息…</p>
