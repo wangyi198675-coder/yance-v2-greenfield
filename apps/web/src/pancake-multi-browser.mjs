@@ -12,7 +12,8 @@ export async function currentPancakeWebSession(fetchImpl=globalThis.fetch){
  return session;
 }
 export async function pancakeMultiApi(action,{
- fetchImpl=globalThis.fetch,userAccessToken,pageId,pageAccessToken
+ fetchImpl=globalThis.fetch,userAccessToken,pageId,pageAccessToken,
+ ownerReviewedRelink=false,expectedRevokedRevision=null
 }={}){
  const session=await currentPancakeWebSession(fetchImpl);
  let url,init;
@@ -22,7 +23,10 @@ export async function pancakeMultiApi(action,{
    redirect:'error',referrerPolicy:'no-referrer'};
  }else if(action==='account'||action==='page-token'){
   url=base+'/'+action;
-  const body=action==='account'?{userAccessToken}:{pageId,pageAccessToken};
+  const body=action==='account'?{
+   userAccessToken,
+   ...(ownerReviewedRelink===true?{ownerReviewedRelink:true,expectedRevokedRevision}:{})
+  }:{pageId,pageAccessToken};
   init={method:'POST',credentials:'same-origin',cache:'no-store',
    // Bound a real provider/native roundtrip; never replay a token write.
    signal:AbortSignal.timeout(30000),

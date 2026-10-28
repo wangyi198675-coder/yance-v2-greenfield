@@ -6,6 +6,7 @@ const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const busy=ref(false),initialized=ref(false),notice=ref(''),accountToken=ref('');
 const pages=ref([]),selectedPage=ref(''),pageToken=ref('');
 const accountConnected=ref(false),apiReady=ref(false);
+const credentialRevoked=ref(false),revokedRevision=ref(0),ownerRelinkConfirmed=ref(false);
 let alive=true,retryTimer=null,retryCount=0,lastFailureCode='';
 function scheduleRetry(){
  if(!alive||apiReady.value||retryTimer||retryCount>=4)return;
@@ -39,6 +40,10 @@ function humanError(e,action){
   return '账户凭据已被保存，不必重复粘贴。请刷新主页查看现有连接。';
  if(code.includes('PANCAKE_NETWORK_UNAVAILABLE')||code.includes('PANCAKE_REMOTE_UNAVAILABLE'))
   return 'Pancake 官方接口连接失败，请检查网络后重试。';
+ if(code.includes('PANCAKE_REVOKED_RELINK_REQUIRES_OWNER_REVIEW'))
+  return '此前的 W55 凭据已撤销。请在本机勾选重新绑定确认，并重新输入自己的账户 Token；旧 Token 不会恢复。';
+ if(code.includes('PANCAKE_RELINK_REVISION_MISMATCH'))
+  return '凭据撤销版本已变化。请点击查询账户状态重新确认后操作。';
  if(code.includes('PANCAKE_ACCOUNT_NOT_CONFIGURED'))return '当前还没有成功保存的 Pancake 账户。';
  if(code.includes('UNAVAILABLE')||code.includes('503'))return '本机 W55 安全凭据或 Pancake 官方接口不可用，验证未完成。';
  if(code.includes('401'))return '验证未通过（HTTP 401）。请检查当前本机会话和 Pancake User Access Token。';
@@ -61,9 +66,17 @@ async function refresh(){
  retryCount=0;
  if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
  apiReady.value=cap.credentialReady===true;
+ credentialRevoked.value=cap.credentialRevoked===true;
+ revokedRevision.value=Number.isSafeInteger(cap.credentialRevision)?cap.credentialRevision:0;
+ ownerRelinkConfirmed.value=false;
  initialized.value=true;
  if(!apiReady.value){
   notice.value='此版本尚未接通原 W55 安全保存能力，暂不能输入 Token。';
+  return;
+ }
+ if(credentialRevoked.value){
+  accountConnected.value=false;pages.value=[];
+  notice.value='本机 W55 中的旧 Pancake 凭据已撤销（版本 '+revokedRevision.value+'）。只有你本人明确确认后，才能保存新的账户授权；旧凭据不会恢复。';
   return;
  }
  const existing=await execute('pages');
@@ -80,13 +93,20 @@ async function refresh(){
  }
 }
 async function saveAccount(){
- if(busy.value||!apiReady.value||accountToken.value.trim().length<8)return;
+ if(busy.value||!apiReady.value||accountToken.value.trim().length<8||
+   (credentialRevoked.value&&(!ownerRelinkConfirmed.value||revokedRevision.value<1)))return;
  const value=accountToken.value.trim();
- const r=await execute('account',{userAccessToken:value});
+ const params={userAccessToken:value};
+ if(credentialRevoked.value){
+  params.ownerReviewedRelink=true;
+  params.expectedRevokedRevision=revokedRevision.value;
+ }
+ const r=await execute('account',params);
  // Wipe immediately after the protected save attempt; never persist in browser.
  accountToken.value='';
  if(!r||!alive)return;
  pages.value=r.pages;accountConnected.value=true;
+ credentialRevoked.value=false;ownerRelinkConfirmed.value=false;
  notice.value='Pancake 账户已验证。请为需要在言策使用的主页分别添加现有 Page Token。';
 }
 async function connectPage(){
@@ -138,9 +158,13 @@ onBeforeUnmount(()=>{
      autocomplete="off" autocapitalize="off" spellcheck="false"
      placeholder="仅在此处安全输入，不需要发到聊天中"
      :disabled="!apiReady||busy" data-test="pancake-user-token"/>
+   <label v-if="credentialRevoked" class="pancake-relink-review" data-test="pancake-relink-owner-review">
+    <input type="checkbox" v-model="ownerRelinkConfirmed" :disabled="busy" data-test="pancake-relink-explicit-confirm"/>
+    我本人确认重新绑定已撤销的 Pancake 账户。此操作只保存我新输入的令牌，不会恢复旧授权或自动启用消息发送。
+   </label>
    <p v-if="busy" role="status" data-test="pancake-account-progress">正在联系 Pancake 官方并核对 W55 安全保存，请勿重复点击。验证请求最多等待 30 秒。</p>
    <button type="button" class="primary"
-     :disabled="!apiReady||busy||accountToken.trim().length<8"
+     :disabled="!apiReady||busy||accountToken.trim().length<8||(credentialRevoked&&!ownerRelinkConfirmed)"
      data-test="pancake-account-save" @click="saveAccount">
      {{busy?'正在验证…':'验证账户并自动读取主页'}}
    </button>
