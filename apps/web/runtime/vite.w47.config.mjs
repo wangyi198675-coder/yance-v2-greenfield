@@ -153,13 +153,28 @@ if(r4IsolatedPreview){
  });
  const channelUxFile='apps/web/src/BCChannelAccountSetup.vue';
  const channelUxSha='158d8af25152e7821c21c938d0c2cf9c1d399d45';
+ // P0 WhatsApp single-flight source is already on the live 44751 version.
+ // Verify its EXACT parent and two changed blobs instead of rejecting a valid
+ // owner delta or weakening the original Baileys/channel security checks.
+ const waP0Source='19c030838071d9df6ae069f7f109bd5ac18cfeea';
+ const waP0Files=Object.freeze({
+  'apps/web/src/whatsapp-native-user-flow.mjs':'a92cfbf423b1b499977394896426dc15e16a012d',
+  'apps/web/src/whatsapp-native-user-flow.test.mjs':'6bdc67f6f9db5343362d2909a1635f571c97de16'
+ });
+ const waP0Verified=(()=>{try{
+  git('merge-base','--is-ancestor',waP0Source,'HEAD');
+  return Object.entries(waP0Files).every(([p,h])=>
+   git('rev-parse',waP0Source+':'+p)===h&&
+   git('rev-parse',waBase+':'+p)===waOwnerFiles[p]&&
+   git('rev-parse','HEAD:'+p)===h&&git('hash-object','--',p)===h);
+ }catch{return false}})();
  const waUxVerified=(()=>{try{
   git('merge-base','--is-ancestor',waBase,'HEAD');
   return Object.entries(waOwnerFiles).every(([p,h])=>
     git('rev-parse',waBase+':'+p)===h&&
     existsSync(join(w46Root,p))&&
-    git('rev-parse','HEAD:'+p)===(p===channelUxFile?channelUxSha:h)&&
-    git('hash-object','--',p)===(p===channelUxFile?channelUxSha:h));
+    git('rev-parse','HEAD:'+p)===(p===channelUxFile?channelUxSha:(waP0Files[p]||h))&&
+    git('hash-object','--',p)===(p===channelUxFile?channelUxSha:(waP0Files[p]||h)));
  }catch{return false}})();
  const pageUiScope=(()=>{try{
   return Object.entries(pageUiFiles).every(([p,h])=>
@@ -236,7 +251,7 @@ if(r4IsolatedPreview){
   try{
    git('merge-base','--is-ancestor',w05Base,'HEAD');
    const delta=git('diff','--name-only',w05Base,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<8||!delta.every(p=>Object.hasOwn(w05Files,p)||w05Evidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(delta.length<8||!delta.every(p=>Object.hasOwn(w05Files,p)||w05Evidence.has(p)||Object.hasOwn(notifyFiles,p)||Object.hasOwn(waP0Files,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(w05Files).every(([p,h])=>existsSync(join(w46Root,p))&&
     git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
     &&[...w05Evidence].every(p=>existsSync(join(w46Root,p))&&
@@ -363,7 +378,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!themeScope||!settingsGeneralValid||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!waP0Verified||!themeScope||!settingsGeneralValid||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
