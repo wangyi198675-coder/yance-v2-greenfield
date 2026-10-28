@@ -24,7 +24,21 @@ const request=async(path,{fetchImpl=globalThis.fetch,method='GET',csrfToken,body
   if(result?.ok!==true||result.canSend!==false)fail('WHATSAPP_OWNER_UNVERIFIED');
   return result;
 };
+// A first load mounts the WhatsApp card while the user may click Connect.
+// Sharing one first-party session bootstrap prevents two overlapping
+// web-private-start responses from overwriting each other's cookie/CSRF.
+const pendingCsrfByFetch = new WeakMap();
 async function authorizedCsrf(fetchImpl){
+  if(typeof fetchImpl!=='function')fail('WHATSAPP_FETCH_REQUIRED');
+  const already=pendingCsrfByFetch.get(fetchImpl);
+  if(already)return already;
+  const pending=resolveAuthorizedCsrf(fetchImpl);
+  pendingCsrfByFetch.set(fetchImpl,pending);
+  try{return await pending}finally{
+    if(pendingCsrfByFetch.get(fetchImpl)===pending)pendingCsrfByFetch.delete(fetchImpl);
+  }
+}
+async function resolveAuthorizedCsrf(fetchImpl){
   const response=await fetchImpl('/api/v2/local-session/status',{
     method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error',
     referrerPolicy:'no-referrer'});

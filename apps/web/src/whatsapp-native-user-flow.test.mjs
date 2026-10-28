@@ -75,3 +75,61 @@ test('HTTP 503 surfaces actual not-connected reason; never downgrade to fake doc
   ({http:503,body:{ok:false,error:'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED'}}));
  await assert.rejects(readWhatsAppNative({fetchImpl:a.fetchImpl}),/WHATSAPP_HTTP_503/);
 });
+
+test('P0 two concurrent WhatsApp card refresh + Connect clicks must issue only ONE local session bootstrap/CSRF',async()=>{
+ let sessionStarts=0,requestsToProvider=0;
+ let grant=null;
+ const fetchImpl=async(url,{headers}={})=>{
+  if(url==='/api/v2/local-session/status'){
+   // Both initial callers see the same browser state. Without single-flight,
+   // two POST web-private-start requests race and set different cookies.
+   return {ok:true,status:200,json:async()=>grant??{
+    ok:true,paired:false,canSend:false,providerAuthorized:false
+   }};
+  }
+  if(url==='/api/v2/local-session/web-private-start'){
+   sessionStarts++;
+   await new Promise(resolve=>setTimeout(resolve,30));
+   grant={...authenticated,sessionKind:'WEB_LOCAL_PRIVATE'};
+   return {ok:true,status:200,json:async()=>grant};
+  }
+  if(url.endsWith('/native/status')){
+   requestsToProvider++;
+   return {ok:true,status:200,json:async()=>({...waState,
+    state:'WAITING_USER_AUTH',connected:false,qrAvailable:false})};
+  }
+  if(url.endsWith('/native/authorize')){
+   requestsToProvider++;
+   assert.equal(headers['X-Yance-CSRF'],csrf);
+   return {ok:true,status:200,json:async()=>({
+    ok:true,channel:'WHATSAPP_PERSONAL',state:'STARTING_NATIVE_SDK',
+    connected:false,canSend:false
+   })};
+  }
+  throw Error('UNEXPECTED_REQUEST_'+url);
+ };
+ const [status,connection]=await Promise.all([
+   readWhatsAppNative({fetchImpl}),connectWhatsAppNative({fetchImpl})
+ ]);
+ assert.equal(status.state,'WAITING_USER_AUTH');
+ assert.equal(connection.state,'STARTING_NATIVE_SDK');
+ assert.equal(sessionStarts,1,'single-flight must prevent cookie/CSRF overwrite');
+ assert.equal(requestsToProvider,2);
+});
+test('P0 failed initial bootstrap is not cached: later user re-click can renew local session',async()=>{
+ let n=0;
+ const fetchImpl=async(url)=>{
+  if(url==='/api/v2/local-session/status')
+   return {ok:true,status:200,json:async()=>({ok:true,paired:false})};
+  if(url==='/api/v2/local-session/web-private-start'){
+   n++;
+   return {ok:n===2,status:n===2?200:503,json:async()=>({...authenticated,
+    sessionKind:'WEB_LOCAL_PRIVATE'})};
+  }
+  if(url.endsWith('/native/authorize'))return {ok:true,status:200,json:async()=>({ok:true,channel:'WHATSAPP_PERSONAL',state:'STARTING_NATIVE_SDK',connected:false,canSend:false})};
+  throw Error('UNEXPECTED_REQUEST_'+url);
+ };
+ await assert.rejects(connectWhatsAppNative({fetchImpl}),/WHATSAPP_LOCAL_SESSION_REQUIRED/);
+ assert.equal((await connectWhatsAppNative({fetchImpl})).state,'STARTING_NATIVE_SDK');
+ assert.equal(n,2);
+});
