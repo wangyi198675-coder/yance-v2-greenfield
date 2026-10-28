@@ -274,7 +274,7 @@ if(r4IsolatedPreview){
   try{
    git('merge-base','--is-ancestor',notifyBase,'HEAD');
    const delta=git('diff','--name-only',notifyBase,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<4||!delta.every(p=>Object.hasOwn(notifyFiles,p)||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(delta.length<4||!delta.every(p=>Object.hasOwn(notifyFiles,p)||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(siwcFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(notifyFiles).every(([p,h])=>{
      const expected=p===settingsGeneralPath?settingsGeneralSha:h;
      return existsSync(join(w46Root,p))&&
