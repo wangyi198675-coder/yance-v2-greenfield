@@ -357,7 +357,9 @@ async function pollVerifiedMessages(){
     if(chosen.value?.contactRef===c.contactRef){
      timeline.value=history.messages;timelineState.value='ready';
     }
-    await showOfficialPancakeInboundNotice({contact:c,message,onClick:async()=>{
+    await showOfficialPancakeInboundNotice({contact:c,message,
+     hidden:document.hidden||chosen.value?.contactRef!==c.contactRef,
+     onClick:async()=>{
      // Re-check current Page token, contact and MID on click. An old system
      // notification must not navigate after Page removal or account rebind.
      const current=await readPancakeContacts();
