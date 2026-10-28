@@ -7,9 +7,51 @@ import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModel
   verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody} from './private-brain-ui-contract.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
+// Native W43 remains the only authority: deltas are ephemeral display only.
+// The final persisted Run is still validated by verifiedTurn + history re-read.
+async function nativeStreamingTurn(url,init,onDelta){
+ const response=await (props.fetchImpl||globalThis.fetch)(url,{
+  credentials:'same-origin',cache:'no-store',redirect:'error',
+  referrerPolicy:'no-referrer',...init,
+  headers:{...init.headers,accept:'application/x-ndjson'}
+ });
+ if(!response?.ok)throw Error('PRIVATE_HTTP_'+(response?.status||'UNAVAILABLE'));
+ if(!String(response.headers?.get('content-type')||'').startsWith('application/x-ndjson'))
+  return response.json();
+ if(!response.body?.getReader)throw Error('PRIVATE_STREAM_UNAVAILABLE');
+ const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
+ let buffer='',final=null;
+ const receive=line=>{
+  if(!line)return;
+  const message=JSON.parse(line);
+  if(message.type==='delta'&&typeof message.text==='string'){
+   onDelta(message.text);return;
+  }
+  if(message.type==='error')throw Error('PRIVATE_STREAM_'+String(message.error||'DENIED').slice(0,90));
+  if(message.type==='completed'&&message.payload?.status==='COMPLETED'&&!final){
+   final=message.payload;return;
+  }
+  throw Error('PRIVATE_STREAM_PROTOCOL_INVALID');
+ };
+ try{
+  for(;;){
+   const {value,done}=await reader.read();
+   if(done)break;
+   buffer+=decoder.decode(value,{stream:true});
+   if(buffer.length>100000)throw Error('PRIVATE_STREAM_TOO_LARGE');
+   let at;while((at=buffer.indexOf('\n'))>=0){
+    const line=buffer.slice(0,at);buffer=buffer.slice(at+1);receive(line);
+   }
+  }
+  buffer+=decoder.decode();
+  if(buffer.trim())receive(buffer.trim());
+  if(!final)throw Error('PRIVATE_STREAM_COMPLETION_UNVERIFIED');
+  return final;
+ }finally{reader.releaseLock()}
+}
 const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false),historyBox=ref(null);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=ref(false),text=ref('');
-const chosen=ref(''),requestInFlight=ref(false),pendingPrompt=ref('');
+const chosen=ref(''),requestInFlight=ref(false),pendingPrompt=ref(''),streamingPreview=ref('');
 const modelCostApproved=ref(false),brainExpertOpen=ref(false),brainRoot=ref(null);
 const nativeTools=ref([]),nativeRuns=ref([]),nativeReadState=ref('idle'),nativeTrace=ref(null),traceReadState=ref('idle');
 const experts=ref([]),expertsState=ref('idle'),expertError=ref(''),expertBusy=ref(false),expertStableId=ref(''),chosenExpertId=ref(''),expertConsent=ref(false),expertVerified=ref(null);
@@ -327,7 +369,7 @@ async function send(){
  const id=++revision;requestInFlight.value=true;notice.value='';
  // The user's draft is removed at submission, not after a slow model response.
  // This is only a transient UI preview: W43 remains the sole history authority.
- pendingPrompt.value=prompt;
+ pendingPrompt.value=prompt;streamingPreview.value='';
  text.value='';
  await nextTick();
  if(historyBox.value)historyBox.value.scrollTop=historyBox.value.scrollHeight;
@@ -337,12 +379,17 @@ async function send(){
   const requestId='req_'+Array.from(crypto.getRandomValues(new Uint8Array(18)),b=>b.toString(16).padStart(2,'0')).join('');
   // Preview user input while the original W43 Run owns actual persistence.
   const body={threadId,text:prompt,requestId};
-  const reply=await api(PRIVATE_ROUTES.turn,endpointBody(PRIVATE_ROUTES.turn,body,session.value.csrf));
+  const reply=await nativeStreamingTurn(PRIVATE_ROUTES.turn,
+   endpointBody(PRIVATE_ROUTES.turn,body,session.value.csrf),delta=>{
+    if(safeCurrent(id))streamingPreview.value=(streamingPreview.value+delta).slice(0,18000);
+   });
   verifiedTurn(reply,{threadId,requestId,provider:model.provider,modelId:model.modelId});
   receiptVerified=true;
   if(!safeCurrent(id))return;
   await loadHistory(id); // if history unavailable, don't fabricate turn in timeline
-  if(safeCurrent(id)&&loadState.value==='ready')pendingPrompt.value='';
+  if(safeCurrent(id)&&loadState.value==='ready'){
+   pendingPrompt.value='';streamingPreview.value='';
+  }
   // W43 verified COMPLETED receipt + re-read original durable Agno History.
   // Only if the app is backgrounded and OS permission is ALREADY granted.
   // No new Agent framework, no synthetic message, and replayed Runs stay silent.
@@ -351,14 +398,14 @@ async function send(){
    void notifyVerifiedAgnoInBackground({receipt:reply,historyVerified:true});
   }
  }catch(e){if(safeCurrent(id)){
-   if(!receiptVerified){text.value=prompt;pendingPrompt.value=''}
+   if(!receiptVerified){text.value=prompt;pendingPrompt.value='';streamingPreview.value=''}
    notice.value=reason(e);loadState.value='history-unavailable'
  }}
  finally{if(safeCurrent(id))requestInFlight.value=false}
 }
 onMounted(()=>{document.addEventListener('keydown',brainMenuKeyboard);document.addEventListener('pointerdown',brainOutsideClick);void refresh()});
 onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);document.removeEventListener('pointerdown',brainOutsideClick);
- mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value='';pendingPrompt.value=''});
+ mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value='';pendingPrompt.value='';streamingPreview.value=''});
 </script>
 <template>
  <section ref="brainRoot" class="bc-private-brain" :class="{'bc-brain-tools-visible':toolsOpen}" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
@@ -433,6 +480,9 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    <article v-if="pendingPrompt" data-role="user" data-test="brain-pending-user">
     <strong>你 <small>待原生 Agno 历史确认</small></strong>
     <p>{{pendingPrompt}}</p>
+   </article>
+   <article v-if="streamingPreview&&requestInFlight" data-role="assistant" data-test="brain-live-model-preview">
+    <strong>闺蜜大脑 <small>实时生成 · 等待 Agno Run 确认</small></strong><p>{{streamingPreview}}</p>
    </article>
    <div v-if="requestInFlight" class="bc-brain-pending" role="status" aria-live="polite" data-test="brain-generating">
     <span class="bc-brain-pending-dot" aria-hidden="true"></span>

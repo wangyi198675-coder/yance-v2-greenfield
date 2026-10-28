@@ -12,12 +12,12 @@ test('composer clears immediately, preview until original W43 history verified, 
  const start=s.indexOf('async function send(){'),end=s.indexOf('onMounted(',start);
  assert.ok(start>0&&end>start);
  const f=s.slice(start,end);
- assert.match(f,/pendingPrompt\.value=prompt;\s*text\.value='';/);
- assert.ok(f.indexOf("text.value=''")<f.indexOf('await api(PRIVATE_ROUTES.turn'));
+ assert.match(f,/pendingPrompt\.value=prompt;streamingPreview\.value='';\s*text\.value='';/);
+ assert.ok(f.indexOf("text.value=''")<f.indexOf('await nativeStreamingTurn(PRIVATE_ROUTES.turn'));
  assert.match(f,/verifiedTurn\(reply/);
  assert.match(f,/await loadHistory\(id\)/);
- assert.match(f,/loadState\.value==='ready'\)pendingPrompt\.value=''/);
- assert.match(f,/if\(!receiptVerified\)\{text\.value=prompt;pendingPrompt\.value=''\}/);
+ assert.match(f,/loadState\.value==='ready'\)\{\s*pendingPrompt\.value='';streamingPreview\.value=''/);
+ assert.match(f,/if\(!receiptVerified\)\{text\.value=prompt;pendingPrompt\.value='';streamingPreview\.value=''\}/);
  assert.match(s,/data-test="brain-pending-user"/);
  assert.match(s,/data-test="brain-generating"/);
 });
