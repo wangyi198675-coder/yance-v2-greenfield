@@ -78,3 +78,33 @@ export async function readOfficialFacebookMessages(id){
  return {ok:true,source:'OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY',roomId:id,
   messages:ev,readOnly:true,providerPeerBindingPending:true,canSend:false};
 }
+
+/** Fetch exact native room avatar through the existing Matrix media API.
+ * Valid room belongs to current official account space; URL only from actual
+ * Matrix room avatar event. No user-supplied media URL or third-party fetch.
+ */
+export async function readOfficialFacebookAvatar(id){
+ if(!room(id))throw Error('INVALID_AVATAR_ROOM');
+ const currentSession=await current();
+ if(!currentSession.roomIDs.has(id))throw Error('AVATAR_ROOM_NOT_OFFICIAL');
+ const event=await get('/_matrix/client/v3/rooms/'+encodeURIComponent(id)+
+  '/state/m.room.avatar',currentSession.token);
+ const mxc=event?.url;
+ const match=typeof mxc==='string'?
+  /^mxc:\/\/([A-Za-z0-9.-]{1,180})\/([A-Za-z0-9_-]{3,220})$/.exec(mxc):null;
+ if(!match)throw Error('NO_OFFICIAL_ROOM_AVATAR');
+ const media='http://127.0.0.1:28438/_matrix/client/v1/media/thumbnail/'+
+  encodeURIComponent(match[1])+'/'+encodeURIComponent(match[2])+
+  '?width=96&height=96&method=crop';
+ const response=await fetch(media,{headers:{Authorization:'Bearer '+currentSession.token},
+  redirect:'error',signal:AbortSignal.timeout(12000)});
+ if(!response.ok)throw Error('MATRIX_AVATAR_MEDIA_'+response.status);
+ const mime=String(response.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+ if(!['image/jpeg','image/png','image/webp','image/gif'].includes(mime))
+  throw Error('MATRIX_AVATAR_NOT_IMAGE');
+ const size=Number(response.headers.get('content-length')||0);
+ if(!Number.isFinite(size)||size<0||size>1_500_000)throw Error('MATRIX_AVATAR_TOO_LARGE');
+ const data=Buffer.from(await response.arrayBuffer());
+ if(!data.length||data.length>1_500_000)throw Error('MATRIX_AVATAR_INVALID_BYTES');
+ return Object.freeze({mime,data});
+}
