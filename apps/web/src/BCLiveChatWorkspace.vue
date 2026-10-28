@@ -138,29 +138,6 @@ async function chooseContact(contact){
  if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
- messengerManual.value={roomId:'',ready:false};
- // The native send qualification is independent of timeline pagination.
- // Loading messages must never indefinitely disable an otherwise verified
- // manual user's original Composer. Server still checks W24/W44/W25 on POST.
- // FB_ROOM is the validated native W26 inbox contactRef. Some upstream
- // read DTOs omit roomId/readOnly, so use its canonical room locator only
- // for GET qualification; the W26/W24/W44 server authorizes the real Peer.
- const fbRoom=typeof contact.contactRef==='string'&&contact.contactRef.startsWith('FB_ROOM|')?
-  contact.contactRef.slice('FB_ROOM|'.length):'';
- if(fbRoom.startsWith('!')){
-  void (async()=>{
-   try{
-    const r=await api.value('/api/v2/providers/fb-personal/manual-send?roomId='+
-      encodeURIComponent(fbRoom),{credentials:'same-origin',cache:'no-store'});
-    const x=await r.json();
-    if(mounted&&ticket===sourceRevision&&chosen.value?.contactRef===contact.contactRef)
-      messengerManual.value={roomId:fbRoom,ready:r.ok&&x.readyForManualSend===true};
-   }catch{
-    if(mounted&&ticket===sourceRevision)
-      messengerManual.value={roomId:'',ready:false};
-   }
-  })();
- }
  if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
   const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
@@ -313,7 +290,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
         and expert/media operations disabled, not create a second renderer. -->
    <BCNativeComposer ref="composerRef" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
     :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"
-    :native-messenger-room="messengerManual.ready?messengerManual.roomId:''" :native-messenger-send-port="manualMessengerSendPort"
+    :native-messenger-room="selected?.contactRef?.startsWith('FB_ROOM|')?selected.contactRef.slice(8):''" :native-messenger-send-port="manualMessengerSendPort"
     @manual-sent="onManualMessengerSent" @navigate="navigate"/>
   </div>
  </section>
