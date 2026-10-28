@@ -1,37 +1,67 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {readAgnoNotificationEnabled,setAgnoNotificationEnabled,
+ notifyVerifiedAgnoInBackground} from '../src/w05-native-notification-port.mjs';
 const source=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 const panel=source('../src/BCNotificationCenter.vue');
 const settings=source('../src/BCSettingsWorkspace.vue');
-const owner=source('../../../services/api/runtime/w47-native-settings-capabilities.mjs');
-test('original nine setting categories reused; native W05 entry not falsely marked ready',()=>{
+
+test('nine original settings remain; notification screen is compact and production-ready',()=>{
  assert.match(settings,/import BCNotificationCenter/);
  assert.match(settings,/category==='notify'/);
  assert.match(settings,/<BCNotificationCenter/);
  assert.match(settings,/requestNotificationPermission/);
- assert.match(owner,/W05_NATIVE_NOTIFICATION_SETTINGS_OWNER_PORT_NOT_CONNECTED/);
- assert.match(owner,/persistedWrite:false/);
- assert.match(panel,/待实机核验/);
- assert.match(panel,/待订阅/);
+ assert.match(panel,/class="nc-grid"/);
+ assert.doesNotMatch(panel,/nc-hero|nc-hero-art|nc-hero-tags|PREFERENCES \/ NOTIFICATIONS/);
+ for(const placeholder of ['待接入','待订阅','待实机核验','开发','W05 原生设置','仅展示','01 \/ CHANNELS','DEMO','type="range"','nc-placeholder','nc-footer','nc-group-note']){
+  assert.equal(panel.includes(placeholder),false,placeholder);
+ }
 });
-test('native browser permission and optional test alone perform user-initiated notifications',()=>{
- assert.match(panel,/Notification/);
- assert.match(panel,/permission==='default'/);
+
+test('shown controls are real user actions, no imaginary API or mock preferences',()=>{
+ for(const action of ['notify-refresh-permission','settings-request-notifications',
+  'notify-test-browser','notify-native-authorize','notify-native-test','notify-agno-toggle']){
+  assert.ok(panel.includes('data-test="'+action+'"'),action);
+ }
  assert.match(panel,/emit\('request-permission'\)/);
- assert.match(panel,/data-test="notify-test-browser"/);
- assert.match(panel,/new window.Notification/);
- assert.match(panel,/!browserGranted\.value\|\|testPending\.value/);
- assert.match(panel,/silent:true/);
- assert.match(panel,/已向浏览器提交测试通知/);
- assert.doesNotMatch(panel,/new Agent|new WebSocket|new AudioContext|localStorage|sessionStorage|fetch\(/);
+ assert.match(panel,/new window.Notification\(/);
+ assert.match(panel,/await native\.nativeTest\(\)/);
+ assert.match(panel,/await native\.askPermission\(\)/);
+ assert.match(panel,/setAgnoNotificationEnabled\(next\)/);
+ assert.match(panel,/native\.available/);
+ assert.match(panel,/!browserGranted\|\|testPending/);
+ assert.match(panel,/onMounted\(\(\)=>\{void refreshPermissions\(\)\}\)/);
+ assert.doesNotMatch(panel,/new WebSocket|new AudioContext|fetch\(|new Agent/);
 });
-test('agreed settings concepts are visible but not counterfeit active switches',()=>{
- for(const s of ['消息提醒','声音与节奏','专注与免打扰','闺蜜大脑事件',
- '浏览器通知','Windows 桌面通知','重复消息去重','音量','当前网页不能代表 Windows','不创建新的消息订阅器'])
-  assert.ok(panel.includes(s),s);
- assert.match(panel,/data-test="notify-volume-native-unavailable"/);
- assert.match(panel,/type="range"[^>]*disabled/);
- assert.match(panel,/prefers-reduced-motion/);
- assert.match(panel,/aria-label="通知中心"/);
+test('real device preference survives reload and rejects unsupported storage',()=>{
+ const m=new Map();
+ const storage={getItem:key=>m.get(key)??null,setItem:(key,val)=>m.set(key,val)};
+ assert.equal(readAgnoNotificationEnabled({storage}),true);
+ assert.equal(setAgnoNotificationEnabled(false,{storage}),true);
+ assert.equal(readAgnoNotificationEnabled({storage}),false);
+ assert.equal(setAgnoNotificationEnabled(true,{storage}),true);
+ assert.equal(readAgnoNotificationEnabled({storage}),true);
+ assert.equal(setAgnoNotificationEnabled(false,{storage:null}),false);
+});
+test('suppressed Agno completion really blocks original background notice',async()=>{
+ const old=globalThis.localStorage;
+ const storage=new Map();
+ globalThis.localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
+ try{
+  setAgnoNotificationEnabled(false);
+  let calls=0;
+  const x=await notifyVerifiedAgnoInBackground({
+   receipt:{status:'COMPLETED',runId:'run_123456',canSend:false,replayed:false},
+   historyVerified:true,hidden:true,
+   native:{available:true,agnoCompleted:async()=>{calls++;return true;}}
+  });
+  assert.equal(x,'NO_NOTICE');assert.equal(calls,0);
+  setAgnoNotificationEnabled(true);
+  assert.equal(await notifyVerifiedAgnoInBackground({
+   receipt:{status:'COMPLETED',runId:'run_123456',canSend:false,replayed:false},
+   historyVerified:true,hidden:true,native:{available:true,agnoCompleted:async()=>{calls++;return true;}}
+  }),'NATIVE_SUBMITTED');
+  assert.equal(calls,1);
+ }finally{if(old===undefined)delete globalThis.localStorage;else globalThis.localStorage=old}
 });

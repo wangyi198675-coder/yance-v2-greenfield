@@ -1,6 +1,6 @@
 // Reuse W05's official tauri-plugin-notification 2.6.0 in the ORIGINAL
 // W54 trusted current-user window. Browser localhost is never a native host.
-// No new event bus, no storage, no provider/user/recipient commands.
+// No new event bus, network, or provider/user/recipient commands.
 const deny=s=>{throw Error(s)};
 const validSession=s=>s?.nativeOsVerified===true&&
  s.nativeSessionActive===true&&s.canSend===false;
@@ -53,6 +53,19 @@ export function createW05NativeNotificationPort({tauri=globalThis.__TAURI__}={})
  return Object.freeze({available,permission,askPermission,nativeTest,agnoCompleted});
 }
 
+const AGNO_DEVICE_PREF='yance-native-notify-agno-task-v1';
+// Simple device-level display preference, not an authorization grant.
+// Use only the browser's existing origin storage; no new notification backend.
+export function readAgnoNotificationEnabled({storage=globalThis.localStorage}={}){
+ try{return storage?.getItem(AGNO_DEVICE_PREF)!=='off'}catch{return true}
+}
+export function setAgnoNotificationEnabled(enabled,{storage=globalThis.localStorage}={}){
+ try{
+  if(!storage||typeof enabled!=='boolean')return false;
+  storage.setItem(AGNO_DEVICE_PREF,enabled?'on':'off');
+  return storage.getItem(AGNO_DEVICE_PREF)===(enabled?'on':'off');
+ }catch{return false}
+}
 export async function notifyVerifiedAgnoInBackground({
  receipt,historyVerified=false,
  hidden=globalThis.document?.visibilityState==='hidden',
@@ -60,7 +73,7 @@ export async function notifyVerifiedAgnoInBackground({
  native=createW05NativeNotificationPort()
 }={}){
  // Auth and original Agno durable receipt are checked by caller BEFORE this.
- if(!hidden||!historyVerified||!receipt||
+ if(!readAgnoNotificationEnabled()||!hidden||!historyVerified||!receipt||
   receipt.status!=='COMPLETED'||receipt.replayed===true||
   receipt.canSend!==false||typeof receipt.runId!=='string'||
   !/^[A-Za-z0-9_-]{6,128}$/.test(receipt.runId))return 'NO_NOTICE';

@@ -78,7 +78,7 @@ test('V2 native Tauri plugin is official and only current main origin has notifi
  assert.match(rust,/notification:allow-request-permission/);
  assert.match(rust,/notification:allow-notify/);
  assert.ok(perm.permissions.includes('notification:allow-notify'));
- assert.doesNotMatch(text('../src/w05-native-notification-port.mjs'),/localStorage|sessionStorage|new WebSocket|fetch\(|sendMessage/);
+ assert.doesNotMatch(text('../src/w05-native-notification-port.mjs'),/new WebSocket|fetch\(|sendMessage/);
  const originalBrain=text('../src/BCPrivateBrainWorkspace.vue');
  assert.match(originalBrain,/notifyVerifiedAgnoInBackground/);
  assert.match(originalBrain,/loadState\.value==='ready'/);
