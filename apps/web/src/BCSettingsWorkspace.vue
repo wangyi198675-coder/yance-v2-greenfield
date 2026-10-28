@@ -13,12 +13,21 @@ const props=defineProps({
  theme:{type:String,default:'Obsidian Lime'},appearance:{type:String,default:'dark'}
 });
 const emit=defineEmits(['navigate','cycle-theme','toggle-theme']);
-const category=ref('general'),busy=ref(false),state=ref('idle'),error=ref(''),data=ref(null);
+// Settings only contains actual configuration/diagnostics; other functions
+// retain their one authoritative global workspace instead of cloned screens.
+const SETTINGS_VISIBLE=Object.freeze([
+ {id:'model',label:'AI 模型'},
+ {id:'theme',label:'外观与主题'},
+ {id:'notify',label:'消息通知'},
+ {id:'privacy',label:'隐私与安全'},
+ {id:'diagnostics',label:'诊断'}
+]);
+const category=ref('theme'),busy=ref(false),state=ref('idle'),error=ref(''),data=ref(null);
 const csrf=ref(null),session=ref(null),notification=ref('unsupported');
 let seq=0,alive=true;
 const channels=[{id:'FB_PERSONAL',label:'Facebook'},{id:'FB_PAGE',label:'Page'},
 {id:'WHATSAPP_PERSONAL',label:'WhatsApp'},{id:'TELEGRAM_PERSONAL',label:'Telegram'}];
-const categoryName=computed(()=>R4_SETTINGS_CATEGORIES.find(x=>x.id===category.value)?.label||'设置');
+const categoryName=computed(()=>SETTINGS_VISIBLE.find(x=>x.id===category.value)?.label||'设置');
 const request=(url,opt)=> (props.fetchImpl||globalThis.fetch)(url,{
  credentials:'same-origin',cache:'no-store',redirect:'error',referrerPolicy:'no-referrer',...opt
 });
@@ -65,7 +74,7 @@ async function refresh(){
  }catch(e){if(alive&&t===seq){state.value='unavailable';error.value=failure(e)}}
  finally{if(alive&&t===seq)busy.value=false}
 }
-function switchCategory(id){if(!R4_SETTINGS_CATEGORIES.some(x=>x.id===id))return;category.value=id}
+function switchCategory(id){if(!SETTINGS_VISIBLE.some(x=>x.id===id))return;category.value=id}
 watch([()=>props.active,category],([active])=>{if(active)void refresh();else{seq++;data.value=null;csrf.value=null;session.value=null}},{immediate:true});
 watch([()=>props.theme,()=>props.appearance],()=>{
  if(category.value==='theme'&&props.active)data.value={theme:props.theme,mode:props.appearance,source:'APP_THEME_TOKENS_CURRENT'};
@@ -93,14 +102,14 @@ function requestNotificationPermission(){
 }
 </script>
 <template>
- <section class="bc-settings-workspace" data-test="w46-settings-nine" aria-label="九分类设置">
-  <label class="bc-settings-mobile" for="w46-settings-picker">设置分类（9）
+ <section class="bc-settings-workspace" data-test="w46-settings-nine" aria-label="设置中心">
+  <label class="bc-settings-mobile" for="w46-settings-picker">设置分类
    <select id="w46-settings-picker" v-model="category" data-test="settings-mobile-picker">
-    <option v-for="x in R4_SETTINGS_CATEGORIES" :key="x.id" :value="x.id">{{x.label}}</option>
+    <option v-for="x in SETTINGS_VISIBLE" :key="x.id" :value="x.id">{{x.label}}</option>
    </select>
   </label>
   <nav class="bc-settings-nav" aria-label="设置分类">
-   <button v-for="x in R4_SETTINGS_CATEGORIES" :key="x.id" type="button" :aria-pressed="category===x.id"
+   <button v-for="x in SETTINGS_VISIBLE" :key="x.id" type="button" :aria-pressed="category===x.id"
      :data-test="'settings-'+x.id" @click="switchCategory(x.id)">{{x.label}}</button>
   </nav>
   <section class="bc-settings-detail" data-test="w46-settings-content" :data-category="category">
