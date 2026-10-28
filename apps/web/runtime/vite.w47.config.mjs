@@ -128,7 +128,7 @@ if(r4IsolatedPreview){
  })();
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'c0130d054cd411bcdf9320a682091c863f24b190',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'1054dbc15558d537c99479479d7a81ea4ec54087',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'8584acc60a34917fd45afbd6860650aef588687c'
  });
  // Reuse the exact already-running 6b0118d multi-account UI: no new authority.
@@ -247,7 +247,7 @@ if(r4IsolatedPreview){
  // This already user-approved ChatGPT connection is built with the official
  // @siwc/local SDK. Preserve exact native/UI source blobs on this fixed site.
  const siwcFiles=Object.freeze({
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'c0130d054cd411bcdf9320a682091c863f24b190',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'1054dbc15558d537c99479479d7a81ea4ec54087',
   'apps/web/src/BCSettingsWorkspace.vue':'17220061dd088fe3128424ede8a1fb4770424333',
   'apps/web/src/BCOfficialChatGPTConnect.vue':'3c00efa5900bc0e3cb0ce56c5e0ca32a8d1b83e0',
   'services/api/runtime/server.mjs':'e221cbd80640f3af84056498093822794d21edaf',
