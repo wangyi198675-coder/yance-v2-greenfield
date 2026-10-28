@@ -77,6 +77,43 @@ test('original W55 one account discovers FB Page A+B, never Zalo or synthetic me
   assert.equal(JSON.stringify(r.body).includes('TEST-ACCOUNT'),false);
  }finally{await f.close()}
 });
+test('official categorized pages activated/inactivated/hidden supported; nopermission never grants Page access',async()=>{
+ const f=await fixture({fetchImpl:async url=>{
+  assert.equal(url.pathname,'/api/v1/pages');
+  return {status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,
+   pages:{
+    activated:[{id:'111',name:'Alpha',platform:'FACEBOOK'},
+      {id:'333',name:'Zalo',platform:'ZALO'}],
+    inactivated:[{id:'222',name:'Beta',platform:'FACEBOOK'}],
+    hidden:[{id:'444',name:'Hidden',platform:'FACEBOOK'}],
+    nopermission:[{id:'555',name:'Denied',platform:'FACEBOOK'}],
+    activated_page_ids:['111','333']
+   }})};
+ }});
+ try{
+  const saved=await f.request('account',{method:'POST',body:{userAccessToken:'FAKE_ACCOUNT_USER_1234'}});
+  assert.equal(saved.status,200);
+  assert.deepEqual(saved.body.pages.map(x=>x.pageId),['111','222','444']);
+  assert.equal(f.writes,1);
+  const after=await f.request('pages');
+  assert.equal(after.status,200);
+  assert.deepEqual(after.body.pages.map(x=>x.pageId),['111','222','444']);
+  assert.equal(JSON.stringify(after.body).includes('Denied'),false);
+  assert.equal(JSON.stringify(after.body).includes('FAKE_ACCOUNT_USER'),false);
+ }finally{await f.close()}
+});
+test('malformed categorized response is not treated as confirmed authorized account and never stores',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,
+   pages:{activated:{id:'111'},nopermission:[{id:'888'}]}})
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',body:{userAccessToken:'FAKE_ACCOUNT_USER_1234'}});
+  assert.equal(r.status,502);
+  assert.equal(r.body.error,'PANCAKE_ACCOUNT_PAGES_INVALID');
+  assert.equal(f.writes,0);
+ }finally{await f.close()}
+});
 test('Page token verifies only owned Page, independently stored, never returns secrets',async()=>{
  const f=await fixture();
  try{

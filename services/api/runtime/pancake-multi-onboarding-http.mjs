@@ -47,11 +47,23 @@ async function official(path,tokenParam,token,fetchImpl){
 }
 async function ownedPages(token,fetchImpl){
  const reply=await official('/api/v1/pages','access_token',token,fetchImpl);
- if(!Array.isArray(reply.pages)||reply.pages.length>500)
+ // The current official GET /api/v1/pages response categorizes pages under
+ // pages.activated/inactivated/hidden/nopermission/activated_page_ids.
+ // Older responses expose pages as an array. Do not interpret a categorized
+ // object as an invalid User Access Token or grant access to nopermission.
+ let source;
+ if(Array.isArray(reply.pages))source=reply.pages;
+ else if(reply.pages&&typeof reply.pages==='object'&&!Array.isArray(reply.pages)){
+  const groups=['activated','inactivated','hidden'];
+  const lists=groups.filter(k=>Object.hasOwn(reply.pages,k)).map(k=>reply.pages[k]);
+  if(!lists.length||lists.some(v=>!Array.isArray(v)))
    throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
+  source=lists.flat();
+ }else throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
+ if(source.length>500)throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
  const seen=new Set();
  const pages=[];
- for(const p of reply.pages){
+ for(const p of source){
   const id=String(p?.id??'');
   if(!validId(id)||seen.has(id))continue;
   const platform=String(p?.platform??'').toUpperCase();
