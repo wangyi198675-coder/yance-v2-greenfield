@@ -249,7 +249,7 @@ if(r4IsolatedPreview){
  const siwcFiles=Object.freeze({
   'apps/web/src/BCProductWorkspaceCandidate.vue':'1054dbc15558d537c99479479d7a81ea4ec54087',
   'apps/web/src/BCSettingsWorkspace.vue':'27f30e231d2a6d2c27eb213fe5e03718fbbac728',
-  'apps/web/src/BCOfficialChatGPTConnect.vue':'3c00efa5900bc0e3cb0ce56c5e0ca32a8d1b83e0',
+  'apps/web/src/BCOfficialChatGPTConnect.vue':'8495834386b45f26cad1bcf41eead8742dbef60c',
   'services/api/runtime/server.mjs':'e221cbd80640f3af84056498093822794d21edaf',
   'services/api/runtime/w47-official-siwc.mjs':'4b81d31cdbcbcc7a50efd1fda007c49e0ecd1b33'
  });
