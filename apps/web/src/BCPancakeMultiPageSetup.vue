@@ -4,7 +4,7 @@ import {pancakeMultiApi} from './pancake-multi-browser.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const busy=ref(false),initialized=ref(false),notice=ref(''),accountToken=ref('');
-const pages=ref([]),selectedPage=ref(''),pageToken=ref(''),independentPageId=ref('');
+const pages=ref([]),selectedPage=ref(''),pageToken=ref(''),independentPageId=ref(''),independentPageToken=ref('');
 const accountConnected=ref(false),apiReady=ref(false);
 const credentialRevoked=ref(false),revokedRevision=ref(0),ownerRelinkConfirmed=ref(false);
 let alive=true,retryTimer=null,retryCount=0,lastFailureCode='';
@@ -123,6 +123,30 @@ async function connectPage(){
  if(current&&alive)pages.value=current.pages;
  notice.value='该主页的 Pancake API 已验证并安全保存。联系人和聊天的 W24 授权绑定状态独立核验。';
 }
+function onIndependentPageIdInput(e){
+ const raw=String(e?.target?.value||'').trim();
+ // Common paste mistake: a secret Token goes into the visible numeric Page ID.
+ // Move it to the already-local password input before any provider request.
+ if(raw.length>=24&&/[^0-9]/.test(raw)){
+  independentPageToken.value=raw;
+  independentPageId.value='';
+  if(e?.target)e.target.value='';
+  notice.value='识别到你粘贴的是 Page Token，已移到下方密码框并隐藏。请在上方填写该主页的纯数字 Page ID。';
+ }
+}
+async function connectIndependentPage(){
+ const id=independentPageId.value.trim();
+ if(busy.value||!apiReady.value||!accountConnected.value||
+   !/^[0-9]{1,40}$/.test(id)||independentPageToken.value.length<8)return;
+ const token=independentPageToken.value;
+ const result=await execute('page-token',{pageId:id,pageAccessToken:token});
+ independentPageToken.value='';
+ if(!result||!alive)return;
+ independentPageId.value='';
+ const current=await execute('pages');
+ if(current&&alive)pages.value=current.pages;
+ notice.value='该 Page 已通过 Pancake 官方验证并保存。其他账号和 Page 不受影响。';
+}
 function cancelPage(){selectedPage.value='';pageToken.value='';}
 onMounted(()=>{
  refresh();
@@ -136,7 +160,7 @@ onBeforeUnmount(()=>{
  globalThis.removeEventListener('focus',retryWhenVisible);
  globalThis.removeEventListener('online',retryWhenVisible);
  document.removeEventListener('visibilitychange',retryWhenVisible);
- accountToken.value='';pageToken.value='';
+ accountToken.value='';pageToken.value='';independentPageToken.value='';
 });
 </script>
 <template>
@@ -190,13 +214,26 @@ onBeforeUnmount(()=>{
    <div class="pancake-token-panel" data-test="pancake-independent-page-add">
     <strong>添加其他账号管理的 Facebook Page</strong>
     <p>只使用该 Page 的独立官方令牌。不会切换或覆盖你已经接入的 Pancake 账号。</p>
-    <label for="pancake-independent-page-id">其他账号的 Page ID</label>
+    <label for="pancake-independent-page-id">第一项：Facebook 主页 ID（只能输入数字）</label>
     <input id="pancake-independent-page-id" v-model.trim="independentPageId" inputmode="numeric"
-      autocomplete="off" spellcheck="false" placeholder="输入 Facebook Page ID"
-      :disabled="busy" data-test="pancake-independent-page-id"/>
-    <button type="button" :disabled="busy||!/^[0-9]{1,40}$/.test(independentPageId)"
-      data-test="pancake-select-independent-page"
-      @click="selectedPage=independentPageId;pageToken=''">添加此主页的 Page Token</button>
+      autocomplete="off" spellcheck="false" placeholder="例如：一串纯数字 Page ID，不是 Token"
+      :disabled="busy" data-test="pancake-independent-page-id"
+      @input="onIndependentPageIdInput"/>
+    <small v-if="independentPageId&&!/^[0-9]{1,40}$/.test(independentPageId)"
+      data-test="pancake-independent-page-id-error" role="alert">
+      Page ID 必须是纯数字；你可能把 Page Access Token 贴到了这个位置。
+    </small>
+    <label for="pancake-independent-page-token">第二项：这个主页的 Page Access Token（会隐藏）</label>
+    <input id="pancake-independent-page-token" type="password" v-model="independentPageToken"
+      autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="在这里粘贴 Pancake 此主页的现有 Token"
+      :disabled="busy||!apiReady" data-test="pancake-independent-page-token"/>
+    <small data-test="pancake-independent-page-help">Page ID 在主页设置里查看；Token 在 Pancake 此主页「设置 → 工具 → Public API access token」查看。不要把 Token 发到聊天中。</small>
+    <button type="button" class="primary"
+      :disabled="busy||!apiReady||!/^[0-9]{1,40}$/.test(independentPageId)||independentPageToken.length<8"
+      data-test="pancake-verify-independent-page" @click="connectIndependentPage">
+      {{busy?'正在验证…':'验证并添加这个 Page'}}
+    </button>
    </div>
    <div v-if="selectedPage" class="pancake-token-panel" data-test="pancake-page-token-panel">
     <strong>主页 {{pages.find(p=>p.pageId===selectedPage)?.name||selectedPage}}</strong>
