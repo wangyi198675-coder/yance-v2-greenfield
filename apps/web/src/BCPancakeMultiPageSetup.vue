@@ -6,9 +6,18 @@ const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const busy=ref(false),initialized=ref(false),notice=ref(''),accountToken=ref('');
 const pages=ref([]),selectedPage=ref(''),pageToken=ref('');
 const accountConnected=ref(false),apiReady=ref(false);
-let alive=true;
-function humanError(e){
+let alive=true,retryTimer=null,retryCount=0;
+function scheduleRetry(){
+ if(!alive||apiReady.value||retryTimer||retryCount>=4)return;
+ retryCount++;
+ retryTimer=setTimeout(()=>{retryTimer=null;if(alive)refresh();},Math.min(7500,retryCount*1600));
+}
+function retryWhenVisible(){if(alive&&!apiReady.value&&!busy.value)refresh();}
+function humanError(e,action){
  const code=String(e?.code||e?.message||'');
+ if(action==='capabilities'&&/HTTP_(?:401|403)/.test(code))return '当前浏览器的本机会话尚未恢复，请重新检测连接。';
+ if(code.includes('EXISTING_WEB_LOCAL_SESSION_UNAVAILABLE')||code.includes('CURRENT_WEB_SESSION_NOT_VERIFIED'))return '本机会话尚未恢复，请重新检测连接。';
+ if(code.includes('PANCAKE_CAPABILITIES_HTTP_404'))return '当前 API 缺少 Facebook Page 接口，正在重试连接。';
  if(code.includes('401'))return 'Pancake 账户令牌可能已失效，请检查账户设置。';
  if(code.includes('403'))return '该主页不属于当前账户，或 Token 无法访问。';
  if(code.includes('429'))return 'Pancake 访问次数受限，请稍后重试。';
@@ -18,13 +27,16 @@ function humanError(e){
 async function execute(action,args){
  busy.value=true;notice.value='';
  try{return await pancakeMultiApi(action,{fetchImpl:fetcher(),...args})}
- catch(e){if(alive)notice.value=humanError(e);return null}
+ catch(e){if(alive)notice.value=humanError(e,action);return null}
  finally{if(alive)busy.value=false}
 }
 async function refresh(){
  if(busy.value)return;
  const cap=await execute('capabilities');
- if(!alive||!cap)return;
+ if(!alive)return;
+ if(!cap){apiReady.value=false;scheduleRetry();return;}
+ retryCount=0;
+ if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
  apiReady.value=cap.credentialReady===true;
  initialized.value=true;
  if(!apiReady.value){
@@ -64,8 +76,20 @@ async function connectPage(){
  notice.value='该主页的 Pancake API 已验证并安全保存。联系人和聊天的 W24 授权绑定状态独立核验。';
 }
 function cancelPage(){selectedPage.value='';pageToken.value='';}
-onMounted(refresh);
-onBeforeUnmount(()=>{alive=false;accountToken.value='';pageToken.value='';});
+onMounted(()=>{
+ refresh();
+ globalThis.addEventListener('focus',retryWhenVisible);
+ globalThis.addEventListener('online',retryWhenVisible);
+ document.addEventListener('visibilitychange',retryWhenVisible);
+});
+onBeforeUnmount(()=>{
+ alive=false;
+ if(retryTimer)clearTimeout(retryTimer);
+ globalThis.removeEventListener('focus',retryWhenVisible);
+ globalThis.removeEventListener('online',retryWhenVisible);
+ document.removeEventListener('visibilitychange',retryWhenVisible);
+ accountToken.value='';pageToken.value='';
+});
 </script>
 <template>
  <article class="pancake-multi" data-test="pancake-multi-page-setup">
@@ -76,6 +100,7 @@ onBeforeUnmount(()=>{alive=false;accountToken.value='';pageToken.value='';});
    <span class="status">{{accountConnected?'账户已验证':'等待配置'}}</span>
   </header>
   <p v-if="notice" class="pancake-note" role="status" data-test="pancake-multi-notice">{{notice}}</p>
+  <button v-if="!apiReady" type="button" class="pancake-retry" :disabled="busy" data-test="pancake-retry-capabilities" @click="refresh">重新检测连接</button>
   <section v-if="!accountConnected" class="pancake-section" data-test="pancake-account-config">
    <div class="pancake-section-head"><strong>第一步 · 连接 Pancake 账户</strong>
      <span>只需一次</span></div>
@@ -135,6 +160,8 @@ onBeforeUnmount(()=>{alive=false;accountToken.value='';pageToken.value='';});
 .pancake-heading p,.pancake-section p,.pancake-multi footer{font-size:12px;line-height:1.55;color:var(--muted);margin:0}
 .status{white-space:nowrap;color:var(--muted);font-size:11px;border:1px solid var(--border);border-radius:20px;padding:5px 8px}
 .pancake-note{font-size:12px;line-height:1.5;padding:9px 11px;border:1px solid var(--border);border-radius:9px;margin:0}
+.pancake-retry{justify-self:start;border:1px solid var(--border);background:var(--bg2);color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px}
+.pancake-retry:disabled{opacity:.55;cursor:wait}
 .pancake-section{display:grid;gap:10px;border:1px solid var(--border);border-radius:13px;padding:16px;background:var(--bg2);min-width:0}
 .pancake-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pancake-section-head span,.pancake-multi small{font-size:11px;color:var(--muted)}
