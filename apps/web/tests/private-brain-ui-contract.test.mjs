@@ -6,11 +6,12 @@ import {readFileSync} from 'node:fs';
 import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModelSelection,
  verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody}
  from '../src/private-brain-ui-contract.mjs';
-const CLOUD='OPENROUTER_USER_API',OPENAI='OPENAI_USER_API',LOCAL='LLAMACPP_LOCAL_QWEN3_8B_FREE';
+const CLOUD='OPENROUTER_USER_API',OPENAI='OPENAI_USER_API',LOCAL='LLAMACPP_LOCAL_QWEN3_8B_FREE',SIWC='CHATGPT_PLAN_SIWC';
 const names=[
  {provider:CLOUD,displayName:'OpenRouter',requiresUserApiKey:true,requiresLocalModel:false},
  {provider:OPENAI,displayName:'OpenAI API',requiresUserApiKey:true,requiresLocalModel:false},
- {provider:LOCAL,displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true}
+ {provider:LOCAL,displayName:'Local Qwen3',requiresUserApiKey:false,requiresLocalModel:true},
+ {provider:SIWC,displayName:'ChatGPT',requiresUserApiKey:false,requiresLocalModel:false}
 ];
 const pub={ok:true,providers:names,authoritative:false,
  actualAvailability:'CHECK_AUTHORIZED_MODEL_CONFIG',canSend:false};
@@ -29,9 +30,10 @@ const run={ok:true,status:'COMPLETED',canSend:false,qualityQualified:false,threa
  sessionId:'sess_12345678',modelProvider:CLOUD,modelId:'openai/gpt-4o-mini'};
 const history={ok:true,status:'HISTORY_PRESENT',threadId:'personal',
  canSend:false,qualityQualified:false,messages:[{role:'user',content:'Question'},{role:'assistant',content:'Answer'}]};
-test('W47 public real uppercase SDK provider trio parses as descriptors only',()=>{
+test('W47 public SDK model sources include optional official ChatGPT plan',()=>{
  const p=publicModelCatalog(pub);
- assert.deepEqual(p.map(x=>x.id),[CLOUD,OPENAI,LOCAL]);
+ assert.deepEqual(p.map(x=>x.id),[CLOUD,OPENAI,LOCAL,SIWC]);
+ assert.equal(p[3].requiresUserApiKey,false);
  assert.equal(p[0].requiresLocalModel,false);assert.equal(p[2].requiresLocalModel,true);
  assert.throws(()=>publicModelCatalog({...pub,authoritative:true}));
 });
@@ -49,6 +51,17 @@ test('OpenAI API provider may be selected if current signed W47 config says READ
  const item={...providerModels[1],configured:true,available:true};
  const m=modelCatalog(config(OPENAI,'gpt-4o-mini',[item]));
  assert.equal(m.selectedProvider,OPENAI);
+});
+test('Official ChatGPT plan is a no-API-Key real-model candidate',()=>{
+ const item={provider:SIWC,modelId:'gpt-test',configured:true,
+  available:true,keyRequired:false,billingNotice:'Official account sharing'};
+ const c=config(SIWC,'gpt-test',[item]);
+ const result=modelCatalog(c,publicModelCatalog(pub));
+ assert.equal(result.configured,true);
+ assert.equal(confirmedModelSelection(c,{provider:SIWC,modelId:'gpt-test'}).configured,true);
+ assert.equal(verifiedTurn({...run,modelProvider:SIWC,modelId:'gpt-test'},
+  {threadId:'personal',requestId:run.requestId,provider:SIWC,modelId:'gpt-test'}).role,'assistant');
+ assert.throws(()=>modelCatalog(config(SIWC,'gpt-test',[{...item,keyRequired:true}])));
 });
 test('POST selection must match exact authoritative W47 private config receipt',()=>{
  assert.equal(confirmedModelSelection(config(CLOUD,'openai/gpt-4o-mini'),selected).configured,true);

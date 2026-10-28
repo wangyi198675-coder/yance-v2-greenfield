@@ -203,6 +203,7 @@ function checkedModelCatalog(dto){
 const providers=computed(()=>publicProviders.value.map(p=>({
  id:p.id,name:p.name,desc:p.id==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?'在电脑上运行的本地模型（可选）':
  p.id==='OPENAI_USER_API'?'使用你自己的 OpenAI API Key':
+ p.id==='CHATGPT_PLAN_SIWC'?'使用已授权的 ChatGPT 计划（无需 API Key）':
  '使用你自己的 OpenRouter API Key'
 })));
 function clearSession(){
@@ -433,7 +434,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
   </div>
   <form class="bc-private-compose" @submit.prevent="send">
    <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
-   <small v-if="catalog?.configured&&catalog.selectedProvider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
+   <small v-if="catalog?.configured&&['OPENROUTER_USER_API','OPENAI_USER_API'].includes(catalog.selectedProvider)" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
    <textarea id="bc-private-question" v-model="text" rows="2" maxlength="4000"
      data-test="brain-question" :placeholder="loadState==='ready'?'给闺蜜大脑发消息…':'选择 AI 模型后开始聊天'" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
    <div class="bc-brain-compose-toolbar">
