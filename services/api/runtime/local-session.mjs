@@ -4,7 +4,13 @@
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
 
 const COOKIE='yance_local_session';
-const WEB_COOKIE='yance_web_private_session';
+// Browser cookies ignore TCP ports: multiple loopback preview APIs must not
+// overwrite each other's PRIVATE session. Stable opt-in namespace, same W47
+// authority/CSRF/HttpOnly policy; default remains byte-for-byte compatible.
+const webCookieSuffix=process.env.YANCE_W47_WEB_COOKIE_SUFFIX;
+if(webCookieSuffix!==undefined&&!/^[a-z0-9]{8,24}$/.test(webCookieSuffix))
+ throw Error('W47_WEB_COOKIE_SUFFIX_INVALID');
+const WEB_COOKIE='yance_web_private_session'+(webCookieSuffix?'_'+webCookieSuffix:'');
 const TTL_MS=5*60*1000;
 const MAX_REQUEST_BYTES=2048;
 const digest=s=>createHash('sha256').update(s).digest('hex');
