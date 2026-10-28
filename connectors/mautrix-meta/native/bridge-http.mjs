@@ -13,6 +13,7 @@ import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {inspectRealBridge} from './bridge-runtime.mjs';
 import {createOfficialMessengerLogin} from './official-messenger-login.mjs';
+import {joinOfficialFacebookInvites} from './official-room-autojoin.mjs';
 import {getProtectedNativeMatrixSession} from './native-matrix-session.mjs';
 import {launchInstalledOfficialManager} from './native-manager-launch.mjs';
 import {readNativeAccountStatus,readNativeLoginFlows,readNativePeerHints,revokeNativeLogin,
@@ -245,4 +246,16 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
   const s=createBridgeStatusServer();
   s.listen(PORT,HOST,()=>process.stdout.write('W26 genuine bridge owner API http://'+HOST+':'+PORT+'\n'));
+  // Recover only provider-bot-verified Matrix room invitations. This is a
+  // local Matrix membership action, never an outbound Facebook message.
+  let checking=false;
+  const checkInvites=async()=>{
+    if(checking)return;
+    checking=true;
+    try {await joinOfficialFacebookInvites()}catch { /* no implicit login retries */ }
+    finally {checking=false}
+  };
+  const timer=setInterval(checkInvites,15000);
+  timer.unref();
+  void checkInvites();
 }
