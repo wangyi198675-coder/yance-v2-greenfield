@@ -133,6 +133,7 @@ fn cleanup_qa(p: CloudProvider) -> Result<(), VaultError> {
     let label = match p {
         CloudProvider::OpenRouter => "OPENROUTER",
         CloudProvider::OpenAi => "OPENAI_API",
+        CloudProvider::PancakePair => "PANCAKE_PAIR",
     };
     let mut h = Sha256::new();
     for x in ["YANCE_V2_NATIVE_CLOUD_KEYS_V1", &install, &principal, label] {
@@ -198,6 +199,25 @@ fn run() -> Result<(), VaultError> {
                     .ok_or(VaultError::Denied)?,
             )?;
             status(&v, p, &mut out)
+        }
+        "lease_for_pancake" => {
+            if p != CloudProvider::PancakePair || secret.is_some() {
+                return Err(VaultError::Denied);
+            }
+            let revision = req
+                .expected_revision
+                .filter(|n| *n > 0)
+                .ok_or(VaultError::Denied)?;
+            // W47's local CSRF and current-user permission gate owns the
+            // request. The token-bearing response is PRIVATE inherited stdio,
+            // never an HTTP response, browser log, argv or disk file.
+            v.with_native_key(p, revision, |key| {
+                let value = std::str::from_utf8(key).map_err(|_| VaultError::Corrupt)?;
+                out.write_all(b"{\"ok\":true,\"privateKey\":")
+                    .map_err(|_| VaultError::OsUnavailable)?;
+                serde_json::to_writer(&mut out, &value).map_err(|_| VaultError::OsUnavailable)?;
+                out.write_all(b"}\n").map_err(|_| VaultError::OsUnavailable)
+            })
         }
         "lease_for_agno" => {
             if secret.is_some() {

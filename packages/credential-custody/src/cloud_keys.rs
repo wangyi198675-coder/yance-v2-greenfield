@@ -21,6 +21,9 @@ use windows_sys::Win32::{
 use zeroize::{Zeroize, Zeroizing};
 
 const MAX_API_KEY_BYTES: usize = 512;
+// PANCAKE_PAIR is a compact account + page-token JSON record. The encrypted
+// WinCred blob remains capped by the original 2560-byte W55 credential limit.
+const MAX_PANCAKE_PAIR_BYTES: usize = 1200;
 const RECORD_SCHEMA: u8 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -29,12 +32,15 @@ pub enum CloudProvider {
     OpenRouter,
     #[serde(rename = "OPENAI_API")]
     OpenAi,
+    #[serde(rename = "PANCAKE_PAIR")]
+    PancakePair,
 }
 impl CloudProvider {
     fn label(self) -> &'static str {
         match self {
             Self::OpenRouter => "OPENROUTER",
             Self::OpenAi => "OPENAI_API",
+            Self::PancakePair => "PANCAKE_PAIR",
         }
     }
 }
@@ -221,6 +227,42 @@ impl NativeKeyCustody {
         write_cred(target, &ciphertext)
     }
     fn validate_key(provider: CloudProvider, key: &[u8]) -> Result<(), VaultError> {
+        if provider == CloudProvider::PancakePair {
+            // Exact structured payload; no arbitrary secret, cross-provider key,
+            // malformed page identifier or oversized WinCred record accepted.
+            if !(35..=MAX_PANCAKE_PAIR_BYTES).contains(&key.len()) {
+                return Err(VaultError::Denied);
+            }
+            let value: serde_json::Value =
+                serde_json::from_slice(key).map_err(|_| VaultError::Denied)?;
+            let object = value.as_object().ok_or(VaultError::Denied)?;
+            if object.len() != 2
+                || !object.contains_key("userAccessToken")
+                || !object.contains_key("pages")
+            {
+                return Err(VaultError::Denied);
+            }
+            let valid_token = |v: &serde_json::Value| {
+                v.as_str().is_some_and(|s| {
+                    (8..=480).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_graphic())
+                })
+            };
+            if !valid_token(&object["userAccessToken"]) {
+                return Err(VaultError::Denied);
+            }
+            let pages = object["pages"].as_object().ok_or(VaultError::Denied)?;
+            if pages.len() > 24
+                || pages.iter().any(|(id, v)| {
+                    id.is_empty()
+                        || id.len() > 40
+                        || !id.bytes().all(|b| b.is_ascii_digit())
+                        || !valid_token(v)
+                })
+            {
+                return Err(VaultError::Denied);
+            }
+            return Ok(());
+        }
         if key.len() < 16
             || key.len() > MAX_API_KEY_BYTES
             || !key.starts_with(b"sk-")
@@ -433,6 +475,8 @@ mod tests {
                 .clean_exact_synthetic_target(CloudProvider::OpenRouter);
             self.native
                 .clean_exact_synthetic_target(CloudProvider::OpenAi);
+            self.native
+                .clean_exact_synthetic_target(CloudProvider::PancakePair);
         }
     }
     const OR_A: &[u8] = b"sk-or-v1-W55-FAKE-NOT-REAL-ROUTER-AAA";
@@ -605,6 +649,56 @@ mod tests {
         assert!(!value.contains("sk-or-v1"));
         assert!(!value.contains("w54i_"));
         assert!(!value.contains("w54u_"));
+    }
+    #[test]
+    fn c09_fake_pancake_pair_native_custody_is_scoped_and_revisioned() {
+        let f = Fixture::new();
+        let account = br#"{"userAccessToken":"FAKE_PANCAKE_USER_ACCOUNT_123","pages":{}}"#;
+        let with_page = br#"{"userAccessToken":"FAKE_PANCAKE_USER_ACCOUNT_123","pages":{"123456":"FAKE_PANCAKE_PAGE_TOKEN_123"}}"#;
+        assert_eq!(
+            f.native
+                .enroll(CloudProvider::PancakePair, account)
+                .unwrap(),
+            1
+        );
+        assert!(
+            f.native
+                .status(CloudProvider::PancakePair)
+                .unwrap()
+                .configured
+        );
+        assert!(matches!(
+            f.native.status(CloudProvider::OpenAi),
+            Err(VaultError::Missing)
+        ));
+        f.native
+            .with_native_key(CloudProvider::PancakePair, 1, |bytes| {
+                assert_eq!(bytes, account);
+                Ok(())
+            })
+            .unwrap();
+        assert_eq!(
+            f.native
+                .rotate(CloudProvider::PancakePair, 1, with_page)
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            f.native
+                .with_native_key(CloudProvider::PancakePair, 1, |_| Ok(())),
+            Err(VaultError::Stale)
+        );
+        assert_eq!(
+            f.native.rotate(CloudProvider::PancakePair, 2, b"not JSON"),
+            Err(VaultError::Denied)
+        );
+        assert_eq!(
+            f.native
+                .rotate(CloudProvider::PancakePair, 2, &vec![b'x'; 1201]),
+            Err(VaultError::Denied)
+        );
+        assert_eq!(f.native.revoke(CloudProvider::PancakePair, 2).unwrap(), 3);
+        assert!(f.native.status(CloudProvider::PancakePair).unwrap().revoked);
     }
     #[test]
     fn c08_provider_serialization_matches_proposed_private_dto_ids() {
