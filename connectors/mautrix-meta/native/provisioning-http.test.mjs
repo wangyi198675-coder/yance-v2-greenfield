@@ -25,7 +25,7 @@ async function withServer(fn,provider){
   const s=server(provider);await new Promise(r=>s.listen(PORT,'127.0.0.1',r));
   try{await fn();}finally{await new Promise(r=>s.close(r));}
 }
-test('user-click route is an actual upstream-manager deep link, not external docs-only',async()=>{
+test('user-click route is a nontechnical native Messenger login page',async()=>{
   await withServer(async()=>{
     const r=await fetch(BASE+'/connect');
     assert.equal(r.status,200);
@@ -33,13 +33,13 @@ test('user-click route is an actual upstream-manager deep link, not external doc
     // no-referrer policy was making Chromium/Opera send Origin:null.
     assert.equal(r.headers.get('referrer-policy'),'same-origin');
     const html=await r.text();
-    assert.match(html,/href="mautrix-manager:\/\/open\/"/);
-    assert.match(html,/127\.0\.0\.1:29319/);
+    assert.match(html,/native-login-ui\.mjs/);
+    assert.doesNotMatch(html,/Homeserver|127\.0\.0\.1:29319|Matrix用户名/);
     assert.doesNotMatch(html,/fake-qr|base64-qr/i);
     const setup=await (await fetch(BASE+'/setup')).json();
-    assert.equal(setup.action,'OPEN_NATIVE_MANAGER');
-    assert.equal(setup.nextUserClick,'mautrix-manager://open/');
-    assert.equal(setup.authorizedSocialAccount,'MATRIX_AUTH_REQUIRED');
+    assert.equal(setup.action,'INTERNAL_SETUP_PENDING');
+    assert.equal(setup.nativeLoginStepReady,false);
+    assert.equal(setup.realAccountState,'WAITING_USER_AUTH');
     assert.equal(setup.canSend,false);
   });
 });
@@ -84,7 +84,7 @@ test('cross origin, wrong Host and malformed query denied; deliberate stub revoc
   });
 });
 
-test('ChatGPT utm_source on user-clicked public auth entry redirects to canonical, then renders real manager launch',async()=>{
+test('UTM canonical redirect renders native login without technical Matrix parameters',async()=>{
   await withServer(async()=>{
     let r=await fetch(BASE+'/connect?utm_source=chatgpt.com',{redirect:'manual'});
     assert.equal(r.status,302);
@@ -93,12 +93,12 @@ test('ChatGPT utm_source on user-clicked public auth entry redirects to canonica
     r=await fetch(BASE+'/connect?utm_source=chatgpt.com');
     assert.equal(r.status,200);
     const html=await r.text();
-    assert.match(html,/href="mautrix-manager:\/\/open\/"/);
+    assert.match(html,/native-login-ui\.mjs/);
     assert.equal(new URL(r.url).search,'');
     r=await fetch(BASE+'/setup?utm_source=chatgpt.com');
     assert.equal(r.status,200);
     const setup=await r.json();
-    assert.equal(setup.action,'OPEN_NATIVE_MANAGER');
+    assert.equal(setup.action,'INTERNAL_SETUP_PENDING');
   });
 });
 test('only benign bounded UTM on public entry can be stripped; authenticated routes and unknown query stay rejected',async()=>{
@@ -119,7 +119,7 @@ test('only benign bounded UTM on public entry can be stripped; authenticated rou
   });
 });
 
-test('one-time local user form POST launches fixed upstream GUI and returns visible result',async()=>{
+test('legacy optional manager launch remains protected by single-use same-origin ticket',async()=>{
   let launches=0;
   PORT++;BASE='http://127.0.0.1:'+PORT+'/api/v2/providers/fb-personal';
   const s=createBridgeStatusServer({port:PORT,installed:()=>true,
@@ -130,7 +130,7 @@ test('one-time local user form POST launches fixed upstream GUI and returns visi
     const page=await (await fetch(BASE+'/connect')).text();
     const match=page.match(/name="ticket" value="([a-f0-9]{48})"/);
     assert.ok(match,'page must provide a one-time unguessable launch ticket');
-    assert.match(page,/method="post" action="\/api\/v2\/providers\/fb-personal\/launch-manager"/);
+    assert.match(page,/native-login-ui\.mjs/); // Manager stays a legacy diagnostic endpoint only.
     assert.equal(launches,0,'visiting page alone must never launch the GUI');
     const submit=()=>fetch(BASE+'/launch-manager',{method:'POST',
       headers:{Origin:'http://127.0.0.1:'+PORT,
