@@ -5,6 +5,8 @@
 // Page ownership is verified by real Pancake official HTTPS endpoints BEFORE W24 bind.
 // Chatwoot Cloud remains standby only; no W25 send-owner switch here.
 
+import {normalizePancakeOwnedPages} from './owned-pages.mjs';
+
 export const PANCAKE_ORIGIN = 'https://pages.fm';
 export const CHATWOOT_ORIGIN = 'https://app.chatwoot.com';
 const MAX_REPLY = 2_000_000;
@@ -123,11 +125,9 @@ export function createFacebookPageNativeAuthorization({
     const lease=await credential(principal,'USER');
     const result=await getJson(fetchImpl,PANCAKE_ORIGIN,'/api/v1/pages',
       lease.secret,'access_token');
-    if (!Array.isArray(result.pages)) throw fail('INVALID_PROVIDER_PAGES',503);
-    // Do not promote vendor page id to Meta Page ownership without W24 authoritative review.
-    return result.pages.filter(x=>x&&typeof x.id==='string').map(x=>({
-      providerPageId:x.id,name:typeof x.name==='string'?x.name:null,
-      platform:typeof x.platform==='string'?x.platform:null,
+    // Reuse the strict official inventory parsing and exclude nopermission.
+    return normalizePancakeOwnedPages(result).map(p=>({
+      providerPageId:p.pageId,name:p.name,platform:'facebook',
       source:'PANCAKE_OFFICIAL_USER_API'
     }));
   }
