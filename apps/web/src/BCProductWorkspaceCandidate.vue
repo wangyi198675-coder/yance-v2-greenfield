@@ -2,8 +2,11 @@
 import {ref,watch,computed,nextTick,onMounted} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/dialog';
+import {Popover,PopoverContent,PopoverTrigger} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/popover';
+import BorderBeam from './oss/inspira/border-beam/BorderBeam.vue';
 import BCVisualAurora from './BCVisualAurora.vue';
 import './BCVisualThemeSystem.css';
+import './BCImmersiveOSS.css';
 import BCBrandIcon from './BCBrandIcon.vue';
 import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
 import BCLiveChatWorkspace from './BCLiveChatWorkspace.vue';
@@ -68,7 +71,15 @@ const settingsModelLaunchRevision=ref(0);
 function openChatGPTSettings(){settingsModelLaunchRevision.value++;choose('SETTINGS')}
 const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
-const menuOpen=ref(false);
+const menuOpen=ref(false),themeMenuOpen=ref(false);
+const THEME_SWATCHES=Object.freeze(['#caff63','#ffa071','#62d8f2','#ffc065','#ceb9ff']);
+const THEME_TITLES=Object.freeze(['黑曜青柠','星河落日','电光海洋','琥珀暖焰','欧泊棱镜']);
+function selectHeaderTheme(index){
+ if(!Number.isInteger(index)||index<0||index>=THEME_NAMES.length)return;
+ const at=THEME_NAMES.indexOf(props.theme);
+ if(at>=0)for(let i=0;i<(index-at+THEME_NAMES.length)%THEME_NAMES.length;i++)emit('cycle-theme');
+ themeMenuOpen.value=false;void rememberThemeAfterOriginalAppUpdate();
+}
 const channelDetailsOpen=ref(false);
 const addAccountOpen=ref(false);
 const connectTrigger=ref({});
@@ -219,21 +230,35 @@ defineExpose({refresh});
  <div v-if="enabled" class="w46-product-candidate" :data-mode="appearance" :data-active-workspace="activeWorkspace" data-test="w46-product-candidate">
   <BCVisualAurora/>
   <header class="w46-compact-global" data-test="w46-compact-nav">
+   <BorderBeam class="w09-inspira-shell-beam" :duration="18" :size="180" :border-width="1.5"/>
    <div class="w46-compact-brand"><span class="w46-brand-glyph">言</span><strong>言策</strong></div>
    <nav class="w46-main-links" aria-label="R4紧凑主导航">
     <Button size="sm" :variant="activeWorkspace==='CHAT'?'secondary':'ghost'" data-test="workspace-CHAT" @click="choose('CHAT')">聊天</Button>
     <Button size="sm" :variant="activeWorkspace==='BRAIN'?'secondary':'ghost'" data-test="workspace-BRAIN" @click="choose('BRAIN')">闺蜜大脑</Button>
     <Button size="sm" :variant="activeWorkspace==='AUTOPILOT'?'secondary':'ghost'" data-test="workspace-AUTOPILOT" @click="choose('AUTOPILOT')">托管</Button>
-    <Button size="sm" variant="ghost" data-test="workspace-all" :aria-expanded="menuOpen" @click="menuOpen=!menuOpen">全部⌄</Button>
+    <Popover v-model:open="menuOpen">
+     <PopoverTrigger as-child><Button size="sm" variant="ghost" data-test="workspace-all" :aria-expanded="menuOpen">全部⌄</Button></PopoverTrigger>
+     <PopoverContent class="w09-oss-palette w09-oss-workspace-menu" :class="['theme-'+THEME_NAMES.indexOf(theme),appearance==='light'?'is-light':'is-dark']" align="center" side="bottom" :side-offset="10" data-test="workspace-mobile-list">
+      <div class="w09-oss-palette-head"><span class="w09-oss-palette-kicker">EXPLORE YANCE</span><strong>全部工作区</strong><small>快捷切换，保持当前会话</small></div>
+      <div class="w09-oss-workspace-grid">
+       <Button v-for="(item,i) in WORKSPACES.filter(i=>!['CHAT','BRAIN','AUTOPILOT'].includes(i.id))" :key="item.id" size="sm" variant="ghost" :data-test="'workspace-'+item.id" @click="choose(item.id);menuOpen=false"><span class="w09-workspace-index">{{String(i+1).padStart(2,'0')}}</span><span>{{item.label}}</span><span aria-hidden="true">↗</span></Button>
+      </div>
+     </PopoverContent>
+    </Popover>
    </nav>
    <div class="w46-global-tools">
     <Button size="sm" variant="ghost" data-test="w46-command" aria-label="搜索联系人 Ctrl+K" @click="openCommand">⌕</Button>
-    <Button size="sm" variant="ghost" data-test="w46-theme" :title="'主题：'+theme" @click="cycleOriginalTheme">◐</Button>
+    <Popover v-model:open="themeMenuOpen">
+     <PopoverTrigger as-child><Button size="sm" variant="ghost" data-test="w46-theme" :title="'主题：'+theme" :aria-expanded="themeMenuOpen">◐</Button></PopoverTrigger>
+     <PopoverContent class="w09-oss-palette w09-oss-theme-menu" :class="['theme-'+THEME_NAMES.indexOf(theme),appearance==='light'?'is-light':'is-dark']" align="end" side="bottom" :side-offset="10" data-test="w09-open-source-theme-popover">
+      <div class="w09-oss-palette-head"><span class="w09-oss-palette-kicker">VISUAL ATELIER</span><strong>选择你的视觉宇宙</strong><small>五种风格，点击立即切换</small></div>
+      <div class="w09-oss-theme-swatches">
+       <button v-for="(name,i) in THEME_NAMES" :key="name" type="button" class="w09-theme-choice" :class="{selected:theme===name}" :aria-pressed="theme===name" :data-test="'w09-quick-theme-'+i" @click="selectHeaderTheme(i)"><span class="w09-theme-choice-dot" :style="{background:THEME_SWATCHES[i]}" aria-hidden="true"></span><span><strong>{{THEME_TITLES[i]}}</strong><small>{{name}}</small></span><span v-if="theme===name" aria-hidden="true">✓</span></button>
+      </div>
+     </PopoverContent>
+    </Popover>
     <Button size="sm" variant="ghost" data-test="w46-appearance" :title="appearance==='dark'?'切换浅色':'切换深色'" @click="toggleOriginalAppearance">{{appearance==='dark'?'☀':'☾'}}</Button>
     <Button size="sm" variant="ghost" data-test="w46-info" aria-label="查看服务状态" @click="compactInfo=!compactInfo">ⓘ</Button>
-   </div>
-   <div v-if="menuOpen" class="w46-workspace-menu" data-test="workspace-mobile-list">
-    <Button v-for="item in WORKSPACES.filter(i=>!['CHAT','BRAIN','AUTOPILOT'].includes(i.id))" :key="item.id" size="sm" variant="ghost" :data-test="'workspace-'+item.id" @click="choose(item.id)">{{item.label}}</Button>
    </div>
   </header>
   <div v-if="compactInfo||(error&&!['CHAT','AUTOPILOT','PEOPLE'].includes(activeWorkspace))" class="w46-compact-status" data-test="w46-trusted-status" role="status">
@@ -511,6 +536,7 @@ defineExpose({refresh});
    <BCMediaWorkspace v-else-if="activeWorkspace==='MEDIA'" :fetch-impl="fetchImpl"
     :active="activeWorkspace==='MEDIA'" :media-authority-port="mediaAuthorityPort"/>
    <div v-else-if="activeWorkspace==='BRAIN'" class="w46-brain-one" data-test="w46-brain-one">
+    <BorderBeam class="w09-inspira-brain-beam" :duration="20" :size="210"/>
     <BCPrivateBrainWorkspace :fetch-impl="fetchImpl"/>
    </div>
    <div v-else-if="activeWorkspace!=='CHAT'" class="w46-blank">

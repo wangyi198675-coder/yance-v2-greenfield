@@ -1,5 +1,7 @@
 <script setup>
 import {computed} from 'vue';
+import BorderBeam from './oss/inspira/border-beam/BorderBeam.vue';
+import CardSpotlight from './oss/inspira/card-spotlight/CardSpotlight.vue';
 const props=defineProps({
  theme:{type:String,default:'Obsidian Lime'},
  appearance:{type:String,default:'dark'}
@@ -37,6 +39,7 @@ function chooseMode(mode){
 <template>
  <article class="theme-page" data-test="settings-panel-theme" aria-label="外观与主题">
   <section class="theme-hero">
+   <BorderBeam class="w09-inspira-hero-beam" :duration="12" :size="260"/>
    <div class="hero-top">
     <div>
      <span class="overline">PERSONALIZE YOUR SPACE</span>
@@ -75,7 +78,8 @@ function chooseMode(mode){
     <span class="theme-count">5 款主题</span>
    </div>
    <div class="theme-gallery" data-test="settings-theme-gallery">
-    <button v-for="item in palettes" :key="item.name" type="button"
+    <CardSpotlight v-for="item in palettes" :key="item.name" class="w09-inspira-theme-card" :gradient-color="item.accent" :gradient-size="270" :gradient-opacity="0.24">
+    <button type="button"
      class="theme-card" :class="{selected:theme===item.name}" :aria-pressed="theme===item.name"
      :data-theme-name="item.name" :data-test="'settings-theme-'+item.name.replaceAll(' ','-').toLowerCase()"
      @click="chooseTheme(item.name)">
@@ -91,7 +95,9 @@ function chooseMode(mode){
       <span class="card-name"><strong>{{item.zh}}</strong><small>{{item.name}}</small></span>
       <span class="selected-label" :class="{active:theme===item.name}">{{theme===item.name?'✓ 已选':'选择'}}</span>
      </span>
+     <BorderBeam v-if="theme===item.name" class="w09-inspira-card-beam" :duration="10" :size="160"/>
     </button>
+    </CardSpotlight>
    </div>
   </section>
   <footer class="theme-foot">

@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync,existsSync} from 'node:fs';
+const read=p=>readFileSync(new URL('../src/'+p,import.meta.url),'utf8');
+const app=read('BCProductWorkspaceCandidate.vue');
+const chooser=read('BCThemeChooser.vue');
+const css=read('BCImmersiveOSS.css');
+test('real MIT Inspira UI BorderBeam and CardSpotlight code is imported into Vue screens',()=>{
+ const beam=read('oss/inspira/border-beam/BorderBeam.vue');
+ const spot=read('oss/inspira/card-spotlight/CardSpotlight.vue');
+ assert.match(beam,/offset-path:rect|offset-path/);
+ assert.match(beam,/border-beam-anim/);
+ assert.match(spot,/@mousemove="handleMouseMove"/);
+ assert.match(spot,/backgroundStyle/);
+ assert.match(chooser,/import BorderBeam from/);
+ assert.match(chooser,/import CardSpotlight from/);
+ assert.match(chooser,/<CardSpotlight v-for="item in palettes"/);
+ assert.match(chooser,/<BorderBeam v-if="theme===item.name"/);
+ assert.match(app,/<BorderBeam class="w09-inspira-shell-beam"/);
+ assert.match(app,/<BorderBeam class="w09-inspira-brain-beam"/);
+ assert.ok(existsSync(new URL('../evidence/INSPIRA_UI_IMMERSIVE_COMPONENTS_MIT.md',import.meta.url)));
+});
+test('hidden navigation and theme palette are real shadcn-vue / Reka Popovers',()=>{
+ assert.match(app,/import \{Popover,PopoverContent,PopoverTrigger\} from .*\/oss\/popover/);
+ assert.match(app,/<Popover v-model:open="menuOpen">/);
+ assert.match(app,/<Popover v-model:open="themeMenuOpen">/);
+ assert.match(app,/data-test="workspace-mobile-list"/);
+ assert.match(app,/data-test="w09-open-source-theme-popover"/);
+ assert.match(app,/data-test="'w09-quick-theme-'\+i"/);
+ assert.doesNotMatch(app,/<div v-if="menuOpen" class="w46-workspace-menu"/);
+ assert.match(app,/const THEME_NAMES=Object.freeze\(\[/);
+ assert.match(app,/const THEME_TITLES=Object.freeze\(\[/);
+});
+test('readability, reduced motion, contrast and boundaries are retained',()=>{
+ assert.match(read('BCVisualThemeSystem.css'),/mask-image:none!important;-webkit-mask-image:none!important/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+ assert.match(css,/prefers-contrast:more/);
+ assert.match(app,/BCPrivateBrainWorkspace/);
+ assert.match(app,/BCLiveChatWorkspace/);
+ assert.match(app,/addAccountOpen/);
+ assert.match(app,/canSend|explainCapability/);
+ assert.doesNotMatch(css,/@import url/);
+});
