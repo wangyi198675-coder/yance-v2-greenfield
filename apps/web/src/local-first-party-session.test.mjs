@@ -82,3 +82,13 @@ test('WhatsApp QR modal uses document.body rather than card stacking context',as
  assert.ok(start>=0&&qr>start&&end>qr);
  assert.ok(vue.includes('data-test="native-provider-qr-dialog"'));
 });
+
+test('teleported QR reuses active theme tokens rather than transparent root styles',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const vue=readFileSync(new URL('./BCChannelAccountSetup.vue',import.meta.url),'utf8');
+ assert.match(vue,/getComputedStyle\(card\)/);
+ assert.match(vue,/watch\(qrOpen,open=>\{if\(open\)syncQrTheme\(\)\}/);
+ assert.match(vue,/:style="qrThemeVars"/);
+ assert.match(vue,/var\(--surface-raised,\s*#202b31\)/);
+ assert.match(vue,/backdrop-filter:none/);
+});

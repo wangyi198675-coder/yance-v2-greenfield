@@ -11,6 +11,21 @@ const props=defineProps({channel:{type:Object,required:true},fetchImpl:{type:Fun
 const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
 const verifiedAccounts=ref(null);
 const userRequested=ref(false),qrOpen=ref(false);
+const qrThemeVars=ref({});
+// The dialog is Teleported to body, outside the theme-scoped account page.
+// Inherit the actual active card's CSS tokens instead of a transparent panel.
+function syncQrTheme(){
+ if(typeof document==='undefined'||typeof getComputedStyle!=='function')return;
+ const card=document.querySelector('.w46-channel[data-provider="WHATSAPP_PERSONAL"]');
+ if(!card)return;
+ const style=getComputedStyle(card),vars={};
+ for(const name of ['--surface-raised','--surface-soft','--ink','--muted','--border','--accent','--accent-ink']){
+  const value=style.getPropertyValue(name).trim();
+  if(value)vars[name]=value;
+ }
+ qrThemeVars.value=vars;
+}
+watch(qrOpen,open=>{if(open)syncQrTheme()},{flush:'sync'});
 const isWhatsApp=computed(()=>props.channel.id==='WHATSAPP_PERSONAL');
 // Before a user has clicked Connect, missing browser-local authorization is
 // a setup condition, not evidence that the Baileys SDK is unavailable.
@@ -196,7 +211,7 @@ defineExpose({setup,refresh});
     <Button v-if="state==='ONLINE_VERIFIED'" variant="outline" size="sm" :disabled="busy" @click="waDisconnect('revoke')">移除账号</Button>
    </div>
    <Teleport to="body">
-   <div v-if="qrOpen&&isWhatsApp" class="w46-qr-backdrop" data-test="native-provider-qr-dialog" @click.self="qrOpen=false">
+   <div v-if="qrOpen&&isWhatsApp" class="w46-qr-backdrop" :style="qrThemeVars" data-test="native-provider-qr-dialog" @click.self="qrOpen=false">
     <section class="w46-qr-dialog" role="dialog" aria-modal="true" aria-label="连接 WhatsApp">
      <header><div><strong>连接 WhatsApp</strong><p>手机 WhatsApp → 已关联设备 → 关联设备</p></div>
       <button type="button" aria-label="关闭扫码窗口" data-test="native-provider-close-qr" @click="qrOpen=false">✕</button></header>
@@ -281,15 +296,15 @@ defineExpose({setup,refresh});
 /* Teleport moves the original QR dialog into document.body. Only its existing
    QR styles are global; the account card styles above remain scoped. */
 /* Real native WhatsApp QR is shown only after the original W47 bytes API attests it. */
-.w46-qr-backdrop{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
-.w46-qr-dialog{display:flex;flex-direction:column;box-sizing:border-box;gap:18px;width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--surface-raised);color:var(--ink);box-shadow:0 24px 65px #0009}
+.w46-qr-backdrop{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.68);backdrop-filter:none}
+.w46-qr-dialog{display:flex;flex-direction:column;box-sizing:border-box;gap:18px;width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:22px;border:1px solid var(--border, #38464c);border-radius:16px;background:var(--surface-raised, #202b31);color:var(--ink, #edf5ef);box-shadow:0 24px 65px #0009}
 .w46-qr-dialog header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
 .w46-qr-dialog header strong{font-size:18px}
-.w46-qr-dialog header p{font-size:13px;line-height:1.6;margin:6px 0 0;color:var(--muted)}
-.w46-qr-dialog header button{min-width:35px;min-height:35px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft);color:var(--ink);cursor:pointer}
+.w46-qr-dialog header p{font-size:13px;line-height:1.6;margin:6px 0 0;color:var(--muted, #a9bdbe)}
+.w46-qr-dialog header button{min-width:35px;min-height:35px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft, #29383e);color:var(--ink, #edf5ef);cursor:pointer}
 .w46-qr-live,.w46-qr-wait{display:grid;justify-items:center;gap:13px;text-align:center}
 .w46-qr-live img{display:block;width:min(280px,100%);height:auto;aspect-ratio:1;background:white;padding:12px;border-radius:12px}
-.w46-qr-live p,.w46-qr-wait p{font-size:13px;line-height:1.6;color:var(--muted);margin:0}
+.w46-qr-live p,.w46-qr-wait p{font-size:13px;line-height:1.6;color:var(--muted, #a9bdbe);margin:0}
 .w46-qr-wait{padding:28px 12px}
 .w46-qr-wait button{padding:10px 17px;border-radius:9px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
 @media(max-width:600px){.w46-qr-dialog{padding:16px}}
