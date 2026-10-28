@@ -9,7 +9,7 @@ const props=defineProps({fetchImpl:{type:Function,default:null}});
 const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
 const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false),historyBox=ref(null);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=ref(false),text=ref('');
-const chosen=ref(''),requestInFlight=ref(false);
+const chosen=ref(''),requestInFlight=ref(false),pendingPrompt=ref('');
 const modelCostApproved=ref(false),brainExpertOpen=ref(false),brainRoot=ref(null);
 const nativeTools=ref([]),nativeRuns=ref([]),nativeReadState=ref('idle'),nativeTrace=ref(null),traceReadState=ref('idle');
 const experts=ref([]),expertsState=ref('idle'),expertError=ref(''),expertBusy=ref(false),expertStableId=ref(''),chosenExpertId=ref(''),expertConsent=ref(false),expertVerified=ref(null);
@@ -311,6 +311,13 @@ async function selectModel(){
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='model-selection-unavailable'}}
  finally{if(safeCurrent(id))busy.value=false}
 }
+function brainComposerKeydown(e){
+ // Native chat behavior: Enter sends, Shift+Enter inserts a newline.
+ // IME confirmation must NEVER submit the Chinese/Japanese composition.
+ if(e.key!=='Enter'||e.shiftKey||e.altKey||e.isComposing||e.keyCode===229)return;
+ e.preventDefault();
+ if(!requestInFlight.value)void send();
+}
 async function send(){
  const prompt=text.value.trim();if(!prompt||prompt.length>4000||requestInFlight.value||busy.value||
     loadState.value!=='ready'||!catalog.value?.configured)return;
@@ -318,18 +325,24 @@ async function send(){
    m.provider===catalog.value.selectedProvider&&m.available&&m.configured);
  if(!model)return; // Cloud fee consent was verified once at model selection by W47.
  const id=++revision;requestInFlight.value=true;notice.value='';
+ // The user's draft is removed at submission, not after a slow model response.
+ // This is only a transient UI preview: W43 remains the sole history authority.
+ pendingPrompt.value=prompt;
+ text.value='';
  await nextTick();
  if(historyBox.value)historyBox.value.scrollTop=historyBox.value.scrollHeight;
+ let receiptVerified=false;
  try{
   ensureCurrent();
   const requestId='req_'+Array.from(crypto.getRandomValues(new Uint8Array(18)),b=>b.toString(16).padStart(2,'0')).join('');
-  // Keep user text local until successful W43 completed receipt; never fake assistant.
+  // Preview user input while the original W43 Run owns actual persistence.
   const body={threadId,text:prompt,requestId};
   const reply=await api(PRIVATE_ROUTES.turn,endpointBody(PRIVATE_ROUTES.turn,body,session.value.csrf));
   verifiedTurn(reply,{threadId,requestId,provider:model.provider,modelId:model.modelId});
+  receiptVerified=true;
   if(!safeCurrent(id))return;
-  text.value=''; // history is sole persisted authority
   await loadHistory(id); // if history unavailable, don't fabricate turn in timeline
+  if(safeCurrent(id)&&loadState.value==='ready')pendingPrompt.value='';
   // W43 verified COMPLETED receipt + re-read original durable Agno History.
   // Only if the app is backgrounded and OS permission is ALREADY granted.
   // No new Agent framework, no synthetic message, and replayed Runs stay silent.
@@ -337,12 +350,15 @@ async function send(){
      messages.value.some(m=>m.role==='assistant'&&m.content===reply.assistantText)){
    void notifyVerifiedAgnoInBackground({receipt:reply,historyVerified:true});
   }
- }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='history-unavailable'}}
+ }catch(e){if(safeCurrent(id)){
+   if(!receiptVerified){text.value=prompt;pendingPrompt.value=''}
+   notice.value=reason(e);loadState.value='history-unavailable'
+ }}
  finally{if(safeCurrent(id))requestInFlight.value=false}
 }
 onMounted(()=>{document.addEventListener('keydown',brainMenuKeyboard);document.addEventListener('pointerdown',brainOutsideClick);void refresh()});
 onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);document.removeEventListener('pointerdown',brainOutsideClick);
- mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value=''});
+ mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value='';pendingPrompt.value=''});
 </script>
 <template>
  <section ref="brainRoot" class="bc-private-brain" :class="{'bc-brain-tools-visible':toolsOpen}" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
@@ -384,6 +400,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
   <section class="bc-private-settings" data-test="brain-model-settings" id="w46-brain-model-menu" role="dialog" aria-modal="true" aria-labelledby="brain-model-dialog-title">
    <div class="bc-brain-model-header"><div><h3 id="brain-model-dialog-title">选择 AI 模型</h3><p>选择已配置的模型，开始与闺蜜大脑聊天</p></div><button type="button" class="bc-brain-model-close" aria-label="关闭模型设置" @click="closeBrainMenu(true)">✕</button></div>
    <BCNativeCloudKeySettings :web-csrf="session?.csrf" @changed="refresh"/>
+   <p v-if="catalog?.selectedProvider==='CHATGPT_PLAN_SIWC'" class="bc-brain-model-section-label" data-test="brain-reasoning-effective">推理档位：模型服务端默认。当前官方 ChatGPT SDK 不支持传入低／中／高，未设置任何固定档位。</p>
    <p class="bc-brain-model-section-label">可用模型</p>
    <div v-for="provider in providers" :key="provider.id" class="bc-provider">
     <strong>{{provider.name}}</strong><small>{{provider.desc}}</small>
@@ -412,6 +429,10 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    <article v-for="(m,i) in messages" :key="i" :data-role="m.role">
     <strong>{{m.role==='user'?'你':m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
     <p>{{m.content}}</p>
+   </article>
+   <article v-if="pendingPrompt" data-role="user" data-test="brain-pending-user">
+    <strong>你 <small>待原生 Agno 历史确认</small></strong>
+    <p>{{pendingPrompt}}</p>
    </article>
    <div v-if="requestInFlight" class="bc-brain-pending" role="status" aria-live="polite" data-test="brain-generating">
     <span class="bc-brain-pending-dot" aria-hidden="true"></span>
@@ -448,7 +469,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
    <small v-if="catalog?.configured&&['OPENROUTER_USER_API','OPENAI_USER_API'].includes(catalog.selectedProvider)" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
    <textarea id="bc-private-question" v-model="text" rows="2" maxlength="4000"
-     data-test="brain-question" :placeholder="loadState==='ready'?'给闺蜜大脑发消息…':loadState==='history-loading'?'正在同步历史，可先输入消息…':'选择 AI 模型后开始聊天'" :disabled="!['ready','history-loading'].includes(loadState)||busy||requestInFlight"></textarea>
+     data-test="brain-question" :placeholder="loadState==='ready'?'给闺蜜大脑发消息…（Enter 发送，Shift+Enter 换行）':loadState==='history-loading'?'正在同步历史，可先输入消息…':'选择 AI 模型后开始聊天'" :disabled="!['ready','history-loading'].includes(loadState)||busy||requestInFlight" @keydown="brainComposerKeydown"></textarea>
    <div class="bc-brain-compose-toolbar">
     <div class="bc-brain-compose-tools">
      <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert" aria-haspopup="menu" aria-controls="w46-brain-expert-menu">＋ 专家</Button>
