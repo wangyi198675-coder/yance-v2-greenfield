@@ -35,9 +35,12 @@ async function getJson(path){
 async function refresh(){
  const t=++seq;busy.value=true;data.value=null;error.value='';state.value='checking';csrf.value=null;session.value=null;
  try{
-  if(category.value==='general'||category.value==='diagnostics'){
+  if(category.value==='diagnostics'){
    const snap=await readWorkspaceSnapshot({fetchImpl:request});
    if(alive&&t===seq)data.value=snap;
+  }else if(category.value==='general'){
+   // General is navigation, not an untrusted diagnostics/status page.
+   data.value={theme:props.theme,appearance:props.appearance};
   }else if(category.value==='model'||category.value==='accounts'||category.value==='privacy'){
    const s=await getJson('/api/v2/local-session/status');
    if(alive&&t===seq){
@@ -101,17 +104,48 @@ function requestNotificationPermission(){
      :data-test="'settings-'+x.id" @click="switchCategory(x.id)">{{x.label}}</button>
   </nav>
   <section class="bc-settings-detail" data-test="w46-settings-content" :data-category="category">
-   <header><div><small>SETTINGS / {{category.toUpperCase()}}</small><h2>{{categoryName}}</h2></div>
-    <button type="button" data-test="settings-refresh" :disabled="busy" @click="refresh">刷新真实状态</button>
+   <header class="bc-settings-heading"><div><small>设置中心</small><h2>{{categoryName}}</h2></div>
+    <button v-if="category!=='general'&&category!=='theme'" type="button" data-test="settings-refresh" :disabled="busy" @click="refresh">刷新</button>
    </header>
    <p v-if="error" data-test="settings-error" role="alert">{{error}}。当前没有启用未经核实的写操作。</p>
-   <p v-if="busy" role="status">正在读取当前服务端信息…</p>
+   <p v-if="busy&&category!=='general'" role="status">正在读取当前设置…</p>
    <template v-if="category==='general'">
-    <article data-test="settings-panel-general"><h3>运行概览</h3>
-     <p>Web/API源码：{{data?.runtimeSha||'尚未回读'}}</p>
-     <p>可信会话：{{data?.trustedSession?'已验证':'未确认'}}</p>
-     <p>社交联系人：{{data?.contactsAccess||'未授权'}}，账号{{data?.connectedAccountCount??'未确认'}}</p>
-     <p>真人发送由W25独立资格决定：{{data?.canSend===false?'当前禁用':'未取得发送授权'}}</p>
+    <article class="bc-settings-home" data-test="settings-panel-general">
+     <div class="bc-settings-welcome">
+      <div><h3>让言策按你的习惯工作</h3>
+       <p>连接账号、选择 AI、调整外观和消息提醒。选择一项即可进入对应设置。</p></div>
+     </div>
+     <div class="bc-settings-shortcuts" aria-label="常用设置">
+      <button type="button" class="bc-settings-shortcut" data-test="settings-general-open-accounts" @click="switchCategory('accounts')">
+       <span class="bc-settings-shortcut-icon" aria-hidden="true">⌁</span>
+       <span class="bc-settings-shortcut-copy"><strong>账号与连接</strong><small>添加和管理聊天平台账号</small></span><span aria-hidden="true" class="bc-settings-shortcut-chevron">›</span>
+      </button>
+      <button type="button" class="bc-settings-shortcut" data-test="settings-general-open-model" @click="switchCategory('model')">
+       <span class="bc-settings-shortcut-icon" aria-hidden="true">✧</span>
+       <span class="bc-settings-shortcut-copy"><strong>AI 模型</strong><small>为不同功能选择模型与来源</small></span><span aria-hidden="true" class="bc-settings-shortcut-chevron">›</span>
+      </button>
+      <button type="button" class="bc-settings-shortcut" data-test="settings-general-open-notify" @click="switchCategory('notify')">
+       <span class="bc-settings-shortcut-icon" aria-hidden="true">◉</span>
+       <span class="bc-settings-shortcut-copy"><strong>消息通知</strong><small>查看权限、声音和提醒选项</small></span><span aria-hidden="true" class="bc-settings-shortcut-chevron">›</span>
+      </button>
+      <button type="button" class="bc-settings-shortcut" data-test="settings-general-open-theme" @click="switchCategory('theme')">
+       <span class="bc-settings-shortcut-icon" aria-hidden="true">◐</span>
+       <span class="bc-settings-shortcut-copy"><strong>外观与主题</strong><small>当前主题：{{theme}}</small></span><span aria-hidden="true" class="bc-settings-shortcut-chevron">›</span>
+      </button>
+      <button type="button" class="bc-settings-shortcut" data-test="settings-general-open-translate" @click="switchCategory('translate')">
+       <span class="bc-settings-shortcut-icon" aria-hidden="true">文</span>
+       <span class="bc-settings-shortcut-copy"><strong>翻译</strong><small>查看语言来源和翻译偏好</small></span><span aria-hidden="true" class="bc-settings-shortcut-chevron">›</span>
+      </button>
+      <button type="button" class="bc-settings-shortcut" data-test="settings-general-open-privacy" @click="switchCategory('privacy')">
+       <span class="bc-settings-shortcut-icon" aria-hidden="true">◇</span>
+       <span class="bc-settings-shortcut-copy"><strong>隐私与安全</strong><small>管理本机会话和授权状态</small></span><span aria-hidden="true" class="bc-settings-shortcut-chevron">›</span>
+      </button>
+     </div>
+     <div class="bc-settings-home-footer">
+      <div><strong>需要检查连接或运行情况？</strong>
+       <p>详细版本、服务状态和技术错误统一放在诊断页面。</p></div>
+      <button type="button" data-test="settings-general-open-diagnostics" @click="switchCategory('diagnostics')">打开诊断</button>
+     </div>
     </article>
    </template>
    <template v-else-if="category==='accounts'">
@@ -193,4 +227,32 @@ function requestNotificationPermission(){
  .bc-settings-nav{display:none}.bc-settings-mobile{display:grid;gap:6px;font-size:12px}
  .bc-settings-mobile select{width:100%;min-height:43px;border:1px solid var(--border);border-radius:9px;padding:8px;background:var(--bg2);color:var(--ink)}
  .bc-settings-detail{padding:12px}.bc-settings-channel-grid{grid-template-columns:1fr}}
+/* User-facing settings home: real navigation, not duplicated developer telemetry.
+   The original nine native settings panels and their write contracts are intact. */
+.bc-settings-workspace{grid-template-columns:205px minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-content:stretch;align-items:stretch;overflow:hidden}
+.bc-settings-nav{min-height:0;overflow-y:auto;align-self:stretch;padding:10px;gap:6px}
+.bc-settings-nav button{min-height:40px;font-size:13px;padding:10px 12px}
+.bc-settings-detail{min-height:0;overflow-y:auto;display:flex;flex-direction:column;padding:clamp(16px,2vw,26px);gap:16px}
+.bc-settings-heading{flex:0 0 auto;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.bc-settings-heading small{font-size:11px;letter-spacing:.02em}
+.bc-settings-heading h2{margin:4px 0 0;font-size:21px;line-height:1.35}
+.bc-settings-detail .bc-settings-home{flex:1 0 auto;min-height:0;display:flex;flex-direction:column;gap:clamp(15px,2vw,24px);align-content:stretch}
+.bc-settings-welcome h3{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:2px 0 8px}
+.bc-settings-welcome p{font-size:13px;line-height:1.7;color:var(--muted);margin:0}
+.bc-settings-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.bc-settings-detail .bc-settings-shortcut{display:flex;align-items:center;gap:14px;min-height:107px;width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface-soft);padding:16px;text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+.bc-settings-detail .bc-settings-shortcut:hover,.bc-settings-detail .bc-settings-shortcut:focus-visible{background:var(--surface-raised);border-color:var(--accent)}
+.bc-settings-shortcut-icon{flex:0 0 41px;width:41px;height:41px;border-radius:12px;display:grid;place-items:center;border:1px solid var(--border);background:rgba(var(--accent-rgb),.1);color:var(--accent);font-size:20px}
+.bc-settings-shortcut-copy{flex:1;min-width:0;display:grid;gap:6px}
+.bc-settings-shortcut-copy strong{font-size:15px;color:var(--ink);line-height:1.3}
+.bc-settings-shortcut-copy small{font-size:12px;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.bc-settings-shortcut-chevron{flex:0 0 auto;font-size:24px;color:var(--muted);font-weight:300}
+.bc-settings-home-footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:17px 19px;border:1px solid var(--border);border-radius:13px;background:var(--surface-soft)}
+.bc-settings-home-footer strong{font-size:13px}
+.bc-settings-home-footer p{margin:5px 0 0;font-size:12px;color:var(--muted);line-height:1.6}
+.bc-settings-detail .bc-settings-home-footer button{flex:0 0 auto;min-height:37px;padding:8px 15px;border:1px solid var(--border);border-radius:9px;background:var(--surface-raised);text-align:center;cursor:pointer;font-size:12px}
+@media(max-width:950px){.bc-settings-workspace{grid-template-columns:162px minmax(0,1fr)}.bc-settings-shortcuts{gap:10px}.bc-settings-detail .bc-settings-shortcut{padding:12px;min-height:98px}}
+@media(max-width:720px){.bc-settings-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);padding:10px;overflow:hidden}.bc-settings-detail{padding:15px}.bc-settings-heading h2{font-size:19px}}
+@media(max-width:550px){.bc-settings-shortcuts{grid-template-columns:minmax(0,1fr);gap:9px}.bc-settings-detail .bc-settings-shortcut{min-height:76px;padding:12px}.bc-settings-shortcut-icon{flex-basis:36px;width:36px;height:36px}.bc-settings-welcome h3{font-size:19px}.bc-settings-home-footer{padding:14px}.bc-settings-detail .bc-settings-home{gap:15px}}
+@media(prefers-reduced-motion:reduce){.bc-settings-detail .bc-settings-shortcut{transition:none}}
 </style>
