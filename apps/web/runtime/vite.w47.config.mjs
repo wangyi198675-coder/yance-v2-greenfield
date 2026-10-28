@@ -201,7 +201,7 @@ if(r4IsolatedPreview){
  // Exact user-authorized General-settings presentation delta.
  // Preserve original de3 owner-verified Settings, W05 and notification blobs.
  const settingsGeneralPath='apps/web/src/BCSettingsWorkspace.vue';
- const settingsGeneralSha='bfe95b9c7697ae047561439b115b845c27945a80';
+ const settingsGeneralSha='26832e58d692df9713305b0bef60097a0485ad65';
  const settingsGeneralBase='de3c6b843449006b7a073ff58c2a7e5f033f7ac2';
  const settingsGeneralValid=(()=>{
   try{
