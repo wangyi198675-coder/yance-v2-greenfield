@@ -70,6 +70,8 @@ async function onManualMessengerSent(){
 const incomingNotice=ref('');
 let refreshTimer=null,pollBusy=false;
 const search=ref(''),channel=ref('ALL'),account=ref('ALL');
+const channelStatusMessage=ref('');
+let channelStatusRevision=0;
 let currentRevision=0,sourceRevision=0,mounted=true;
 const selected=computed(()=>filtered.value.find(c=>c.contactRef===chosen.value?.contactRef)||null);
 const channels=Object.freeze([
@@ -94,12 +96,43 @@ function reconcileFilter(){
   chosen.value=null;timeline.value=[];timelineState.value='none';timelineError.value='';mobileChat.value=false;
  }
 }
+async function readSelectedChannelStatus(){
+ const selectedChannel=channel.value,revision=++channelStatusRevision;
+ channelStatusMessage.value='';
+ if(!['WHATSAPP_PERSONAL','TELEGRAM_PERSONAL'].includes(selectedChannel))return;
+ const endpoint=selectedChannel==='WHATSAPP_PERSONAL'?
+  '/api/v2/providers/whatsapp-personal/native/status':
+  '/api/v2/providers/telegram-personal/status';
+ try{
+  const response=await api.value(endpoint,{method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
+  const result=await response.json();
+  if(!mounted||revision!==channelStatusRevision||channel.value!==selectedChannel)return;
+  if(selectedChannel==='WHATSAPP_PERSONAL'){
+   channelStatusMessage.value=response.ok&&result.source==='BAILEYS_NATIVE_SDK'&&result.connected===false?
+    'WhatsApp 尚未连接，请在账号管理中由本人扫码授权。':
+    response.ok&&result.source==='BAILEYS_NATIVE_SDK'&&result.connected===true?
+    'WhatsApp 已连接，但尚未从可信联系人源读到会话。':
+    'WhatsApp 联系状态未核实，请在账号管理检查。';
+  }else{
+   channelStatusMessage.value=response.status===401&&result.reason==='W54_SIGNED_INSTALLED_SESSION_REQUIRED'?
+    'Telegram 当前需要安装版的原生授权会话，网页无法读取联系人。':
+    response.ok&&result.authorized===true?
+    'Telegram 已授权，但尚未从可信联系人源读到会话。':
+    'Telegram 连接状态尚未核实，请在账号管理检查。';
+  }
+ }catch{
+  if(mounted&&revision===channelStatusRevision&&channel.value===selectedChannel)
+   channelStatusMessage.value=selectedChannel==='WHATSAPP_PERSONAL'?
+    'WhatsApp 连接状态暂时无法读取。':'Telegram 连接状态暂时无法读取。';
+ }
+}
 function onChannelFilterChange(){
  if(account.value!=='ALL'&&!accountIds.value.includes(account.value))account.value='ALL';
  reconcileFilter();filterOpen.value=false;
+ void readSelectedChannelStatus();
 }
 function onAccountFilterChange(){reconcileFilter();filterOpen.value=false}
-function clearContactFilter(){channel.value='ALL';account.value='ALL';filterOpen.value=false;reconcileFilter()}
+function clearContactFilter(){channel.value='ALL';account.value='ALL';filterOpen.value=false;reconcileFilter();void readSelectedChannelStatus()}
 const pinned=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized===true&&c.pinned===true));
 const regular=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized!==true||c.pinned!==true));
 const availableUnread=computed(()=>unreadAuthoritative.value?
@@ -236,7 +269,7 @@ onMounted(()=>{window.addEventListener('keydown',onKeyDown);void refresh();
 });
 onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
  if(refreshTimer!==null)clearInterval(refreshTimer);
- mounted=false;currentRevision++;sourceRevision++;contacts.value=[];timeline.value=[]});
+ mounted=false;currentRevision++;sourceRevision++;channelStatusRevision++;contacts.value=[];timeline.value=[]});
 </script>
 <template>
  <section class="bc-real-chat" :class="{'mobile-conversation':mobileChat}" data-test="w46-real-chat" aria-label="B＋C实际联系人与聊天工作台">
@@ -292,7 +325,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
       <span class="bc-channel-mark" data-test="w46-contact-channel" :title="platformName(c.channel)">{{c.channel==='FB_PERSONAL'?'FB':c.channel==='FB_PAGE'?'Page':c.channel==='WHATSAPP_PERSONAL'?'WA':'TG'}}</span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
      </button>
-     <p v-if="!filtered.length" class="bc-inbox-state">没有匹配的当前授权联系人</p>
+     <p v-if="!filtered.length" class="bc-inbox-state" data-test="w46-filter-empty">{{channelStatusMessage||'没有匹配的当前授权联系人'}}</p>
     </template>
    </div>
    <footer class="bc-inbox-footer"><span>{{state==='ready'?(filterActive?filtered.length+' / '+contacts.length+' 个联系人':contacts.length+' 个联系人'):state==='unavailable'?'连接异常':'尚无对话'}}</span>
