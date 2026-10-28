@@ -24,11 +24,18 @@ export async function pancakeMultiApi(action,{
   url=base+'/'+action;
   const body=action==='account'?{userAccessToken}:{pageId,pageAccessToken};
   init={method:'POST',credentials:'same-origin',cache:'no-store',
+   // Bound a real provider/native roundtrip; never replay a token write.
+   signal:AbortSignal.timeout(30000),
    redirect:'error',referrerPolicy:'no-referrer',
    headers:{'content-type':'application/json','x-yance-csrf':session.csrfToken},
    body:JSON.stringify(body)};
  }else error('INVALID_PANCAKE_ACCOUNT_ACTION');
- let res=await fetchImpl(url,init);
+ let res;
+ try{res=await fetchImpl(url,init)}
+ catch(e){if(['TimeoutError','AbortError'].includes(e?.name))
+  error('PANCAKE_'+action.toUpperCase().replace('-','_')+'_TIMEOUT_30S');
+  throw e;
+ }
  // An older browser tab may retain a local-session cookie from a prior API
  // process. Reissue the existing first-party PRIVATE session once, only on
  // read-only capability discovery; never silently replay token writes.
@@ -37,7 +44,12 @@ export async function pancakeMultiApi(action,{
   await currentPancakeWebSession(fetchImpl);
   res=await fetchImpl(url,init);
  }
- if(!res?.ok)error('PANCAKE_'+action.toUpperCase().replace('-','_')+'_HTTP_'+(res?.status||0));
+ if(!res?.ok){
+  let code='';
+  try{const body=await res.clone().json();if(/^[A-Z0-9_]{3,80}$/.test(body?.error||''))code=body.error}
+  catch{}
+  error('PANCAKE_'+action.toUpperCase().replace('-','_')+'_HTTP_'+(res?.status||0)+(code?'_CODE_'+code:''));
+ }
  const reply=await res.json();
  if(reply?.ok!==true||reply.canSend!==false)
   error('PANCAKE_ACCOUNT_RESPONSE_UNVERIFIED');

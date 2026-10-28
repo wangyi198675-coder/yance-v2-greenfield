@@ -19,7 +19,16 @@ function humanError(e,action){
  if(code.includes('EXISTING_WEB_LOCAL_SESSION_UNAVAILABLE'))return '本机会话无法建立（'+(code.match(/HTTP_([0-9]+)/)?.[1]||'启动失败')+'），请检查浏览器站点 Cookie 设置。';
  if(code.includes('CURRENT_WEB_SESSION_NOT_VERIFIED'))return '本机会话 Cookie 未生效，请检查浏览器站点 Cookie 设置。';
  if(code.includes('PANCAKE_CAPABILITIES_HTTP_404'))return '当前 API 缺少 Facebook Page 接口，正在重试连接。';
- if(code.includes('401'))return 'Pancake 账户令牌可能已失效，请检查账户设置。';
+ if(code.includes('_TIMEOUT_30S'))return 'Pancake 官方验证超过30秒，结果尚未确认。请先点击重新查询账户，不要重复提交 Token。';
+ if(code.includes('PANCAKE_TOKEN_REJECTED')||code.includes('PANCAKE_TOKEN_OR_PAGE_REJECTED'))
+  return 'Pancake 官方拒绝此 Token。请确认复制的是账户个人设置里的 User Access Token，而不是主页 Page Token。';
+ if(code.includes('PANCAKE_ACCOUNT_ALREADY_CONFIGURED'))
+  return '账户凭据已被保存，不必重复粘贴。请刷新主页查看现有连接。';
+ if(code.includes('PANCAKE_NETWORK_UNAVAILABLE')||code.includes('PANCAKE_REMOTE_UNAVAILABLE'))
+  return 'Pancake 官方接口连接失败，请检查网络后重试。';
+ if(code.includes('PANCAKE_ACCOUNT_NOT_CONFIGURED'))return '当前还没有成功保存的 Pancake 账户。';
+ if(code.includes('UNAVAILABLE')||code.includes('503'))return '本机 W55 安全凭据或 Pancake 官方接口不可用，验证未完成。';
+ if(code.includes('401'))return '验证未通过（HTTP 401）。请检查当前本机会话和 Pancake User Access Token。';
  if(code.includes('403'))return '该主页不属于当前账户，或 Token 无法访问。';
  if(code.includes('429'))return 'Pancake 访问次数受限，请稍后重试。';
  if(code.includes('503'))return '本机账号安全保存或 Pancake 服务尚不可用。';
@@ -102,16 +111,18 @@ onBeforeUnmount(()=>{
   </header>
   <p v-if="notice" class="pancake-note" role="status" data-test="pancake-multi-notice">{{notice}}</p>
   <button v-if="!apiReady" type="button" class="pancake-retry" :disabled="busy" data-test="pancake-retry-capabilities" @click="refresh">重新检测连接</button>
+  <button v-else-if="!busy&&!accountConnected" type="button" class="pancake-retry" data-test="pancake-recheck-account" @click="refresh">查询账户授权状态</button>
   <section v-if="!accountConnected" class="pancake-section" data-test="pancake-account-config">
    <div class="pancake-section-head"><strong>第一步 · 连接 Pancake 账户</strong>
      <span>只需一次</span></div>
-   <p>从 Pancake「账户 → 高级设置 → Access Token」复制账户令牌，言策据此查询你管理的主页。</p>
-   <a href="https://pancake.biz/account" target="_blank" rel="noopener noreferrer">打开 Pancake 账户设置</a>
-   <label for="pancake-user-token">Pancake 账户 Access Token</label>
+   <p>请从 Pancake「账户 → 个人设置 → API Access Token」复制 User Access Token（不是某个主页的 Page Token）。只会用于查询你管理的主页。</p>
+   <a href="https://pages.fm" target="_blank" rel="noopener noreferrer">打开 Pancake 账户个人设置</a>
+   <label for="pancake-user-token">Pancake 账户 User Access Token</label>
    <input id="pancake-user-token" type="password" v-model="accountToken"
      autocomplete="off" autocapitalize="off" spellcheck="false"
      placeholder="仅在此处安全输入，不需要发到聊天中"
      :disabled="!apiReady||busy" data-test="pancake-user-token"/>
+   <p v-if="busy" role="status" data-test="pancake-account-progress">正在联系 Pancake 官方并核对 W55 安全保存，请勿重复点击。验证请求最多等待 30 秒。</p>
    <button type="button" class="primary"
      :disabled="!apiReady||busy||accountToken.trim().length<8"
      data-test="pancake-account-save" @click="saveAccount">
