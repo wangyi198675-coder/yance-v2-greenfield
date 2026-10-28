@@ -133,3 +133,16 @@ test('P0 failed initial bootstrap is not cached: later user re-click can renew l
  assert.equal((await connectWhatsAppNative({fetchImpl})).state,'STARTING_NATIVE_SDK');
  assert.equal(n,2);
 });
+
+// Guard the real Opera/Chromium layout regression: a hover-transformed
+// WhatsApp card cannot contain a viewport-fixed QR overlay.
+test('P0 real WhatsApp QR dialog teleports outside hover-transformed card',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const source=readFileSync(new URL('./BCChannelAccountSetup.vue',import.meta.url),'utf8');
+ const open=source.indexOf('<Teleport to="body">');
+ const qr=source.indexOf('v-if="qrOpen&&isWhatsApp" class="w46-qr-backdrop"');
+ const close=source.indexOf('</Teleport>',qr);
+ assert.ok(open>=0&&qr>open&&close>qr,'real QR dialog must live under document.body');
+ assert.ok(source.includes('position:fixed;inset:0'),'real QR retains viewport sizing');
+ assert.ok(!source.includes('backdrop-filter:blur('),'avoid Opera compositor blur flicker');
+});

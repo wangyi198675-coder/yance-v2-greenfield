@@ -182,6 +182,10 @@ defineExpose({setup,refresh});
     <Button variant="outline" size="sm" :disabled="busy" @click="waDisconnect('disconnect')">断开连接</Button>
     <Button v-if="state==='ONLINE_VERIFIED'" variant="outline" size="sm" :disabled="busy" @click="waDisconnect('revoke')">移除账号</Button>
    </div>
+   <!-- The dialog belongs to document.body: a hovered card uses transform,
+        which otherwise changes position:fixed containing block and makes
+        Opera alternate between card-sized and viewport-sized overlays. -->
+   <Teleport to="body">
    <div v-if="qrOpen&&isWhatsApp" class="w46-qr-backdrop" data-test="native-provider-qr-dialog" @click.self="qrOpen=false">
     <section class="w46-qr-dialog" role="dialog" aria-modal="true" aria-label="连接 WhatsApp">
      <header><div><strong>连接 WhatsApp</strong><p>手机 WhatsApp → 已关联设备 → 关联设备</p></div>
@@ -197,6 +201,7 @@ defineExpose({setup,refresh});
      </div>
     </section>
    </div>
+   </Teleport>
    <details class="w46-channel-extra" data-test="native-provider-details">
     <summary>连接问题？查看帮助</summary>
     <p>连接状态由原生平台回读，不根据界面点击判定成功。</p>
@@ -262,7 +267,7 @@ defineExpose({setup,refresh});
 .w46-channel-extra summary{font-size:10px}
 @media(max-width:600px){.w46-channel{min-height:240px;padding:13px}}
 /* Real native WhatsApp QR is shown only after the original W47 bytes API attests it. */
-.w46-qr-backdrop{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
+.w46-qr-backdrop{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.72)}
 .w46-qr-dialog{display:flex;flex-direction:column;box-sizing:border-box;gap:18px;width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--surface-raised);color:var(--ink);box-shadow:0 24px 65px #0009}
 .w46-qr-dialog header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
 .w46-qr-dialog header strong{font-size:18px}
