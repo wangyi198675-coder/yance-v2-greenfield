@@ -14,8 +14,9 @@ test('ordinary private AI needs no visible terminal pair or Windows native auth 
  assert.match(privateSection,/<BCPrivateBrainWorkspace/);
  assert.doesNotMatch(privateSection,/BCNativeHostSession|BCLocalSessionConnector|pair/);
  assert.doesNotMatch(content,/64位配对|终端pair|登录后才能|本机可信会话尚未建立/);
- assert.match(content,/loadState\.value='setup-required';setupOpen\.value=true/);
- assert.match(content,/loadState\.value='service-unavailable';setupOpen\.value=true/);
+ assert.match(content,/loadState\.value='setup-required';return/);
+ assert.match(content,/loadState\.value='service-unavailable';notice\.value=reason\(e\)/);
+ assert.match(content,/closeBrainMenu\(\);setupOpen\.value=true;await focusBrainPopup\(\)/);
 });
 test('cloud provider labels remain independent of local optional Qwen3',()=>{
  assert.match(readFileSync(new URL('../src/private-brain-ui-contract.mjs',import.meta.url),'utf8'),/OPENROUTER_USER_API/);
