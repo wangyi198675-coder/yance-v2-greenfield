@@ -5,6 +5,7 @@ import {mediaCapabilitiesRead} from './w23-media-browser-consumer.mjs';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
 import BCOfficialChatGPTConnect from './BCOfficialChatGPTConnect.vue';
+import {currentFirstPartyWebSession} from './local-first-party-session.mjs';
 import BCNativeHostSession from './BCNativeHostSession.vue';
 import BCThemeChooser from './BCThemeChooser.vue';
 import BCNotificationCenter from './BCNotificationCenter.vue';
@@ -53,7 +54,7 @@ async function refresh(){
    // General is navigation, not an untrusted diagnostics/status page.
    data.value={theme:props.theme,appearance:props.appearance};
   }else if(category.value==='model'||category.value==='accounts'||category.value==='privacy'){
-   const s=await getJson('/api/v2/local-session/status');
+   const s=await currentFirstPartyWebSession(props.fetchImpl||globalThis.fetch);
    if(alive&&t===seq){
     session.value=s;
     // The existing PRIVATE key settings accepts current signed local session CSRF only.

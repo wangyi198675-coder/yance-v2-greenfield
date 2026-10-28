@@ -1,9 +1,10 @@
 <script setup>
 import {ref,onMounted,onBeforeUnmount} from 'vue';
+import {currentFirstPartyWebSession,renewFirstPartyWebSession} from './local-first-party-session.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const session=ref(null),models=ref([]),selected=ref(''),message=ref('');
 const busy=ref(false),connecting=ref(false),testText=ref(''),response=ref('');
-let disposed=false,poll=null,csrf='',sessionInFlight=null;
+let disposed=false,poll=null,csrf='';
 const request=(url,options={})=>(props.fetchImpl||globalThis.fetch)(url,{
  credentials:'same-origin',cache:'no-store',redirect:'error',...options});
 const read=async(url,options)=>{
@@ -15,26 +16,14 @@ const read=async(url,options)=>{
 const sessionExpired=e=>['LOCAL_SESSION_REQUIRED','CURRENT_LOCAL_SESSION_OR_CSRF_REQUIRED',
  'CURRENT_SESSION_REVOKED_DURING_ROUTING'].includes(String(e?.message||e));
 async function ensureCurrentSession({renew=false}={}){
- // Multiple settings requests share one local-session bootstrap instead of
- // racing cookies. This is NOT a new login or an additional permission gate.
- if(sessionInFlight)return sessionInFlight;
- const current=(async()=>{
-  if(!renew){
-   const s=await read('/api/v2/local-session/status');
-   if(s?.sessionKind==='WEB_LOCAL_PRIVATE'&&s?.authorized===true&&
-     typeof s.csrfToken==='string'&&/^[a-f0-9]{64}$/.test(s.csrfToken)){
-    csrf=s.csrfToken;return;
-   }
-  }
-  const s=await read('/api/v2/local-session/web-private-start',{
-   method:'POST',headers:{'content-type':'application/json'},body:'{}'});
-  if(s?.sessionKind!=='WEB_LOCAL_PRIVATE'||
+ // Share the existing W47 browser-local in-flight session authority with WA
+ // and Pancake. A separate ChatGPT bootstrap races their HttpOnly cookie.
+ const fetcher=props.fetchImpl||globalThis.fetch;
+ const s=await (renew?renewFirstPartyWebSession(fetcher):currentFirstPartyWebSession(fetcher));
+ if(!['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(s.sessionKind)||
     typeof s.csrfToken!=='string'||!/^[a-f0-9]{64}$/.test(s.csrfToken))
    throw Error('LOCAL_PRIVATE_SESSION_NOT_AVAILABLE');
-  csrf=s.csrfToken;
- })();
- sessionInFlight=current;
- try{await current}finally{if(sessionInFlight===current)sessionInFlight=null}
+ csrf=s.csrfToken;
 }
 async function currentSessionCall(action){
  await ensureCurrentSession();
