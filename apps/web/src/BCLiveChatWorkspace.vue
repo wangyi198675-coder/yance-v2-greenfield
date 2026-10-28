@@ -65,11 +65,11 @@ const incomingNotice=ref('');
 let refreshTimer=null,pollBusy=false;
 const search=ref(''),channel=ref('ALL'),account=ref('ALL');
 let currentRevision=0,sourceRevision=0,mounted=true;
-const selected=computed(()=>contacts.value.find(c=>c.contactRef===chosen.value?.contactRef)||null);
+const selected=computed(()=>filtered.value.find(c=>c.contactRef===chosen.value?.contactRef)||null);
 const channels=Object.freeze([
  {id:'ALL',label:'全部渠道'},
- {id:'FB_PERSONAL',label:'Facebook'},
- {id:'FB_PAGE',label:'Page'},
+ {id:'FB_PERSONAL',label:'Facebook 个人'},
+ {id:'FB_PAGE',label:'Facebook Page'},
  {id:'WHATSAPP_PERSONAL',label:'WhatsApp'},
  {id:'TELEGRAM_PERSONAL',label:'Telegram'}
 ]);
@@ -80,7 +80,20 @@ const filtered=computed(()=>{
   (account.value==='ALL'||c.accountRef===account.value)&&
   (!q||[c.displayName,c.accountRef,c.peerRef].some(s=>String(s).toLowerCase().includes(q))));
 });
-const accountIds=computed(()=>['ALL',...new Set(contacts.value.map(c=>c.accountRef))]);
+const accountIds=computed(()=>['ALL',...new Set(contacts.value.filter(c=>channel.value==='ALL'||c.channel===channel.value).map(c=>c.accountRef))]);
+const filterActive=computed(()=>channel.value!=='ALL'||account.value!=='ALL'||search.value.trim()!=='');
+const platformName=c=>channels.find(x=>x.id===c)?.label||c;
+function reconcileFilter(){
+ if(chosen.value&&!filtered.value.some(c=>c.contactRef===chosen.value.contactRef)){
+  chosen.value=null;timeline.value=[];timelineState.value='none';timelineError.value='';mobileChat.value=false;
+ }
+}
+function onChannelFilterChange(){
+ if(account.value!=='ALL'&&!accountIds.value.includes(account.value))account.value='ALL';
+ reconcileFilter();
+}
+function onAccountFilterChange(){reconcileFilter()}
+function clearContactFilter(){channel.value='ALL';account.value='ALL';filterOpen.value=false;reconcileFilter()}
 const pinned=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized===true&&c.pinned===true));
 const regular=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized!==true||c.pinned!==true));
 const availableUnread=computed(()=>unreadAuthoritative.value?
@@ -270,12 +283,13 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     <!-- Chat creation remains controlled by each channel's existing account flow. -->
    </div>
    <div v-if="filterOpen" class="bc-action-popover" data-test="w46-filter-menu">
-    <label>平台<select v-model="channel" aria-label="平台筛选"><option v-for="ch in channels" :key="ch.id" :value="ch.id">{{ch.label}}</option></select></label>
-    <label>账号<select v-model="account" aria-label="账号筛选"><option v-for="id in accountIds" :key="id" :value="id">{{id==='ALL'?'全部已授权账号':id}}</option></select></label>
+    <label>平台<select v-model="channel" aria-label="平台筛选" @change="onChannelFilterChange"><option v-for="ch in channels" :key="ch.id" :value="ch.id">{{ch.label}}</option></select></label>
+    <label>账号<select v-model="account" aria-label="账号筛选" @change="onAccountFilterChange"><option v-for="id in accountIds" :key="id" :value="id">{{id==='ALL'?'全部已授权账号':id}}</option></select></label>
 
-    <button type="button" @click="channel='ALL';account='ALL';filterOpen=false">清除筛选</button>
+    <button type="button" @click="clearContactFilter">清除筛选</button>
    </div>
    <p v-if="incomingNotice" role="status" class="bc-inbox-state" data-test="w56-real-inbound-notice" @click="incomingNotice=''">{{incomingNotice}}</p>
+   <p v-if="state==='ready'&&(channel!=='ALL'||account!=='ALL')" class="bc-filter-applied" data-test="w46-filter-applied" role="status"><span>{{platformName(channel)}}{{account==='ALL'?'':' · '+account}}：{{filtered.length}} / {{contacts.length}}</span><button type="button" @click="clearContactFilter">清除</button></p>
    <div class="bc-inbox-list-scroll" data-test="w46-contacts-scroll">
     <p v-if="state==='checking'&&!contacts.length" class="bc-inbox-state">正在读取本机联系人…</p>
     <div v-else-if="state!=='ready'" class="bc-inbox-state" data-test="w46-contact-waiting">
@@ -288,18 +302,20 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
       <template v-if="pinnedExpanded">
        <button v-for="c in pinned" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
         <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
+        <span class="bc-channel-mark" data-test="w46-contact-channel" :title="platformName(c.channel)">{{c.channel==='FB_PERSONAL'?'FB':c.channel==='FB_PAGE'?'Page':c.channel==='WHATSAPP_PERSONAL'?'WA':'TG'}}</span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
        </button>
       </template>
      </template>
      <button v-for="c in regular" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
       <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
-      <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
+      <span class="bc-channel-mark" data-test="w46-contact-channel" :title="platformName(c.channel)">{{c.channel==='FB_PERSONAL'?'FB':c.channel==='FB_PAGE'?'Page':c.channel==='WHATSAPP_PERSONAL'?'WA':'TG'}}</span>
+        <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
      </button>
      <p v-if="!filtered.length" class="bc-inbox-state">没有匹配的当前授权联系人</p>
     </template>
    </div>
-   <footer class="bc-inbox-footer"><span>{{state==='ready'?contacts.length+' 个联系人':state==='unavailable'?'连接异常':'尚无对话'}}</span>
+   <footer class="bc-inbox-footer"><span>{{state==='ready'?(filterActive?filtered.length+' / '+contacts.length+' 个联系人':contacts.length+' 个联系人'):state==='unavailable'?'连接异常':'尚无对话'}}</span>
     <button type="button" :disabled="state==='checking'" @click="refresh">刷新</button>
    </footer>
   </aside>
@@ -356,6 +372,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
 .bc-search-capsule:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.17),inset 0 1px 0 rgba(255,255,255,.08)}
 .bc-search-capsule span{font-size:21px;color:var(--accent)}.bc-search-capsule input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:12px}.bc-search-capsule input::placeholder{color:var(--muted)}.bc-search-capsule kbd{white-space:nowrap;font-size:9px;color:var(--muted)}
 .bc-unread-toggle{height:38px;min-width:47px;padding:0 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--ink);cursor:pointer}.bc-unread-toggle[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}.bc-unread-toggle:disabled{opacity:.65;cursor:not-allowed}
+.bc-filter-applied{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 10px;margin:0;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);background:var(--surface-soft);min-width:0}.bc-filter-applied span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bc-filter-applied button{flex:none;border:0;background:transparent;color:var(--accent);font:inherit;cursor:pointer}.bc-channel-mark{flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;min-width:24px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;background:var(--surface-soft);color:var(--muted)}
 .bc-inbox-list-scroll{min-height:0;flex:1 1 auto;overflow:auto;scrollbar-width:thin;overscroll-behavior:contain}
 .bc-real-contact{position:relative;min-height:68px;width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:0;border-left:2px solid transparent;border-bottom:1px solid var(--border);background:transparent;color:var(--ink);padding:10px 11px;cursor:pointer;transition:background .14s,box-shadow .14s}
 .bc-real-contact:hover{background:var(--surface-soft)}.bc-real-contact.selected{border-left-color:var(--accent);background:linear-gradient(96deg,rgba(var(--accent-rgb),.15),rgba(var(--accent-rgb),.025) 80%);box-shadow:inset 2px 0 0 rgba(var(--accent-rgb),.55)}
