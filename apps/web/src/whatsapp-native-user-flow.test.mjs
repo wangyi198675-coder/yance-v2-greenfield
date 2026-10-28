@@ -34,8 +34,9 @@ test('normal click goes to ORIGINAL W28 native POST with only selector + valid W
 test('do not create WhatsApp Socket without real native current session',async()=>{
  const a=fake(async()=>({ok:true,paired:false,canSend:false,providerAuthorized:false}));
  await assert.rejects(connectWhatsAppNative({fetchImpl:a.fetchImpl}),/WHATSAPP_LOCAL_SESSION_REQUIRED/);
- assert.equal(a.calls.length,2);
+ assert.equal(a.calls.length,3);
  assert.equal(a.calls[1].url,'/api/v2/local-session/web-private-start');
+ assert.equal(a.calls[2].url,'/api/v2/local-session/status');
  assert.equal(a.calls.some(c=>c.url.endsWith('/native/authorize')),false);
 });
 test('native status must be truly online and have verified real account JID',async()=>{
@@ -120,7 +121,7 @@ test('P0 failed initial bootstrap is not cached: later user re-click can renew l
  let n=0;
  const fetchImpl=async(url)=>{
   if(url==='/api/v2/local-session/status')
-   return {ok:true,status:200,json:async()=>({ok:true,paired:false})};
+   return {ok:true,status:200,json:async()=>n>=2?({...authenticated,sessionKind:'WEB_LOCAL_PRIVATE',authorized:true}):({ok:true,paired:false})};
   if(url==='/api/v2/local-session/web-private-start'){
    n++;
    return {ok:n===2,status:n===2?200:503,json:async()=>({...authenticated,

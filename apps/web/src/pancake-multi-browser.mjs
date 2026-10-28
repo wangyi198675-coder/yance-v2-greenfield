@@ -1,28 +1,10 @@
 // Web-first client for ORIGINAL local-session and W27/W55 server-side API.
+import {currentFirstPartyWebSession,renewFirstPartyWebSession} from './local-first-party-session.mjs';
 // Tokens are transient component state, never localStorage/URL/logs.
 const base='/api/v2/providers/fb-page/onboarding';
 const error=code=>{throw Object.assign(new Error(code),{code})};
-const get=async(f,url)=>f(url,{
- method:'GET',credentials:'same-origin',cache:'no-store',
- redirect:'error',referrerPolicy:'no-referrer'
-});
-const renewWebPrivateSession=async f=>{
- const started=await f('/api/v2/local-session/web-private-start',{
-  method:'POST',credentials:'same-origin',cache:'no-store',
-  redirect:'error',referrerPolicy:'no-referrer',
-  headers:{'content-type':'application/json'},body:'{}'
- });
- if(!started?.ok)error('EXISTING_WEB_LOCAL_SESSION_UNAVAILABLE_HTTP_'+(started?.status||0));
- return started;
-};
 export async function currentPancakeWebSession(fetchImpl=globalThis.fetch){
- const status=await get(fetchImpl,'/api/v2/local-session/status');
- let session=status.ok?await status.json():null;
- if(session?.authorized!==true){
-  await renewWebPrivateSession(fetchImpl);
-  const after=await get(fetchImpl,'/api/v2/local-session/status');
-  session=after.ok?await after.json():null;
- }
+ const session=await currentFirstPartyWebSession(fetchImpl);
  if(session?.authorized!==true||
    !['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(session.sessionKind)||
    !/^[a-f0-9]{64}$/.test(session.csrfToken??''))
@@ -51,7 +33,7 @@ export async function pancakeMultiApi(action,{
  // process. Reissue the existing first-party PRIVATE session once, only on
  // read-only capability discovery; never silently replay token writes.
  if(action==='capabilities'&&[401,403].includes(res?.status)){
-  await renewWebPrivateSession(fetchImpl);
+  await renewFirstPartyWebSession(fetchImpl);
   await currentPancakeWebSession(fetchImpl);
   res=await fetchImpl(url,init);
  }

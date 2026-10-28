@@ -12,6 +12,12 @@ const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
 const verifiedAccounts=ref(null);
 const userRequested=ref(false),qrOpen=ref(false);
 const isWhatsApp=computed(()=>props.channel.id==='WHATSAPP_PERSONAL');
+// Before a user has clicked Connect, missing browser-local authorization is
+// a setup condition, not evidence that the Baileys SDK is unavailable.
+const needsLocalSession=e=>[
+ 'WHATSAPP_LOCAL_SESSION_REQUIRED','WHATSAPP_HTTP_401',
+ 'LOCAL_FIRST_PARTY_SESSION_NOT_VERIFIED','LOCAL_FIRST_PARTY_BOOTSTRAP_HTTP_401'
+].includes(String(e?.code??e?.message??''));
 let alive=true,revision=0,expiryTimer=null,pollTimer=null,waTimer=null;
 const stopWaPoll=()=>{if(waTimer){clearTimeout(waTimer);waTimer=null}};
 async function waUpdate(id){
@@ -54,6 +60,7 @@ const display=computed(()=>providerCopy[props.channel.id]||{title:props.channel.
 const statusLabel=computed(()=>state.value==='ONLINE_VERIFIED'?'已连接':
  state.value==='checking'?'检查中':
  state.value==='EXPIRED'?'二维码已过期':
+ state.value==='LOCAL_SESSION_NEEDED'?'待连接':
  state.value==='WAITING_USER_AUTH'?(receipt.value?.qr?'等待扫码':'等待授权'):
  state.value==='WAITING_QR_SCAN'?'等待扫码':
  state.value==='STARTING_NATIVE_SDK'?'连接中':
@@ -69,7 +76,11 @@ async function refresh(){
   verifiedAccounts.value=v.accounts;
   notice.value=v.online?'原生服务确认已连接':'尚未完成本人授权';
  }catch(e){
-  if(alive&&id===revision){state.value='unavailable';notice.value=isWhatsApp.value?whatsappNativeError(e):channelError(e)}
+  if(alive&&id===revision){
+   if(isWhatsApp.value&&!userRequested.value&&needsLocalSession(e)){
+    state.value='LOCAL_SESSION_NEEDED';notice.value='点击连接 WhatsApp 将重新建立本机会话';
+   }else{state.value='unavailable';notice.value=isWhatsApp.value?whatsappNativeError(e):channelError(e)}
+  }
  }finally{if(alive&&id===revision)busy.value=false}
 }
 async function setup(){
@@ -123,7 +134,9 @@ async function pollStatus(){
   verifiedAccounts.value=v.accounts;
   if(v.online){clearReceipt();state.value='ONLINE_VERIFIED';notice.value='账号已连接'}
   else if(!receipt.value)state.value=v.state;
- }catch{if(!receipt.value&&id===revision){state.value='unavailable'}}
+ }catch(e){if(!receipt.value&&id===revision){
+  state.value=isWhatsApp.value&&!userRequested.value&&needsLocalSession(e)?'LOCAL_SESSION_NEEDED':'unavailable';
+ }}
 }
 watch(()=>props.connectTrigger,(next,prev)=>{if(next>prev)setup()});
 onMounted(()=>{if(!isFbPage.value){refresh();pollTimer=setInterval(pollStatus,15000)}});

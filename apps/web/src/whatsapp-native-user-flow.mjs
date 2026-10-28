@@ -1,6 +1,7 @@
 // W46 normal-user WhatsApp connection flow -> EXISTING W47 original native Owner.
 // Account locator is a server-verified lookup selector, never an Account K or
 // a browser authorization claim. No raw Baileys socket, token or QR persistence.
+import {currentFirstPartyWebSession} from './local-first-party-session.mjs';
 const prefix='/api/v2/providers/whatsapp-personal/native';
 const allowedStates=new Set(['WAITING_USER_AUTH','STARTING_NATIVE_SDK',
   'WAITING_QR_SCAN','ONLINE','DISCONNECTED','REVOKED','LOGGED_OUT',
@@ -24,41 +25,21 @@ const request=async(path,{fetchImpl=globalThis.fetch,method='GET',csrfToken,body
   if(result?.ok!==true||result.canSend!==false)fail('WHATSAPP_OWNER_UNVERIFIED');
   return result;
 };
-// A first load mounts the WhatsApp card while the user may click Connect.
-// Sharing one first-party session bootstrap prevents two overlapping
-// web-private-start responses from overwriting each other's cookie/CSRF.
-const pendingCsrfByFetch = new WeakMap();
+// Both original WhatsApp and Pancake components use the SAME W47
+// browser-session initializer. Only W47 issues the HttpOnly cookie/CSRF.
 async function authorizedCsrf(fetchImpl){
-  if(typeof fetchImpl!=='function')fail('WHATSAPP_FETCH_REQUIRED');
-  const already=pendingCsrfByFetch.get(fetchImpl);
-  if(already)return already;
-  const pending=resolveAuthorizedCsrf(fetchImpl);
-  pendingCsrfByFetch.set(fetchImpl,pending);
-  try{return await pending}finally{
-    if(pendingCsrfByFetch.get(fetchImpl)===pending)pendingCsrfByFetch.delete(fetchImpl);
-  }
-}
-async function resolveAuthorizedCsrf(fetchImpl){
-  const response=await fetchImpl('/api/v2/local-session/status',{
-    method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error',
-    referrerPolicy:'no-referrer'});
-  if(!response?.ok)fail('WHATSAPP_LOCAL_SESSION_REQUIRED');
-  let r=await response.json();
-  if(r?.ok===true&&r.paired===false){
-    // Start the EXISTING same-origin WEB_LOCAL_PRIVATE session automatically.
-    // This is only a local browser cookie, NOT WhatsApp pairing/consent.
-    const activated=await fetchImpl('/api/v2/local-session/web-private-start',{
-      method:'POST',credentials:'same-origin',cache:'no-store',redirect:'error',
-      referrerPolicy:'no-referrer',headers:{'Content-Type':'application/json'},body:'{}'
-    });
-    if(activated?.ok)r=await activated.json();
+  let r;
+  try{r=await currentFirstPartyWebSession(fetchImpl)}
+  catch(e){
+    // Retain W46's original user-facing error contract for failed bootstrap.
+    if(String(e?.code??'').startsWith('LOCAL_FIRST_PARTY_'))
+      fail('WHATSAPP_LOCAL_SESSION_REQUIRED');
+    throw e;
   }
   if(r?.ok!==true||r.paired!==true||
     !['NATIVE_FIRST_PARTY','WEB_LOCAL_PRIVATE'].includes(r.sessionKind)||
     !/^[a-f0-9]{64}$/.test(r.csrfToken??'')||
     r.expiresAt<=Date.now())fail('WHATSAPP_LOCAL_SESSION_REQUIRED');
-  // Server W47 still independently checks the actual cookie/W24/CSRF; the
-  // browser token never authorizes WhatsApp pairing on its own.
   return r.csrfToken;
 }
 export async function readWhatsAppNative({fetchImpl=globalThis.fetch}={}){
