@@ -1,0 +1,5 @@
+const fs=require('fs'),{execFileSync}=require('child_process'),p=require('path'),root=__dirname,repo=p.resolve(root,'../../..'),rel='design/nonproduction/approved-clickable-abc-bc/package-lock.json';
+const old=JSON.parse(execFileSync('git',['-C',repo,'show','HEAD:'+rel],{encoding:'utf8'}));const fresh=JSON.parse(fs.readFileSync(p.join(root,'package-lock.json'),'utf8'));
+const delta=[];for(const key of new Set([...Object.keys(old.packages),...Object.keys(fresh.packages)])){const a=old.packages[key],b=fresh.packages[key];if(JSON.stringify(a)!==JSON.stringify(b))delta.push({key,old:a?.version,new:b?.version})}
+const unexpected=delta.filter(x=>!(/^node_modules\/(vite|esbuild|@esbuild\/)/.test(x.key)||x.key===''));
+console.log(JSON.stringify({oldPackages:Object.keys(old.packages).length,newPackages:Object.keys(fresh.packages).length,changed:delta.length,delta,unexpected},null,2));fs.writeFileSync(p.join(root,'evidence','W39_W42_NPM_LOCK_EXACT_DELTA.json'),JSON.stringify({delta,unexpected},null,2));if(unexpected.length)process.exitCode=2;

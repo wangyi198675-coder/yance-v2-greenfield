@@ -1,0 +1,22 @@
+[
+  {
+    "file": "dist/assets/browser-tests-BLHtoASZ.js",
+    "sha256": "397d273dcb6d9fdbb60cdde329af325106e8485697b3751aeb0953cd605d9fc0",
+    "bytes": 8380
+  },
+  {
+    "file": "dist/assets/index-BQPsiH08.css",
+    "sha256": "816e3872e4d3add6452145a05437eba29b52e9f175dae2fb764fe5f293bc33cb",
+    "bytes": 37864
+  },
+  {
+    "file": "dist/assets/index-BRZRaF4q.js",
+    "sha256": "baa2deddae0eb876065c50cfc20a2bcc21b0bcc2821a022274a0fdc1e732a3ed",
+    "bytes": 333191
+  },
+  {
+    "file": "dist/index.html",
+    "sha256": "fd6e54daeb2d052f214bb30ba5739b99c98b7b1194531eab8f502fd5f7825712",
+    "bytes": 384
+  }
+]

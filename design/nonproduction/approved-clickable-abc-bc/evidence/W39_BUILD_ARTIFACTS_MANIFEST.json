@@ -1,0 +1,82 @@
+{
+  "scope": "YANCE_V2_P3_1_OFFLINE_NONPRODUCTION",
+  "status": "W39_REAL_BUILD_AND_CLICKABLE_CHROME_SELF_PASS_PENDING_INDEPENDENT_W40_W41_W42",
+  "sourcePreimportGitSHA": "f0b008875a15340a39325549dba3a9c099442405",
+  "reproducibleSameCommitBuild": true,
+  "buildEnvironment": "DESKTOP-029FH47; npm install --ignore-scripts; vite@7.3.1; node 24.18.0",
+  "buildCommand": "npm run build",
+  "bundle": [
+    {
+      "path": "dist/assets/browser-tests-BLHtoASZ.js",
+      "bytes": 8380,
+      "sha256": "397d273dcb6d9fdbb60cdde329af325106e8485697b3751aeb0953cd605d9fc0"
+    },
+    {
+      "path": "dist/assets/index-BQPsiH08.css",
+      "bytes": 37864,
+      "sha256": "816e3872e4d3add6452145a05437eba29b52e9f175dae2fb764fe5f293bc33cb"
+    },
+    {
+      "path": "dist/assets/index-BRZRaF4q.js",
+      "bytes": 333191,
+      "sha256": "baa2deddae0eb876065c50cfc20a2bcc21b0bcc2821a022274a0fdc1e732a3ed"
+    },
+    {
+      "path": "dist/index.html",
+      "bytes": 384,
+      "sha256": "fd6e54daeb2d052f214bb30ba5739b99c98b7b1194531eab8f502fd5f7825712"
+    }
+  ],
+  "lockSHA256": "1d91cd197a4bc429fb0d6bd8808746b4b3537951f1f1806d277aed67afc143c6",
+  "screenshotEvidence": {
+    "count": 23,
+    "arms": 4,
+    "themeStates": 10,
+    "responsiveExactCSSWidths": [
+      360,
+      430,
+      720,
+      920,
+      950,
+      1050,
+      1100,
+      1101,
+      1360
+    ],
+    "sha256": "7ba09645f8fdf33762267f8ae45ce37d23b673259803e389fca32aceb93b690b"
+  },
+  "uat": {
+    "method": "Chrome headless actual DOM click/keyboard/text input + W39 owner-only assertions",
+    "cases": 44,
+    "pass": 44,
+    "fail": 0,
+    "sourceSHA256": "1ce91bc4d0f62110c6a85df4d43db84982e7fae3239dbc99c1e03fa37249dfd7"
+  },
+  "vendor": {
+    "approvedCopied": 72,
+    "approvedDiffs": 5,
+    "sourceManifestSHA256": "8f5e066650687ad25c00d0ac58e374422906f6ffe7a5d3f287cac8446b102fb2",
+    "diffSHA256": "d1ab01e3ebeea79e0b73953c6ad198edc2338d0e91002b44868388ac1dc149f7"
+  },
+  "npm": {
+    "approvedDirect": 14,
+    "winMaterialized": 74,
+    "lockEntries": 145,
+    "unmaterializedOptionalPlatforms": 71,
+    "actualDownloadedTarballSRI": 74,
+    "failedSRI": 0,
+    "integrityEvidenceSHA256": "025f0037781b0135df5eb8b9066a84543067f37b6790d0e9cb3865db3a694d70"
+  },
+  "legal": {
+    "THIRD_PARTY_NOTICES_SHA256": "d07f4e60e02a50c9b9bae6aade8a5c98a5d8e9ae9e8cb38457911f7d59d99a37",
+    "bomSHA256": "099e392930b7030abbdf8bf9f9c08f1f458c96303bfc7e28d720a5b70640bf36",
+    "W42Postbuild": "NOT_RUN"
+  },
+  "fixture": {
+    "contacts": 120,
+    "sidecarEvents": 8,
+    "themes": 10,
+    "sourceSHA256": "5b9a05df788fe5fab41b6b2033fb895cd3650fb573345856650cfeb24ef9c99c"
+  },
+  "notYet": "Windows Tauri/WebView2 UAT; 125/150/200% DPI; W40 independent QA; W41 independent security; W42 postbuild OSS; pixel accurate original historical V2.5 A; P4"
+}
