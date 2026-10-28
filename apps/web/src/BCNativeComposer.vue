@@ -9,6 +9,7 @@ import {createW23BrowserMediaClient} from './w23-media-browser-consumer.mjs';
 // Replacement seam for the ONE selected B+C CONTACT Composer; not a second sender.
 const props=defineProps({
   identity:{type:Object,default:null}, sourceMid:{type:String,default:''},
+  readOnlyConversation:{type:Boolean,default:false},
   suggestions:{type:Array,default:()=>[]}, nativeMessage:{type:Object,default:null},
   takeoverPort:{type:Object,default:null}, draftCandidatePort:{type:Object,default:null},
   mediaAuthorityPort:{type:Object,default:null},fetchImpl:{type:Function,default:null}
@@ -145,29 +146,29 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 
 <template>
   <section ref="composerRoot" class="bc-native-composer" aria-label="唯一 CONTACT Composer" @dragover.prevent @drop="onDrop">
-    <p class="bc-identity" :title="current.key?'当前联系人身份由原W24/W47接口核验':'尚未选择经平台授权的真实联系人'">{{current.key?'当前联系人 · '+current.status:'未选联系人 · 发送已禁用'}}</p>
-    <p v-if="why" role="alert" class="bc-warning">{{why}}</p>
-    <div v-if="sourceMessage" class="bc-source" data-test="native-message">
+    <p v-if="!readOnlyConversation" class="bc-identity" :title="current.key?'当前联系人身份由原W24/W47接口核验':'尚未选择经平台授权的真实联系人'">{{current.key?'当前联系人 · '+current.status:'未选联系人 · 发送已禁用'}}</p>
+    <p v-if="why&&!readOnlyConversation" role="alert" class="bc-warning">{{why}}</p>
+    <div v-if="sourceMessage&&!readOnlyConversation" class="bc-source" data-test="native-message">
       <p>原文 · MID {{sourceMessage.mid}} · {{sourceMessage.original}}</p>
       <p v-if="sourceMessage.zh">有来源的译文（质量另行验收） · {{sourceMessage.zh}}</p>
       <p v-else>中文译文：{{sourceMessage.translationStatus==='FIXTURE_ONLY'?'仅模拟数据，不作为真实译文':'暂无经过验证的译文'}}</p>
     </div>
-    <div v-if="current.key" class="bc-replies" aria-label="有来源的建议回复">
+    <div v-if="current.key&&!readOnlyConversation" class="bc-replies" aria-label="有来源的建议回复">
       <span>{{cards.length}} 条有来源建议（质量审核：未通过正式签署）</span>
       <div v-for="s in cards" :key="s.id" class="bc-card">
         <p>{{s.text}}</p><small>未审核 · {{s.qualityStatus||'MODEL_QUALITY_UNREVIEWED'}} · 候选 {{s.id}} · Agno Run {{s.provenance.runId}} · MID {{s.provenance.sourceMid}}</small>
         <Button size="sm" variant="outline" @click="chooseSuggestion(s)">填入草稿</Button>
       </div>
     </div>
-    <div v-if="current.draft?.quote" class="bc-quote">引用 MID {{current.draft.quote.mid}}</div>
+    <div v-if="current.draft?.quote&&!readOnlyConversation" class="bc-quote">引用 MID {{current.draft.quote.mid}}</div>
     <InputGroup>
       <InputGroupTextarea :model-value="current.draft?.text||''"
-        :disabled="!current.key" aria-label="当前 CONTACT 私有草稿"
-        placeholder="输入消息后核验真实接管；未授权不会发送"
+        :disabled="!current.key||readOnlyConversation" aria-label="消息输入框"
+        :placeholder="readOnlyConversation?'暂时无法发送消息':'输入消息…'"
         @update:model-value="onInput" @compositionstart="startIME"
         @compositionend="endIME" @paste="onPaste" @keydown="onSendAttempt"/>
     </InputGroup>
-    <div class="bc-footer">
+    <div v-if="!readOnlyConversation" class="bc-footer">
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-haspopup="dialog" aria-controls="w46-contact-experts-menu" :aria-expanded="expertsOpen" @click="toggleContactMenu('experts')">＋ 专家</Button>
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-model" aria-haspopup="menu" aria-controls="w46-contact-model-menu" :aria-expanded="contactMenu==='model'" @click="toggleContactMenu('model')">模型</Button>
       <button type="button" class="bc-mode-label bc-compact-menu-trigger" data-test="w46-contact-mode" aria-haspopup="menu" aria-controls="w46-contact-mode-menu" :aria-expanded="contactMenu==='mode'" @click="toggleContactMenu('mode')">人工 · 辅助 · 自动（待核验）⌄</button>
@@ -175,14 +176,18 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
       <span class="bc-send-hold" title="真人发送仅允许原W25唯一MessageDelivery通过当前身份及ACK授权边界">未授权 · 不能发送</span>
       <Button disabled size="sm">发送不可用</Button>
     </div>
-    <BCNativeExpertPicker v-if="expertsOpen" :fetch-impl="fetchImpl"
+    <div v-else class="bc-footer bc-readonly-footer" data-test="w56-readonly-composer">
+      <span class="bc-readonly-status">目前仅可查看消息</span>
+      <Button disabled size="sm" title="发送功能尚未接通">发送</Button>
+    </div>
+    <BCNativeExpertPicker v-if="expertsOpen&&!readOnlyConversation" :fetch-impl="fetchImpl"
       @close="closeContactMenu(true)" @navigate="section=>{closeContactMenu();emit('navigate',section)}"/>
-    <div v-if="contactMenu==='model'" class="bc-compose-popup" role="menu" data-test="w46-contact-model-popup" id="w46-contact-model-menu">
+    <div v-if="contactMenu==='model'&&!readOnlyConversation" class="bc-compose-popup" role="menu" data-test="w46-contact-model-popup" id="w46-contact-model-menu">
       <div class="bc-popup-head"><strong>联系人模型</strong><button type="button" @click="toggleContactMenu('model')">关闭</button></div>
       <p>尚未取得当前联系人完整身份K、原生模型费用预算与授权，不能使用闺蜜大脑私人模型的权限代替。</p>
       <button type="button" disabled>本地模型 · 待资格回读</button><button type="button" disabled>云端模型 · 待密钥和批准</button>
     </div>
-    <div v-if="contactMenu==='mode'" class="bc-compose-popup" role="menu" data-test="w46-contact-mode-popup" id="w46-contact-mode-menu">
+    <div v-if="contactMenu==='mode'&&!readOnlyConversation" class="bc-compose-popup" role="menu" data-test="w46-contact-mode-popup" id="w46-contact-mode-menu">
       <div class="bc-popup-head"><strong>回复模式</strong><button type="button" @click="toggleContactMenu('mode')">关闭</button></div>
       <p>三模式须由原W44/W47读取当前联系人有效授权，真实切换经写入与服务端再次回读才生效。</p>
       <button type="button" disabled data-test="w46-mode-human">人工 · 等待模式回读</button>

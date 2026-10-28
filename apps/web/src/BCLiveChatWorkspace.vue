@@ -178,13 +178,13 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
       <button type="button" class="bc-group-title" :aria-expanded="pinnedExpanded" @click="pinnedExpanded=!pinnedExpanded">置顶 <span>{{pinnedExpanded?'⌄':'›'}}</span></button>
       <template v-if="pinnedExpanded">
        <button v-for="c in pinned" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-        <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
+        <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
        </button>
       </template>
      </template>
      <button v-for="c in regular" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-      <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
+      <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
       <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
      </button>
      <p v-if="!filtered.length" class="bc-inbox-state">没有匹配的当前授权联系人</p>
@@ -199,26 +199,26 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
      <span class="bc-contact-avatar" aria-hidden="true"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span>
-     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnly?'官方 Messenger 入站已同步 · 只读':selected.channel+' · 绑定修订 '+selected.bindingRevision}}</small></div>
+     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnly?'Messenger':selected.channel==='FB_PERSONAL'?'Messenger':selected.channel==='FB_PAGE'?'Facebook Page':selected.channel==='WHATSAPP_PERSONAL'?'WhatsApp':selected.channel==='TELEGRAM_PERSONAL'?'Telegram':'聊天'}}</small></div>
      <button type="button" :disabled="timelineState==='checking'" aria-label="从原生服务刷新消息" @click="chooseContact(selected)">刷新消息</button>
     </header>
-    <p v-if="timelineState==='checking'" class="bc-inbox-state">正在读取有来源的聊天记录…</p>
+    <p v-if="timelineState==='checking'" class="bc-inbox-state">正在加载消息…</p>
     <p v-if="timelineState==='blocked'" role="alert" data-test="w46-messages-error" class="bc-inbox-state">{{timelineError}}</p>
     <div class="bc-real-timeline" data-test="w46-message-scroll">
-     <p v-if="timelineState==='ready'&&!timeline.length" class="bc-inbox-state">该联系人暂无已核验的消息</p>
+     <p v-if="timelineState==='ready'&&!timeline.length" class="bc-inbox-state">还没有消息</p>
      <div v-for="m in timeline" :key="m.mid" class="bc-real-message" :data-mid="m.mid">
       <Message :align="m.direction==='OUTBOUND'?'end':'start'">
        <Bubble :align="m.direction==='OUTBOUND'?'end':'start'" variant="default">
-        <BubbleContent><p>{{m.original}}</p><p v-if="m.zh" class="bc-translation">{{m.zh}}</p></BubbleContent>
+        <BubbleContent><div class="bc-message-text" :class="{'is-outgoing':m.direction==='OUTBOUND'}"><p>{{m.original}}</p><p v-if="m.zh" class="bc-translation">{{m.zh}}</p></div></BubbleContent>
        </Bubble>
       </Message>
-      <div class="bc-message-meta"><small>MID {{m.mid}} · {{m.translationRunId?'翻译Run '+m.translationRunId:'中文译文待核验'}}</small>
-       <button type="button" :disabled="!selected?.identityKey" @click="sourceQuote(m)">引用</button>
+      <div v-if="!selected?.readOnly&&selected?.identityKey" class="bc-message-meta">
+       <button type="button" @click="sourceQuote(m)">引用</button>
       </div>
      </div>
     </div>
-    <p v-if="selected.readOnly" class="bc-inbox-state bc-composer-hold">此联系人与消息来自官方 Messenger 桥接，现可阅读；真人发送仍需原 W24/W25 账号及 Peer 授权，不需要重新登录 Facebook。</p>
-    <p v-else-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">暂时无法读取此对话，请重新连接账号后重试。</p>
+    <p v-if="selected.readOnly" class="bc-composer-hold" hidden>只读对话</p>
+    <p v-else-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">暂时无法发送消息</p>
    </template>
    <div v-else class="bc-real-no-contact" data-test="w46-empty-chat">
     <div aria-hidden="true" class="bc-empty-glow">✦</div>
@@ -228,7 +228,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
    </div>
    <!-- One always-mounted original CONTACT Composer. Null K must leave input
         and expert/media operations disabled, not create a second renderer. -->
-   <BCNativeComposer ref="composerRef" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
+   <BCNativeComposer ref="composerRef" :read-only-conversation="selected?.readOnly===true" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
     :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort" @navigate="navigate"/>
   </div>
  </section>
@@ -257,7 +257,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
 .bc-inbox-footer{min-height:32px;display:flex;justify-content:space-between;align-items:center;padding:6px 12px;gap:6px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}.bc-inbox-footer button{border:0;background:transparent;color:var(--accent);cursor:pointer}
 .bc-real-conversation{min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
 .bc-chat-heading{display:flex;align-items:center;gap:11px;padding:10px 14px;min-height:57px;border-bottom:1px solid var(--border);background:var(--bg2)}.bc-chat-title{display:grid;gap:4px;min-width:0;flex:1}.bc-chat-title strong,.bc-chat-title small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bc-chat-title small{color:var(--muted);font-size:11px}.bc-chat-heading button{border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--ink);padding:8px;cursor:pointer}
-.bc-real-timeline{min-height:0;flex:1 1 auto;overflow-y:auto;padding:18px;overscroll-behavior:contain}.bc-real-message{max-width:100%;margin-bottom:14px}.bc-real-message p{white-space:pre-wrap;overflow-wrap:anywhere}.bc-translation{color:var(--accent)}.bc-message-meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:11px}.bc-message-meta button{padding:2px 7px;border:0;background:none;color:var(--accent);cursor:pointer}.bc-message-meta button:disabled{opacity:.45}
+.bc-real-timeline{min-height:0;flex:1 1 auto;overflow-y:auto;padding:18px;overscroll-behavior:contain}.bc-real-message{max-width:100%;margin-bottom:14px}.bc-real-message p{white-space:pre-wrap;overflow-wrap:anywhere}.bc-message-text{display:inline-block;max-width:min(72ch,100%);padding:9px 13px;border-radius:14px 14px 14px 5px;background:var(--surface-raised,var(--surface));color:var(--ink);font-size:14px;line-height:1.55;box-shadow:0 1px 3px rgba(0,0,0,.07)}.bc-message-text.is-outgoing{border-radius:14px 14px 5px 14px;background:rgba(var(--accent-rgb),.15)}.bc-message-text p{margin:0}.bc-message-text .bc-translation{margin-top:5px;font-size:12px}.bc-translation{color:var(--accent)}.bc-message-meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:11px}.bc-message-meta button{padding:2px 7px;border:0;background:none;color:var(--accent);cursor:pointer}.bc-message-meta button:disabled{opacity:.45}
 .bc-real-no-contact{flex:1;min-height:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:20px;text-align:center}.bc-empty-glow{font-size:40px;color:var(--accent);text-shadow:0 0 30px rgba(var(--accent-rgb),.6)}.bc-real-no-contact h2{font-size:20px;margin:0}.bc-real-no-contact p{font-size:14px;line-height:1.65;color:var(--muted);max-width:390px;margin:0}
 .bc-mobile-back{display:none}
 :deep(.bc-native-composer){flex:0 0 auto}.bc-real-conversation.is-empty-chat :deep(.bc-native-composer){display:none}
