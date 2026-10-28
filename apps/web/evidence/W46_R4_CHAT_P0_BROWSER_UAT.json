@@ -1,0 +1,141 @@
+{
+  "source": "REAL_WINDOWS_CHROME_HEADLESS_W47_GATE_ACTUAL_SOURCE",
+  "upstreamPr53Head": "755f075979471a71f14d135f18809cf9c94f44b7",
+  "w47GateSource": "W09_R4_OWNER_JOIN_20261025/apps/web/runtime/vite.w47.config.mjs",
+  "nonprodTestAdapter": "ONLY_BYPASSES_DRAFT_UI_FEATURE_TOGGLE_NOT_AUTHORITY",
+  "originalChatComposer": "RETAINED_ONE_COMPONENT_BUT_UNMOUNTED_WITH_NO_AUTHORIZED_CONTACT",
+  "trustedSession": false,
+  "realAccountCount": 0,
+  "realContacts": 0,
+  "canSend": false,
+  "recoveredOriginalMain": true,
+  "remountedOriginalMain": false,
+  "syntheticDOMContinuityMarker": true,
+  "realAuthorizedDraftRecovery": "HOLD_NO_TRUSTED_SESSION",
+  "workspaceCount": 9,
+  "permissionDenied": 503,
+  "noMutations": 0,
+  "jsErrors": [],
+  "workspaces": [
+    {
+      "workspace": "BRAIN",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "workspace": "AUTOPILOT",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "workspace": "ACCOUNTS",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "workspace": "PEOPLE",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "workspace": "PERSONA",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "workspace": "TASKS",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "workspace": "MEDIA",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "workspace": "SETTINGS",
+      "display": "none",
+      "connected": true,
+      "same": true,
+      "marker": "synthetic-test-only-no-send",
+      "composerCount": 0
+    },
+    {
+      "stage": "responsive-CHAT",
+      "width": 320,
+      "scroll": 320,
+      "display": "flex",
+      "composerCount": 0
+    },
+    {
+      "stage": "responsive-CHAT",
+      "width": 360,
+      "scroll": 360,
+      "display": "flex",
+      "composerCount": 0
+    },
+    {
+      "stage": "responsive-CHAT",
+      "width": 430,
+      "scroll": 430,
+      "display": "flex",
+      "composerCount": 0
+    },
+    {
+      "stage": "responsive-CHAT",
+      "width": 720,
+      "scroll": 720,
+      "display": "grid",
+      "composerCount": 0
+    },
+    {
+      "stage": "responsive-CHAT",
+      "width": 950,
+      "scroll": 950,
+      "display": "grid",
+      "composerCount": 0
+    },
+    {
+      "stage": "responsive-CHAT",
+      "width": 1101,
+      "scroll": 1101,
+      "display": "grid",
+      "composerCount": 0
+    },
+    {
+      "stage": "responsive-CHAT",
+      "width": 1360,
+      "scroll": 1360,
+      "display": "grid",
+      "composerCount": 0
+    }
+  ],
+  "backendSha": "7ff387adf2007744117b706d72a57c6055b04177",
+  "screenshots": [
+    "W46_R4_CHAT_P0_CHROME_1360_EMPTY.png",
+    "W46_R4_CHAT_P0_CHROME_1360_RETURN.png",
+    "W46_R4_CHAT_P0_CHROME_360_EMPTY.png",
+    "W46_R4_CHAT_P0_CHROME_PERMISSION_503.png"
+  ]
+}

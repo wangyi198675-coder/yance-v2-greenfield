@@ -1,0 +1,167 @@
+// Original W24 IdentityConsent to existing W47 authorized-contact GET.
+import {canonicalK} from './identity-consent.mjs';
+// No second account store; all native platform inventory callbacks come from
+// W26-29 and must check REAL SDK account authorization and peer provenance.
+const required=s=>typeof s==='string'&&s.length>0&&s.length<=200;
+const deny=s=>{throw Error(s)};
+const samePrincipal=(a,b)=>a?.verified===true&&a?.source==='W54_NATIVE_CURRENT_USER'&&
+ required(a.principalRef)&&a.principalRef===b?.principalRef&&
+ a.installationRef===b?.installationRef&&
+ a.revocationGeneration===b?.revocationGeneration;
+const channels=new Set(['FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL']);
+export function createW24NativeOwnerReadPorts({
+  identityConsent, resolveNativePrincipal, listVerifiedPlatformAccounts,
+  listVerifiedPlatformPeers, readW44IdentityAuthority
+}={}){
+ if(identityConsent?.isDurableIdentity!==true||
+   typeof identityConsent?.assertCurrent!=='function'||
+   typeof identityConsent?.readConsentEpoch!=='function'||
+   [resolveNativePrincipal,listVerifiedPlatformAccounts,listVerifiedPlatformPeers,readW44IdentityAuthority]
+   .some(x=>typeof x!=='function'))
+   deny('W24_STRICT_AND_NATIVE_OWNER_READ_PORTS_REQUIRED');
+ const confirmPrincipal=async({principal,session})=>{
+  const latest=await resolveNativePrincipal({session,operation:'READ_CONTACTS'});
+  if(!samePrincipal(latest,principal))deny('NATIVE_PRINCIPAL_REVOKED_OR_UNVERIFIED');
+  return latest;
+ };
+ const verifiedAccount=x=>x?.platformAuthorizationVerified===true&&
+  x?.nativeSessionCurrent===true&&x?.channelAccountBindingCurrent===true&&
+  x?.authorization==='ONLINE_VERIFIED'&&channels.has(x.channel)&&
+  required(x.accountRef)&&/^[A-Za-z0-9_-]{8,150}$/.test(x.accountRef)&&
+  required(x.ownerPrincipalRef)&&required(x.tenant)&&required(x.accountId)&&
+  required(x.accountAnchorPeerId)&&Number.isSafeInteger(x.bindingRevision)&&
+  x.bindingRevision>=1;
+ async function readW24AuthorizedAccounts({principal,session}={}){
+  const native=await confirmPrincipal({principal,session});
+  const rows=await listVerifiedPlatformAccounts({nativePrincipal:native,session});
+  if(!Array.isArray(rows)||rows.length>50)deny('NATIVE_ACCOUNTS_NOT_AUTHORITATIVE');
+  const seen=new Set();
+  return Object.freeze(rows.map(a=>{
+   if(!verifiedAccount(a)||a.ownerPrincipalRef!==native.principalRef||
+     seen.has(a.accountRef))deny('ACCOUNT_AUTHORIZATION_MISSING_OR_DUPLICATE');
+   seen.add(a.accountRef);
+   const w44=readW44IdentityAuthority({actor:native.principalRef,
+     identity:{tenant:a.tenant,account:a.accountId,channel:a.channel,
+      peer_id:a.accountAnchorPeerId,binding_revision:a.bindingRevision}});
+   if(!w44?.account||w44.account.owner!==native.principalRef||
+     w44.account.active!==true||w44.bindingRevision!==a.bindingRevision||
+     !Number.isSafeInteger(w44.accountEpoch)||w44.accountEpoch<0)
+    deny('W24_ACCOUNT_NOT_REGISTERED_OR_REVOKED');
+   return Object.freeze({accountRef:a.accountRef,channel:a.channel,
+    ownerPrincipalRef:a.ownerPrincipalRef,authorization:'ONLINE_VERIFIED',
+    bindingRevision:a.bindingRevision,accountEpoch:w44.accountEpoch,
+    tenant:a.tenant,accountId:a.accountId,accountAnchorPeerId:a.accountAnchorPeerId});
+  }));
+ }
+ async function readW24VerifiedContacts({principal,session,accounts}={}){
+  const native=await confirmPrincipal({principal,session});
+  if(!Array.isArray(accounts)||accounts.some(a=>a.ownerPrincipalRef!==native.principalRef||
+    a.authorization!=='ONLINE_VERIFIED'))
+    deny('ACCOUNT_SCOPE_NOT_AUTHORIZED');
+  const current=await listVerifiedPlatformAccounts({nativePrincipal:native,session});
+  if(!Array.isArray(current)||current.length>50)deny('PLATFORM_ACCOUNT_REVOCATION_UNAVAILABLE');
+  const currentKey=new Map();
+  for(const a of current) {
+   if(!verifiedAccount(a)||a.ownerPrincipalRef!==native.principalRef||
+     currentKey.has(a.accountRef))deny('CURRENT_ACCOUNT_NOT_AUTHORIZED');
+   currentKey.set(a.accountRef,a);
+  }
+  if(accounts.length!==current.length||accounts.some(a=>
+    !currentKey.has(a.accountRef)||currentKey.get(a.accountRef).channel!==a.channel||
+    currentKey.get(a.accountRef).tenant!==a.tenant||
+    currentKey.get(a.accountRef).accountId!==a.accountId||
+    currentKey.get(a.accountRef).accountAnchorPeerId!==a.accountAnchorPeerId||
+    currentKey.get(a.accountRef).bindingRevision!==a.bindingRevision))
+    deny('ACCOUNT_BINDING_CHANGED_DURING_READ');
+  const seen=new Set(),result=[],finalPeers=[];
+  for(const account of accounts){
+   const original=currentKey.get(account.accountRef);
+   const w44=readW44IdentityAuthority({actor:native.principalRef,
+     identity:{tenant:original.tenant,account:original.accountId,
+      channel:original.channel,peer_id:original.accountAnchorPeerId,
+      binding_revision:original.bindingRevision}});
+   if(w44?.account?.active!==true||w44.account.owner!==native.principalRef||
+     w44.bindingRevision!==original.bindingRevision||w44.accountEpoch!==account.accountEpoch)
+    deny('W24_ACCOUNT_REVOKED_DURING_READ');
+   const peers=await listVerifiedPlatformPeers({nativePrincipal:native,
+    account:original,session});
+   if(!Array.isArray(peers)||peers.length>10000)deny('PEER_LIST_NOT_AUTHORITATIVE');
+   for(const peer of peers){
+    if(peer?.platformPeerVerified!==true||peer?.nativeSessionCurrent!==true||
+       peer?.channelAccountBindingCurrent!==true||
+       peer.accountRef!==account.accountRef||peer.channel!==account.channel||
+       peer.tenant!==original.tenant||peer.accountId!==original.accountId||
+       peer.bindingRevision!==original.bindingRevision||
+       !required(peer.peerRef)||!/^[A-Za-z0-9_.:@+-]{4,200}$/.test(peer.peerRef)||
+       !Number.isSafeInteger(peer.bindingRevision)||peer.bindingRevision<1||
+       !required(peer.tenant)||!required(peer.accountId)||
+       !required(peer.displayName)||peer.displayName.length>180 ||
+       peer.ownerPrincipalRef!==native.principalRef)
+      deny('PEER_NATIVE_BINDING_NOT_VERIFIED');
+    const pair=account.accountRef+'|'+account.channel+'|'+peer.peerRef;
+    if(seen.has(pair))deny('DUPLICATE_NATIVE_CONTACT');seen.add(pair);
+    const k={tenant:peer.tenant,account:peer.accountId,channel:account.channel,
+      peer_id:peer.peerRef,binding_revision:peer.bindingRevision};
+    const ctx={tenant:peer.tenant,principal_id:native.principalRef,
+      input_domain:'CONTACT'};
+    const read=identityConsent.assertCurrent(ctx,k);
+    const epoch=identityConsent.readConsentEpoch(ctx,k);
+    const identityKey=canonicalK(k);
+    if(read?.binding_revision!==peer.bindingRevision||
+       read?.identity_key!==identityKey||
+       !Number.isSafeInteger(epoch)||epoch<=0)
+      deny('W24_CONTACT_CONSENT_OR_BINDING_STALE');
+    // Keep ALL five native identity segments; displayName and peerRef alone
+    // are not conversation identifiers, even when two contacts share a name.
+    finalPeers.push({k,ctx,identityKey,epoch,accountRef:account.accountRef});
+    result.push(Object.freeze({accountRef:account.accountRef,
+      channel:account.channel,peerRef:peer.peerRef,
+      bindingRevision:peer.bindingRevision,displayName:peer.displayName,
+      identity:Object.freeze({...k}),identityKey,
+      accountEpoch:read.account_revocation_epoch,consentEpoch:epoch,
+      w24CurrentKVerified:true,w24ConsentCurrent:true}));
+   }
+  }
+  // An SDK may disconnect/rebind after the first account enumeration while
+  // the Peer list is being read. Check the live account list again before
+  // letting W47 return any ONLINE contact or account count.
+  const closing=await listVerifiedPlatformAccounts({nativePrincipal:native,session});
+  if(!Array.isArray(closing)||closing.length!==accounts.length)
+   deny('NATIVE_ACCOUNT_SWITCH_DURING_CONTACT_READ');
+  const closingMap=new Map();
+  for(const a of closing){
+   if(!verifiedAccount(a)||a.ownerPrincipalRef!==native.principalRef||
+     closingMap.has(a.accountRef))deny('NATIVE_ACCOUNT_SWITCH_DURING_CONTACT_READ');
+   closingMap.set(a.accountRef,a);
+  }
+  for(const account of accounts){
+   const a=closingMap.get(account.accountRef);
+   if(!a||a.channel!==account.channel||a.tenant!==account.tenant||
+     a.accountId!==account.accountId||a.bindingRevision!==account.bindingRevision||
+     a.accountAnchorPeerId!==account.accountAnchorPeerId)
+    deny('NATIVE_ACCOUNT_SWITCH_DURING_CONTACT_READ');
+   const w44=readW44IdentityAuthority({actor:native.principalRef,
+    identity:{tenant:account.tenant,account:account.accountId,
+     channel:account.channel,peer_id:account.accountAnchorPeerId,
+     binding_revision:account.bindingRevision}});
+   if(w44?.account?.active!==true||w44.account.owner!==native.principalRef||
+     w44.bindingRevision!==account.bindingRevision||w44.accountEpoch!==account.accountEpoch)
+    deny('W24_ACCOUNT_CHANGED_BEFORE_CONTACT_RESPONSE');
+  }
+  // A peer may be revoked/rebound while SDK account inventory is awaited.
+  // Final per-Peer strict W24/W44 read ensures no revoked/stale K escapes.
+  for(const item of finalPeers){
+   const currentPeer=identityConsent.assertCurrent(item.ctx,item.k);
+   const consentEpoch=identityConsent.readConsentEpoch(item.ctx,item.k);
+   if(currentPeer?.identity_key!==item.identityKey||
+     consentEpoch!==item.epoch||
+     currentPeer.account_revocation_epoch!==
+       result.find(x=>x.identityKey===item.identityKey)?.accountEpoch)
+    deny('PEER_CHANGED_BEFORE_CONTACT_RESPONSE');
+  }
+  const latest=await resolveNativePrincipal({session,operation:'READ_CONTACTS'});
+  if(!samePrincipal(latest,native))deny('NATIVE_PRINCIPAL_REVOKED_DURING_READ');
+  return Object.freeze(result);
+ }
+ return Object.freeze({readW24AuthorizedAccounts,readW24VerifiedContacts});
+}

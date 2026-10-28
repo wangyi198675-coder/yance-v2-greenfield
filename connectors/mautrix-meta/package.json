@@ -1,0 +1,10 @@
+{
+  "name": "@yance-v2/mautrix-meta-synthetic-contract",
+  "private": true,
+  "type": "module",
+  "description": "W26 offline contract-only Messenger Personal synthetic inbound adapter; no provider connection",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

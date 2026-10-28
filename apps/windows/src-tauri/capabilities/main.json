@@ -1,0 +1,19 @@
+{
+    "identifier":  "main",
+    "description":  "Local main window only; no remote URLs, provider permissions or send commands",
+    "local":  true,
+    "windows":  [
+                    "main"
+                ],
+    "permissions":  [
+                        "core:default",
+                        "allow-session-status",
+                        "allow-logout-session",
+                        "allow-cloud-key-status",
+                        "allow-cloud-key-store",
+                        "allow-cloud-key-revoke",
+                        "notification:allow-is-permission-granted",
+                        "notification:allow-request-permission",
+                        "notification:allow-notify"
+                    ]
+}

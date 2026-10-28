@@ -1,0 +1,32 @@
+{
+  "status": "PUBLIC_DOCUMENT_SNAPSHOT_ONLY_NOT_COMMERCIAL_API_APPROVAL",
+  "collected_local_at": "2026-10-24T15:42:13+07:00",
+  "rest": {
+    "url": "https://developer.pancake.biz/openapi/openapi.yaml",
+    "title": "Pancake API Library",
+    "openapi": "3.0.0",
+    "info_version": "1.0.0",
+    "raw_bytes": 176520,
+    "sha256": "ab2e2a9fadd2f170aba2921e459a2d349b42c2675c5883f27f8bbbd052f7130c",
+    "method": "POST",
+    "base_url": "https://pages.fm/api/public_api/v1",
+    "send_path": "/pages/{page_id}/conversations/{conversation_id}/messages",
+    "note": "HTTP 200 may include success:false; provider id is not independently verified Meta MID"
+  },
+  "webhook": {
+    "url": "https://developer.pancake.biz/openapi/webhook.yaml",
+    "title": "Pancake Webhooks",
+    "openapi": "3.0.0",
+    "info_version": "1.0.0",
+    "raw_bytes": 38933,
+    "sha256": "ab327fea1a398553351edde68a992f96c66dbc6fc4a93045d1d23e03f8d0e09d",
+    "supported_events": ["messaging", "conversation", "subscription", "post", "connect_status"],
+    "public_schema_signature_specified": false,
+    "note": "Lack of signature headers in public YAML is not proof provider never supports a signature; production must reject unverified origins"
+  },
+  "real_app_repo_git_sha": "NOT_PINNED_BY_THIS_DOCUMENT",
+  "pancake_server_source_sha": "COMMERCIAL_SERVER_NOT_PUBLISHED",
+  "chatwoot_cloud_build_sha": "UNVERIFIED",
+  "legal_rights": "HOLD",
+  "production_provider_calls": "FORBIDDEN"
+}

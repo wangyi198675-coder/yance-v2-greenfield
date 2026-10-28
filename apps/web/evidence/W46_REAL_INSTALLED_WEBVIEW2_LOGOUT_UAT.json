@@ -1,0 +1,25 @@
+{
+  "type": "REAL_ISOLATED_INSTALLED_W54_NATIVE_LOGOUT_UI_PASS",
+  "exe": "C:\\Users\\1\\AppData\\Local\\YanceV2_W46_InstalledHost_R3_UAT\\yance-v2-native-session-lab.exe",
+  "host": "http://tauri.localhost/",
+  "installedPid": 35948,
+  "before": {
+    "nativeOsVerified": true,
+    "nativeSessionActive": true,
+    "serverTrusted": false,
+    "canSend": false,
+    "connectedAccountCount": 0
+  },
+  "after": {
+    "nativeOsVerified": true,
+    "nativeSessionActive": false,
+    "serverTrusted": false,
+    "canSend": false,
+    "connectedAccountCount": 0
+  },
+  "visible": "已调用 Windows 原生注销；W47 权限须再次独立回读",
+  "events": [],
+  "paidModelCalls": 0,
+  "socialMessagesSent": 0,
+  "realAccountAuth": false
+}

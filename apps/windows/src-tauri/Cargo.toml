@@ -1,0 +1,37 @@
+[package]
+name = "yance-v2-native-session-lab"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Nonproduction native Windows identity/IPC qualification host"
+license = "MIT"
+build = "build.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.0", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.0", default-features = true, features = ["dynamic-acl"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+getrandom = "=0.3.4"
+sha2 = "=0.10.9"
+tauri-plugin-localhost = "=2.4.0"
+tauri-plugin-notification = "=2.6.0"
+portpicker = "=0.1.1"
+serde_json = "=1.0.151"
+zeroize = "=1.9.1"
+yance-w55-fake-credential-custody = { path = "../../../packages/credential-custody" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_Threading",
+  "Win32_UI_Shell",
+  "Win32_System_Com"
+] }
+
+[dev-dependencies]
+
+[profile.dev]
+debug = 0

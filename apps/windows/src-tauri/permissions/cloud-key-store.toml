@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-cloud-key-store"
+description = "Installed main WebView only: W55 native current-user key store, not ordinary HTTP"
+commands.allow = ["cloud_key_store"]

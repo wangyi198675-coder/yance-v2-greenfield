@@ -1,0 +1,2318 @@
+{
+  "banner": "OFFLINE_SYNTHETIC_FIXTURE_NOT_REAL_USER_OR_PROVIDER",
+  "intent": "UX_ONLY_NO_RUNTIME",
+  "channels": [
+    "FB_PERSONAL",
+    "FB_PAGE",
+    "WHATSAPP_PERSONAL",
+    "TELEGRAM_PERSONAL"
+  ],
+  "contacts": [
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-001",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 001",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-1",
+        "original": "Test message #1",
+        "zh": "模拟译文 #1",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-002",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 002",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-2",
+        "original": "Test message #2",
+        "zh": "模拟译文 #2",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-003",
+      "binding_revision": 1,
+      "display_name": "同名演示联系人",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-3",
+        "original": "Test message #3",
+        "zh": "模拟译文 #3",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-004",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 004",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-4",
+        "original": "Test message #4",
+        "zh": "模拟译文 #4",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-005",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 005",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-5",
+        "original": "Test message #5",
+        "zh": "模拟译文 #5",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-006",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 006",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-6",
+        "original": "Test message #6",
+        "zh": "模拟译文 #6",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-007",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 007",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-7",
+        "original": "Test message #7",
+        "zh": "模拟译文 #7",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-008",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 008",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-8",
+        "original": "Test message #8",
+        "zh": "模拟译文 #8",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-009",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 009",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-9",
+        "original": "Test message #9",
+        "zh": "模拟译文 #9",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-010",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 010",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-10",
+        "original": "Test message #10",
+        "zh": "模拟译文 #10",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-011",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 011",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-11",
+        "original": "Test message #11",
+        "zh": "模拟译文 #11",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-012",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 012",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-12",
+        "original": "Test message #12",
+        "zh": "模拟译文 #12",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-013",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 013",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-13",
+        "original": "Test message #13",
+        "zh": "模拟译文 #13",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-014",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 014",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-14",
+        "original": "Test message #14",
+        "zh": "模拟译文 #14",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-015",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 015",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-15",
+        "original": "Test message #15",
+        "zh": "模拟译文 #15",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-016",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 016",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-16",
+        "original": "Test message #16",
+        "zh": "模拟译文 #16",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-017",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 017",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-17",
+        "original": "Test message #17",
+        "zh": "模拟译文 #17",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-018",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 018",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-18",
+        "original": "Test message #18",
+        "zh": "模拟译文 #18",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-019",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 019",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-19",
+        "original": "Test message #19",
+        "zh": "模拟译文 #19",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-020",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 020",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-20",
+        "original": "Test message #20",
+        "zh": "模拟译文 #20",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-021",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 021",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-21",
+        "original": "Test message #21",
+        "zh": "模拟译文 #21",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-022",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 022",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-22",
+        "original": "Test message #22",
+        "zh": "模拟译文 #22",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-023",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 023",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-23",
+        "original": "Test message #23",
+        "zh": "模拟译文 #23",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-024",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 024",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-24",
+        "original": "Test message #24",
+        "zh": "模拟译文 #24",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-025",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 025",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-25",
+        "original": "Test message #25",
+        "zh": "模拟译文 #25",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-026",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 026",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-26",
+        "original": "Test message #26",
+        "zh": "模拟译文 #26",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-027",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 027",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-27",
+        "original": "Test message #27",
+        "zh": "模拟译文 #27",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-028",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 028",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-28",
+        "original": "Test message #28",
+        "zh": "模拟译文 #28",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-029",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 029",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-29",
+        "original": "Test message #29",
+        "zh": "模拟译文 #29",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-030",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 030",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-30",
+        "original": "Test message #30",
+        "zh": "模拟译文 #30",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-031",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 031",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-31",
+        "original": "Test message #31",
+        "zh": "模拟译文 #31",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-032",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 032",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-32",
+        "original": "Test message #32",
+        "zh": "模拟译文 #32",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-033",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 033",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-33",
+        "original": "Test message #33",
+        "zh": "模拟译文 #33",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-034",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 034",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-34",
+        "original": "Test message #34",
+        "zh": "模拟译文 #34",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-035",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 035",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-35",
+        "original": "Test message #35",
+        "zh": "模拟译文 #35",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-036",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 036",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-36",
+        "original": "Test message #36",
+        "zh": "模拟译文 #36",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-037",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 037",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-37",
+        "original": "Test message #37",
+        "zh": "模拟译文 #37",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-038",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 038",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-38",
+        "original": "Test message #38",
+        "zh": "模拟译文 #38",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-039",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 039",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-39",
+        "original": "Test message #39",
+        "zh": "模拟译文 #39",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-040",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 040",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-40",
+        "original": "Test message #40",
+        "zh": "模拟译文 #40",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-041",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 041",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-41",
+        "original": "Test message #41",
+        "zh": "模拟译文 #41",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-042",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 042",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-42",
+        "original": "Test message #42",
+        "zh": "模拟译文 #42",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-043",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 043",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-43",
+        "original": "Test message #43",
+        "zh": "模拟译文 #43",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-044",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 044",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-44",
+        "original": "Test message #44",
+        "zh": "模拟译文 #44",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-045",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 045",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-45",
+        "original": "Test message #45",
+        "zh": "模拟译文 #45",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-046",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 046",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-46",
+        "original": "Test message #46",
+        "zh": "模拟译文 #46",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-047",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 047",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-47",
+        "original": "Test message #47",
+        "zh": "模拟译文 #47",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-048",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 048",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-48",
+        "original": "Test message #48",
+        "zh": "模拟译文 #48",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-049",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 049",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-49",
+        "original": "Test message #49",
+        "zh": "模拟译文 #49",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-050",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 050",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-50",
+        "original": "Test message #50",
+        "zh": "模拟译文 #50",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-051",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 051",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-51",
+        "original": "Test message #51",
+        "zh": "模拟译文 #51",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-052",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 052",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-52",
+        "original": "Test message #52",
+        "zh": "模拟译文 #52",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-053",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 053",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-53",
+        "original": "Test message #53",
+        "zh": "模拟译文 #53",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-054",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 054",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-54",
+        "original": "Test message #54",
+        "zh": "模拟译文 #54",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-055",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 055",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-55",
+        "original": "Test message #55",
+        "zh": "模拟译文 #55",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-056",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 056",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-56",
+        "original": "Test message #56",
+        "zh": "模拟译文 #56",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-057",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 057",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-57",
+        "original": "Test message #57",
+        "zh": "模拟译文 #57",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-058",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 058",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-58",
+        "original": "Test message #58",
+        "zh": "模拟译文 #58",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-059",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 059",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-59",
+        "original": "Test message #59",
+        "zh": "模拟译文 #59",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-060",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 060",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-60",
+        "original": "Test message #60",
+        "zh": "模拟译文 #60",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-061",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 061",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-61",
+        "original": "Test message #61",
+        "zh": "模拟译文 #61",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-062",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 062",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-62",
+        "original": "Test message #62",
+        "zh": "模拟译文 #62",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-063",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 063",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-63",
+        "original": "Test message #63",
+        "zh": "模拟译文 #63",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-064",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 064",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-64",
+        "original": "Test message #64",
+        "zh": "模拟译文 #64",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-065",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 065",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-65",
+        "original": "Test message #65",
+        "zh": "模拟译文 #65",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-066",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 066",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-66",
+        "original": "Test message #66",
+        "zh": "模拟译文 #66",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-067",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 067",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-67",
+        "original": "Test message #67",
+        "zh": "模拟译文 #67",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-068",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 068",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-68",
+        "original": "Test message #68",
+        "zh": "模拟译文 #68",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-069",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 069",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-69",
+        "original": "Test message #69",
+        "zh": "模拟译文 #69",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-070",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 070",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-70",
+        "original": "Test message #70",
+        "zh": "模拟译文 #70",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-071",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 071",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-71",
+        "original": "Test message #71",
+        "zh": "模拟译文 #71",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-072",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 072",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-72",
+        "original": "Test message #72",
+        "zh": "模拟译文 #72",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-073",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 073",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-73",
+        "original": "Test message #73",
+        "zh": "模拟译文 #73",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-074",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 074",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-74",
+        "original": "Test message #74",
+        "zh": "模拟译文 #74",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-075",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 075",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-75",
+        "original": "Test message #75",
+        "zh": "模拟译文 #75",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-076",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 076",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-76",
+        "original": "Test message #76",
+        "zh": "模拟译文 #76",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-077",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 077",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-77",
+        "original": "Test message #77",
+        "zh": "模拟译文 #77",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-078",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 078",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-78",
+        "original": "Test message #78",
+        "zh": "模拟译文 #78",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-079",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 079",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-79",
+        "original": "Test message #79",
+        "zh": "模拟译文 #79",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-080",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 080",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-80",
+        "original": "Test message #80",
+        "zh": "模拟译文 #80",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-081",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 081",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-81",
+        "original": "Test message #81",
+        "zh": "模拟译文 #81",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-082",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 082",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-82",
+        "original": "Test message #82",
+        "zh": "模拟译文 #82",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-083",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 083",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-83",
+        "original": "Test message #83",
+        "zh": "模拟译文 #83",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-084",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 084",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-84",
+        "original": "Test message #84",
+        "zh": "模拟译文 #84",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-085",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 085",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-85",
+        "original": "Test message #85",
+        "zh": "模拟译文 #85",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-086",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 086",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-86",
+        "original": "Test message #86",
+        "zh": "模拟译文 #86",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-087",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 087",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-87",
+        "original": "Test message #87",
+        "zh": "模拟译文 #87",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-088",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 088",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-88",
+        "original": "Test message #88",
+        "zh": "模拟译文 #88",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-089",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 089",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-89",
+        "original": "Test message #89",
+        "zh": "模拟译文 #89",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-090",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 090",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-90",
+        "original": "Test message #90",
+        "zh": "模拟译文 #90",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-091",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 091",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-91",
+        "original": "Test message #91",
+        "zh": "模拟译文 #91",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-092",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 092",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-92",
+        "original": "Test message #92",
+        "zh": "模拟译文 #92",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-093",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 093",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-93",
+        "original": "Test message #93",
+        "zh": "模拟译文 #93",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-094",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 094",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-94",
+        "original": "Test message #94",
+        "zh": "模拟译文 #94",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-095",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 095",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-95",
+        "original": "Test message #95",
+        "zh": "模拟译文 #95",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-096",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 096",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-96",
+        "original": "Test message #96",
+        "zh": "模拟译文 #96",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-097",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 097",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-97",
+        "original": "Test message #97",
+        "zh": "模拟译文 #97",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-098",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 098",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-98",
+        "original": "Test message #98",
+        "zh": "模拟译文 #98",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-099",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 099",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-99",
+        "original": "Test message #99",
+        "zh": "模拟译文 #99",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-100",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 100",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-100",
+        "original": "Test message #100",
+        "zh": "模拟译文 #100",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-101",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 101",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-101",
+        "original": "Test message #101",
+        "zh": "模拟译文 #101",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-102",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 102",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-102",
+        "original": "Test message #102",
+        "zh": "模拟译文 #102",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-103",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 103",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-103",
+        "original": "Test message #103",
+        "zh": "模拟译文 #103",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-104",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 104",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-104",
+        "original": "Test message #104",
+        "zh": "模拟译文 #104",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-105",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 105",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-105",
+        "original": "Test message #105",
+        "zh": "模拟译文 #105",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-106",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 106",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-106",
+        "original": "Test message #106",
+        "zh": "模拟译文 #106",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-107",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 107",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-107",
+        "original": "Test message #107",
+        "zh": "模拟译文 #107",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-108",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 108",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-108",
+        "original": "Test message #108",
+        "zh": "模拟译文 #108",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-109",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 109",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-109",
+        "original": "Test message #109",
+        "zh": "模拟译文 #109",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-110",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 110",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-110",
+        "original": "Test message #110",
+        "zh": "模拟译文 #110",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-111",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 111",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-111",
+        "original": "Test message #111",
+        "zh": "模拟译文 #111",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-112",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 112",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-112",
+        "original": "Test message #112",
+        "zh": "模拟译文 #112",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-113",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 113",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-113",
+        "original": "Test message #113",
+        "zh": "模拟译文 #113",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-114",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 114",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-114",
+        "original": "Test message #114",
+        "zh": "模拟译文 #114",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-115",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 115",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-115",
+        "original": "Test message #115",
+        "zh": "模拟译文 #115",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-116",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 116",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-116",
+        "original": "Test message #116",
+        "zh": "模拟译文 #116",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "FB_PERSONAL",
+      "peer_id": "fake-peer-117",
+      "binding_revision": 1,
+      "display_name": "同名演示联系人",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-117",
+        "original": "Test message #117",
+        "zh": "模拟译文 #117",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "FB_PAGE",
+      "peer_id": "fake-peer-118",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 118",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "AUTO",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-118",
+        "original": "Test message #118",
+        "zh": "模拟译文 #118",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-1",
+      "channel": "WHATSAPP_PERSONAL",
+      "peer_id": "fake-peer-119",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 119",
+      "unread": 0,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "ASSIST",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-119",
+        "original": "Test message #119",
+        "zh": "模拟译文 #119",
+        "translation_state": "SYNTHETIC"
+      }
+    },
+    {
+      "tenant": "SYNTHETIC_TEST_ONLY",
+      "account": "fixture-account-2",
+      "channel": "TELEGRAM_PERSONAL",
+      "peer_id": "fake-peer-120",
+      "binding_revision": 1,
+      "display_name": "模拟联系人 120",
+      "unread": 1,
+      "read_verification": "UNVERIFIED",
+      "presence": "UNKNOWN",
+      "mode": "HUMAN",
+      "draft": "",
+      "last_message": {
+        "provider_mid": "fake-mid-120",
+        "original": "Test message #120",
+        "zh": "模拟译文 #120",
+        "translation_state": "SYNTHETIC"
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "test-revoke-a",
+      "kind": "GRANT_REVOKED",
+      "peer_id": "fake-peer-003",
+      "expected": "NO_SEND"
+    },
+    {
+      "id": "test-unknown-b",
+      "kind": "DELIVERY_UNKNOWN",
+      "peer_id": "fake-peer-117",
+      "expected": "NO_RETRY_NO_DELIVERED"
+    },
+    {
+      "id": "test-takeover",
+      "kind": "HUMAN_EDIT",
+      "peer_id": "fake-peer-001",
+      "expected": "ONLY_A_HUMAN_OTHERS_AUTO_UNCHANGED"
+    }
+  ],
+  "reply_candidate_variants": [
+    0,
+    1,
+    2,
+    3
+  ]
+}

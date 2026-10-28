@@ -1,0 +1,89 @@
+{
+  "source": "e352180cba665b56b35822fa2aff2c7525360016",
+  "type": "REAL_WINDOWS_CHROME_NO_MODEL_NO_PAIR",
+  "noKeyProvided": true,
+  "noPaidRequests": true,
+  "realSocialSends": 0,
+  "scenarios": [
+    {
+      "width": 320,
+      "height": 680,
+      "state": "先设置 AI 模型；本机服务连接后即可聊天",
+      "providers": [
+        "OpenRouter",
+        "OpenAI API",
+        "本地 Qwen3"
+      ],
+      "view": "BRAIN",
+      "nativeSigninPanels": 0,
+      "setupVisible": 1,
+      "sendDisabled": true,
+      "postRequests": [],
+      "serverModelRequests": [
+        "http://127.0.0.1:4193/api/v2/private-brain/model-catalog"
+      ],
+      "errors": [],
+      "scrollX": 0
+    },
+    {
+      "width": 430,
+      "height": 850,
+      "state": "先设置 AI 模型；本机服务连接后即可聊天",
+      "providers": [
+        "OpenRouter",
+        "OpenAI API",
+        "本地 Qwen3"
+      ],
+      "view": "BRAIN",
+      "nativeSigninPanels": 0,
+      "setupVisible": 1,
+      "sendDisabled": true,
+      "postRequests": [],
+      "serverModelRequests": [
+        "http://127.0.0.1:4193/api/v2/private-brain/model-catalog"
+      ],
+      "errors": [],
+      "scrollX": 0
+    },
+    {
+      "width": 950,
+      "height": 620,
+      "state": "先设置 AI 模型；本机服务连接后即可聊天",
+      "providers": [
+        "OpenRouter",
+        "OpenAI API",
+        "本地 Qwen3"
+      ],
+      "view": "BRAIN",
+      "nativeSigninPanels": 0,
+      "setupVisible": 1,
+      "sendDisabled": true,
+      "postRequests": [],
+      "serverModelRequests": [
+        "http://127.0.0.1:4193/api/v2/private-brain/model-catalog"
+      ],
+      "errors": [],
+      "scrollX": 0
+    },
+    {
+      "width": 1360,
+      "height": 900,
+      "state": "先设置 AI 模型；本机服务连接后即可聊天",
+      "providers": [
+        "OpenRouter",
+        "OpenAI API",
+        "本地 Qwen3"
+      ],
+      "view": "BRAIN",
+      "nativeSigninPanels": 0,
+      "setupVisible": 1,
+      "sendDisabled": true,
+      "postRequests": [],
+      "serverModelRequests": [
+        "http://127.0.0.1:4193/api/v2/private-brain/model-catalog"
+      ],
+      "errors": [],
+      "scrollX": 0
+    }
+  ]
+}
