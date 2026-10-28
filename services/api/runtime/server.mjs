@@ -25,6 +25,7 @@ import {createNativeMessageReadHttp} from './native-message-reads.mjs';
 import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
 import {createW47WebMediaHttp} from './w47-w23-media-bridge.mjs';
 import {createW47NativeSettingsCatalog} from './w47-native-settings-capabilities.mjs';
+import {createOfficialSiwcHttp} from './w47-official-siwc.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -145,6 +146,7 @@ const contactNativeAuthorityHttp=createContactNativeAuthorityHoldHttp({
 const nativeMediaHttp=createW47WebMediaHttp({
  sessionAuthority:localSessionAuthority,webOrigin
 });
+const officialSiwcHttp=createOfficialSiwcHttp({sessionAuthority:localSessionAuthority,webOrigin});
 const nativeSettingsCatalog=createW47NativeSettingsCatalog({
  sessionAuthority:localSessionAuthority,webOrigin
 });
@@ -207,6 +209,14 @@ const handler=(req,res)=>{
       return deny(res,403,'CROSS_SITE_BLOCKED');
     if(req.method==='OPTIONS')return deny(res,403,'CORS_DISABLED');
     const url=new URL(req.url||'/', 'http://'+bind+':'+req.socket.localPort);
+    if(url.pathname.startsWith('/api/v2/chatgpt/')){
+      void officialSiwcHttp(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'OFFICIAL_SIWC_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'OFFICIAL_SIWC_ADAPTER_UNAVAILABLE');
+       else res.destroy();
+      });return;
+    }
     if(url.pathname.startsWith('/api/v2/local-session/')){
       void localSessionHttp(req,res,url).catch(()=>{
         if(!res.headersSent)deny(res,503,'LOCAL_SESSION_UNAVAILABLE');

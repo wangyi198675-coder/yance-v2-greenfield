@@ -4,13 +4,15 @@ import {R4_SETTINGS_CATEGORIES,readWorkspaceSnapshot} from './product-workspace-
 import {mediaCapabilitiesRead} from './w23-media-browser-consumer.mjs';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
+import BCOfficialChatGPTConnect from './BCOfficialChatGPTConnect.vue';
 import BCNativeHostSession from './BCNativeHostSession.vue';
 import BCThemeChooser from './BCThemeChooser.vue';
 import BCNotificationCenter from './BCNotificationCenter.vue';
 
 const props=defineProps({
  active:{type:Boolean,default:false},fetchImpl:{type:Function,default:null},
- theme:{type:String,default:'Obsidian Lime'},appearance:{type:String,default:'dark'}
+ theme:{type:String,default:'Obsidian Lime'},appearance:{type:String,default:'dark'},
+ openModelRevision:{type:Number,default:0}
 });
 const emit=defineEmits(['navigate','cycle-theme','toggle-theme']);
 // Settings only contains actual configuration/diagnostics; other functions
@@ -75,6 +77,7 @@ async function refresh(){
  finally{if(alive&&t===seq)busy.value=false}
 }
 function switchCategory(id){if(!SETTINGS_VISIBLE.some(x=>x.id===id))return;category.value=id}
+watch(()=>props.openModelRevision,()=>{category.value='model'});
 watch([()=>props.active,category],([active])=>{if(active)void refresh();else{seq++;data.value=null;csrf.value=null;session.value=null}},{immediate:true});
 watch([()=>props.theme,()=>props.appearance],()=>{
  if(category.value==='theme'&&props.active)data.value={theme:props.theme,mode:props.appearance,source:'APP_THEME_TOKENS_CURRENT'};
@@ -170,6 +173,7 @@ function requestNotificationPermission(){
      <p>原唯一PRIVATE Agno模型仍在闺蜜大脑中进行选择，模型费用需本人确认，联系人不继承PRIVATE权限。</p>
      <button type="button" data-test="settings-open-brain" @click="emit('navigate','BRAIN')">进入原闺蜜大脑选择模型</button>
      <p>{{csrf?'已验证本机会话，可使用原W47受保护密钥设置':'本机会话CSRF未确认，不能保存云端API Key'}}</p>
+     <BCOfficialChatGPTConnect :fetch-impl="fetchImpl"/>
      <BCNativeCloudKeySettings v-if="csrf" :web-csrf="csrf" @changed="refresh"/>
     </article>
    </template>

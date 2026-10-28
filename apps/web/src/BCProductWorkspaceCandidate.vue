@@ -63,6 +63,8 @@ onMounted(()=>{
  }
  if(desired.appearance!==props.appearance)emit('toggle-theme');
 });
+const settingsModelLaunchRevision=ref(0);
+function openChatGPTSettings(){settingsModelLaunchRevision.value++;choose('SETTINGS')}
 const compactInfo=ref(false);
 const snapshot=ref(null),error=ref('尚未连接真实运行环境'),loading=ref(false);
 const menuOpen=ref(false);
@@ -502,7 +504,7 @@ defineExpose({refresh});
     </div>
    </section>
    <BCSettingsWorkspace v-else-if="activeWorkspace==='SETTINGS'" :fetch-impl="fetchImpl"
-    :active="activeWorkspace==='SETTINGS'" :theme="theme" :appearance="appearance"
+    :active="activeWorkspace==='SETTINGS'" :theme="theme" :appearance="appearance" :open-model-revision="settingsModelLaunchRevision"
     @navigate="choose" @cycle-theme="cycleOriginalTheme" @toggle-theme="toggleOriginalAppearance"/>
    <BCMediaWorkspace v-else-if="activeWorkspace==='MEDIA'" :fetch-impl="fetchImpl"
     :active="activeWorkspace==='MEDIA'" :media-authority-port="mediaAuthorityPort"/>
@@ -518,9 +520,9 @@ defineExpose({refresh});
     <p v-if="activeWorkspace==='TASKS'">Tool、Trace 和历史需原生 Agno Run 资格；不会模拟成功回执。</p>
    </div>
    <div class="w46-workspace-auth">
-    <div v-if="activeWorkspace==='ACCOUNTS'" class="w46-auth-summary" data-test="w46-chatgpt-auth-unavailable">
-     <strong>ChatGPT 官方身份授权</strong><span>未授权 · 套餐资格未核验 · 费用权限未核验</span>
-     <Button disabled data-test="chatgpt-auth-unavailable" variant="outline">连接 ChatGPT · 官方授权暂不可用</Button>
+    <div v-if="activeWorkspace==='ACCOUNTS'" class="w46-auth-summary" data-test="w46-chatgpt-official-connect-entry">
+     <strong>ChatGPT 官方账号授权</strong><span>可通过官方 Sign in with ChatGPT SDK 在本机授权；具体状态以登录后实际回读为准。</span>
+     <Button data-test="chatgpt-auth-open-model-settings" variant="outline" @click="openChatGPTSettings">连接 ChatGPT · 打开 AI 模型设置</Button>
     </div>
     <small>真实状态来自 W47 API。R4 的导航措辞、九分类及 252 Stable ID 对位需原件签认。</small>
    </div>
