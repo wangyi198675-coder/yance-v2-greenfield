@@ -14,15 +14,18 @@ test('ordinary private AI needs no visible terminal pair or Windows native auth 
  assert.match(privateSection,/<BCPrivateBrainWorkspace/);
  assert.doesNotMatch(privateSection,/BCNativeHostSession|BCLocalSessionConnector|pair/);
  assert.doesNotMatch(content,/64位配对|终端pair|登录后才能|本机可信会话尚未建立/);
- assert.match(content,/loadState\.value='setup-required';setupOpen\.value=true/);
- assert.match(content,/loadState\.value='service-unavailable';setupOpen\.value=true/);
+ assert.match(content,/loadState\.value='setup-required';return/);
+ assert.match(content,/loadState\.value='service-unavailable';notice\.value=reason\(e\)/);
+ assert.match(content,/closeBrainMenu\(\);setupOpen\.value=true;await focusBrainPopup\(\)/);
 });
 test('cloud provider labels remain independent of local optional Qwen3',()=>{
  assert.match(readFileSync(new URL('../src/private-brain-ui-contract.mjs',import.meta.url),'utf8'),/OPENROUTER_USER_API/);
  assert.match(content,/OPENAI_USER_API/);
  assert.match(content,/LLAMACPP_LOCAL_QWEN3_8B_FREE/);
  assert.match(content,/OpenRouter/);assert.match(content,/OpenAI API/);
- assert.match(content,/Qwen3/);assert.match(content,/本地 Qwen3 完全可选/);
+ assert.match(content,/publicModelCatalog\(await api\(PRIVATE_ROUTES\.catalog\)\)/);
+ assert.match(content,/在电脑上运行的本地模型（可选）/);
+ assert.match(readFileSync(new URL('../src/private-brain-ui-contract.mjs',import.meta.url),'utf8'),/本地 Qwen3/);
  assert.match(source,/唯一 Agno · 本地或云端模型任选/);
 });
 test('same native W43/W47 Agno model history/turn and no browser key or fake responses',()=>{

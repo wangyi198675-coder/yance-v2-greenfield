@@ -3,7 +3,7 @@
 import {createServer} from 'node:http';
 import {homedir} from 'node:os';
 import {join} from 'node:path';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {resolveRuntimeConfig} from './runtime-config.mjs';
 import {resolveRuntimeSource} from './runtime-provenance.mjs';
@@ -18,10 +18,13 @@ import {createWebPrivateLocalQwen} from './web-private-local-qwen.mjs';
 import {createWebPrivateCloudByok} from './web-private-cloud-byok.mjs';
 import {createWebPrivateCloudHttp} from './web-private-cloud-http.mjs';
 import {createW55WebNativeStdioPort} from './w55-web-native-stdio.mjs';
+import {createPancakeMultiOnboardingHttp} from './pancake-multi-onboarding-http.mjs';
+import {createW55PancakeWebCustody} from './w55-pancake-web-custody.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
 import {createNativeMessageReadHttp} from './native-message-reads.mjs';
+import {createW47WhatsAppNativeRoute} from './w47-whatsapp-native-route.mjs';
 import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
 import {createW47WebMediaHttp} from './w47-w23-media-bridge.mjs';
 import {createW47NativeSettingsCatalog} from './w47-native-settings-capabilities.mjs';
@@ -49,7 +52,12 @@ const localSessionAuthority=createLocalSessionAuthority({ttlMs:customTtl?Number(
 // child stdin. No HTTP request, localhost Origin or frontend-supplied profile
 // supplies these private current-user fields or receives the HttpOnly cookie.
 const nativeBoot=readW54LocalBoot();
-const webPrivateMode=process.env.YANCE_W47_WEB_PRIVATE_SINGLE_USER==='1';
+// Highest rule §2A/6A: local single-user Web is usable without W54/NSIS.
+// Explicit 0 disables automatic local Web mode; loopback+same-origin only.
+const webPrivateMode=process.env.YANCE_W47_WEB_PRIVATE_SINGLE_USER==='1'||
+ (process.env.YANCE_W47_WEB_PRIVATE_SINGLE_USER!=='0'&&
+  config.mode==='development'&&!nativeBoot&&
+  /^http:\/\/127\.0\.0\.1:[0-9]{4,5}$/.test(webOrigin));
 if(webPrivateMode&&(config.mode!=='development'||nativeBoot||
    !/^http:\/\/127\.0\.0\.1:[0-9]{4,5}$/.test(webOrigin)))
  throw Error('W47_WEB_PRIVATE_QA_LOOPBACK_DEVELOPMENT_ONLY');
@@ -65,9 +73,11 @@ const webPrivateQwen=webPrivateRoot&&existingLocalQwenKey?
 // W55's ORIGINAL Rust WinCred host is optional for a local-Qwen-only user.
 // W55 owns the executable, WinCred scope and OS checks, not the browser.
 let webCloudByok=null;
+let webNativeCredentialPort=null;
 if(webPrivateRoot&&process.env.YANCE_W55_WEB_NATIVE_EXE){
  const nativeWinCred=createW55WebNativeStdioPort({
   executable:process.env.YANCE_W55_WEB_NATIVE_EXE});
+ webNativeCredentialPort=nativeWinCred;
  webCloudByok=createWebPrivateCloudByok({
   appLocalDataRoot:webPrivateRoot,nativeKeyPort:nativeWinCred});
 }
@@ -151,12 +161,51 @@ const nativeSettingsCatalog=createW47NativeSettingsCatalog({
 // W24 + W26..W29 provider SDK authority is absent, not a zero-contact
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
-const nativeOwnerReads=createNativeOwnerReadHttp({sessionAuthority:localSessionAuthority,webOrigin});
+// The actual W28/W24/W44/W25/W55 graph is installed ONLY under the
+// existing signed W54 native launch, never localhost or a test-only actor.
+// Web users click WhatsApp themselves; the existing local Web private session
+// binds the original SDK controller. Windows DPAPI is discovered in background,
+// never a terminal pairing/installer prerequisite for a browser visit.
+const whatsAppLocalBoot=nativeBoot??(webPrivatePrincipal?Object.freeze({
+ ...webPrivatePrincipal,nativeRevocationGeneration:0
+}):null);
+const packagedSignal=webPrivateRoot?
+ join(webPrivateRoot,'NativeOwners','whatsapp_signal_auth.exe'):null;
+const whatsAppSignalExecutable=process.env.YANCE_W55_SIGNAL_NATIVE_EXE||
+ (packagedSignal&&existsSync(packagedSignal)?packagedSignal:null);
+const whatsAppLive=whatsAppLocalBoot&&whatsAppSignalExecutable?
+ await import('./w47-whatsapp-live-runtime.mjs').then(({createW47WhatsAppLiveRuntime})=>
+  createW47WhatsAppLiveRuntime({nativeBoot:whatsAppLocalBoot,nativeSession,
+   sessionAuthority:localSessionAuthority,webOrigin,
+   w55Executable:whatsAppSignalExecutable})):null;
+const nativeOwnerReads=createNativeOwnerReadHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,
+ ...(whatsAppLive?{
+  resolveW54CurrentUser:whatsAppLive.resolveW54CurrentUser,
+  readW24AuthorizedAccounts:whatsAppLive.readW24AuthorizedAccounts,
+  readW24VerifiedContacts:whatsAppLive.readW24VerifiedContacts,
+ }:{}),
+});
 // W26 real official bridge read is DIAGNOSTIC ONLY, never source of FB
 // user auth. Explicit W09/W54-injected native owner ports are still required
 // for actual W24 account ONLINE, SDK setup and authorized message access.
 const nativeMessages=createNativeMessageReadHttp({
- sessionAuthority:localSessionAuthority,webOrigin
+ sessionAuthority:localSessionAuthority,webOrigin,
+ ...(whatsAppLive?{
+  resolveW54Principal:whatsAppLive.resolveW54CurrentUser,
+  resolveW24CurrentFullK:whatsAppLive.resolveW24CurrentFullK,
+  readW25OriginalInbound:whatsAppLive.readW25OriginalInbound,
+ }:{}),
+});
+// W28 actual Baileys QR/contacts/history lives behind the original W24/W55
+// owner ports. This one-listener mount becomes active ONLY after the original
+// W54 current user, W24 real account/peer, and W55 protected Signal creds are
+// installed in-process. Current unprovisioned QA must explicitly remain 503.
+const whatsAppNativeHttp=whatsAppLive?.handler??null;
+const pancakeCustody=webPrivatePrincipal&&webNativeCredentialPort?
+ createW55PancakeWebCustody({nativeKeyPort:webNativeCredentialPort}):null;
+const pancakeOnboarding=createPancakeMultiOnboardingHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,custody:pancakeCustody
 });
 const nativeProviders=createNativeProviderGateway({
  sessionAuthority:localSessionAuthority,
@@ -272,10 +321,25 @@ const handler=(req,res)=>{
       return serial(res,200,{...state(req),webSource:'SEE_INSTALLED_LOCAL_WEB_VERSION',apiGitSha:sha});
     if(req.method==='GET' && url.pathname==='/api/v2/runtime/capabilities')
       return serial(res,200,{ok:true,authoritative:true,canSend:false,capabilities:endpoints});
-    if(/^\/api\/v2\/providers\/(fb-page|whatsapp-personal|telegram-personal)\/native\//.test(url.pathname)){
-      // Original W27/W28/W29 SDK owners are present in source, but the
-      // W24 account lifecycle/W55 user-approved credential consumers are
-      // not yet injected here. Do not turn an HTTP 404 into a fake QR/login.
+    if(url.pathname.startsWith('/api/v2/providers/whatsapp-personal/native/')){
+      if(!whatsAppNativeHttp)return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
+      void whatsAppNativeHttp(req,res,url).then(handled=>{
+        if(!handled&&!res.writableEnded)deny(res,404,'W28_NATIVE_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+        if(!res.headersSent)deny(res,503,'W28_NATIVE_HANDLER_UNAVAILABLE');
+        else res.destroy();
+      });return;
+    }
+    if(url.pathname.startsWith('/api/v2/providers/fb-page/onboarding/')){
+      void pancakeOnboarding(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'PANCAKE_ONBOARDING_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'PANCAKE_ONBOARDING_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
+    }
+    if(/^\/api\/v2\/providers\/(fb-page|telegram-personal)\/native\//.test(url.pathname)){
       return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
     }
     if(url.pathname.startsWith('/api/v2/providers/')){

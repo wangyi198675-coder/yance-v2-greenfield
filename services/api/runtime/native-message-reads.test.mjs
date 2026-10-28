@@ -80,3 +80,54 @@ test('W54 revocation generation changing while W25 reads blocks all private data
   assert.equal((await x.get('/api/v2/messages?identityKey='+encodeURIComponent(selected),x.cookie())).status,409)
  }finally{await x.close()}
 });
+
+test('original W25 verified WhatsApp history keeps genuine inbound AND own outbound direction without fabricated ACK',async()=>{
+ const wa={...k,channel:'WHATSAPP_PERSONAL'};
+ const selectedWa=[wa.tenant,wa.account,wa.channel,wa.peer_id,wa.binding_revision].join('|');
+ const base={...row,k:{...row.k,channel:'WHATSAPP_PERSONAL'},source:'baileys',
+  isHistory:true,messageAt:1793000000000,timeSource:'VERIFIED_PROVIDER_TIMESTAMP'};
+ const history=[
+  {...base,id:randomBytes(32).toString('hex'),providerMid:'wa-inbound-a',
+   original:'received by user',fromMe:false,direction:'INBOUND',deliveryState:'NOT_REQUESTED'},
+  {...base,id:randomBytes(32).toString('hex'),providerMid:'wa-fromme-b',
+   original:'sent by user before connecting',fromMe:true,direction:'OUTBOUND',
+   deliveryState:'PROVIDER_HISTORY_UNRECONCILED'},
+ ];
+ const x=await run({resolveW54Principal:async()=>native,
+  resolveW24CurrentFullK:async()=>wa,
+  readW25OriginalInbound:async()=>history});
+ try{
+  const data=await x.get('/api/v2/messages?identityKey='+encodeURIComponent(selectedWa),x.cookie());
+  assert.equal(data.status,200);
+  assert.equal(data.value.messages.length,2);
+  assert.equal(data.value.messages[0].direction,'INBOUND');
+  assert.equal(data.value.messages[1].direction,'OUTBOUND');
+  assert.equal(data.value.messages[1].delivery,'PROVIDER_HISTORY_UNRECONCILED');
+  assert.equal(data.value.messages[1].isHistory,true);
+  assert.equal(data.value.messages[1].messageAt,1793000000000);
+  assert.equal(data.value.canSend,false);
+ }finally{await x.close()}
+});
+test('W47 refuses fake W25 fromMe, forged direction, ACK claim and foreign WhatsApp K',async()=>{
+ const wa={...k,channel:'WHATSAPP_PERSONAL'};
+ const sel=[wa.tenant,wa.account,wa.channel,wa.peer_id,wa.binding_revision].join('|');
+ const valid={...row,k:{...row.k,channel:'WHATSAPP_PERSONAL'},source:'baileys',
+  isHistory:true,fromMe:true,direction:'OUTBOUND',
+  messageAt:1793000000000,deliveryState:'PROVIDER_HISTORY_UNRECONCILED'};
+ const negatives=[
+  {...valid,fromMe:true,direction:'INBOUND'},
+  {...valid,fromMe:true,deliveryState:'DELIVERED'},
+  {...valid,isHistory:false,fromMe:true},
+  {...valid,k:{...valid.k,accountId:'FOREIGN_WHATSAPP_ACCOUNT'}},
+ ];
+ for(const item of negatives){
+  const x=await run({resolveW54Principal:async()=>native,
+   resolveW24CurrentFullK:async()=>wa,
+   readW25OriginalInbound:async()=>[item]});
+  try{
+   const data=await x.get('/api/v2/messages?identityKey='+encodeURIComponent(sel),x.cookie());
+   assert.equal(data.status,503);
+   assert.equal(data.value.canSend,false);
+  }finally{await x.close()}
+ }
+});
