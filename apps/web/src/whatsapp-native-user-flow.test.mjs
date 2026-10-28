@@ -134,3 +134,56 @@ test('P0 failed initial bootstrap is not cached: later user re-click can renew l
  assert.equal((await connectWhatsAppNative({fetchImpl})).state,'STARTING_NATIVE_SDK');
  assert.equal(n,2);
 });
+
+test('stale W47 session 401 on status is renewed once, then read-only native status succeeds',async()=>{
+ const original='a'.repeat(64),next='b'.repeat(64);
+ let refreshed=false,starts=0,reads=0;
+ const fetchImpl=async(url)=>{
+  if(url==='/api/v2/local-session/status')return {ok:true,status:200,json:async()=>({
+    ...authenticated,csrfToken:refreshed?next:original,sessionKind:'WEB_LOCAL_PRIVATE'
+  })};
+  if(url==='/api/v2/local-session/web-private-start'){
+    starts++;refreshed=true;return {ok:true,status:200,json:async()=>({...authenticated,csrfToken:next})};
+  }
+  if(url.endsWith('/native/status')){
+    reads++;return reads===1?
+      {ok:false,status:401,json:async()=>({ok:false})}:
+      {ok:true,status:200,json:async()=>({...waState,state:'WAITING_USER_AUTH',connected:false,qrAvailable:false})};
+  }
+  throw Error('UNEXPECTED_'+url);
+ };
+ assert.equal((await readWhatsAppNative({fetchImpl})).state,'WAITING_USER_AUTH');
+ assert.equal(starts,1);assert.equal(reads,2);
+});
+test('stale W47 session on explicitly clicked native authorize retries with newly signed CSRF',async()=>{
+ let refreshed=false,starts=0,auth=0;
+ const fetchImpl=async(url,init={})=>{
+  if(url==='/api/v2/local-session/status')return {ok:true,status:200,json:async()=>({
+    ...authenticated,csrfToken:refreshed?'b'.repeat(64):csrf,sessionKind:'WEB_LOCAL_PRIVATE'
+  })};
+  if(url==='/api/v2/local-session/web-private-start'){
+    refreshed=true;starts++;return {ok:true,status:200,json:async()=>({...authenticated,csrfToken:'b'.repeat(64)})};
+  }
+  if(url.endsWith('/native/authorize')){
+    auth++;
+    if(auth===1){assert.equal(init.headers['X-Yance-CSRF'],csrf);return {ok:false,status:401,json:async()=>({ok:false})}}
+    assert.equal(init.headers['X-Yance-CSRF'],'b'.repeat(64));
+    return {ok:true,status:200,json:async()=>({ok:true,channel:'WHATSAPP_PERSONAL',
+      state:'STARTING_NATIVE_SDK',connected:false,canSend:false})};
+  }
+  throw Error('UNEXPECTED_'+url);
+ };
+ assert.equal((await connectWhatsAppNative({fetchImpl})).state,'STARTING_NATIVE_SDK');
+ assert.equal(starts,1);assert.equal(auth,2);
+});
+test('unsafe revoke is not repeated if native server returns 401',async()=>{
+ let starts=0,revoke=0;
+ const fetchImpl=async(url)=>{
+  if(url.endsWith('/local-session/status'))return {ok:true,status:200,json:async()=>authenticated};
+  if(url.endsWith('/web-private-start')){starts++;return {ok:true,json:async()=>authenticated}};
+  if(url.endsWith('/native/revoke')){revoke++;return {ok:false,status:401,json:async()=>({ok:false})}};
+  throw Error('UNEXPECTED_'+url);
+ };
+ await assert.rejects(changeWhatsAppNativeConnection('revoke',{fetchImpl}),/WHATSAPP_HTTP_401/);
+ assert.equal(starts,0);assert.equal(revoke,1);
+});

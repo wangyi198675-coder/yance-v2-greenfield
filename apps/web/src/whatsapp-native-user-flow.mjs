@@ -1,7 +1,7 @@
 // W46 normal-user WhatsApp connection flow -> EXISTING W47 original native Owner.
 // Account locator is a server-verified lookup selector, never an Account K or
 // a browser authorization claim. No raw Baileys socket, token or QR persistence.
-import {currentFirstPartyWebSession} from './local-first-party-session.mjs';
+import {currentFirstPartyWebSession,renewFirstPartyWebSession} from './local-first-party-session.mjs';
 const prefix='/api/v2/providers/whatsapp-personal/native';
 const allowedStates=new Set(['WAITING_USER_AUTH','STARTING_NATIVE_SDK',
   'WAITING_QR_SCAN','ONLINE','DISCONNECTED','REVOKED','LOGGED_OUT',
@@ -17,9 +17,23 @@ const request=async(path,{fetchImpl=globalThis.fetch,method='GET',csrfToken,body
   if(typeof fetchImpl!=='function')fail('WHATSAPP_FETCH_REQUIRED');
   const headers=method==='POST'?{'Content-Type':'application/json',
     'X-Yance-CSRF':csrfToken??''}:{};
-  const response=await fetchImpl(path,{method,headers,
+  const init={method,headers,
     credentials:'same-origin',cache:'no-store',redirect:'error',
-    referrerPolicy:'no-referrer',...(body!==undefined?{body:JSON.stringify(body)}:{})});
+    referrerPolicy:'no-referrer',...(body!==undefined?{body:JSON.stringify(body)}:{})};
+  let response=await fetchImpl(path,init);
+  // Existing W47 local sessions are process-scoped. A controlled API restart
+  // may invalidate an old HttpOnly cookie between status and the user's click.
+  // Retry ONLY the harmless status read or an explicitly clicked authorize
+  // after a genuine 401 and a fresh same-origin W47 Cookie+CSRF readback.
+  if(response?.status===401&&
+      ((method==='GET'&&path.endsWith('/status'))||
+       (method==='POST'&&path.endsWith('/authorize')))){
+    let session;
+    try{session=await renewFirstPartyWebSession(fetchImpl)}
+    catch{fail('WHATSAPP_LOCAL_SESSION_REQUIRED')}
+    response=await fetchImpl(path,{...init,
+      headers:method==='POST'?{...headers,'X-Yance-CSRF':session.csrfToken}:headers});
+  }
   if(!response?.ok)fail('WHATSAPP_HTTP_'+(response?.status??'UNAVAILABLE'));
   const result=await response.json();
   if(result?.ok!==true||result.canSend!==false)fail('WHATSAPP_OWNER_UNVERIFIED');
