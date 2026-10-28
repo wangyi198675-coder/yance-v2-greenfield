@@ -11,9 +11,12 @@ import {createBaileysPairingViewPort} from './native-pairing-port.mjs';
 
 const fail=code=>{throw Object.assign(new Error(code),{code})};
 const valid=s=>typeof s==='string'&&s.length>0&&s.length<=256;
+// A browser-only local session can rotate its HttpOnly cookie after tab
+// reload without changing the single OS user. Keep desktop signed native
+// session IDs strict; never widen account/installation/revocation matching.
 const same=(a,b)=>!!a&&!!b&&a.principalRef===b.principalRef&&
   a.installationRef===b.installationRef&&a.revocationGeneration===b.revocationGeneration&&
-  a.sessionRef===b.sessionRef;
+  a.kind===b.kind&&(a.kind==='WEB_LOCAL_PRIVATE'||a.sessionRef===b.sessionRef);
 
 export function createBaileysNativeSetupController({createWorker,verifyNativeSession}={}){
   if(typeof createWorker!=='function'||typeof verifyNativeSession!=='function')
@@ -23,17 +26,22 @@ export function createBaileysNativeSetupController({createWorker,verifyNativeSes
   const check=async(nativeSession,operation)=>{
     // nativeSession comes from W47 authenticated local-session middleware, not client JSON.
     const verified=await verifyNativeSession({nativeSession,operation,channel:'WHATSAPP_PERSONAL'});
-    if(verified?.verified!==true||verified.kind!=='NATIVE_FIRST_PARTY'||
+    if(verified?.verified!==true||
+      !['NATIVE_FIRST_PARTY','WEB_LOCAL_PRIVATE'].includes(verified.kind)||
       !valid(verified.principalRef)||!valid(verified.installationRef)||
       !valid(verified.sessionRef)||!Number.isSafeInteger(verified.revocationGeneration)||
       verified.revocationGeneration<0)fail('W54_SIGNED_NATIVE_SESSION_REQUIRED');
     return Object.freeze({principalRef:verified.principalRef,
       installationRef:verified.installationRef,sessionRef:verified.sessionRef,
-      revocationGeneration:verified.revocationGeneration});
+      revocationGeneration:verified.revocationGeneration,kind:verified.kind});
   };
   const owned=async(nativeSession,operation)=>{
     const v=await check(nativeSession,operation);
     if(owner && !same(v,owner))fail('CROSS_PRINCIPAL_OR_STALE_SESSION');
+    // Rebind the live Web viewer after an authenticated cookie rotation;
+    // old first-party desktop sessions still cannot take over a QR.
+    if(owner&&owner.kind==='WEB_LOCAL_PRIVATE'&&owner.sessionRef!==v.sessionRef)
+      owner=Object.freeze({...v,nativeSession});
     return v;
   };
   const pairingView=createBaileysPairingViewPort({

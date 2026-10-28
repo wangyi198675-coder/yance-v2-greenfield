@@ -22,7 +22,7 @@ const files=['server.mjs','runtime-config.mjs','runtime-provenance.mjs',
  'web-private-cloud-byok.mjs','web-private-cloud-http.mjs','w55-web-native-stdio.mjs',
  'w54-native-child-frame.mjs','w54-native-webview-session.mjs',
  'w47-w43-private-child.py','w47-w23-media-bridge.mjs',
- 'w47-native-settings-capabilities.mjs'];
+ 'w47-native-settings-capabilities.mjs','w47-whatsapp-native-route.mjs'];
 let child,base,work;
 before(async()=>{
  work=mkdtempSync(join(tmpdir(),'w47-exact-native-test-'));
@@ -168,4 +168,16 @@ test('native session, original W43 and W55 missing cannot be forged from browser
  assert.equal(setup.body.status,'OPEN_LOCAL_MODEL_SETTINGS');
  assert.equal(setup.body.requiresTerminalPair,false);
  assert.equal(setup.body.canSend,false);
+});
+
+test('real current W47 WhatsApp native gateway cannot falsely report a QR without W24/W55 installed ports',async()=>{
+ const result=await request('/api/v2/providers/whatsapp-personal/native/qr');
+ assert.equal(result.status,503);
+ assert.equal(result.body.error,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
+ assert.equal(result.body.canSend,false);
+ const connect=await request('/api/v2/providers/whatsapp-personal/native/authorize',{
+  method:'POST',headers:{'content-type':'application/json'},
+  body:JSON.stringify({accountLocator:'current-own-whatsapp'})});
+ assert.equal(connect.status,503);
+ assert.equal(connect.body.canSend,false);
 });
