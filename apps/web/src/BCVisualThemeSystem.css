@@ -427,3 +427,9 @@
  box-shadow:0 0 0 6px rgba(var(--wow-one),.055),0 0 40px rgba(var(--wow-one),.14);
  border:1px solid var(--wow-stroke);
 }
+/* W09: approved workspace popup hit testing.
+   The earlier equal z-index:1 rule put later chat content over the navbar.
+   Keep the existing original R4 48px header and native menu; only restore
+   actual pointer/keyboard access to every workspace across all five themes. */
+.w46-product-candidate>.w46-compact-global{z-index:70}
+.w46-product-candidate>.w46-candidate-content{z-index:1}
