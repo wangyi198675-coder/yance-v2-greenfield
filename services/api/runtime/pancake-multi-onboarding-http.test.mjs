@@ -5,7 +5,7 @@ import {once} from 'node:events';
 import {randomBytes} from 'node:crypto';
 import {createLocalSessionAuthority} from './local-session.mjs';
 import {createPancakeMultiOnboardingHttp} from './pancake-multi-onboarding-http.mjs';
-async function fixture(){
+async function fixture({fetchImpl}={}){
  const a=createLocalSessionAuthority(),origin='http://127.0.0.1:44767';
  let stored=null,writes=0,officialCalls=0;
  const proof=a.issueNativeWebView(randomBytes(32).toString('hex'));
@@ -41,7 +41,7 @@ async function fixture(){
   throw Error('UNEXPECTED_OFFICIAL_API');
  };
  const h=createPancakeMultiOnboardingHttp({
-  sessionAuthority:a,webOrigin:origin,custody:vault,fetchImpl:mockFetch
+  sessionAuthority:a,webOrigin:origin,custody:vault,fetchImpl:fetchImpl||mockFetch
  });
  const server=createServer((req,res)=>void h(req,res,
     new URL(req.url,'http://127.0.0.1')).then(ok=>{
@@ -77,6 +77,80 @@ test('original W55 one account discovers FB Page A+B, never Zalo or synthetic me
   assert.equal(JSON.stringify(r.body).includes('TEST-ACCOUNT'),false);
  }finally{await f.close()}
 });
+test('official categorized pages activated/inactivated/hidden supported; nopermission never grants Page access',async()=>{
+ const f=await fixture({fetchImpl:async url=>{
+  assert.equal(url.pathname,'/api/v1/pages');
+  return {status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,
+   pages:{
+    activated:[{id:'111',name:'Alpha',platform:'FACEBOOK'},
+      {id:'333',name:'Zalo',platform:'ZALO'}],
+    inactivated:[{id:'222',name:'Beta',platform:'FACEBOOK'}],
+    hidden:[{id:'444',name:'Hidden',platform:'FACEBOOK'}],
+    nopermission:[{id:'555',name:'Denied',platform:'FACEBOOK'}],
+    activated_page_ids:['111','333']
+   }})};
+ }});
+ try{
+  const saved=await f.request('account',{method:'POST',body:{userAccessToken:'FAKE_ACCOUNT_USER_1234'}});
+  assert.equal(saved.status,200);
+  assert.deepEqual(saved.body.pages.map(x=>x.pageId),['111','222','444']);
+  assert.equal(f.writes,1);
+  const after=await f.request('pages');
+  assert.equal(after.status,200);
+  assert.deepEqual(after.body.pages.map(x=>x.pageId),['111','222','444']);
+  assert.equal(JSON.stringify(after.body).includes('Denied'),false);
+  assert.equal(JSON.stringify(after.body).includes('FAKE_ACCOUNT_USER'),false);
+ }finally{await f.close()}
+});
+test('root categorized response is accepted without unowned Pages',async()=>{
+ const f=await fixture({fetchImpl:async()=>({status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,categorized:{activated:[{id:'101',name:'One',platform:'FACEBOOK'}],inactivated:[],hidden:[],nopermission:[{id:'102',name:'Two',platform:'FACEBOOK'}]}})})});
+ try{const r=await f.request('account',{method:'POST',body:{userAccessToken:'TEST-ACCOUNT-SYNTHETIC-123'}});
+ assert.equal(r.status,200);assert.deepEqual(r.body.pages.map(x=>x.pageId),['101']);assert.equal(f.writes,1)}finally{await f.close()}
+});
+test('official nested/category maps preserve IDs and never grant nopermission',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,
+   pages:{activated:{'111':{name:'Mapped',platform:'FACEBOOK'}},
+    inactivated:{data:[{id:'222',name:'Nested',platform:'FACEBOOK'}]},
+    hidden:{pages:{'333':{name:'Hidden',platform:'FACEBOOK'}}},
+    nopermission:{'444':{name:'Unauthorized',platform:'FACEBOOK'}}
+   }})
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',body:{userAccessToken:'FAKE_ACCOUNT_USER_1234'}});
+  assert.equal(r.status,200);
+  assert.deepEqual(r.body.pages.map(p=>p.pageId),['111','222','333']);
+  assert.equal(f.writes,1);
+  assert.equal(JSON.stringify(r.body).includes('Unauthorized'),false);
+ }finally{await f.close()}
+});
+test('long authentic-shaped User token within W55 WinCred bound passes account API, no secret returned',async()=>{
+ const long='FAKE_LONG_ACCOUNT_USER_TOKEN_'+('a'.repeat(1450));
+ const f=await fixture({fetchImpl:async url=>{
+  assert.equal(url.searchParams.get('access_token'),long);
+  return {status:200,headers:new Headers(),text:async()=>JSON.stringify({
+   success:true,pages:{activated:[{id:'1234567',name:'Long Token Page',platform:'FACEBOOK'}]}
+  })};
+ }});
+ try{
+  const r=await f.request('account',{method:'POST',body:{userAccessToken:long}});
+  assert.equal(r.status,200);assert.equal(f.writes,1);
+  assert.deepEqual(r.body.pages.map(p=>p.pageId),['1234567']);
+  assert.equal(JSON.stringify(r.body).includes(long),false);
+ }finally{await f.close()}
+});
+test('malformed categorized response is not treated as confirmed authorized account and never stores',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,
+   pages:{activated:{bogus:{id:'111'}},nopermission:[{id:'888'}]}})
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',body:{userAccessToken:'FAKE_ACCOUNT_USER_1234'}});
+  assert.equal(r.status,502);
+  assert.equal(r.body.error,'PANCAKE_ACCOUNT_PAGES_INVALID');
+  assert.equal(f.writes,0);
+ }finally{await f.close()}
+});
 test('Page token verifies only owned Page, independently stored, never returns secrets',async()=>{
  const f=await fixture();
  try{
@@ -108,5 +182,36 @@ test('forged origin/CSRF and unauthorized page cannot store credential',async()=
    body:{userAccessToken:'TEST-ACCOUNT-SYNTHETIC-123'}});
   assert.equal(r.status,403);
   assert.equal(f.writes,0);assert.equal(f.officialCalls,0);
+ }finally{await f.close()}
+});
+test('official HTTP 200 but success=false error 102 is explicit auth failure and never stores secret',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({
+   success:false,error_code:102,message:'SENSITIVE_UPSTREAM_MESSAGE_MUST_NOT_LEAK'
+  })
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',
+   body:{userAccessToken:'FAKE_ACCOUNT_TOKEN_NOT_REAL'}});
+  assert.equal(r.status,401);
+  assert.equal(r.body.error,'PANCAKE_OFFICIAL_AUTH_102');
+  assert.equal(f.writes,0);
+  assert.equal(JSON.stringify(r.body).includes('SENSITIVE_UPSTREAM_MESSAGE'),false);
+  assert.equal(JSON.stringify(r.body).includes('FAKE_ACCOUNT_TOKEN'),false);
+ }finally{await f.close()}
+});
+test('unrecognized official error is not falsely reported as invalid user token',async()=>{
+ const f=await fixture({fetchImpl:async()=>({
+  status:200,headers:new Headers(),text:async()=>JSON.stringify({
+   success:false,error_code:777,message:'Private upstream error'
+  })
+ })});
+ try{
+  const r=await f.request('account',{method:'POST',
+   body:{userAccessToken:'FAKE_ACCOUNT_TOKEN_NOT_REAL'}});
+  assert.equal(r.status,502);
+  assert.equal(r.body.error,'PANCAKE_OFFICIAL_ERROR_777');
+  assert.equal(f.writes,0);
+  assert.equal(JSON.stringify(r.body).includes('Private upstream'),false);
  }finally{await f.close()}
 });

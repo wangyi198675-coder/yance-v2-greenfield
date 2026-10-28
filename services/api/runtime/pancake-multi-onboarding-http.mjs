@@ -10,7 +10,7 @@ const send=(res,status,value)=>{res.writeHead(status,{
 });res.end(JSON.stringify({...value,canSend:false}));};
 const fail=(code,status=403)=>Object.assign(new Error(code),{code,status});
 const validId=v=>typeof v==='string'&&/^[0-9]{1,40}$/.test(v);
-const validToken=v=>typeof v==='string'&&v.length>=8&&v.length<=480&&
+const validToken=v=>typeof v==='string'&&v.length>=8&&v.length<=1600&&
  !/[\s\u0000-\u001f\u007f]/.test(v);
 async function official(path,tokenParam,token,fetchImpl){
  const url=new URL(site+path);url.searchParams.set(tokenParam,token);
@@ -29,18 +29,92 @@ async function official(path,tokenParam,token,fetchImpl){
   const raw=await response.text();
   if(Buffer.byteLength(raw,'utf8')>2000000)throw fail('PANCAKE_RESPONSE_TOO_LARGE',502);
   let data;try{data=JSON.parse(raw)}catch{throw fail('PANCAKE_RESPONSE_INVALID',502)}
-  if(data?.success===false)throw fail('PANCAKE_TOKEN_OR_PAGE_REJECTED',401);
+  if(data?.success===false){
+   // Pancake may return HTTP 200 with a structured API error. Do not turn
+   // every failure (permissions, account state, upstream limits) into a claim
+   // that the user pasted the wrong token. Only bounded numeric codes cross
+   // the browser boundary; official raw messages and secrets never do.
+   const nativeCode=String(data.error_code??'');
+   if(/^[0-9]{1,5}$/.test(nativeCode)){
+    if(nativeCode==='102')throw fail('PANCAKE_OFFICIAL_AUTH_102',401);
+    throw fail('PANCAKE_OFFICIAL_ERROR_'+nativeCode,502);
+   }
+   throw fail('PANCAKE_OFFICIAL_FAILURE_UNCLASSIFIED',502);
+  }
   return data;
  }catch(e){if(e?.code)throw e;throw fail('PANCAKE_NETWORK_UNAVAILABLE',503)}
  finally{url.searchParams.delete(tokenParam);}
 }
 async function ownedPages(token,fetchImpl){
  const reply=await official('/api/v1/pages','access_token',token,fetchImpl);
- if(!Array.isArray(reply.pages)||reply.pages.length>500)
-   throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
+ // The current official GET /api/v1/pages response categorizes pages under
+ // pages.activated/inactivated/hidden/nopermission/activated_page_ids.
+ // Older responses expose pages as an array. Do not interpret a categorized
+ // object as an invalid User Access Token or grant access to nopermission.
+ // In production Pancake can return category arrays, category objects keyed
+ // by page ID, or nested page lists. Preserve explicit account ownership by
+ // accepting only the allowed categories; never include nopermission.
+ const items=value=>{
+  if(value===null)return [];
+  if(Array.isArray(value))return value;
+  if(!value||typeof value!=='object')return null;
+  if(validId(String(value.id??'')))return [value];
+  for(const key of ['data','pages','items','list','results']){
+   if(Object.hasOwn(value,key)){
+    const nested=value[key];
+    if(Array.isArray(nested))return nested;
+    if(nested&&typeof nested==='object'&&nested!==value)return items(nested);
+    return null;
+   }
+  }
+  const entries=Object.entries(value);
+  if(!entries.length)return [];
+  if(entries.length>500||entries.some(([id,p])=>
+    !validId(id)||!p||typeof p!=='object'||Array.isArray(p)))return null;
+  return entries.map(([id,p])=>({...p,id:p.id??id}));
+ };
+ const groups=['activated','inactivated','hidden'];
+ const candidateContainers=[
+   reply.pages,reply.categorized,reply.page_list,
+   reply.data?.pages,reply.data?.categorized,reply.data?.page_list,
+   reply.result?.pages,reply.result?.categorized,reply.result?.page_list,
+   reply.payload?.pages,reply.payload?.categorized,
+   reply
+ ];
+ // Root-level categorized is also used by some official API versions.
+ // Never select arbitrary object values, which could grant unauthorized pages.
+ const rawPages=candidateContainers.find(value=>
+   Array.isArray(value)||
+   (value&&typeof value==='object'&&groups.some(k=>Object.hasOwn(value,k)))
+ )??null;
+ const invalidSchema=()=>{
+  // Strictly structural telemetry only: no token, page ID/name or raw response.
+  // Local QA flag is opt-in, never on by default.
+  if(process.env.P0_PANCAKE_SCHEMA_DIAG==='1'){
+   const kind=v=>Array.isArray(v)?'array':v===null?'null':typeof v;
+   process.stderr.write('[P0_PANCAKE_SCHEMA_ONLY] '+JSON.stringify({
+    hasPages:reply.pages!==undefined,hasData:reply.data!==undefined,
+    hasCategorized:reply.categorized!==undefined,
+    pagesKind:kind(rawPages),
+    topLevelKeys:Object.keys(reply).slice(0,20).map(k=>
+     /^[a-z][a-z0-9_]{0,36}$/.test(k)&&
+     !/(token|secret|password|auth|name|email|phone|customer)/i.test(k)?k:'REDACTED'),
+    groups:groups.map(k=>[k,kind(rawPages?.[k])])
+   })+'\n');
+  }
+  throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
+ };
+ let source;
+ if(Array.isArray(rawPages))source=rawPages;
+ else if(rawPages&&typeof rawPages==='object'){
+  const lists=groups.filter(k=>Object.hasOwn(rawPages,k)).map(k=>items(rawPages[k]));
+  if(!lists.length||lists.some(v=>!Array.isArray(v)))invalidSchema();
+  source=lists.flat();
+ }else invalidSchema();
+ if(source.length>500)throw fail('PANCAKE_ACCOUNT_PAGES_INVALID',502);
  const seen=new Set();
  const pages=[];
- for(const p of reply.pages){
+ for(const p of source){
   const id=String(p?.id??'');
   if(!validId(id)||seen.has(id))continue;
   const platform=String(p?.platform??'').toUpperCase();

@@ -90,7 +90,10 @@ export function createOfficialSiwcHttp({sessionAuthority,webOrigin}={}){
    credentialEncryption:{
     id:'win-dpapi-current-user-v1',isAvailable:()=>process.platform==='win32',
     encrypt:data=>currentUserDpapi('encrypt',data),
-    decrypt:data=>currentUserDpapi('decrypt',data)
+    // Official @siwc/local CredentialEncryption.decrypt MUST return UTF-8 text,
+    // not a Uint8Array. Returning bytes made every valid saved credential fail.
+    decrypt:async data=>new TextDecoder('utf-8',{fatal:true}).decode(
+     await currentUserDpapi('decrypt',data))
    },
    openBrowser:openOfficialBrowser});
  })();
