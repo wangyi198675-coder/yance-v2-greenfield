@@ -28,7 +28,27 @@ function intentKey(k,id){
   return JSON.stringify([canonicalK(k),id]);
 }
 
-export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,verifyOwnerMutation,verifyOwnerCancellation,requireDurableIdentity=false,now=Date.now}={}) {
+export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,verifyOwnerMutation,verifyOwnerCancellation,verifyTrustedRealActor=null,requireDurableIdentity=false,now=Date.now}={}) {
+  // The existing synthetic fixture is the default. Real access is opt-in
+  // only through the ORIGINAL W54 current-native-principal verifier, NEVER
+  // a browser claim, localhost address or a read-only WebPrivate session.
+  const realK=k=>{
+    if(typeof verifyTrustedRealActor!=='function')throw Error('ONLY_SYNTHETIC_FULL_K');
+    if(!k||
+       !safe(k.tenant)||k.tenant==='SYNTHETIC_TEST_ONLY'||
+       !safe(k.account)||!CHANNELS.has(k.channel)||!safe(k.peer_id)||
+       !pos(k.binding_revision))throw Error('W54_SIGNED_REAL_PRINCIPAL_REQUIRED');
+    return JSON.stringify([k.tenant,k.account,k.channel,k.peer_id,k.binding_revision]);
+  };
+  const scopedK=k=>k?.tenant==='SYNTHETIC_TEST_ONLY'?canonicalK(k):realK(k);
+  const scopeKey=(k,scope)=>scope==='GLOBAL'?
+    JSON.stringify(['G',k.tenant,k.account,k.channel]):scope==='CONTACT'?
+    JSON.stringify(['C',scopedK(k)]):(()=>{throw Error('INVALID_SCOPE')})();
+  const intentKey=(k,id)=>{
+    if(!safe(id)||(k.tenant==='SYNTHETIC_TEST_ONLY'&&!id.startsWith('fake-')))
+      throw Error('INVALID_BUSINESS_INTENT');
+    return JSON.stringify([scopedK(k),id]);
+  };
   if(typeof path!=='string'||!path||path.length>1024||
     (!requireDurableIdentity&&typeof verifyIdentity!=='function')||typeof authorizeMutation!=='function'||
     typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
@@ -51,7 +71,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   const peerBarrier=k=>readBarrier.get(scopeKey(k,'CONTACT'))?.pending===1;
   const anyBarrier=k=>globalBarrier(k)||peerBarrier(k);
   const hasLease=(k,scope)=>scope==='CONTACT'
-    ?Boolean(readLease.get(canonicalK(k)))
+    ?Boolean(readLease.get(scopedK(k)))
     :Boolean(db.prepare("SELECT 1 FROM boundary_leases WHERE json_extract(k,'$[0]')=? AND json_extract(k,'$[1]')=? AND json_extract(k,'$[2]')=? LIMIT 1")
       .get(k.tenant,k.account,k.channel));
   const time=()=>{const t=now();if(!pos(t))throw Error('INVALID_CLOCK');return t};
@@ -61,16 +81,30 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     catch(e){db.exec('ROLLBACK');throw e}
   }
   function admin(actor,action,k){
-    canonicalK(k);
-    if(!safe(actor)||!actor.startsWith('fake-')||
-      authorizeMutation({actor,action,identity:k})!==true)throw Error('W24_MUTATION_NOT_AUTHORIZED');
+    scopedK(k);
+    if(!safe(actor))throw Error('W24_MUTATION_NOT_AUTHORIZED');
+    if(k.tenant==='SYNTHETIC_TEST_ONLY'){
+      if(!actor.startsWith('fake-')||
+         authorizeMutation({actor,action,identity:k})!==true)
+        throw Error('W24_MUTATION_NOT_AUTHORIZED');
+      return;
+    }
+    // The W54 server-side verifier must authenticate the current native
+    // session AND the W26 official account/owner; callers cannot self-assert.
+    const attest=verifyTrustedRealActor?.({actor,action,identity:k});
+    if(attest?.then||attest?.verified!==true||
+       attest.proofSource!=='W54_SIGNED_NATIVE_SESSION_AND_W26_OWNER'||
+       attest.principalId!==actor||attest.tenant!==k.tenant||
+       attest.nativeSessionCurrent!==true||attest.providerOwnerCurrent!==true||
+       authorizeMutation({actor,action,identity:k})!==true)
+      throw Error('W54_REAL_PRINCIPAL_OR_W24_PROOF_REQUIRED');
   }
-  const durable=attachDurableAuthority({db,transaction,canonicalK,admin,
+  const durable=attachDurableAuthority({db,transaction,canonicalK:scopedK,admin,
     hasLease,readBarrier,now,verifyOwnerMutation,verifyOwnerCancellation});
   // Same W44 SQLite after the additive native-schema initialization.
   const readPause=db.prepare('SELECT paused,epoch FROM grant_pauses WHERE scope_key=?');
   function currentIdentity(k){
-    canonicalK(k);
+    scopedK(k);
     const native=durable.readNativeCurrent(k);
     if(native!==undefined)return native;
     if(requireDurableIdentity)return null;
@@ -94,7 +128,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   }
   function qualify(k,units=1){
     if(!pos(units)||!bounded(units))throw Error('INVALID_BUDGET_UNITS');
-    const key=canonicalK(k),s=currentIdentity(k);
+    const key=scopedK(k),s=currentIdentity(k);
     if(anyBarrier(k))return deny('AUTHORITY_MUTATION_PENDING');
     if(!s)return deny('W24_IDENTITY_OR_CONSENT_INVALID');
     const custody=readCustody.get(key);
@@ -109,7 +143,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       consentEpoch:s.consent_epoch,expiresAt:g.expires_at,availableUnits:g.budget_limit-g.spent-g.reserved};
   }
   function grant({identity:k,scope,actor,enabled=true,expiresAt,budgetUnits,expectedEpoch=0}){
-    canonicalK(k);
+    scopedK(k);
     if(typeof enabled!=='boolean'||!pos(expiresAt)||!bounded(budgetUnits)||!nonneg(expectedEpoch))
       throw Error('INVALID_GRANT_TERMS');
     admin(actor,'GRANT_'+scope,k);
@@ -128,7 +162,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     });
   }
   function revoke({identity:k,scope,actor,expectedEpoch}){
-    canonicalK(k);admin(actor,'REVOKE_'+scope,k);
+    scopedK(k);admin(actor,'REVOKE_'+scope,k);
     const key=scopeKey(k,scope);
     return transaction(()=>{
       const old=readGrant.get(key);
@@ -149,7 +183,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   }
   function setCustody({identity:k,mode,action,actor,expectedEpoch=0}){
     if(requireDurableIdentity)throw Error('NATIVE_TRANSACTIONAL_TAKEOVER_REQUIRED');
-    const key=canonicalK(k);
+    const key=scopedK(k);
     if(!nonneg(expectedEpoch)||
       !(mode==='HUMAN'&&action==='USER_EDIT'||mode==='AUTO'&&action==='EXPLICIT_RESUME'))
       throw Error('FOCUS_CANNOT_TAKEOVER');
@@ -288,7 +322,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   // Atomic with W44 budget rows, but not yet bound to W24's mutation
   // entrypoints or W25's irreversible sink. W25 remains sole sender.
   function armSend({identity:k,intentId,w25IntentId}){
-    const key=intentKey(k,intentId),peer=canonicalK(k);
+    const key=intentKey(k,intentId),peer=scopedK(k);
     if(!safe(w25IntentId))return deny('W25_ATTEMPT_ID_REQUIRED');
     return transaction(()=>{
       if(anyBarrier(k))return deny('AUTHORITY_MUTATION_PENDING');
@@ -310,7 +344,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   }
   function requestMutationFence({identity:k,scope,actor,expectedGeneration=0}){
     if(requireDurableIdentity)throw Error('NATIVE_TRANSACTIONAL_MUTATION_REQUIRED');
-    canonicalK(k);
+    scopedK(k);
     if(!nonneg(expectedGeneration))throw Error('INVALID_MUTATION_GENERATION');
     admin(actor,'REQUEST_'+scope+'_MUTATION',k);
     const key=scopeKey(k,scope);
@@ -326,7 +360,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   }
   function finalizeMutationFence({identity:k,scope,actor,generation,kind,applyW24}){
     if(requireDurableIdentity)throw Error('IN_MEMORY_W24_CALLBACK_FORBIDDEN');
-    canonicalK(k);
+    scopedK(k);
     if(!pos(generation)||!['REVOKE_GRANT','REVOKE_ACCOUNT','REVOKE_CONSENT','HUMAN_TAKEOVER'].includes(kind)
         ||typeof applyW24!=='function')throw Error('EXPLICIT_W24_MUTATION_REQUIRED');
     if(kind==='HUMAN_TAKEOVER'&&scope!=='CONTACT')throw Error('INVALID_TAKEOVER_SCOPE');
@@ -348,7 +382,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
           .run(scopeKey(k,scope),scope);
       }
       if(kind==='HUMAN_TAKEOVER'){
-        const peer=canonicalK(k),old=readCustody.get(peer);
+        const peer=scopedK(k),old=readCustody.get(peer);
         const epoch=(old?.epoch??0)+1;
         db.prepare('INSERT INTO custody(k,mode,epoch) VALUES(?,?,?) ON CONFLICT(k) DO UPDATE SET mode=excluded.mode,epoch=excluded.epoch')
           .run(peer,'HUMAN',epoch);
@@ -359,7 +393,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     });
   }
   function leaseStatus(k){
-    const peer=canonicalK(k),active=readLease.get(peer);
+    const peer=scopedK(k),active=readLease.get(peer);
     return {ok:true,active:!!active,mutationPending:anyBarrier(k),
       intentKey:active?.intent_key??null};
   }
@@ -377,7 +411,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     const globalFence=scope==='GLOBAL'?fence:
       durable.readMutationFence({identity:k,scope:'GLOBAL',actor});
     const current=effective(k);
-    const mode=readCustody.get(canonicalK(k))?.mode??'AUTO';
+    const mode=readCustody.get(scopedK(k))?.mode??'AUTO';
     const reason=(!native.account)?'ACCOUNT_NOT_CONFIGURED':
       (!native.valid)?'ACCOUNT_OR_PEER_UNBOUND':
       anyBarrier(k)?'AUTHORITY_MUTATION_PENDING':
@@ -390,7 +424,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       spent:grantRow.spent,reserved:grantRow.reserved,
       available:Math.max(0,grantRow.budget_limit-grantRow.spent-grantRow.reserved)}:null;
     return {ok:true,status:reason?'DENIED':'ELIGIBLE_SYNTHETIC',
-      reason,scope,fullK:canonicalK(k),
+      reason,scope,fullK:scopedK(k),
       // Never confuse a test fixture or a recorded grant with user consent.
       realUserAuthorized:false,realAccountVerified:false,
       authorityClass:'SYNTHETIC_FIXTURE_ONLY',
@@ -508,7 +542,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       generation:req.generation,readback};
   }
   function inspection(k){
-    const key=canonicalK(k);
+    const key=scopedK(k);
     if(!currentIdentity(k))return deny('W24_IDENTITY_OR_CONSENT_INVALID');
     const c=readCustody.get(key),s=effective(k);
     return {ok:true,mode:c?.mode??'AUTO',custodyEpoch:c?.epoch??0,

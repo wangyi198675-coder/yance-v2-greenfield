@@ -22,6 +22,8 @@ const pj=k=>JSON.stringify([k.tenant,k.account,k.channel,k.peer_id]);
 const sj=(k,scope,canonicalK)=>scope==='GLOBAL'?JSON.stringify(['G',...JSON.parse(aj(k))]):
  scope==='CONTACT'?JSON.stringify(['C',canonicalK(k)]):(()=>{throw Error('INVALID_SCOPE')})();
 const json=x=>JSON.stringify(x);
+ const proofRef=(k,v)=>str(v)&&
+   (k.tenant==='SYNTHETIC_TEST_ONLY'?v.startsWith('fake-'):!v.startsWith('fake-'));
 
 export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease,readBarrier,now,
   verifyOwnerMutation,verifyOwnerCancellation}={}){
@@ -57,7 +59,7 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
      mode:c?.mode??'AUTO'};
  };
  const checkActor=(actor,k,kind)=>{
-   if(!str(actor)||!actor.startsWith('fake-'))throw Error('TRUSTED_ACTOR_REQUIRED');
+   if(!str(actor))throw Error('TRUSTED_ACTOR_REQUIRED');
    admin(actor,'NATIVE_'+kind,k);
    const a=account(k);
    if(a&&a.owner!==actor)throw Error('W24_OWNER_MISMATCH');
@@ -107,7 +109,9 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
    if(!KINDS.has(kind)||!['GLOBAL','CONTACT'].includes(scope)||
        (GLOBAL.has(kind)&&scope!=='GLOBAL')||(CONTACT.has(kind)&&scope!=='CONTACT'))
        throw Error('MUTATION_KIND_SCOPE_MISMATCH');
-   if(!str(idempotencyKey)||!idempotencyKey.startsWith('fake-')||
+   if(!str(idempotencyKey)||
+      (k.tenant==='SYNTHETIC_TEST_ONLY'?!idempotencyKey.startsWith('fake-'):
+       idempotencyKey.startsWith('fake-'))||
       ![expectedGeneration,expectedBindingRevision,expectedAccountEpoch,
         expectedConsentEpoch,expectedCustodyEpoch].every(nonnegative))
      throw Error('EXPLICIT_MUTATION_CAS_AND_ID_REQUIRED');
@@ -223,12 +227,12 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
    const a=account(k),pr=peer(k),kind=row.kind;
    if(kind==='REGISTER_ACCOUNT'){
      if(a)return refuse('ACCOUNT_ALREADY_EXISTS');
-     if(!str(p.bindingProofRef)||!p.bindingProofRef.startsWith('fake-')||
+     if(!proofRef(k,p.bindingProofRef)||
        k.binding_revision!==1)return refuse('W24_VERIFIED_BINDING_REQUIRED');
      db.prepare('INSERT INTO identity_accounts VALUES(?,?,?,?,?,?,?,?)')
        .run(k.tenant,k.account,k.channel,actor,1,0,1,p.bindingProofRef);
    } else if(kind==='BIND_PEER'){
-     if(!a?.active||!str(p.peerProofRef)||!p.peerProofRef.startsWith('fake-'))
+     if(!a?.active||!proofRef(k,p.peerProofRef))
        return refuse('W24_PEER_PROOF_REQUIRED');
      db.prepare('INSERT INTO identity_peers(tenant,account,channel,peer_id,binding_revision,bound,proof_ref,revocation_epoch) VALUES(?,?,?,?,?,1,?,0) ON CONFLICT(tenant,account,channel,peer_id) DO UPDATE SET binding_revision=excluded.binding_revision,bound=1,proof_ref=excluded.proof_ref,revocation_epoch=identity_peers.revocation_epoch+1')
        .run(k.tenant,k.account,k.channel,k.peer_id,k.binding_revision,p.peerProofRef);
@@ -236,7 +240,7 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
    } else if(kind==='CREATE_CONSENT'){
      if(!a?.active||!pr?.bound||!['SEND_MESSAGE','TRANSLATE','ANALYZE'].includes(p.operation)||
         ![p.consentId,p.subjectId,p.purpose,p.proofRef].every(str)||
-        !p.consentId.startsWith('fake-')||!p.proofRef.startsWith('fake-')||
+        !proofRef(k,p.consentId)||!proofRef(k,p.proofRef)||
         !positive(p.expiresAt)||p.expiresAt<=now()||p.approved!==true)
        return refuse('W24_VERIFIED_CONSENT_REQUIRED');
      if(db.prepare('SELECT consent_id FROM identity_consents WHERE consent_id=?').get(p.consentId))
@@ -257,7 +261,7 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
      if(!a)return refuse('ACCOUNT_NOT_REGISTERED');
      if(kind==='REVOKE_ACCOUNT'&&!a.active)return refuse('ACCOUNT_ALREADY_REVOKED');
      if(kind==='RELINK_ACCOUNT'&&(a.active||!str(p.bindingProofRef)||
-       !p.bindingProofRef.startsWith('fake-')))return refuse('W24_RELINK_PROOF_REQUIRED');
+       !proofRef(k,p.bindingProofRef)))return refuse('W24_RELINK_PROOF_REQUIRED');
      db.prepare('UPDATE identity_accounts SET active=?,binding_revision=binding_revision+1,revocation_epoch=revocation_epoch+1,binding_proof_ref=? WHERE tenant=? AND account=? AND channel=?')
        .run(kind==='RELINK_ACCOUNT'?1:0,kind==='RELINK_ACCOUNT'?p.bindingProofRef:a.binding_proof_ref,
          k.tenant,k.account,k.channel);
@@ -349,6 +353,7 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
      if(row.state!=='PENDING')return refuse('MUTATION_NOT_PENDING');
      const k=JSON.parse(row.full_k),identity={
        tenant:k[0],account:k[1],channel:k[2],peer_id:k[3],binding_revision:k[4]};
+     checkActor(row.actor,identity,'FINALIZE_MUTATION');
      if(hasLease(identity,JSON.parse(row.scope_key)[0]==='G'?'GLOBAL':'CONTACT'))
        return {ok:false,status:'PENDING',requestId,generation,reason:'ACTIVE_SEND_MUST_SETTLE_FIRST'};
      const barrier=readBarrier.get(row.scope_key);
@@ -379,7 +384,8 @@ export function attachDurableAuthority({db,transaction,canonicalK,admin,hasLease
      db.prepare('UPDATE mutation_barriers SET pending=0 WHERE scope_key=? AND generation=? AND pending=1')
        .run(row.scope_key,generation);
      db.prepare('INSERT INTO authority_privacy_audit VALUES(?,?,?,?,?,?,?)')
-       .run('fake-event-'+requestId,requestId,row.kind,row.full_k,row.actor,json(result.epochs),at);
+       .run((identity.tenant==='SYNTHETIC_TEST_ONLY'?'fake-event-':'native-event-')+requestId,
+         requestId,row.kind,row.full_k,row.actor,json(result.epochs),at);
      return {ok:true,status:'COMMITTED',state:'APPLIED',requestId,generation,result};
    });
  }
