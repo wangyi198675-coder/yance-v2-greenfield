@@ -58,3 +58,22 @@ test('never POST, log in on mount, or create placeholder QR from browser',async(
  assert.equal(urls[0].init.method,'GET');
  assert.equal(urls[0].init.credentials,'same-origin');
 });
+
+test('Facebook upstream connected is not the same as application account bound and cannot send',()=>{
+ const actual={ok:true,channel:'FB_PERSONAL',source:'OFFICIAL_MAUTRIX_META',
+  canSend:false,status:'UPSTREAM_CONNECTED_BINDING_PENDING',
+  nativeProviderSessionConnected:true,authorizedByNativeOwner:false,
+  accountIdentityVerified:false};
+ const parsed=parseChannelState('FB_PERSONAL',actual);
+ assert.equal(parsed.state,'UPSTREAM_CONNECTED_BINDING_PENDING');
+ assert.equal(parsed.nativeProviderSessionConnected,true);
+ assert.equal(parsed.online,false);
+ assert.equal(parsed.accounts,null);
+ for(const bad of [
+  {...actual,nativeProviderSessionConnected:false},
+  {...actual,authorizedByNativeOwner:true},
+  {...actual,accountIdentityVerified:true},
+  {...actual,canSend:true},
+  {...actual,channel:'WHATSAPP_PERSONAL',source:'BAILEYS_NATIVE_SDK'}
+ ])assert.throws(()=>parseChannelState(bad.channel,bad));
+});

@@ -4,7 +4,8 @@
 const PROVIDER_NAMES=Object.freeze({
  OPENROUTER_USER_API:'OpenRouter',
  OPENAI_USER_API:'OpenAI API',
- LLAMACPP_LOCAL_QWEN3_8B_FREE:'本地 Qwen3'
+ LLAMACPP_LOCAL_QWEN3_8B_FREE:'本地 Qwen3',
+ CHATGPT_PLAN_SIWC:'ChatGPT'
 });
 const PROVIDERS=new Set(Object.keys(PROVIDER_NAMES));
 const LOCAL='LLAMACPP_LOCAL_QWEN3_8B_FREE';
@@ -50,7 +51,7 @@ export function publicModelCatalog(d){
  noSecrets(d);
  if(d.ok!==true||d.authoritative!==false||d.canSend!==false||
     d.actualAvailability!=='CHECK_AUTHORIZED_MODEL_CONFIG'||
-    !Array.isArray(d.providers)||d.providers.length!==3)
+    !Array.isArray(d.providers)||d.providers.length!==4)
     fail('W47_PUBLIC_CATALOG_INVALID');
  const seen=new Set();
  const providers=d.providers.map(p=>{
@@ -60,7 +61,7 @@ export function publicModelCatalog(d){
      typeof p.requiresLocalModel!=='boolean'||
      p.requiresLocalModel!==(p.provider===LOCAL)||
      typeof p.requiresUserApiKey!=='boolean'||
-     p.requiresUserApiKey===(p.provider===LOCAL))
+     p.requiresUserApiKey!==['OPENROUTER_USER_API','OPENAI_USER_API'].includes(p.provider))
     fail('W47_PUBLIC_PROVIDER_INVALID');
   seen.add(p.provider);
   return Object.freeze({id:p.provider,name:PROVIDER_NAMES[p.provider],
@@ -92,7 +93,7 @@ export function modelCatalog(d,publicProviders=null){
   if(!m||!allowed.has(m.provider)||!PROVIDERS.has(m.provider)||
      !MODEL_ID.test(m.modelId)||typeof m.configured!=='boolean'||
      typeof m.available!=='boolean'||typeof m.keyRequired!=='boolean'||
-     m.keyRequired===(m.provider===LOCAL)||
+     m.keyRequired!==['OPENROUTER_USER_API','OPENAI_USER_API'].includes(m.provider)||
      (m.available&&!m.configured)||
      typeof m.billingNotice!=='string'||m.billingNotice.length>400||
      keys.has(m.provider+'|'+m.modelId))

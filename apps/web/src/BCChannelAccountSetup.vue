@@ -73,6 +73,7 @@ const providerCopy=Object.freeze({
 });
 const display=computed(()=>providerCopy[props.channel.id]||{title:props.channel.label,description:'连接你的社交账号'});
 const statusLabel=computed(()=>state.value==='ONLINE_VERIFIED'?'已连接':
+ state.value==='UPSTREAM_CONNECTED_BINDING_PENDING'?'平台已连接·待同步':
  state.value==='checking'?'检查中':
  state.value==='EXPIRED'?'二维码已过期':
  state.value==='LOCAL_SESSION_NEEDED'?'待连接':
@@ -89,7 +90,8 @@ async function refresh(){
   if(!alive||id!==revision)return;
   state.value=v.state;
   verifiedAccounts.value=v.accounts;
-  notice.value=v.online?'原生服务确认已连接':'尚未完成本人授权';
+  notice.value=v.online?'原生服务确认已连接':
+   v.nativeProviderSessionConnected?'Facebook 已成功连接，言策账号与联系人授权正在同步':'尚未完成本人授权';
  }catch(e){
   if(alive&&id===revision){
    if(isWhatsApp.value&&!userRequested.value&&needsLocalSession(e)){
@@ -148,7 +150,10 @@ async function pollStatus(){
   if(!alive||id!==revision)return;
   verifiedAccounts.value=v.accounts;
   if(v.online){clearReceipt();state.value='ONLINE_VERIFIED';notice.value='账号已连接'}
-  else if(!receipt.value)state.value=v.state;
+  else if(v.nativeProviderSessionConnected){
+   clearReceipt();state.value='UPSTREAM_CONNECTED_BINDING_PENDING';
+   notice.value='Facebook 已连接；言策账号及联系人尚待验证绑定';
+  }else if(!receipt.value)state.value=v.state;
  }catch(e){if(!receipt.value&&id===revision){
   state.value=isWhatsApp.value&&!userRequested.value&&needsLocalSession(e)?'LOCAL_SESSION_NEEDED':'unavailable';
  }}
@@ -186,14 +191,14 @@ defineExpose({setup,refresh});
     <span class="w46-account-check" aria-label="平台已验证账号">✓</span>
    </div>
    <p v-if="!verifiedAccounts?.length" class="w46-account-placeholder">
-    {{state==='ONLINE_VERIFIED'?'已连接，账号信息正在同步':state==='checking'?'正在检查账号…':'还没有已验证的账号'}}
+    {{state==='ONLINE_VERIFIED'?'已连接，账号信息正在同步':state==='UPSTREAM_CONNECTED_BINDING_PENDING'?'Facebook 已连接，言策联系人待同步':state==='checking'?'正在检查账号…':'还没有已验证的账号'}}
    </p>
   </div>
   <div class="w46-channel-bottom">
    <Button class="w46-channel-connect" size="sm"
-    data-test="native-provider-setup" :disabled="busy||(isWhatsApp&&state==='ONLINE_VERIFIED')"
-    @click="isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)?qrOpen=true:setup()"><span aria-hidden="true">＋</span> {{busy?'正在处理…':isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)?'查看二维码':state==='ONLINE_VERIFIED'?'添加另一个账号':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':isWhatsApp?'连接 WhatsApp':'重新获取授权'):'连接账号'}} </Button>
-   <p v-if="(receipt||state==='EXPIRED'||userRequested)&&notice"
+    data-test="native-provider-setup" :disabled="busy||(isWhatsApp&&state==='ONLINE_VERIFIED')||(channel.id==='FB_PERSONAL'&&state==='UPSTREAM_CONNECTED_BINDING_PENDING')"
+    @click="isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)?qrOpen=true:setup()"><span aria-hidden="true">＋</span> {{busy?'正在处理…':isWhatsApp&&['WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)?'查看二维码':state==='ONLINE_VERIFIED'?'添加另一个账号':state==='UPSTREAM_CONNECTED_BINDING_PENDING'?'已连接·同步待完成':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':isWhatsApp?'连接 WhatsApp':'重新获取授权'):'连接账号'}} </Button>
+   <p v-if="(receipt||state==='EXPIRED'||userRequested||state==='UPSTREAM_CONNECTED_BINDING_PENDING')&&notice"
     class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{state==='unavailable'?'当前无法连接，请查看帮助':notice}}</p>
    <div v-if="receipt" class="w46-channel-auth-result" data-test="native-provider-auth-result">
     <a v-if="receipt.officialConnectUrl" :href="receipt.officialConnectUrl"

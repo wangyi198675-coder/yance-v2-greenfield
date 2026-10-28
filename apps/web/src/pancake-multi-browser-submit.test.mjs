@@ -37,3 +37,21 @@ test('read-only authorization recheck identifies missing W55 account separately 
  await assert.rejects(pancakeMultiApi('pages',{fetchImpl}),/PANCAKE_PAGES_HTTP_403_CODE_PANCAKE_ACCOUNT_NOT_CONFIGURED/);
  assert.equal(gets,1);
 });
+test('relink request includes exact owner confirmation and W55 revoked revision only by opt-in',async()=>{
+ const submissions=[];
+ const fetchImpl=async(url,opts={})=>{
+  if(url.endsWith('/local-session/status'))return response(session);
+  if(url.endsWith('/onboarding/account')){
+   submissions.push(JSON.parse(opts.body));
+   return response({ok:true,canSend:false,pages:[],userTokenStored:true});
+  }
+  throw Error('UNEXPECTED_PATH');
+ };
+ await pancakeMultiApi('account',{fetchImpl,userAccessToken:'FAKE_ONLY_ACCOUNT_TOKEN'});
+ await pancakeMultiApi('account',{fetchImpl,userAccessToken:'FAKE_ONLY_ACCOUNT_TOKEN',
+  ownerReviewedRelink:true,expectedRevokedRevision:3});
+ assert.deepEqual(submissions[0],{userAccessToken:'FAKE_ONLY_ACCOUNT_TOKEN'});
+ assert.deepEqual(submissions[1],{userAccessToken:'FAKE_ONLY_ACCOUNT_TOKEN',
+  ownerReviewedRelink:true,expectedRevokedRevision:3});
+ assert.equal(submissions.length,2);
+});
