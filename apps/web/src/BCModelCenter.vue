@@ -164,7 +164,7 @@ onMounted(()=>{if(props.active)void refresh()});
     <div class="mc-source-actions"><button type="button" data-test="local-model-recheck" @click="refresh">重新检测</button><button type="button" data-test="local-model-details" @click="localDetails=!localDetails">{{localDetails?'收起':'原因'}}</button></div>
     <p v-if="localDetails" data-test="local-model-diagnostics">言策使用原生 llama.cpp（127.0.0.1:11605）。如服务已启动仍未连接，请检查 W47 模型鉴权和会话状态。</p></article>
    <article><h3>V-Claw</h3><strong>未连接</strong>
-    <button type="button" data-test="vclaw-manage-inline" @click="vclawOpen=!vclawOpen">{{vclawOpen?'收起':'在言策内配置'}}</button>
+    <button type="button" data-test="vclaw-manage-inline" @click="vclawOpen=!vclawOpen">{{vclawOpen?'收起':'查看连接状态'}}</button>
     <div v-if="vclawOpen" data-test="vclaw-pending"><p>当前密钥保管仅支持 OpenRouter 和 OpenAI；V-Claw 还没有受保护的密钥入口。</p><small>候选接口：token.v-claw.org/v1。请勿将密钥填入其他供应商。</small></div></article>
   </section>
 
