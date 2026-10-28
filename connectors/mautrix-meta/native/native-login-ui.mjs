@@ -31,18 +31,15 @@ async function loadFlows(){
   clear(byId('step'));clear(byId('flows'));handle=null;step=null;
   const info=await api('/native-login/flows');
   if(!Array.isArray(info.flows)||info.flows.length===0)throw Error('UPSTREAM_NO_FLOWS');
-  state('等待本人选择登录方式');
-  const label=element('p','请选择 Messenger 登录方式：');
-  byId('flows').append(label);
-  for(const f of info.flows){
-   const b=element('button',f.id==='messenger-lite-android'?'Messenger Android':'Messenger iPhone');
-   b.type='button';b.onclick=()=>withBusy(async()=>{
-    state('正在取得 Messenger 原生登录步骤…');
-    const response=await api('/native-login/start',{flowId:f.id});
-    handle=response.handle;clear(byId('flows'));showStep(response.step);
-   });
-   byId('flows').append(b);
-  }
+  state('准备连接 Facebook Messenger');
+  const b=element('button','登录 Facebook Messenger');
+  b.type='button';b.id='messenger-login';
+  b.onclick=()=>withBusy(async()=>{
+   state('正在打开 Messenger 登录…');
+   const response=await api('/native-login/start');
+   handle=response.handle;clear(byId('flows'));showStep(response.step);
+  });
+  byId('flows').append(b);
  });
  if(!byId('flows').children.length){state('Messenger 连接服务尚未准备好');byId('retry').classList.remove('hidden')}
 }
@@ -59,7 +56,8 @@ function showStep(s){
  if(s.type==='user_input'&&Array.isArray(s.fields)){
   const form=element('form');
   for(const f of s.fields){
-   const lab=element('label',f.name||f.id);
+   const friendly={username:'Facebook 账号（邮箱或手机号）',password:'密码',email:'邮箱',phone_number:'手机号',two_factor_code:'验证码','2fa_code':'验证码',code:'验证码'};
+   const lab=element('label',friendly[f.id]||f.name||f.id);
    const field=f.type==='select'?element('select'):element('input');
    field.name=f.id;field.required=true;
    if(field.tagName==='INPUT'){

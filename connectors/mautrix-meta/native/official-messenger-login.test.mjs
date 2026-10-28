@@ -38,7 +38,7 @@ test('real BridgeV2 endpoints are used without exposing Matrix bearer',async()=>
  assert.deepEqual(flows.flows.map(f=>f.id),['messenger-lite','messenger-lite-android']);
  assert.equal(flows.canSend,false);
  await assert.rejects(()=>controller.start('facebook'),/UNAPPROVED_MESSENGER_LOGIN_FLOW/);
- const first=await controller.start('messenger-lite');
+ const first=await controller.start();
  assert.equal(first.step.type,'user_input');
  assert.equal(first.step.fields[1].type,'password');
  assert.equal('token' in first,false);

@@ -4,7 +4,10 @@ import {createBridgeStatusServer} from './bridge-http.mjs';
 
 let PORT=29323,BASE='http://127.0.0.1:'+PORT+'/api/v2/providers/fb-personal';
 function server(provider={}) {
-  return createBridgeStatusServer({port:PORT,installed:()=>true,probe:async()=>({
+  return createBridgeStatusServer({port:PORT,installed:()=>true,
+    // Isolate the public-page no-session fixture from the real private DPAPI account.
+    officialLogin:{flows:async()=>{throw Error('TEST_MATRIX_SESSION_ABSENT')}},
+    probe:async()=>({
     channel:'FB_PERSONAL',binaryIntegrity:'OFFICIAL_SHA_VERIFIED',
     bridgeState:'RUNNING_OFFICIAL_APP_SERVICE_REGISTERED',bridgeBotProfileVerified:true,
     realAccountState:'WAITING_USER_AUTH',canSend:false}),

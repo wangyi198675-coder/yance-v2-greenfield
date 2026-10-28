@@ -70,17 +70,25 @@ export function createOfficialMessengerLogin({getSession,fetchImpl=fetch,clock=D
       state:'WAITING_USER_AUTH',canSend:false};
   }
   async function start(flowId){
-    if(!ALLOWED.has(flowId))deny('UNAPPROVED_MESSENGER_LOGIN_FLOW',403);
+    // Ordinary users choose Messenger, not an underlying mobile protocol.
+    // Prefer the already-verified upstream flow; use Android only if that
+    // official flow is the one available. Never retry after bad credentials.
+    if(flowId!==undefined&&!ALLOWED.has(flowId))
+      deny('UNAPPROVED_MESSENGER_LOGIN_FLOW',403);
     const s=await scope(),available=await call(s,'/login/flows');
-    if(!available.flows?.some(f=>f.id===flowId))deny('OFFICIAL_LOGIN_FLOW_NOT_AVAILABLE',503);
-    const step=await call(s,'/login/start/'+encodeURIComponent(flowId),'POST');
+    const upstream=Array.isArray(available.flows)?available.flows:[];
+    const selected=flowId??['messenger-lite','messenger-lite-android']
+      .find(id=>upstream.some(f=>f.id===id));
+    if(!ALLOWED.has(selected)||!upstream.some(f=>f.id===selected))
+      deny('OFFICIAL_LOGIN_FLOW_NOT_AVAILABLE',503);
+    const step=await call(s,'/login/start/'+encodeURIComponent(selected),'POST');
     if(!idValid(step.login_id)||!idValid(step.step_id)&&step.type!=='complete')
       deny('INVALID_OFFICIAL_LOGIN_PROCESS',503);
     purged();if(active.size>20)active.clear();
     const handle=randomBytes(24).toString('hex');
     if(step.type!=='complete')active.set(handle,{principal:s.principal,
       upstreamId:step.login_id,stepId:step.step_id,txnId:step.txn_id,
-      type:step.type,flowId,expiresAt:clock()+600000});
+      type:step.type,flowId:selected,expiresAt:clock()+600000});
     return {handle:step.type==='complete'?null:handle,step:normalizeStep(step),
       state:'WAITING_USER_AUTH',canSend:false};
   }
