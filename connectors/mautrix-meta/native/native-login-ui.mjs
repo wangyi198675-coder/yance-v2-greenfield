@@ -21,10 +21,21 @@ async function api(route,body={}){
  if(!r.ok)throw Error(value.error||'MESSENGER_LOGIN_UNAVAILABLE');
  return value;
 }
+const isAuthenticatorStep=s=>s?.type==='user_input'&&(
+ /(?:six[- ]digit|authenticator|two[- ]factor|6\s*位|身份验证器)/i.test(s.instructions||'')||
+ (s.fields||[]).some(f=>/^(?:2fa_code|two_factor_code|totp|authenticator_code)$/.test(f.id)));
 const withBusy=async f=>{
  if(busy)return;busy=true;error('');
- try{await f()}catch{
-  error('当前验证未完成。可以重新开始登录；如不恢复加密聊天记录，安全存储 PIN 可留空。');
+ try{await f()}catch(e){
+  const code=String(e?.message||'');
+  let message='Messenger 验证尚未完成。请检查输入内容；如果无法继续，可重新开始登录。';
+  if(code==='LOGIN_PROCESS_EXPIRED_OR_MISSING'||code==='LOGIN_PROCESS_HANDLE_INVALID')
+   message='这次登录步骤已经失效，需要重新开始登录。';
+  else if(isAuthenticatorStep(step))
+   message='身份验证器验证尚未完成。请使用 App 当前显示的最新 6 位动态验证码；如果仍失败，可重新开始登录。';
+  else if((step?.fields||[]).some(f=>f.optional===true&&/pin|recovery/i.test(f.id)))
+   message='安全存储 PIN 只用于恢复加密聊天记录；如果不恢复历史，可留空继续。如仍失败，请重新开始登录。';
+  error(message);
   byId('retry').textContent='重新开始登录';
   byId('retry').classList.remove('hidden');
  }
@@ -54,6 +65,8 @@ function showStep(s){
    f.optional===true&&/pin|recovery|secure.storage/i.test([f.id,f.name].join(' ')));
  if(hasOptionalRecoveryPin)target.append(element('p',
    '安全存储 PIN 仅用于恢复已加密的聊天记录。不需要恢复历史时，可以留空直接继续。'));
+ else if(isAuthenticatorStep(s))target.append(element('p',
+   '请输入身份验证器 App 中当前显示的 6 位动态验证码。这是 Facebook 双重身份验证，不能使用聊天记录恢复 PIN，也不能留空跳过。'));
  else if(s.instructions)target.append(element('p',s.instructions));
  if(s.type==='complete'){
   state('Messenger 已完成原生登录，等待言策核验账号授权');
@@ -65,12 +78,13 @@ function showStep(s){
   const form=element('form');
   for(const f of s.fields){
    const friendly={username:'Facebook 账号（邮箱或手机号）',password:'密码',email:'邮箱',phone_number:'手机号',two_factor_code:'验证码','2fa_code':'验证码',code:'验证码'};
-   const lab=element('label',friendly[f.id]||f.name||f.id);
+   const lab=element('label',isAuthenticatorStep(s)?'身份验证器 6 位动态验证码':(friendly[f.id]||f.name||f.id));
    const field=f.type==='select'?element('select'):element('input');
    field.name=f.id;field.required=true;
    if(field.tagName==='INPUT'){
     field.type=['password','2fa_code','token'].includes(f.type)?'password':
       f.type==='email'?'email':'text';field.autocomplete='off';
+    if(isAuthenticatorStep(s)){field.inputMode='numeric';field.maxLength=6;field.pattern='[0-9]{6}';}
    }else for(const v of f.options||[]){
     const option=element('option',v);option.value=v;field.append(option);
    }
