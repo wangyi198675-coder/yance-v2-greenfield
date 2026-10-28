@@ -4,6 +4,7 @@ import {Monitor,Bell,RefreshCw,Play,Sparkles,Check,AlertCircle} from '../../../d
 import {
  createW05NativeNotificationPort,readAgnoNotificationEnabled,setAgnoNotificationEnabled
 } from './w05-native-notification-port.mjs';
+import {readW05AudioPreference,writeW05AudioPreference,playW05DoubleTone} from './w05-notification-audio.mjs';
 
 const props=defineProps({permission:{type:String,default:'unsupported'}});
 const emit=defineEmits(['request-permission']);
@@ -22,6 +23,16 @@ const nativeLabel=computed(()=>({
 })[nativeStatus.value]||'未确认');
 const testPending=ref(false),lastTest=ref('');
 const agnoEnabled=ref(readAgnoNotificationEnabled()),preferenceFeedback=ref('');
+const sound=ref(readW05AudioPreference()),soundResult=ref('');
+function setSound(next){
+ if(writeW05AudioPreference(next)){
+  sound.value=readW05AudioPreference();soundResult.value='声音设置已保存';
+ }else soundResult.value='声音设置无法保存';
+}
+async function previewSound(){
+ const result=await playW05DoubleTone({preference:sound.value});
+ soundResult.value=result.played?'双音试听已提交':result.reason==='MUTED'?'已静音': '无法播放，请检查浏览器声音权限';
+}
 watch(()=>props.permission,p=>{browserPermission.value=p;lastTest.value=''});
 async function inspectNative(){
  if(!native.available)return;
@@ -131,6 +142,28 @@ function toggleAgno(){
       :disabled="nativeStatus!=='granted'||nativeBusy" @click="testNative"><Play :size="14"/> 发送测试</button>
     </div>
     <p v-if="nativeFeedback" class="nc-feedback" role="status" data-test="notify-native-feedback">{{nativeFeedback}}</p>
+   </section>
+
+   <section class="nc-card" data-test="notify-w05-sound">
+    <div class="nc-card-head"><div class="nc-symbol"><Bell :size="20"/></div>
+     <span class="nc-chip nc-chip-neutral">此浏览器</span></div>
+    <div class="nc-card-copy"><h4>消息提示音</h4>
+     <p>沿用 W05 清晰短促双音，接到新消息时只播放一次。</p></div>
+    <div class="nc-task-row">
+     <span>开启提示音</span>
+     <button type="button" class="nc-switch" role="switch" data-test="notify-sound-toggle"
+      :aria-checked="sound.enabled" aria-label="开启消息提示音"
+      @click="setSound({...sound,enabled:!sound.enabled})"><span></span></button>
+    </div>
+    <label class="nc-hint" for="w05-notify-volume">提示音量 {{sound.volume}}%</label>
+    <input id="w05-notify-volume" type="range" min="0" max="100" step="5"
+     data-test="notify-volume" :value="sound.volume"
+     @input="setSound({...sound,volume:Number($event.target.value)})"/>
+    <div class="nc-actions">
+     <button type="button" class="nc-button nc-button-secondary"
+      data-test="notify-play-sound" @click="previewSound"><Play :size="14"/> 试听双音</button>
+    </div>
+    <p v-if="soundResult" class="nc-feedback" data-test="notify-audio-feedback" role="status">{{soundResult}}</p>
    </section>
 
    <section class="nc-card nc-task" data-test="notify-agno-pref">

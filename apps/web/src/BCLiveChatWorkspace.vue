@@ -8,6 +8,7 @@ import BCNativeComposer from './BCNativeComposer.vue';
 import {createTrustedTakeoverPort} from './native-takeover-port.mjs';
 import {readLiveContacts,readLiveTimeline,explainNativeFailure} from './live-chat-source.mjs';
 import {pancakeMultiApi} from './pancake-multi-browser.mjs';
+import {latestNewOfficialPancakeInbound,showOfficialPancakeInboundNotice} from './w05-pancake-inbox-notice.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null},mediaAuthorityPort:{type:Object,default:null}});
 const emit=defineEmits(['navigate']);
 const searchBox=ref(null),composerRef=ref(null);
@@ -240,7 +241,7 @@ async function readPancakeContacts(){
    rows.push(Object.freeze({
     contactRef:'PANCAKE_READ_ONLY|'+page.pageId+'|'+c.conversationId,
     accountRef:page.name||page.pageId,channel:'FB_PAGE',peerRef:c.conversationId,
-    displayName:c.displayName,lastMessage:c.snippet||'',pageId:page.pageId,
+    displayName:c.displayName,lastMessage:c.snippet||'',updatedAt:c.updatedAt||null,pageId:page.pageId,
     avatarUrl:typeof c.avatarUrl==='string'&&c.avatarUrl.startsWith('/api/v2/providers/fb-page/onboarding/avatar?')?c.avatarUrl:null,
     conversationId:c.conversationId,readOnly:true,readOnlyPreview:true,
     identity:null,identityKey:null,canSend:false,unread:null
@@ -314,42 +315,93 @@ const lastNativeMessage=computed(()=>{
  }:null;
 });
 async function pollVerifiedMessages(){
+ // Reuse this EXISTING eight-second read. No second poller/queue/message DB.
  if(pollBusy||state.value!=='ready'||!contacts.value.some(c=>c.readOnly))return;
  pollBusy=true;
  try{
-  const next=await readLiveContacts({fetchImpl:api.value});
-  if(!mounted||!next.contacts.some(c=>c.readOnly))return;
-  const old=new Map(contacts.value.map(c=>[c.contactRef,c.lastMessageTimestamp||0]));
-  const updates=next.contacts.filter(c=>c.readOnly&&c.lastMessageTimestamp&&
-    old.has(c.contactRef)&&c.lastMessageTimestamp>old.get(c.contactRef));
-  if(updates.length){
-   incomingNotice.value='Facebook Messenger 收到新消息';
-   if(document.hidden&&globalThis.Notification?.permission==='granted')
-    new Notification('Facebook Messenger 新消息',{body:'言策已同步新的入站消息'});
+  let native=null,pages=null;
+  try{native=await readLiveContacts({fetchImpl:api.value})}catch{}
+  try{pages=await readPancakeContacts()}catch{}
+  if(!mounted||(!native&&!pages))return;
+  const before=new Map(contacts.value.map(c=>[c.contactRef,c]));
+  const newNative=native?.contacts||contacts.value.filter(c=>!c.readOnlyPreview&&!c.messengerOfficial);
+  const currentPages=pages?.contacts||contacts.value.filter(c=>c.readOnlyPreview);
+  const messenger=contacts.value.filter(c=>c.messengerOfficial);
+  const merged=[...newNative,...messenger,...currentPages];
+  contacts.value=[...new Map(merged.map(c=>[c.contactRef,c])).values()];
+  const oldNative=new Map([...before].map(([k,c])=>[k,c.lastMessageTimestamp||0]));
+  const nativeUpdates=(native?.contacts||[]).filter(c=>c.readOnly&&
+   c.lastMessageTimestamp&&oldNative.has(c.contactRef)&&
+   c.lastMessageTimestamp>oldNative.get(c.contactRef));
+  // Changed conversation timestamp is NOT itself a verified inbound MID.
+  // For Pancake, read the original official Page-scoped message history.
+  const pendingPages=pages?currentPages.filter(c=>{
+   const prev=before.get(c.contactRef);
+   return prev?.readOnlyPreview&&Date.parse(c.updatedAt)>Date.parse(prev.updatedAt);
+  }):[];
+  const changed=pendingPages.slice(0,3);
+  // Remaining Page updates stay pending in the SAME existing poll, instead
+  // of losing their timestamp while processing three official REST reads.
+  const deferred=new Set(pendingPages.slice(3).map(c=>c.contactRef));
+  if(deferred.size)contacts.value=contacts.value.map(c=>
+   deferred.has(c.contactRef)?{...c,updatedAt:before.get(c.contactRef).updatedAt}:c);
+  for(const c of changed){
+   try{
+    const history=await pancakeMultiApi('history',{fetchImpl:api.value,
+     pageId:c.pageId,conversationId:c.conversationId});
+    if(!mounted)return;
+    const message=latestNewOfficialPancakeInbound(before.get(c.contactRef),c,history);
+    if(!message)continue;
+    incomingNotice.value=c.displayName+' 发来新消息';
+    // Keep the selected real timeline fresh, without creating a new Composer.
+    if(chosen.value?.contactRef===c.contactRef){
+     timeline.value=history.messages;timelineState.value='ready';
+    }
+    await showOfficialPancakeInboundNotice({contact:c,message,onClick:async()=>{
+     // Re-check current Page token, contact and MID on click. An old system
+     // notification must not navigate after Page removal or account rebind.
+     const current=await readPancakeContacts();
+     if(!current.contacts.some(x=>x.contactRef===c.contactRef))return;
+     const latest=await pancakeMultiApi('history',{fetchImpl:api.value,
+      pageId:c.pageId,conversationId:c.conversationId});
+     if(!latest.messages.some(m=>m.mid===message.mid&&m.direction==='INBOUND'))return;
+     const target=contacts.value.find(x=>x.contactRef===c.contactRef);
+     if(target)await chooseContact(target);
+    }});
+   }catch{
+    // Do not advance the official inbox high-water mark on a failed Page
+    // history read. The next original interval can retry this same update.
+    const prior=before.get(c.contactRef);
+    if(prior)contacts.value=contacts.value.map(x=>x.contactRef===c.contactRef?
+     {...x,updatedAt:prior.updatedAt}:x);
+   }
   }
-  // Preserve platform-sourced Messenger conversations during W24 polling.
-  // Re-read W26 before updating: never silently drop or trust stale Messenger
-  // identities and never turn read-only rooms into authorized senders.
-  const hadOfficial=contacts.value.some(c=>c.messengerOfficial);
+  // Preserve the newly verified W26 Messenger rooms independently of a
+  // partial W24 refresh, while keeping the original W55 Page read-only rows.
+  // No second poller; this is the same existing eight-second refresh.
   let official=null;
   try{official=await readOfficialMessengerContacts()}catch{
-   if(hadOfficial)return; // Keep current view, never replace with partial data.
+   official={contacts:contacts.value.filter(c=>c.messengerOfficial)};
   }
   if(!mounted||state.value!=='ready')return;
-  const seenRooms=new Set(next.contacts.map(c=>c.roomId).filter(Boolean));
-  const officialRows=(official?.contacts||[]).filter(c=>!seenRooms.has(c.roomId));
+  const signedRooms=new Set(newNative.map(c=>c.roomId).filter(Boolean));
+  const officialRows=(official?.contacts||[]).filter(c=>!signedRooms.has(c.roomId));
   const pageRows=contacts.value.filter(c=>c.readOnlyPreview);
-  contacts.value=[...next.contacts,...officialRows,...pageRows];
+  contacts.value=[...new Map([...newNative,...officialRows,...pageRows]
+   .map(c=>[c.contactRef,c])).values()];
   if(chosen.value){
-   const same=next.contacts.find(c=>c.contactRef===chosen.value.contactRef);
+   const same=contacts.value.find(c=>c.contactRef===chosen.value.contactRef);
    if(same){chosen.value=same;
-    if(updates.some(c=>c.contactRef===same.contactRef)){
-     const latest=await readLiveTimeline({fetchImpl:api.value,contact:same});
-     timeline.value=latest.messages;timelineState.value='ready';
+    if(nativeUpdates.some(c=>c.contactRef===same.contactRef)){
+     try{const latest=await readLiveTimeline({fetchImpl:api.value,contact:same});
+      if(mounted&&chosen.value?.contactRef===same.contactRef){
+       timeline.value=latest.messages;timelineState.value='ready';
+      }
+     }catch{}
     }
    }
   }
- }catch{/* Preserve current real timeline when a poll fails. */}
+ }catch{/* Preserve the original verified conversation on error. */}
  finally{pollBusy=false}
 }
 onMounted(()=>{window.addEventListener('keydown',onKeyDown);void refresh();
