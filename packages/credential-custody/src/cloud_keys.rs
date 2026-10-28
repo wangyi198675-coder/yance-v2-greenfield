@@ -23,7 +23,7 @@ use zeroize::{Zeroize, Zeroizing};
 const MAX_API_KEY_BYTES: usize = 512;
 // PANCAKE_PAIR is a compact account + page-token JSON record. The encrypted
 // WinCred blob remains capped by the original 2560-byte W55 credential limit.
-const MAX_PANCAKE_PAIR_BYTES: usize = 1200;
+const MAX_PANCAKE_PAIR_BYTES: usize = 1900;
 const RECORD_SCHEMA: u8 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -244,7 +244,7 @@ impl NativeKeyCustody {
             }
             let valid_token = |v: &serde_json::Value| {
                 v.as_str().is_some_and(|s| {
-                    (8..=480).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_graphic())
+                    (8..=1600).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_graphic())
                 })
             };
             if !valid_token(&object["userAccessToken"]) {
@@ -699,6 +699,38 @@ mod tests {
         );
         assert_eq!(f.native.revoke(CloudProvider::PancakePair, 2).unwrap(), 3);
         assert!(f.native.status(CloudProvider::PancakePair).unwrap().revoked);
+    }
+    #[test]
+    fn c10_fake_long_pancake_user_token_supported_with_wincred_bound() {
+        let f = Fixture::new();
+        let sample = serde_json::json!({
+            "userAccessToken": format!("FAKE_LONG_TOKEN_{}", "a".repeat(1500)),
+            "pages": {}
+        })
+        .to_string();
+        assert!(sample.len() > 480 && sample.len() < MAX_PANCAKE_PAIR_BYTES);
+        assert_eq!(
+            f.native
+                .enroll(CloudProvider::PancakePair, sample.as_bytes())
+                .unwrap(),
+            1
+        );
+        f.native
+            .with_native_key(CloudProvider::PancakePair, 1, |bytes| {
+                assert_eq!(bytes, sample.as_bytes());
+                Ok(())
+            })
+            .unwrap();
+        let oversized = serde_json::json!({
+            "userAccessToken": format!("FAKE_OVERSIZE_{}", "a".repeat(1800)),
+            "pages": {}
+        })
+        .to_string();
+        assert_eq!(
+            f.native
+                .rotate(CloudProvider::PancakePair, 1, oversized.as_bytes()),
+            Err(VaultError::Denied)
+        );
     }
     #[test]
     fn c08_provider_serialization_matches_proposed_private_dto_ids() {
