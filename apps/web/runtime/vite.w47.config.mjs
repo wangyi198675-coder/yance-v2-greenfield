@@ -395,7 +395,7 @@ if(r4IsolatedPreview){
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
     !readAck('apps/web/evidence/TO_W09_2_W46_SINGLE_BRAIN_NO_PAIR_MODEL_UI_20261026.md').includes('W46_UNIQUE_BRAIN_NO_PAIR_MODEL_UI_SOURCE_BUILD_CHROME_PASS'))
-   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED');
+   throw Error('W47_W46_SIGNED_CLEAN_CANDIDATE_AND_OWNER_HANDOFF_REQUIRED '+JSON.stringify({signedAncestor,chatUiDeltaValid,toolsUiTestValid,multiScope,pageUiScope,waUxVerified,waP0Verified,themeScope,settingsGeneralValid,siwcExactValid,wowDeltaValid,notifyDeltaValid,w05Scope,dirtySource,receiptTracked,validSignedBlobs,w46ReviewValid,noPairReviewValid,w42VisualValid,mediaDesignValid}));
 }
 // This proxy target is a NONPRODUCTION QA-only W47 installed-mode API port.
 // Keep 47182 as the default for unchanged signed B_88DED, never accept remote host.
