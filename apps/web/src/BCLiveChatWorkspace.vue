@@ -139,20 +139,28 @@ async function chooseContact(contact){
  const ticket=++sourceRevision;
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
  messengerManual.value={roomId:'',ready:false};
- if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
- try{
-  const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
-  if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
-  timeline.value=result.messages;timelineState.value='ready';
-  if(contact.readOnly===true&&contact.channel==='FB_PERSONAL'&&contact.roomId){
+ // The native send qualification is independent of timeline pagination.
+ // Loading messages must never indefinitely disable an otherwise verified
+ // manual user's original Composer. Server still checks W24/W44/W25 on POST.
+ if(contact.readOnly===true&&contact.channel==='FB_PERSONAL'&&contact.roomId){
+  void (async()=>{
    try{
     const r=await api.value('/api/v2/providers/fb-personal/manual-send?roomId='+
       encodeURIComponent(contact.roomId),{credentials:'same-origin',cache:'no-store'});
     const x=await r.json();
     if(mounted&&ticket===sourceRevision&&chosen.value?.contactRef===contact.contactRef)
       messengerManual.value={roomId:contact.roomId,ready:r.ok&&x.readyForManualSend===true};
-   }catch{messengerManual.value={roomId:'',ready:false}}
-  }
+   }catch{
+    if(mounted&&ticket===sourceRevision)
+      messengerManual.value={roomId:'',ready:false};
+   }
+  })();
+ }
+ if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
+ try{
+  const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
+  if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
+  timeline.value=result.messages;timelineState.value='ready';
  }catch(e){
   if(!mounted||ticket!==sourceRevision)return;
   timelineState.value='blocked';timelineError.value=explainNativeFailure(e);
