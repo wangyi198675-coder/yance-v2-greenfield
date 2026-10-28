@@ -211,6 +211,7 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 .bc-native-composer :deep(.cn-input-group){border-radius:17px!important;border-color:var(--border);background:linear-gradient(120deg,rgba(var(--accent-rgb),.04),transparent),var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
 .bc-native-composer :deep(.cn-input-group:focus-within){border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.13)}
 .bc-mode-label{color:var(--muted);font-size:10px}.bc-footer{justify-content:flex-start!important}.bc-footer .bc-file-label{margin-left:auto}
+.bc-readonly-footer{justify-content:space-between!important;align-items:center}.bc-readonly-status{font-size:12px;color:var(--muted)}.bc-readonly-footer :deep(button:disabled){opacity:.42;cursor:not-allowed}
 /* Anchored R4 contextual menus; no second Composer or shadow sender. */
 .bc-native-composer{position:relative;overflow:visible!important;max-height:none!important}
 .bc-compose-popup{position:absolute;box-sizing:border-box;left:12px;bottom:calc(100% - 1px);z-index:70;width:min(315px,calc(100vw - 32px));max-height:min(300px,58dvh);overflow:auto!important;display:grid;gap:8px;align-content:start;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised,var(--surface));color:var(--ink)}
