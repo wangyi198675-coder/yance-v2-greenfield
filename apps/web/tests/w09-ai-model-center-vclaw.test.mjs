@@ -33,7 +33,8 @@ test('connected ChatGPT is compact by default, test only behind manual diagnosti
 test('cloud key management preserves native Key status and collapses when configured',()=>{
  const s=src('BCNativeCloudKeySettings.vue');
  assert.match(s,/data-test="cloud-redacted-status"/);
- assert.match(s,/current\?\.configured\?'已连接'/);
+ assert.match(s,/current\?\.configured\?\(props\.fixedProvider==='VCLAW_USER_API'/);
+ assert.match(s,/props\.externalStatus/);
  assert.match(s,/data-test="cloud-key-manage-toggle"/);
  assert.match(s,/v-if="!current\?\.configured\|\|manageOpen"/);
  const refresh=s.split('async function refresh(){')[1].split('async function save(){')[0];

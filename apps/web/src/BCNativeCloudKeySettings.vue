@@ -3,7 +3,7 @@ import {ref,computed,onMounted,watch} from 'vue';
 type Provider='OPENROUTER_USER_API'|'OPENAI_USER_API'|'VCLAW_USER_API';
 type Status={provider:Provider,configured:boolean,revoked:boolean,revision:number};
 type NativeStatus={provider:string,configured:boolean,revoked:boolean,revision:number};
-const props=defineProps<{webCsrf?:string|null,fixedProvider?:Provider}>();
+const props=defineProps<{webCsrf?:string|null,fixedProvider?:Provider,externalStatus?:string}>();
 const emit=defineEmits<{changed:[]}>();
 const native=typeof window!=='undefined'&&(window as any).__TAURI__?.core?.invoke;
 const path='/api/v2/private-brain/cloud-keys';
@@ -142,7 +142,7 @@ watch(()=>props.webCsrf,()=>{if(!nativeSupported(provider.value))void refresh()}
    </select>
   </label>
   <p role="status" data-test="cloud-redacted-status">
-    {{stale?'上次已确认（当前状态未核验）':current?.configured?'已连接':current?.revoked?'已撤销':current?'未配置':'待读取'}}
+    {{stale?'上次已确认（当前状态未核验）':current?.configured?(props.fixedProvider==='VCLAW_USER_API'?(props.externalStatus||'密钥已保存 · 验证中'):'已连接'):current?.revoked?'已撤销':current?'未配置':'待读取'}}
     <span v-if="current"> · 版本 {{current.revision}}</span>
    </p>
    <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">

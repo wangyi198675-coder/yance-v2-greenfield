@@ -20,6 +20,7 @@ const PROVIDERS=Object.freeze({
 });
 const tab=ref('overview'),busy=ref(false),saving=ref(false),status=ref('idle');
 const vclawOpen=ref(false),localDetails=ref(false);
+const vclawProof=ref({revision:0,state:'unknown',modelCount:0});
 const message=ref(''),error=ref(''),lastCheck=ref('');
 const modelConfig=ref(null),cloudKeys=ref(null),keysVerified=ref(false);
 const selected=ref(''),costApproved=ref(false),stale=ref(true);
@@ -35,7 +36,13 @@ const cloudModels=computed(()=>models.value.filter(m=>['OPENROUTER_USER_API','OP
 const vclawStatus=computed(()=>{
  if(!keysVerified.value)return '状态未核验';
  const p=keyProviders.value.find(x=>x.provider==='VCLAW_USER_API');
- return p?.configured===true?'密钥已保存 · 待验证':'未连接';
+ if(!p||['KEY_SOURCE_UNAVAILABLE','NATIVE_PROVIDER_NOT_CONNECTED'].includes(p.status))return '凭据服务不可用';
+ if(!p.configured)return p.revoked?'已撤销':'未配置';
+ if(vclawProof.value.revision!==p.revision)return '密钥已保存 · 验证中';
+ if(vclawProof.value.state==='verified')return '已连接';
+ if(vclawProof.value.state==='rejected')return '密钥无效 · 请更换';
+ if(vclawProof.value.state==='unavailable')return '密钥已保存 · 暂无法验证';
+ return '密钥已保存 · 验证中';
 });
 const selectedModel=computed(()=>models.value.find(m=>m.provider+'|'+m.modelId===selected));
 const keyProviders=computed(()=>keysVerified.value&&Array.isArray(cloudKeys.value?.providers)?cloudKeys.value.providers:[]);
@@ -77,6 +84,25 @@ async function refresh(){
  }else stale.value=true;
  keysVerified.value=key.status==='fulfilled'&&key.value?.ok===true&&key.value?.credentialValueReturned===false;
  if(keysVerified.value)cloudKeys.value=key.value;
+ // Verify the saved Key via current W47/W55 backend; the browser never sees it.
+ const vc=keysVerified.value?key.value?.providers?.find(p=>p.provider==='VCLAW_USER_API'):null;
+ vclawProof.value={revision:vc?.revision||0,state:vc?.configured?'checking':'unconfigured',modelCount:0};
+ if(vc?.configured&&csrfOk.value){
+  try{
+   const proof=await request('/api/v2/private-brain/vclaw-verify',{
+    method:'POST',headers:{'content-type':'application/json','x-yance-csrf':props.webCsrf},body:'{}'
+   });
+   if(ticket!==requestId)return;
+   vclawProof.value={revision:vc.revision,
+    state:proof?.ok===true&&proof?.verified===true&&proof?.revision===vc.revision&&
+       proof?.canSend===false?'verified':'unavailable',
+    modelCount:Number.isSafeInteger(proof?.modelCount)?proof.modelCount:0};
+  }catch(e){
+   if(ticket!==requestId)return;
+   vclawProof.value={revision:vc.revision,
+    state:String(e?.message||'').includes('HTTP_409')?'rejected':'unavailable',modelCount:0};
+  }
+ }
  const errs=reads.filter(x=>x.status==='rejected').map(x=>friendly(x.reason));
  status.value=errs.length?'partial':'ready';
  error.value=[...new Set(errs)].join('；');
@@ -118,7 +144,7 @@ onMounted(()=>{if(props.active)void refresh()});
    <article><span>闺蜜大脑当前模型</span><strong>{{currentModel||'尚未确认'}}</strong><small>{{providerName(currentProvider)}}</small></article>
    <article><span>云端密钥</span><strong>{{keyStatus('OPENROUTER_USER_API')}}</strong><small>OpenAI：{{keyStatus('OPENAI_USER_API')}}</small></article>
    <article><span>本地 Qwen3</span><strong>{{isAuthoritative&&localModels.length?'已连接':'未连接'}}</strong><small>使用 W47 原生模型资格检测</small></article>
-   <article><span>V-Claw</span><strong>未连接</strong><small>待完成原生密钥接入</small></article>
+   <article><span>V-Claw</span><strong data-test="vclaw-summary-state">{{vclawStatus}}</strong><small>待完成原生密钥接入</small></article>
   </div>
   <p v-if="busy||error||status==='partial'" class="mc-status" data-test="model-center-status" role="status">
    <b>{{busy?'正在核对':stale?'状态未核验':'原生状态已确认'}}</b> {{message}}
@@ -170,7 +196,7 @@ onMounted(()=>{if(props.active)void refresh()});
     <p v-if="localDetails" data-test="local-model-diagnostics">言策使用原生 llama.cpp（127.0.0.1:11605）。如服务已启动仍未连接，请检查 W47 模型鉴权和会话状态。</p></article>
    <article><h3>V-Claw</h3><strong data-test="vclaw-current-state">{{vclawStatus}}</strong>
     <button type="button" data-test="vclaw-manage-inline" @click="vclawOpen=!vclawOpen">{{vclawOpen?'收起':'管理密钥'}}</button>
-    <div v-if="vclawOpen" data-test="vclaw-pending"><BCNativeCloudKeySettings v-if="csrfOk" :web-csrf="webCsrf" fixed-provider="VCLAW_USER_API" @changed="refresh"/><p v-else>请先建立本机私人会话。</p><small>V-Claw 密钥由原 W55 Windows 凭据保管。保存不等于接口鉴权或付费推理已经通过。</small></div></article>
+    <div v-if="vclawOpen" data-test="vclaw-pending"><BCNativeCloudKeySettings v-if="csrfOk" :web-csrf="webCsrf" fixed-provider="VCLAW_USER_API" :external-status="vclawStatus" @changed="refresh"/><p v-else>请先建立本机私人会话。</p><small>V-Claw 密钥由原 W55 Windows 凭据保管。保存不等于接口鉴权或付费推理已经通过。</small></div></article>
   </section>
 
  </section>
