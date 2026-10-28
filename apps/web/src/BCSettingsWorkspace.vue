@@ -4,6 +4,7 @@ import {R4_SETTINGS_CATEGORIES,readWorkspaceSnapshot} from './product-workspace-
 import {mediaCapabilitiesRead} from './w23-media-browser-consumer.mjs';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
+import BCFunctionModelRouting from './BCFunctionModelRouting.vue';
 import BCNativeHostSession from './BCNativeHostSession.vue';
 import BCThemeChooser from './BCThemeChooser.vue';
 import BCNotificationCenter from './BCNotificationCenter.vue';
@@ -39,7 +40,19 @@ async function refresh(){
    const snap=await readWorkspaceSnapshot({fetchImpl:request});
    if(alive&&t===seq)data.value=snap;
   }else if(category.value==='model'||category.value==='accounts'||category.value==='privacy'){
-   const s=await getJson('/api/v2/local-session/status');
+   let s=await getJson('/api/v2/local-session/status');
+   // Reuse the ORIGINAL PRIVATE local-only bootstrap. Settings cannot
+   // invent a secondary login/pairing ceremony or authorize paid inference.
+   // W47 refuses this POST outside its installed localhost single-user mode.
+   if(category.value==='model'&&s?.authorized!==true&&alive&&t===seq&&
+       typeof window!=='undefined'&&window.location.hostname==='127.0.0.1'){
+    try{
+     const started=await request('/api/v2/local-session/web-private-start',{
+      method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+     if(started.ok&&alive&&t===seq)
+      s=await getJson('/api/v2/local-session/status');
+    }catch{} // Native mode without signed W54/W47 remains unauthorized.
+   }
    if(alive&&t===seq){
     session.value=s;
     // The existing PRIVATE key settings accepts current signed local session CSRF only.
@@ -123,11 +136,19 @@ function requestNotificationPermission(){
     </article>
    </template>
    <template v-else-if="category==='model'">
-    <article data-test="settings-panel-model"><h3>本地与云端AI模型</h3>
-     <p>原唯一PRIVATE Agno模型仍在闺蜜大脑中进行选择，模型费用需本人确认，联系人不继承PRIVATE权限。</p>
-     <button type="button" data-test="settings-open-brain" @click="emit('navigate','BRAIN')">进入原闺蜜大脑选择模型</button>
-     <p>{{csrf?'已验证本机会话，可使用原W47受保护密钥设置':'本机会话CSRF未确认，不能保存云端API Key'}}</p>
-     <BCNativeCloudKeySettings v-if="csrf" :web-csrf="csrf" @changed="refresh"/>
+    <article data-test="settings-panel-model" class="bc-settings-model">
+     <div class="bc-model-intro"><h3>AI来源与功能分配</h3>
+      <p>翻译、真人回复、专家与私人闺蜜大脑可以独立选择AI。没有安装或授权的模型不会伪装可用。</p>
+      <button type="button" data-test="settings-open-brain" @click="emit('navigate','BRAIN')">打开闺蜜大脑</button>
+     </div>
+     <BCFunctionModelRouting :active="active" :csrf="csrf" :fetch-impl="fetchImpl"/>
+     <details class="bc-model-native-keys" data-test="settings-openrouter-keys">
+      <summary>管理OpenRouter自己的API Key</summary>
+      <p>Key通过已有W55本机凭据保存。ChatGPT会员授权不需要API Key，两者额度独立。</p>
+      <BCNativeCloudKeySettings v-if="csrf" :web-csrf="csrf" :open-router-only="true" @changed="refresh"/>
+      <p v-else>当前本机会话未授权，暂不能修改密钥。已有密钥不会展示或自动收费。</p>
+     </details>
+     <p class="bc-model-explain">ChatGPT会员的官方套餐授权尚未在言策完成真实OAuth与模型目录回读，因此不会显示虚构的可选模型。每项功能的偏好保存不等于已实际接线运行，不授予联系人发送和自动托管权限。</p>
     </article>
    </template>
    <template v-else-if="category==='translate'">
@@ -188,6 +209,12 @@ function requestNotificationPermission(){
 .bc-settings-actions{display:flex;flex-wrap:wrap;gap:8px}
 .bc-settings-channel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}
 .bc-settings-mobile{display:none}
+.bc-settings-model{gap:17px!important}.bc-model-intro{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:7px}
+.bc-model-intro h3{flex-basis:100%}.bc-model-intro p{flex:1;min-width:190px;margin:0!important}
+.bc-model-native-keys{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--surface-soft)}
+.bc-model-native-keys>summary{cursor:pointer;font-weight:650;font-size:13px;list-style-position:inside}
+.bc-model-native-keys p,.bc-model-explain{font-size:11px!important;color:var(--muted);line-height:1.6}
+
 @media(max-width:950px){.bc-settings-workspace{grid-template-columns:147px minmax(0,1fr)}.bc-settings-channel-grid{grid-template-columns:1fr}}
 @media(max-width:720px){.bc-settings-workspace{grid-template-columns:minmax(0,1fr);padding:10px}
  .bc-settings-nav{display:none}.bc-settings-mobile{display:grid;gap:6px;font-size:12px}
