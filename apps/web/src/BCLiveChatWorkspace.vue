@@ -98,6 +98,7 @@ async function readPancakeContacts(){
     contactRef:'PANCAKE_READ_ONLY|'+page.pageId+'|'+c.conversationId,
     accountRef:page.name||page.pageId,channel:'FB_PAGE',peerRef:c.conversationId,
     displayName:c.displayName,lastMessage:c.snippet||'',pageId:page.pageId,
+    avatarUrl:typeof c.avatarUrl==='string'&&c.avatarUrl.startsWith('/api/v2/providers/fb-page/onboarding/avatar?')?c.avatarUrl:null,
     conversationId:c.conversationId,readOnly:true,readOnlyPreview:true,
     identity:null,identityKey:null,canSend:false,unread:null
    }));
