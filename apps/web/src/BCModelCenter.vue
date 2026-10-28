@@ -32,6 +32,11 @@ const currentProvider=computed(()=>isAuthoritative.value?modelConfig.value.selec
 const currentModel=computed(()=>isAuthoritative.value?modelConfig.value.selectedModelId||'':'');
 const localModels=computed(()=>models.value.filter(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'));
 const cloudModels=computed(()=>models.value.filter(m=>['OPENROUTER_USER_API','OPENAI_USER_API'].includes(m.provider)));
+const vclawStatus=computed(()=>{
+ if(!keysVerified.value)return '状态未核验';
+ const p=keyProviders.value.find(x=>x.provider==='VCLAW_USER_API');
+ return p?.configured===true?'密钥已保存 · 待验证':'未连接';
+});
 const selectedModel=computed(()=>models.value.find(m=>m.provider+'|'+m.modelId===selected));
 const keyProviders=computed(()=>keysVerified.value&&Array.isArray(cloudKeys.value?.providers)?cloudKeys.value.providers:[]);
 const keyStatus=p=>{
@@ -163,9 +168,9 @@ onMounted(()=>{if(props.active)void refresh()});
     <p v-if="localModels.length" v-for="m in localModels" :key="m.modelId">{{m.modelId}}</p>
     <div class="mc-source-actions"><button type="button" data-test="local-model-recheck" @click="refresh">重新检测</button><button type="button" data-test="local-model-details" @click="localDetails=!localDetails">{{localDetails?'收起':'原因'}}</button></div>
     <p v-if="localDetails" data-test="local-model-diagnostics">言策使用原生 llama.cpp（127.0.0.1:11605）。如服务已启动仍未连接，请检查 W47 模型鉴权和会话状态。</p></article>
-   <article><h3>V-Claw</h3><strong>未连接</strong>
-    <button type="button" data-test="vclaw-manage-inline" @click="vclawOpen=!vclawOpen">{{vclawOpen?'收起':'查看连接状态'}}</button>
-    <div v-if="vclawOpen" data-test="vclaw-pending"><p>当前密钥保管仅支持 OpenRouter 和 OpenAI；V-Claw 还没有受保护的密钥入口。</p><small>候选接口：token.v-claw.org/v1。请勿将密钥填入其他供应商。</small></div></article>
+   <article><h3>V-Claw</h3><strong data-test="vclaw-current-state">{{vclawStatus}}</strong>
+    <button type="button" data-test="vclaw-manage-inline" @click="vclawOpen=!vclawOpen">{{vclawOpen?'收起':'管理密钥'}}</button>
+    <div v-if="vclawOpen" data-test="vclaw-pending"><BCNativeCloudKeySettings v-if="csrfOk" :web-csrf="webCsrf" fixed-provider="VCLAW_USER_API" @changed="refresh"/><p v-else>请先建立本机私人会话。</p><small>V-Claw 密钥由原 W55 Windows 凭据保管。保存不等于接口鉴权或付费推理已经通过。</small></div></article>
   </section>
 
  </section>

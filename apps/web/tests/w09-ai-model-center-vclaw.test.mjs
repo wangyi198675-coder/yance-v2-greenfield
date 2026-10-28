@@ -45,7 +45,9 @@ test('V-Claw action is in app, never external login redirect or fake native prov
  assert.match(s,/data-test="vclaw-manage-inline"/);
  assert.match(s,/data-test="vclaw-pending"/);
  assert.doesNotMatch(s,/<a href="https:\/\/token\.v-claw\.org/);
- assert.doesNotMatch(s,/VCLAW_USER_API|vclaw-save|\/v1\/chat\/completions/);
+ assert.match(s,/fixed-provider="VCLAW_USER_API"/);
+ assert.match(src('BCNativeCloudKeySettings.vue'),/VCLAW_USER_API/);
+ assert.doesNotMatch(s,/vclaw-save|\/v1\/chat\/completions/);
 });
 test('local model has truthful native W47 status and on-demand explanation',()=>{
  const s=src('BCModelCenter.vue');

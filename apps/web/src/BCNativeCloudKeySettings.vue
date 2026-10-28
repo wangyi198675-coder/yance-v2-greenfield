@@ -1,21 +1,24 @@
 <script setup lang="ts">
 import {ref,computed,onMounted,watch} from 'vue';
-type Provider='OPENROUTER_USER_API'|'OPENAI_USER_API';
+type Provider='OPENROUTER_USER_API'|'OPENAI_USER_API'|'VCLAW_USER_API';
 type Status={provider:Provider,configured:boolean,revoked:boolean,revision:number};
 type NativeStatus={provider:string,configured:boolean,revoked:boolean,revision:number};
-const props=defineProps<{webCsrf?:string|null}>();
+const props=defineProps<{webCsrf?:string|null,fixedProvider?:Provider}>();
 const emit=defineEmits<{changed:[]}>();
 const native=typeof window!=='undefined'&&(window as any).__TAURI__?.core?.invoke;
 const path='/api/v2/private-brain/cloud-keys';
 const vendors=[{id:'OPENROUTER_USER_API',label:'OpenRouter'},
- {id:'OPENAI_USER_API',label:'OpenAI API'}] as const;
-const provider=ref<Provider>('OPENROUTER_USER_API');
+ {id:'OPENAI_USER_API',label:'OpenAI API'},
+ {id:'VCLAW_USER_API',label:'V-Claw'}] as const;
+const visibleVendors=computed(()=>props.fixedProvider?vendors.filter(v=>v.id===props.fixedProvider):vendors.filter(v=>v.id!=='VCLAW_USER_API'));
+const provider=ref<Provider>(props.fixedProvider||'OPENROUTER_USER_API');
 const key=ref(''),current=ref<Status|null>(null),manageOpen=ref(false);
 const ready=ref(!!native),busy=ref(false),message=ref(''),stale=ref(false);
 const webCsrfOk=computed(()=>typeof props.webCsrf==='string'&&/^[a-f0-9]{64}$/.test(props.webCsrf));
-const webActive=computed(()=>typeof native!=='function'&&ready.value&&webCsrfOk.value);
-const canConfigure=computed(()=>(typeof native==='function'||webActive.value)&&!stale.value);
-const nativeId=(p:Provider)=>p==='OPENROUTER_USER_API'?'OPENROUTER':'OPENAI_API';
+const nativeSupported=(p:Provider)=>typeof native==='function'&&p!=='VCLAW_USER_API';
+const webActive=computed(()=>!nativeSupported(provider.value)&&ready.value&&webCsrfOk.value);
+const canConfigure=computed(()=>(nativeSupported(provider.value)||webActive.value)&&!stale.value);
+const nativeId=(p:Provider)=>p==='OPENROUTER_USER_API'?'OPENROUTER':p==='OPENAI_USER_API'?'OPENAI_API':'VCLAW_API';
 function verifiedStatus(v:unknown,p:Provider):Status{
  if(!v||typeof v!=='object'||Array.isArray(v))throw Error('INVALID_STATUS');
  const x=v as Record<string,unknown>;
@@ -44,14 +47,14 @@ async function webRequest(method:'GET'|'POST'|'DELETE',body?:Record<string,unkno
 }
 async function webStatus(p:Provider):Promise<Status>{
  const d=await webRequest('GET');
- if(!Array.isArray(d.providers)||d.providers.length!==2)throw Error('INVALID_STATUS_LIST');
+ if(!Array.isArray(d.providers)||d.providers.length!==3)throw Error('INVALID_STATUS_LIST');
  const ids=new Set<string>(),statuses=new Map<Provider,Status>();
  for(const x of d.providers){
   const id=(x as Status)?.provider;
   if(!vendors.some(v=>v.id===id)||ids.has(id))throw Error('INVALID_STATUS_LIST');
   ids.add(id);statuses.set(id,verifiedStatus(x,id));
  }
- if(ids.size!==2||!statuses.has(p))throw Error('INVALID_STATUS_LIST');
+ if(ids.size!==3||!statuses.has(p))throw Error('INVALID_STATUS_LIST');
  return statuses.get(p)!;
 }
 function userError(e:unknown){
@@ -64,7 +67,7 @@ function userError(e:unknown){
  return '本机密钥操作未取得可核验的服务端确认';
 }
 async function readStatus(p:Provider){
- if(typeof native==='function'){
+ if(nativeSupported(p)){
   return verifiedStatus(await native('cloud_key_status',{provider:nativeId(p)}),p);
  }
  return webStatus(p);
@@ -85,7 +88,7 @@ async function save(){
  let pending=key.value;key.value='';
  busy.value=true;message.value='';
  try{
-  if(typeof native==='function'){
+  if(nativeSupported(p)){
    const r=await native('cloud_key_store',{provider:nativeId(p),secret:pending,
     ...(previous?.revision?{expectedRevision:previous.revision}:{})});
    verifiedStatus(r,p);
@@ -110,7 +113,7 @@ async function revoke(){
  const p=provider.value,previous=current.value;
  busy.value=true;message.value='';key.value='';
  try{
-  if(typeof native==='function'){
+  if(nativeSupported(p)){
    verifiedStatus(await native('cloud_key_revoke',{
     provider:nativeId(p),expectedRevision:previous.revision}),p);
   }else{
@@ -128,14 +131,14 @@ async function revoke(){
 }
 function onProviderChange(){key.value='';current.value=null;stale.value=false;manageOpen.value=false;void refresh()}
 onMounted(refresh);
-watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
+watch(()=>props.webCsrf,()=>{if(!nativeSupported(provider.value))void refresh()});
 </script>
 <template>
  <section class="cloud-key-panel" data-test="cloud-key-native" aria-label="云端 AI Key 设置">
   <strong>云端 API 密钥</strong>
   <label>来源
    <select v-model="provider" data-test="cloud-provider" :disabled="busy" @change="onProviderChange">
-    <option v-for="p in vendors" :key="p.id" :value="p.id">{{p.label}}</option>
+    <option v-for="p in visibleVendors" :key="p.id" :value="p.id">{{p.label}}</option>
    </select>
   </label>
   <p role="status" data-test="cloud-redacted-status">
