@@ -5,6 +5,7 @@
  */
 import { DatabaseSync } from 'node:sqlite';
 import {attachDurableAuthority} from './authority-db.mjs';
+import {attachW44OfficialWhatsAppIdentity} from './native-whatsapp-identity.mjs';
 const CHANNELS=new Set(['FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL']);
 const pos=x=>Number.isSafeInteger(x)&&x>0;
 const nonneg=x=>Number.isSafeInteger(x)&&x>=0;
@@ -28,7 +29,8 @@ function intentKey(k,id){
   return JSON.stringify([canonicalK(k),id]);
 }
 
-export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,verifyOwnerMutation,verifyOwnerCancellation,requireDurableIdentity=false,now=Date.now}={}) {
+export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,verifyOwnerMutation,verifyOwnerCancellation,requireDurableIdentity=false,
+  officialWhatsAppOwner=null,now=Date.now}={}) {
   if(typeof path!=='string'||!path||path.length>1024||
     (!requireDurableIdentity&&typeof verifyIdentity!=='function')||typeof authorizeMutation!=='function'||
     typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
@@ -67,6 +69,10 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
   }
   const durable=attachDurableAuthority({db,transaction,canonicalK,admin,
     hasLease,readBarrier,now,verifyOwnerMutation,verifyOwnerCancellation});
+  // W44 original SAME SQLite DB; official SDK reads never affect fixture
+  // grants/OUTBOX and never inherit fake test authorization.
+  const nativeWhatsApp=officialWhatsAppOwner?
+    attachW44OfficialWhatsAppIdentity({db,transaction,...officialWhatsAppOwner}):null;
   // Same W44 SQLite after the additive native-schema initialization.
   const readPause=db.prepare('SELECT paused,epoch FROM grant_pauses WHERE scope_key=?');
   function currentIdentity(k){
@@ -528,5 +534,6 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     finalizeNativeMutationFence:durable.finalizeMutationFence,
     cancelMutationFence:durable.cancelMutationFence,
     mutationResult:durable.mutationResult,
+    nativeWhatsApp,
     close:()=>db.close()});
 }
