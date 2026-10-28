@@ -98,6 +98,7 @@ function reconcileFilter(){
 }
 async function readSelectedChannelStatus(){
  const selectedChannel=channel.value,revision=++channelStatusRevision;
+ console.info('YANCE_CHANNEL_STATUS_CHECK',selectedChannel);
  channelStatusMessage.value='';
  if(!['WHATSAPP_PERSONAL','TELEGRAM_PERSONAL'].includes(selectedChannel))return;
  const endpoint=selectedChannel==='WHATSAPP_PERSONAL'?
@@ -120,7 +121,8 @@ async function readSelectedChannelStatus(){
     'Telegram 已授权，但尚未从可信联系人源读到会话。':
     'Telegram 连接状态尚未核实，请在账号管理检查。';
   }
- }catch{
+ }catch(error){
+  console.info('YANCE_CHANNEL_STATUS_ERROR',String(error?.message||error));
   if(mounted&&revision===channelStatusRevision&&channel.value===selectedChannel)
    channelStatusMessage.value=selectedChannel==='WHATSAPP_PERSONAL'?
     'WhatsApp 连接状态暂时无法读取。':'Telegram 连接状态暂时无法读取。';
