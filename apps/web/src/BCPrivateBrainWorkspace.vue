@@ -258,10 +258,15 @@ async function refresh(){
    (models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.provider+
     '|'+models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.modelId
     ||'');
-  // Existing Agno History must load with NO model configured.
-  await loadHistory(id);
-  if(!safeCurrent(id))return;
-  if(!models.configured){loadState.value='no-model';return}
+  // Agno remains the only history authority. Do not freeze the entire
+  // composer while the Windows Python child opens native SQLite.
+  if(!models.configured){
+   await loadHistory(id);
+   if(safeCurrent(id))loadState.value='no-model';
+   return;
+  }
+  loadState.value='history-loading';
+  void loadHistory(id);
  }catch(e){if(safeCurrent(id)){
    loadState.value='service-unavailable';notice.value=reason(e)
   }}
@@ -338,31 +343,32 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
  mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value=''});
 </script>
 <template>
- <section ref="brainRoot" class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
+ <section ref="brainRoot" class="bc-private-brain" :class="{'bc-brain-tools-visible':toolsOpen}" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
   <header class="bc-private-brain-head">
    <div class="bc-private-brain-heading"><strong>闺蜜大脑</strong><span>你的私人 AI 助手</span>
-    <p v-if="loadState==='checking'||loadState==='service-unavailable'||loadState==='history-unavailable'" class="bc-private-brain-state" role="status" data-test="brain-state">
+    <p v-if="loadState==='checking'||loadState==='history-loading'||loadState==='service-unavailable'||loadState==='history-unavailable'" class="bc-private-brain-state" role="status" data-test="brain-state">
    {{loadState==='checking'?'正在连接':loadState==='ready'?'':
     loadState==='no-model'?'尚未配置 AI 模型':
     loadState==='setup-required'?'先设置 AI 模型；本机服务连接后即可聊天':
     loadState==='service-unavailable'?'AI 服务暂时不可用，仍可查看模型设置':
     loadState==='models-unavailable'?'模型服务接口尚未接通':
+    loadState==='history-loading'?'正在读取 Agno 历史，你可以先输入…':
     loadState==='history-unavailable'?'真实对话或历史暂不可用':'模型选择尚未确认'}}
     </p>
    </div>
    <div class="bc-private-brain-actions">
     <Button size="sm" variant="ghost" data-test="brain-open-settings" aria-haspopup="dialog" :aria-expanded="setupOpen" :disabled="requestInFlight" @click="toggleBrainModel">模型 ▾</Button>
-    <Button size="sm" variant="ghost" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">历史</Button>
-    <Button size="sm" variant="ghost" data-test="brain-toggle-tools" aria-haspopup="menu" :aria-expanded="toolsOpen" @click="toggleBrainTools">工具详情 ▣</Button>
+    <Button size="sm" variant="ghost" data-test="brain-check" aria-label="重新同步原生 Agno 历史" title="重新同步原生 Agno 历史" :disabled="busy||requestInFlight||!session" @click="loadHistory()">同步历史</Button>
+    <Button size="sm" variant="ghost" data-test="brain-toggle-tools" aria-haspopup="dialog" :aria-expanded="toolsOpen" aria-controls="w46-brain-tools-menu" @click="toggleBrainTools">工具与运行 ▣</Button>
    </div>
   </header>
   <p v-if="notice" class="bc-private-notice" role="alert" data-test="brain-error">{{notice}}</p>
-  <details v-if="toolsOpen" open class="bc-brain-trace" data-test="w46-brain-tools" id="w46-brain-tools-menu"><summary tabindex="0">真实执行详情 · 工具 / Run / Trace</summary><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史内暂无经过服务端确认的工具回执。</p>
+  <details v-if="toolsOpen" open class="bc-brain-trace" data-test="w46-brain-tools" id="w46-brain-tools-menu" role="dialog" aria-label="Agno 原生工具和执行记录"><summary tabindex="0">原生工具 · Run / Trace</summary><button type="button" class="bc-brain-tools-close" data-test="brain-close-tools" @click="closeBrainMenu(true)">关闭详情</button><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史内暂无经过服务端确认的工具回执。</p>
    <p v-if="nativeReadState==='loading'">正在读取W43原生工具与Run…</p>
    <p v-else-if="nativeReadState==='unavailable'">本机原生工具／Run接口不可用或未授权；不显示模拟记录。</p>
    <template v-else-if="nativeReadState==='ready'">
     <p>已注册工具 {{nativeTools.length}} 项，实际执行资格由W43授权决定。</p>
-    <div v-for="(tool,i) in nativeTools" :key="i">{{tool.label}} · {{tool.businessExecutable?'服务端限制执行':'只读／未开放执行'}}</div>
+    <div v-for="(tool,i) in nativeTools" :key="i" class="bc-native-tool-row"><strong>{{tool.label}}</strong><small>{{tool.businessExecutable?'具备服务端执行资格':'只读或当前未授权执行'}}</small></div>
     <p>当前有来源Run {{nativeRuns.length}} 条</p>
     <div v-for="(run,i) in nativeRuns" :key="i" class="bc-native-run-row">
      <span>{{run.id}} · {{run.status}}</span>
@@ -436,7 +442,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
    <small v-if="catalog?.configured&&['OPENROUTER_USER_API','OPENAI_USER_API'].includes(catalog.selectedProvider)" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
    <textarea id="bc-private-question" v-model="text" rows="2" maxlength="4000"
-     data-test="brain-question" :placeholder="loadState==='ready'?'给闺蜜大脑发消息…':'选择 AI 模型后开始聊天'" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
+     data-test="brain-question" :placeholder="loadState==='ready'?'给闺蜜大脑发消息…':loadState==='history-loading'?'正在同步历史，可先输入消息…':'选择 AI 模型后开始聊天'" :disabled="!['ready','history-loading'].includes(loadState)||busy||requestInFlight"></textarea>
    <div class="bc-brain-compose-toolbar">
     <div class="bc-brain-compose-tools">
      <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert" aria-haspopup="menu" aria-controls="w46-brain-expert-menu">＋ 专家</Button>
@@ -516,6 +522,55 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
  .bc-private-compose{width:calc(100% - 20px);margin-bottom:10px;padding:9px!important}
  .bc-brain-compose-tools{gap:1px}.bc-brain-compose-tools button{font-size:10px;padding:5px!important}
  .bc-private-history article{max-width:92%}
+}
+/* Single-native Agno workspace: use the available viewport rather than
+   reserving two empty, non-interactive side rails. */
+.bc-private-brain .bc-private-history{
+ max-width:none!important;width:100%;align-self:stretch;
+ padding:clamp(12px,2vw,26px) clamp(14px,3vw,42px)!important;
+}
+.bc-private-history article{max-width:min(82%,1020px)!important}
+.bc-private-brain .bc-private-compose{
+ max-width:none!important;width:calc(100% - clamp(24px,5vw,80px));
+ align-self:center;
+}
+.bc-brain-tools-visible.bc-private-brain{
+ display:grid!important;grid-template-columns:minmax(0,1fr) minmax(265px,340px);
+ grid-template-rows:43px minmax(0,1fr) auto;gap:0!important;
+}
+.bc-brain-tools-visible>.bc-private-brain-head{grid-column:1/-1;grid-row:1;min-width:0}
+.bc-brain-tools-visible>.bc-private-history{grid-column:1;grid-row:2;min-width:0}
+.bc-brain-tools-visible>.bc-private-compose{grid-column:1;grid-row:3;min-width:0}
+.bc-brain-tools-visible>.bc-brain-trace{
+ position:relative!important;top:auto!important;right:auto!important;
+ left:auto!important;bottom:auto!important;grid-column:2;grid-row:2/4;
+ width:100%;max-height:none;height:100%;min-width:0;min-height:0;
+ overflow-y:auto;overflow-x:hidden;z-index:5;
+ box-sizing:border-box;border-left:1px solid var(--border);
+ box-shadow:none;background:var(--bg2);border-radius:0;
+ padding:16px 14px;font-size:12px;color:var(--ink);
+}
+.bc-brain-tools-visible .bc-native-tool-row{
+ display:flex;justify-content:space-between;gap:8px;align-items:baseline;
+ padding:8px 0;border-bottom:1px solid var(--border);
+ overflow-wrap:anywhere;
+}
+.bc-native-tool-row strong{font-size:12px;min-width:0}
+.bc-native-tool-row small{color:var(--muted);font-size:11px;text-align:right}
+.bc-brain-tools-close{display:block;margin:10px 0 14px;padding:7px 12px;
+ border:1px solid var(--border);border-radius:8px;
+ background:var(--surface-soft);color:var(--ink);cursor:pointer}
+.bc-brain-tools-visible .bc-brain-trace summary{font-weight:700;font-size:14px;line-height:1.7}
+@media(max-width:760px){
+ .bc-brain-tools-visible.bc-private-brain{display:flex!important}
+ .bc-brain-tools-visible>.bc-brain-trace{
+  position:absolute!important;top:43px!important;right:0!important;
+  left:auto!important;bottom:0!important;z-index:55;
+  width:min(360px,100%)!important;max-height:none!important;height:calc(100% - 43px);
+  box-shadow:-18px 8px 36px rgba(0,0,0,.16);
+ }
+ .bc-private-history article{max-width:92%!important}
+ .bc-private-brain .bc-private-compose{width:calc(100% - 18px)}
 }
 @media(prefers-reduced-motion:reduce){.bc-private-compose,.bc-private-history article{box-shadow:none}}
 /* Input-adjacent R4 popovers retain original PRIVATE Agno model config and cost safety. */
