@@ -24,7 +24,7 @@ const SETTINGS_VISIBLE=Object.freeze([
  {id:'privacy',label:'隐私与安全'},
  {id:'diagnostics',label:'诊断'}
 ]);
-const category=ref('theme'),busy=ref(false),state=ref('idle'),error=ref(''),data=ref(null);
+const category=ref(props.openModelRevision>0?'model':'theme'),busy=ref(false),state=ref('idle'),error=ref(''),data=ref(null);
 const csrf=ref(null),session=ref(null),notification=ref('unsupported');
 let seq=0,alive=true;
 const channels=[{id:'FB_PERSONAL',label:'Facebook'},{id:'FB_PAGE',label:'Page'},
