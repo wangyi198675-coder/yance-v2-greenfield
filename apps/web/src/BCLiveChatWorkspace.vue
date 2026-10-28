@@ -17,6 +17,28 @@ const api=computed(()=>props.fetchImpl||globalThis.fetch);
 const state=ref('checking'),error=ref(''),contacts=ref([]),accounts=ref(0),chosen=ref(null);
 const timeline=ref([]),timelineState=ref('none'),timelineError=ref('');
 const messengerManual=ref({roomId:'',ready:false});
+const pageManual=ref({pageId:'',conversationId:'',ready:false});
+const pageManualTarget=computed(()=>selected.value?.readOnlyPreview===true&&pageManual.value.ready===true&&
+  pageManual.value.pageId===selected.value.pageId&&pageManual.value.conversationId===selected.value.conversationId?
+  'PAGE|'+selected.value.pageId+'|'+selected.value.conversationId:'');
+const manualPageSendPort=Object.freeze({
+ async send(target,text,businessMessageId){
+  const match=/^PAGE\|([0-9]{1,40})\|([a-zA-Z0-9._:-]{8,160})$/.exec(target);
+  if(!match)throw Error('当前主页联系人未通过官方身份核验');
+  const fetcher=api.value;
+  const local=await fetcher('/api/v2/local-session/status',{credentials:'same-origin',cache:'no-store'});
+  const session=await local.json();
+  if(!local.ok||session.authorized!==true||typeof session.csrfToken!=='string')throw Error('当前本机会话不可用');
+  const response=await fetcher('/api/v2/providers/fb-page/manual-send',{
+   method:'POST',credentials:'same-origin',cache:'no-store',
+   headers:{'content-type':'application/json','x-yance-csrf-token':session.csrfToken},
+   body:JSON.stringify({pageId:match[1],conversationId:match[2],text,businessMessageId})
+  });
+  const reply=await response.json();
+  if(!response.ok||reply.ok!==true)throw Error('Pancake 暂未接受发送，请检查当前 Page 授权');
+  return reply;
+ }
+});
 const manualMessengerSendPort=Object.freeze({
  async send(roomId,text,businessMessageId){
   const fetcher=api.value;
@@ -37,7 +59,7 @@ const manualMessengerSendPort=Object.freeze({
  }
 });
 async function onManualMessengerSent(){
- const c=selected.value;if(c&&c.roomId)await chooseContact(c);
+ const c=selected.value;if(c&&(c.roomId||c.readOnlyPreview))await chooseContact(c);
 }
 const incomingNotice=ref('');
 let refreshTimer=null,pollBusy=false;
@@ -138,12 +160,26 @@ async function refresh(){
 async function chooseContact(contact){
  if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
+ pageManual.value={pageId:'',conversationId:'',ready:false};
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
  if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
   const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
   if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
   timeline.value=result.messages;timelineState.value='ready';
+  if(contact.readOnlyPreview){
+   try{
+    const response=await api.value('/api/v2/providers/fb-page/manual-send?pageId='+
+     encodeURIComponent(contact.pageId)+'&conversationId='+encodeURIComponent(contact.conversationId),
+     {credentials:'same-origin',cache:'no-store'});
+    const eligibility=await response.json();
+    if(mounted&&ticket===sourceRevision&&chosen.value?.contactRef===contact.contactRef&&
+       response.ok&&eligibility.readyForManualSend===true&&eligibility.channel==='FB_PAGE'&&
+       eligibility.pageId===contact.pageId&&eligibility.conversationId===contact.conversationId){
+      pageManual.value={pageId:contact.pageId,conversationId:contact.conversationId,ready:true};
+    }
+   }catch{/* The same original Composer remains disabled if official Page proof fails. */}
+  }
  }catch(e){
   if(!mounted||ticket!==sourceRevision)return;
   timelineState.value='blocked';timelineError.value=explainNativeFailure(e);
@@ -260,7 +296,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
      <span class="bc-contact-avatar" aria-hidden="true"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span>
-     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnlyPreview?'Pancake Facebook Page · 官方只读':selected.readOnly?'Messenger':selected.channel==='FB_PERSONAL'?'Messenger':selected.channel==='FB_PAGE'?'Facebook Page':selected.channel==='WHATSAPP_PERSONAL'?'WhatsApp':selected.channel==='TELEGRAM_PERSONAL'?'Telegram':'聊天'}}</small></div>
+     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnlyPreview?(pageManualTarget?'Pancake Facebook Page · 可人工回复':'Pancake Facebook Page · 正在核验发送资格'):selected.readOnly?'Messenger':selected.channel==='FB_PERSONAL'?'Messenger':selected.channel==='FB_PAGE'?'Facebook Page':selected.channel==='WHATSAPP_PERSONAL'?'WhatsApp':selected.channel==='TELEGRAM_PERSONAL'?'Telegram':'聊天'}}</small></div>
      <button type="button" :disabled="timelineState==='checking'" aria-label="刷新消息" title="刷新消息" @click="chooseContact(selected)">⟳</button>
     </header>
     <p v-if="timelineState==='checking'" class="bc-inbox-state">正在加载消息…</p>
@@ -291,7 +327,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
         and expert/media operations disabled, not create a second renderer. -->
    <BCNativeComposer ref="composerRef" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
     :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"
-    :native-messenger-room="selected?.contactRef?.startsWith('FB_ROOM|')?selected.contactRef.slice(8):''" :native-messenger-send-port="manualMessengerSendPort"
+    :native-messenger-room="selected?.contactRef?.startsWith('FB_ROOM|')?selected.contactRef.slice(8):pageManualTarget" :native-messenger-send-port="selected?.readOnlyPreview?manualPageSendPort:manualMessengerSendPort"
     @manual-sent="onManualMessengerSent" @navigate="navigate"/>
   </div>
  </section>

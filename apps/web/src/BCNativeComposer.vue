@@ -36,6 +36,10 @@ async function sendManual(){
    manualNotices.value={...manualNotices.value,[room]:'已提交，等待 Messenger 确认'};
    manualDrafts.value={...manualDrafts.value,[room]:''};
    emit('manual-sent');
+  }else if(result.state==='ACKED_NATIVE'){
+   manualDrafts.value={...manualDrafts.value,[room]:''};
+   manualNotices.value={...manualNotices.value,[room]:room.startsWith('PAGE|')?'Pancake 已接收消息，正在同步官方历史':'Messenger 已接受消息'};
+   emit('manual-sent');
   }else if(result.state==='REJECTED_NO_SEND'){
    manualNotices.value={...manualNotices.value,[room]:'当前发送未被接受'};
   }else{
@@ -190,7 +194,7 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 
 <template>
   <section ref="composerRoot" class="bc-native-composer" aria-label="唯一 CONTACT Composer" @dragover.prevent @drop="onDrop">
-    <p class="bc-identity" :title="current.key?'当前联系人身份由原W24/W47接口核验':'尚未选择经平台授权的真实联系人'">{{manualReady?'Messenger · 人工发送':current.key?'当前联系人 · '+current.status:'未选联系人 · 发送已禁用'}}</p>
+    <p class="bc-identity" :title="current.key?'当前联系人身份由原W24/W47接口核验':'尚未选择经平台授权的真实联系人'">{{manualReady?(nativeMessengerRoom.startsWith('PAGE|')?'Pancake Page · 人工发送':'Messenger · 人工发送'):current.key?'当前联系人 · '+current.status:'未授权联系人 · 发送已禁用'}}</p>
     <p v-if="why" role="alert" class="bc-warning">{{why}}</p>
     <p v-if="manualNotices[nativeMessengerRoom]" role="status" class="bc-warning">{{manualNotices[nativeMessengerRoom]}}</p>
     <div v-if="sourceMessage" class="bc-source" data-test="native-message">
@@ -218,7 +222,7 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-model" aria-haspopup="menu" aria-controls="w46-contact-model-menu" :aria-expanded="contactMenu==='model'" @click="toggleContactMenu('model')">模型</Button>
       <button type="button" class="bc-mode-label bc-compact-menu-trigger" data-test="w46-contact-mode" aria-haspopup="menu" aria-controls="w46-contact-mode-menu" :aria-expanded="contactMenu==='mode'" @click="toggleContactMenu('mode')">人工 · 辅助 · 自动（待核验）⌄</button>
       <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key||mediaUploading||!mediaClient" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/wav,audio/mpeg,audio/ogg"/></label>
-      <span class="bc-send-hold" title="真人发送通过原 W25 唯一 MessageDelivery">{{manualReady?(manualHold?'待 Messenger 确认':manualBusy?'发送中…':'人工发送'):'未授权 · 不能发送'}}</span>
+      <span class="bc-send-hold" title="真人发送通过原 W25 唯一 MessageDelivery">{{manualReady?(manualHold?(nativeMessengerRoom.startsWith('PAGE|')?'待 Pancake 确认':'待 Messenger 确认'):manualBusy?'发送中…':'人工发送'):'未授权 · 不能发送'}}</span>
       <Button size="sm" :disabled="!manualReady||!manualText.trim()||manualBusy||manualHold" @click="sendManual">{{manualReady?'发送':'发送不可用'}}</Button>
     </div>
     <BCNativeExpertPicker v-if="expertsOpen" :fetch-impl="fetchImpl"
