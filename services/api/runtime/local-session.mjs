@@ -25,7 +25,10 @@ const cookieFor=(id,ttlMs,name=COOKIE)=>name+'='+id+'; HttpOnly; SameSite=Strict
 const eraseCookie=(name=COOKIE)=>name+'=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0';
 const cookieId=(req,name=COOKIE)=>{
  const hdr=req.headers.cookie;
- if(typeof hdr!=='string'||hdr.length>4096)return null;
+ // Chromium combines cookies from every loopback port into one request header.
+ // Bound the aggregate to Node's 16 KiB HTTP limit, then strictly validate
+ // exactly one named 64-hex session cookie; unrelated cookies grant nothing.
+ if(typeof hdr!=='string'||Buffer.byteLength(hdr,'utf8')>16*1024)return null;
  const found=hdr.split(';').map(x=>x.trim()).filter(x=>x.startsWith(name+'='));
  if(found.length!==1)return null;
  const id=found[0].slice(name.length+1);
