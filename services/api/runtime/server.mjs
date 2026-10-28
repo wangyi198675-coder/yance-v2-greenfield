@@ -19,6 +19,7 @@ import {createWebPrivateCloudByok} from './web-private-cloud-byok.mjs';
 import {createWebPrivateCloudHttp} from './web-private-cloud-http.mjs';
 import {createW55WebNativeStdioPort} from './w55-web-native-stdio.mjs';
 import {createPancakeMultiOnboardingHttp} from './pancake-multi-onboarding-http.mjs';
+import {createFbPageNativeStatusHttp} from './fb-page-native-status-http.mjs';
 import {createW55PancakeWebCustody} from './w55-pancake-web-custody.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createFunctionModelRoutingHttp} from './function-model-routing-http.mjs';
@@ -287,6 +288,9 @@ const pancakeCustody=webPrivatePrincipal&&webNativeCredentialPort?
 const pancakeOnboarding=createPancakeMultiOnboardingHttp({
  sessionAuthority:localSessionAuthority,webOrigin,custody:pancakeCustody
 });
+const pancakeNativeStatus=createFbPageNativeStatusHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,custody:pancakeCustody
+});
 const nativeProviders=createNativeProviderGateway({
  sessionAuthority:localSessionAuthority,
  readW26Status:makeW26DiagnosticPort(process.env.YANCE_W47_W26_READONLY_PORT)
@@ -433,6 +437,12 @@ const handler=(req,res)=>{
        else res.destroy();
       });
       return;
+    }
+    if(url.pathname==='/api/v2/providers/fb-page/native/status'){
+      void pancakeNativeStatus(req,res,url).catch(()=>{
+       if(!res.headersSent)deny(res,503,'PANCAKE_NATIVE_STATUS_UNAVAILABLE');
+       else res.destroy();
+      });return;
     }
     if(/^\/api\/v2\/providers\/(fb-page|telegram-personal)\/native\//.test(url.pathname)){
       return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
