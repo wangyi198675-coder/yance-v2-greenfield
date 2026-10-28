@@ -30,6 +30,32 @@ export function assertCanonicalK(k) {
   return Object.fromEntries(MIN_K.map((key) => [key, k[key]]));
 }
 
+export class NativeConnectorSink {
+  syntheticOnly = false;
+  owner = 'MAUTRIX_META_NATIVE';
+  constructor({deliver}={}){
+    if(typeof deliver!=='function')throw new DeliveryError('OFFICIAL_NATIVE_DELIVERY_PORT_REQUIRED');
+    this.deliver=deliver;
+  }
+  async send(request){
+    if(request?.synthetic!==false||request?.k?.channel!=='FB_PERSONAL'||
+       !allowedStr(request?.attemptId)||!allowedStr(request?.intentId)||
+       !allowedStr(request?.businessMessageId))
+      throw new DeliveryError('OFFICIAL_NATIVE_SINK_INVALID_REQUEST');
+    // This is called ONLY by the original W25 durable Outbox, after both
+    // current W24/W44 authority checks. It does not create another sender.
+    const result=await this.deliver(structuredClone(request));
+    // Matrix event acceptance is not a Meta provider ACK. The official
+    // provider must prove delivery separately; uncertain results freeze peer.
+    if(result?.kind==='REJECTED_NO_SEND'&&result?.beforeNetwork===true)
+      return {kind:'REJECTED_NO_SEND'};
+    // In production a local Matrix send is never proof of Meta delivery.
+    // All actual provider ACK/DELIVERED/READ states are accepted exclusively
+    // via W25 recordVerifiedReceipt and its independent trusted verifier.
+    return {kind:'UNKNOWN'};
+  }
+}
+
 export class SyntheticConnectorSink {
   syntheticOnly = true;
   constructor(handler = async ({ attemptId }) =>
@@ -144,7 +170,8 @@ export class MessageDelivery {
   constructor({ databasePath, eligibility, sink, receiptVerifier, now = () => Date.now() }) {
     if (!allowedStr(databasePath) || !eligibility || typeof eligibility.check !== 'function')
       throw new DeliveryError('AUTHORITY_PORT_REQUIRED');
-    if (!(sink instanceof SyntheticConnectorSink) || sink.syntheticOnly !== true)
+    if(!((sink instanceof SyntheticConnectorSink && sink.syntheticOnly===true)||
+         (sink instanceof NativeConnectorSink && sink.syntheticOnly===false)))
       throw new DeliveryError('SYNTHETIC_SINK_ONLY');
     if (typeof receiptVerifier !== 'function') throw new DeliveryError('RECEIPT_VERIFIER_REQUIRED');
     this.db = new DatabaseSync(databasePath, { timeout: 5000 });
@@ -262,7 +289,8 @@ export class MessageDelivery {
         .run(attemptId,id,key,lease.fence,intent.k.bindingRevision,
           intent.authority.pageOwnerEpoch, 'IN_FLIGHT',this.now(),this.now(),this.now());
       this.db.prepare("UPDATE send_intents SET state='IN_FLIGHT',revision=revision+1,updated_at=? WHERE id=?").run(this.now(),id);
-      this.audit(id, 'SYNTHETIC_BOUNDARY_ENTERED', { attemptId, recipientFence: lease.fence });
+      this.audit(id, this.sink.syntheticOnly?'SYNTHETIC_BOUNDARY_ENTERED':'NATIVE_BOUNDARY_ENTERED',
+        { attemptId, recipientFence: lease.fence });
     });
     // Recheck once more AFTER recording the durable attempt and as close as
     // possible to the synthetic side-effect. W44's existing PRE_NETWORK port
@@ -291,7 +319,7 @@ export class MessageDelivery {
     let result;
     try {
       result = await this.sink.send({
-        synthetic: true, intentId: id, attemptId, k: structuredClone(intent.k),
+        synthetic: this.sink.syntheticOnly, intentId: id, attemptId, k: structuredClone(intent.k),
         payload: structuredClone(intent.payload), businessMessageId: intent.businessMessageId,
         pageOwnerEpoch: intent.authority.pageOwnerEpoch
       });
@@ -301,13 +329,15 @@ export class MessageDelivery {
     return this.tx(() => {
       const ack = result?.kind === 'ACK' && allowedStr(result.providerMid);
       const rejected = result?.kind === 'REJECTED_NO_SEND';
-      const state = ack ? 'ACKED_SYNTHETIC' : rejected ? 'REJECTED_NO_SEND' : 'UNKNOWN';
+      const state = ack ? (this.sink.syntheticOnly?'ACKED_SYNTHETIC':'ACKED_NATIVE') :
+        rejected ? 'REJECTED_NO_SEND' : 'UNKNOWN';
       this.db.prepare('UPDATE send_intents SET state=?,revision=revision+1,updated_at=? WHERE id=?')
         .run(state,this.now(),id);
       this.db.prepare('UPDATE outbox_attempts SET state=?,provider_mid=?,error_code=?,updated_at=? WHERE id=?')
         .run(state,ack?result.providerMid:null,state==='UNKNOWN'?'UNCONFIRMED_NETWORK_OUTCOME':null,this.now(),attemptId);
       this.db.prepare('DELETE FROM recipient_leases WHERE peer_key=? AND intent_id=?').run(key,id);
-      this.audit(id,'SYNTHETIC_RESULT',{state,attemptId,providerMid:ack?result.providerMid:null});
+      this.audit(id,this.sink.syntheticOnly?'SYNTHETIC_RESULT':'NATIVE_RESULT',
+       {state,attemptId,providerMid:ack?result.providerMid:null});
       return { state, dispatched: true, attemptId, providerMid:ack?result.providerMid:null };
     });
   }
@@ -369,14 +399,18 @@ export class MessageDelivery {
       }
       this.db.prepare('INSERT INTO receipt_events(source_event_id,intent_id,attempt_id,kind,provider_mid,verified_source,received_at) VALUES(?,?,?,?,?,?,?)')
         .run(event.sourceEventId,event.intentId,event.attemptId,event.kind,event.providerMid,verification.source,this.now());
-      const priority = { UNKNOWN: 0, IN_FLIGHT: 0, ACKED_SYNTHETIC: 1, DELIVERED_SYNTHETIC: 2, READ_SYNTHETIC: 3 };
-      const proposed = event.kind === 'ACK' ? 'ACKED_SYNTHETIC' :
-        event.kind === 'DELIVERED' ? 'DELIVERED_SYNTHETIC' : 'READ_SYNTHETIC';
+      const native=this.sink.syntheticOnly===false;
+      const suffix=native?'NATIVE':'SYNTHETIC';
+      const priority = { UNKNOWN: 0, IN_FLIGHT: 0, ACKED_SYNTHETIC: 1, DELIVERED_SYNTHETIC: 2, READ_SYNTHETIC: 3,
+        ACKED_NATIVE:1,DELIVERED_NATIVE:2,READ_NATIVE:3 };
+      const proposed = event.kind === 'ACK' ? 'ACKED_'+suffix :
+        event.kind === 'DELIVERED' ? 'DELIVERED_'+suffix : 'READ_'+suffix;
       const state = (priority[proposed] > (priority[i.state] ?? -1)) ? proposed : i.state;
       this.db.prepare('UPDATE send_intents SET state=?,revision=revision+1,updated_at=? WHERE id=?').run(state,this.now(),event.intentId);
       this.db.prepare('UPDATE outbox_attempts SET state=?,provider_mid=?,updated_at=? WHERE id=?')
         .run(state,event.providerMid,this.now(),event.attemptId);
-      this.audit(event.intentId,'VERIFIED_SYNTHETIC_RECEIPT',{sourceEventId:event.sourceEventId,kind:event.kind,state});
+      this.audit(event.intentId,native?'VERIFIED_NATIVE_RECEIPT':'VERIFIED_SYNTHETIC_RECEIPT',
+        {sourceEventId:event.sourceEventId,kind:event.kind,state});
       return { state, duplicate: false };
     });
   }
