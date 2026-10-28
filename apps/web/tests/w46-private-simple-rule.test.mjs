@@ -22,7 +22,9 @@ test('cloud provider labels remain independent of local optional Qwen3',()=>{
  assert.match(content,/OPENAI_USER_API/);
  assert.match(content,/LLAMACPP_LOCAL_QWEN3_8B_FREE/);
  assert.match(content,/OpenRouter/);assert.match(content,/OpenAI API/);
- assert.match(content,/Qwen3/);assert.match(content,/本地 Qwen3 完全可选/);
+ assert.match(content,/publicModelCatalog\(await api\(PRIVATE_ROUTES\.catalog\)\)/);
+ assert.match(content,/在电脑上运行的本地模型（可选）/);
+ assert.match(readFileSync(new URL('../src/private-brain-ui-contract.mjs',import.meta.url),'utf8'),/本地 Qwen3/);
  assert.match(source,/唯一 Agno · 本地或云端模型任选/);
 });
 test('same native W43/W47 Agno model history/turn and no browser key or fake responses',()=>{
