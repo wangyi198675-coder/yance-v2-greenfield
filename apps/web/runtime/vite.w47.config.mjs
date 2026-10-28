@@ -128,7 +128,7 @@ if(r4IsolatedPreview){
  })();
  const chatUiFiles=Object.freeze({
   'apps/web/src/BCLiveChatWorkspace.vue':'8af50eae07986b9561ad4aad392addafba4e8243',
-  'apps/web/src/BCProductWorkspaceCandidate.vue':'96f57574e82fd2ed498fdb83036c60c61451ac1a',
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'c0130d054cd411bcdf9320a682091c863f24b190',
   'apps/web/src/BCPrivateBrainWorkspace.vue':'8584acc60a34917fd45afbd6860650aef588687c'
  });
  // Reuse the exact already-running 6b0118d multi-account UI: no new authority.
@@ -216,7 +216,7 @@ if(r4IsolatedPreview){
  // Exact user-authorized General-settings presentation delta.
  // Preserve original de3 owner-verified Settings, W05 and notification blobs.
  const settingsGeneralPath='apps/web/src/BCSettingsWorkspace.vue';
- const settingsGeneralSha='26832e58d692df9713305b0bef60097a0485ad65';
+ const settingsGeneralSha='17220061dd088fe3128424ede8a1fb4770424333';
  const settingsGeneralBase='de3c6b843449006b7a073ff58c2a7e5f033f7ac2';
  const settingsGeneralValid=(()=>{
   try{
@@ -244,6 +244,18 @@ if(r4IsolatedPreview){
  const notifyFiles=Object.freeze({"apps/web/src/BCSettingsWorkspace.vue":"77c1bcc6728fa17a548fbcbf92da710438bd2464","apps/web/src/BCNotificationCenter.vue":"f645e278987be088f286a06c2a692e3f63e441a7","apps/web/tests/w46-r4-media-settings-native.test.mjs":"592708bc0484a4b164ddb6ad106021f7d4d53142","apps/web/tests/w09-notification-center-native-reuse.test.mjs":"3dd8b07dbc3048235e6046dedd132d0dcb136c54"});
  const notifyEvidence=new Set(["apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_REAL_1360.png","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_REAL_430.png","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/NOTIFY_CENTER_QA_20261028.json","apps/web/evidence/NOTIFICATION_CENTER_WEBFIRST_20261028/W09_NOTIFICATION_CENTER_REVIEW.md","apps/web/evidence/NOTIFICATION_COMPACT_20261028/NOTIFY_COMPACT_REAL_1360.png","apps/web/evidence/NOTIFICATION_COMPACT_20261028/NOTIFY_COMPACT_REAL_430.png","apps/web/evidence/NOTIFICATION_COMPACT_20261028/NOTIFY_COMPACT_REAL_QA.json","apps/web/evidence/NOTIFICATION_COMPACT_20261028/W09_NOTIFY_COMPACT_REAL_CONTROLS_REVIEW.md"]);
  // Exact W05 native Tauri 2.6.0 + W43 verified Agno completion, no second event engine.
+ // This already user-approved ChatGPT connection is built with the official
+ // @siwc/local SDK. Preserve exact native/UI source blobs on this fixed site.
+ const siwcFiles=Object.freeze({
+  'apps/web/src/BCProductWorkspaceCandidate.vue':'c0130d054cd411bcdf9320a682091c863f24b190',
+  'apps/web/src/BCSettingsWorkspace.vue':'17220061dd088fe3128424ede8a1fb4770424333',
+  'apps/web/src/BCOfficialChatGPTConnect.vue':'3c00efa5900bc0e3cb0ce56c5e0ca32a8d1b83e0',
+  'services/api/runtime/server.mjs':'e221cbd80640f3af84056498093822794d21edaf',
+  'services/api/runtime/w47-official-siwc.mjs':'4b81d31cdbcbcc7a50efd1fda007c49e0ecd1b33'
+ });
+ const siwcExactValid=Object.entries(siwcFiles).every(([path,sha])=>
+   existsSync(join(w46Root,path))&&git('rev-parse','HEAD:'+path)===sha&&
+   git('hash-object','--',path)===sha);
  const w05Base='ffdd62dd8b9e5a512f322adeb5819b595dddc5f5';
  const w05Files=Object.freeze({"apps/web/src/BCNotificationCenter.vue":"f645e278987be088f286a06c2a692e3f63e441a7","apps/web/src/BCPrivateBrainWorkspace.vue":"8584acc60a34917fd45afbd6860650aef588687c","apps/web/src/w05-native-notification-port.mjs":"a10eb38128c39d7ddaf3f5d1a5881190223a3daf","apps/web/tests/w09-w05-native-notification.test.mjs":"8f07f4969815179ae865c6fce828b5f5f34a0906","apps/windows/src-tauri/Cargo.toml":"624b745b73f514fdcfb0f168064546ce1c55f864","apps/windows/src-tauri/Cargo.lock":"cc0bb05412250f404872fc438d23b88ad62fcd5a","apps/windows/src-tauri/src/main.rs":"2fd2fdad1e4e6de1e41c224efe8252ff5c9b1031","apps/windows/src-tauri/capabilities/main.json":"8aefc72b1a3ce83a83b147c485a807a4eb060833"});
  const w05Evidence=new Set(["apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/NOTIFY_W05_NATIVE_QA_20261028.json","apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/NOTIFY_W05_NATIVE_REAL_1360.png","apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/NOTIFY_W05_NATIVE_REAL_430.png","apps/web/evidence/W05_AGNO_NATIVE_NOTIFY_20261028/W09_W05_AGNO_DELTA_REVIEW.md"]);
@@ -251,7 +263,7 @@ if(r4IsolatedPreview){
   try{
    git('merge-base','--is-ancestor',w05Base,'HEAD');
    const delta=git('diff','--name-only',w05Base,'HEAD').split('\n').filter(Boolean);
-   if(delta.length<8||!delta.every(p=>Object.hasOwn(w05Files,p)||w05Evidence.has(p)||Object.hasOwn(notifyFiles,p)||Object.hasOwn(waP0Files,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(delta.length<8||!delta.every(p=>Object.hasOwn(w05Files,p)||w05Evidence.has(p)||Object.hasOwn(notifyFiles,p)||Object.hasOwn(waP0Files,p)||Object.hasOwn(siwcFiles,p)||notifyEvidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(w05Files).every(([p,h])=>existsSync(join(w46Root,p))&&
     git('hash-object','--',p)===h&&git('rev-parse','HEAD:'+p)===h)
     &&[...w05Evidence].every(p=>existsSync(join(w46Root,p))&&
@@ -293,7 +305,7 @@ if(r4IsolatedPreview){
   try{
    git('merge-base','--is-ancestor',chatUiBase,'HEAD');
    const changed=git('diff','--name-only',chatUiBase,'HEAD').split('\n').filter(Boolean);
-   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
+   if(!changed.every(p=>p===toolsUiTest||Object.hasOwn(waOwnerFiles,p)||Object.hasOwn(pageUiFiles,p)||Object.hasOwn(chatUiFiles,p)||Object.hasOwn(multiUiFiles,p)||Object.hasOwn(themeUiFiles,p)||themeEvidence.has(p)||Object.hasOwn(siwcFiles,p)||Object.hasOwn(wowFiles,p)||wowEvidence.has(p)||Object.hasOwn(notifyFiles,p)||notifyEvidence.has(p)||Object.hasOwn(w05Files,p)||w05Evidence.has(p)||p==='apps/web/runtime/vite.w47.config.mjs'))return false;
    return Object.entries(chatUiFiles).every(([p,sha])=>
     git('rev-parse','HEAD:'+p)===sha&&git('hash-object','--',p)===sha&&
     git('rev-parse',chatUiBase+':'+p)===(expertPins[p]||ownerFiles[p]));
@@ -310,7 +322,7 @@ if(r4IsolatedPreview){
      git('rev-parse','HEAD:'+path)===(chatUiFiles[path]||sha)&&
      git('hash-object','--',path)===(chatUiFiles[path]||sha);
  }catch{return false}});
- const validSignedBlobs=w05Scope&&notifyDeltaValid&&wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
+ const validSignedBlobs=siwcExactValid&&w05Scope&&notifyDeltaValid&&wowDeltaValid&&galleryScope&&expertScope&&Object.entries(ownerFiles).every(([path,sha])=>{
    const expected=path===settingsGeneralPath?settingsGeneralSha:
     (path===channelUxFile?channelUxSha:(notifyFiles[path]||pageUiFiles[path]||chatUiFiles[path]||multiUiFiles[path]||themeUiFiles[path]||(path===galleryPath?git('rev-parse',galleryCommit+':'+path):(expertPins[path]||sha))));
    return existsSync(join(w46Root,path))&&git('hash-object','--',path)===expected&&
@@ -378,7 +390,7 @@ if(r4IsolatedPreview){
    visualOwnerAck.includes('DESIGN_DELTA_PASS')&&
    visualOwnerAck.includes('44 PASS / 0 FAIL')&&
    visualOwnerAck.includes(previousSignedSha);
- if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!waP0Verified||!themeScope||!settingsGeneralValid||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
+ if(signedSha!==expectedOwnerSha||!signedAncestor||!chatUiDeltaValid||!toolsUiTestValid||!multiScope||!pageUiScope||!waUxVerified||!waP0Verified||!themeScope||!settingsGeneralValid||!siwcExactValid||!wowDeltaValid||!notifyDeltaValid||!w05Scope||dirtySource||
     !receiptTracked||!validSignedBlobs||!w46ReviewValid||!noPairReviewValid||!w42VisualValid||!mediaDesignValid||
     !oldOwnerAck.includes('W46 → W09-2')||!oldOwnerAck.includes('R4 Vue')||
     !readAck('apps/web/evidence/TO_W09_2_W46_LOCAL_SESSION_OWNER_SECURITY_ACK_20261026.md').includes('W46_LOCAL_PAIRING_UI_SECURITY_DELTA_PASS')||
