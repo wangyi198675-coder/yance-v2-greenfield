@@ -102,6 +102,11 @@ test('official categorized pages activated/inactivated/hidden supported; nopermi
   assert.equal(JSON.stringify(after.body).includes('FAKE_ACCOUNT_USER'),false);
  }finally{await f.close()}
 });
+test('root categorized response is accepted without unowned Pages',async()=>{
+ const f=await fixture({fetchImpl:async()=>({status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,categorized:{activated:[{id:'101',name:'One',platform:'FACEBOOK'}],inactivated:[],hidden:[],nopermission:[{id:'102',name:'Two',platform:'FACEBOOK'}]}})})});
+ try{const r=await f.request('account',{method:'POST',body:{userAccessToken:'TEST-ACCOUNT-SYNTHETIC-123'}});
+ assert.equal(r.status,200);assert.deepEqual(r.body.pages.map(x=>x.pageId),['101']);assert.equal(f.writes,1)}finally{await f.close()}
+});
 test('official nested/category maps preserve IDs and never grant nopermission',async()=>{
  const f=await fixture({fetchImpl:async()=>({
   status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,

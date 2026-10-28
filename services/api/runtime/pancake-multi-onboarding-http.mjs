@@ -74,8 +74,19 @@ async function ownedPages(token,fetchImpl){
   return entries.map(([id,p])=>({...p,id:p.id??id}));
  };
  const groups=['activated','inactivated','hidden'];
- const rawPages=reply.pages??reply.data?.pages??(
-   reply.data&&groups.some(k=>Object.hasOwn(reply.data,k))?reply.data:null);
+ const candidateContainers=[
+   reply.pages,reply.categorized,reply.page_list,
+   reply.data?.pages,reply.data?.categorized,reply.data?.page_list,
+   reply.result?.pages,reply.result?.categorized,reply.result?.page_list,
+   reply.payload?.pages,reply.payload?.categorized,
+   reply
+ ];
+ // Root-level categorized is also used by some official API versions.
+ // Never select arbitrary object values, which could grant unauthorized pages.
+ const rawPages=candidateContainers.find(value=>
+   Array.isArray(value)||
+   (value&&typeof value==='object'&&groups.some(k=>Object.hasOwn(value,k)))
+ )??null;
  const invalidSchema=()=>{
   // Strictly structural telemetry only: no token, page ID/name or raw response.
   // Local QA flag is opt-in, never on by default.
@@ -83,7 +94,11 @@ async function ownedPages(token,fetchImpl){
    const kind=v=>Array.isArray(v)?'array':v===null?'null':typeof v;
    process.stderr.write('[P0_PANCAKE_SCHEMA_ONLY] '+JSON.stringify({
     hasPages:reply.pages!==undefined,hasData:reply.data!==undefined,
+    hasCategorized:reply.categorized!==undefined,
     pagesKind:kind(rawPages),
+    topLevelKeys:Object.keys(reply).slice(0,20).map(k=>
+     /^[a-z][a-z0-9_]{0,36}$/.test(k)&&
+     !/(token|secret|password|auth|name|email|phone|customer)/i.test(k)?k:'REDACTED'),
     groups:groups.map(k=>[k,kind(rawPages?.[k])])
    })+'\n');
   }
