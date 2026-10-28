@@ -228,7 +228,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
    </div>
    <!-- One always-mounted original CONTACT Composer. Null K must leave input
         and expert/media operations disabled, not create a second renderer. -->
-   <BCNativeComposer ref="composerRef" :read-only-conversation="selected?.readOnly===true" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
+   <BCNativeComposer ref="composerRef" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
     :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort" @navigate="navigate"/>
   </div>
  </section>
