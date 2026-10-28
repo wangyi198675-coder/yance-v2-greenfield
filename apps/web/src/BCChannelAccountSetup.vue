@@ -276,6 +276,10 @@ defineExpose({setup,refresh});
 .w46-channel-extra{opacity:.9}
 .w46-channel-extra summary{font-size:10px}
 @media(max-width:600px){.w46-channel{min-height:240px;padding:13px}}
+</style>
+<style>
+/* Teleport moves the original QR dialog into document.body. Only its existing
+   QR styles are global; the account card styles above remain scoped. */
 /* Real native WhatsApp QR is shown only after the original W47 bytes API attests it. */
 .w46-qr-backdrop{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;box-sizing:border-box;background:rgba(0,0,0,.72);backdrop-filter:blur(4px)}
 .w46-qr-dialog{display:flex;flex-direction:column;box-sizing:border-box;gap:18px;width:min(440px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--surface-raised);color:var(--ink);box-shadow:0 24px 65px #0009}
