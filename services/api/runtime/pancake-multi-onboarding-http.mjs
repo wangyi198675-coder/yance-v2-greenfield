@@ -10,7 +10,7 @@ const send=(res,status,value)=>{res.writeHead(status,{
 });res.end(JSON.stringify({...value,canSend:false}));};
 const fail=(code,status=403)=>Object.assign(new Error(code),{code,status});
 const validId=v=>typeof v==='string'&&/^[0-9]{1,40}$/.test(v);
-const validToken=v=>typeof v==='string'&&v.length>=8&&v.length<=480&&
+const validToken=v=>typeof v==='string'&&v.length>=8&&v.length<=1600&&
  !/[\s\u0000-\u001f\u007f]/.test(v);
 async function official(path,tokenParam,token,fetchImpl){
  const url=new URL(site+path);url.searchParams.set(tokenParam,token);

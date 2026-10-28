@@ -102,6 +102,21 @@ test('official categorized pages activated/inactivated/hidden supported; nopermi
   assert.equal(JSON.stringify(after.body).includes('FAKE_ACCOUNT_USER'),false);
  }finally{await f.close()}
 });
+test('long authentic-shaped User token within W55 WinCred bound passes account API, no secret returned',async()=>{
+ const long='FAKE_LONG_ACCOUNT_USER_TOKEN_'+('a'.repeat(1450));
+ const f=await fixture({fetchImpl:async url=>{
+  assert.equal(url.searchParams.get('access_token'),long);
+  return {status:200,headers:new Headers(),text:async()=>JSON.stringify({
+   success:true,pages:{activated:[{id:'1234567',name:'Long Token Page',platform:'FACEBOOK'}]}
+  })};
+ }});
+ try{
+  const r=await f.request('account',{method:'POST',body:{userAccessToken:long}});
+  assert.equal(r.status,200);assert.equal(f.writes,1);
+  assert.deepEqual(r.body.pages.map(p=>p.pageId),['1234567']);
+  assert.equal(JSON.stringify(r.body).includes(long),false);
+ }finally{await f.close()}
+});
 test('malformed categorized response is not treated as confirmed authorized account and never stores',async()=>{
  const f=await fixture({fetchImpl:async()=>({
   status:200,headers:new Headers(),text:async()=>JSON.stringify({success:true,

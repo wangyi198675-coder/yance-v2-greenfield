@@ -4,7 +4,7 @@
 const provider='PANCAKE_PAIR';
 const denial=code=>{throw Object.assign(new Error(code),{code,status:403})};
 const pageId=x=>typeof x==='string'&&/^[0-9]{1,40}$/.test(x);
-const token=x=>typeof x==='string'&&x.length>=8&&x.length<=480&&
+const token=x=>typeof x==='string'&&x.length>=8&&x.length<=1600&&
  !/[\s\u0000-\u001f\u007f]/.test(x);
 const json=x=>JSON.stringify(x);
 const valid=v=>v&&token(v.userAccessToken)&&v.pages&&
