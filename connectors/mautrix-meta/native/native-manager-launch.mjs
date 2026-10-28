@@ -20,8 +20,15 @@ export function officialManagerExecutable() {
 export async function launchInstalledOfficialManager() {
   const executable=officialManagerExecutable();
   if(!executable)throw Error('OFFICIAL_MAUTRIX_MANAGER_NOT_INSTALLED');
+  // Official manager already has an isolated localhost Matrix principal and
+  // this machine's original BridgeV2 in its own profile. No technical login UI.
+  const userHome=process.env.USERPROFILE;
+  if(!userHome)throw Error('WINDOWS_USER_PROFILE_REQUIRED');
+  const profile=join(userHome,'Documents','YanceV2','W56_MANAGER_FB_PERSONAL_PROFILE');
+  if(!existsSync(profile))throw Error('OFFICIAL_MANAGER_PROFILE_NOT_INITIALIZED');
   await new Promise((resolve,reject)=>{
-    const child=spawn(executable,[],{detached:true,windowsHide:false,stdio:'ignore'});
+    const child=spawn(executable,['--user-data-dir='+profile],
+      {detached:true,windowsHide:false,stdio:'ignore'});
     child.once('error',reject);
     child.once('spawn',()=>{child.unref();resolve();});
   });

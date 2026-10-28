@@ -1,25 +1,19 @@
 <!doctype html>
-<html lang="zh-CN"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="google" content="notranslate">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="google" content="notranslate">
 <title>连接 Facebook Messenger · 言策</title>
 <style>
-:root{color-scheme:light}body{font:15px/1.6 system-ui,-apple-system,sans-serif;background:#f4f7fa;color:#183247;min-height:100vh;margin:0;display:grid;place-items:center}
-main{width:min(540px,calc(100% - 44px));background:white;border:1px solid #dce5ed;border-radius:18px;padding:30px;box-shadow:0 12px 38px #17364d12}
-h1{font-size:24px;margin:0 0 8px}p{margin:8px 0 14px}.sub{color:#526476}.status{font-size:13px;color:#5a6874;background:#eff3f6;padding:8px 12px;border-radius:7px;margin:14px 0}
-button{background:#176cbe;color:white;border:0;border-radius:9px;padding:11px 16px;font:inherit;cursor:pointer;margin:7px 7px 7px 0}
-button:disabled{opacity:.5;cursor:default}button.secondary{background:#e8f0f7;color:#164e7e}
-label{font-weight:600;display:block;margin-top:13px}input,select{display:block;width:100%;box-sizing:border-box;padding:11px;border:1px solid #b7c4d0;border-radius:8px;font:inherit;margin-top:5px}
-.error{color:#ad3434;white-space:pre-wrap}small{display:block;color:#5c6d79;margin-top:4px}.hidden{display:none}
-</style>
-</head><body translate="no"><main>
+:root{color-scheme:light}body{font:15px/1.65 system-ui,-apple-system,sans-serif;background:#f4f7fa;color:#183247;min-height:100vh;margin:0;display:grid;place-items:center}
+main{width:min(510px,calc(100% - 44px));background:white;border:1px solid #dce5ed;border-radius:18px;padding:30px;box-shadow:0 12px 38px #17364d12}
+h1{font-size:24px;margin:0 0 8px}p{margin:8px 0 16px}.sub{color:#526476}.status{font-size:13px;color:#526476;background:#eff3f6;padding:9px 12px;border-radius:7px;margin:14px 0}
+button{background:#176cbe;color:#fff;border:0;border-radius:9px;padding:12px 17px;font:inherit;cursor:pointer;min-height:44px}
+small{display:block;margin-top:15px;color:#617181}
+</style></head><body translate="no"><main>
 <h1>连接 Facebook Messenger</h1>
-<p class="sub">点击下方按钮，在此电脑上登录你的 Facebook Messenger。必要时按提示输入验证码。言策不会自动向任何人发送消息。</p>
-<p class="status" id="status" role="status">正在检查 Messenger 连接服务…</p>
-<input type="hidden" name="ticket" value="__W26_LAUNCH_TICKET__" id="ticket">
-<section id="flows"></section>
-<section id="step" aria-live="polite"></section>
-<p id="error" class="error" role="alert"></p>
-<button class="secondary hidden" id="retry" type="button">重新检查连接</button>
-</main>
-<script type="module" src="/api/v2/providers/fb-personal/native-login-ui.mjs"></script>
-</body></html>
+<p class="sub">使用 Facebook 网页方式连接，不再使用此前反复触发安全检查的手机模拟登录。</p>
+<p class="status">已准备好本机官方登录助手，登录后才会连接你的 Messenger 账号。</p>
+<form method="post" action="/api/v2/providers/fb-personal/launch-manager">
+<input type="hidden" name="ticket" value="__W26_LAUNCH_TICKET__">
+<button type="submit">打开 Facebook 网页登录</button>
+</form>
+<small>点击后会打开官方 mautrix-manager。选择 Facebook Messenger，然后选择 facebook.com，在弹出的 Facebook 网页中由本人完成授权。无需 Matrix 参数或复制 Cookie。</small>
+</main></body></html>

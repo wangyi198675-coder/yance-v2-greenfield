@@ -40,10 +40,10 @@ function sendAuthPage(res,ticket){
 }
 function sendLaunchResult(res,result){
   const started=result?.launched===true,foreground=result?.foregroundVerified===true;
-  const title=started?'官方mautrix-manager已启动':'官方mautrix-manager启动失败';
-  const detail=foreground?'官方窗口已显示在前台，请自行选择登录。':
-    started?'Windows已启动官方程序，但系统不允许后台进程强制切换前台。请在Windows任务栏点击mautrix-manager，或按Alt+Tab选择该窗口。':
-      '官方管理器启动失败。请通过Windows开始菜单运行mautrix-manager，或返回检查安装状态。';
+  const title=started?'Facebook 网页登录窗口已打开':'Facebook 网页登录助手启动失败';
+  const detail=foreground?'请在已打开的官方管理器中点击 Facebook Messenger，再选择 facebook.com，通过弹出的 Facebook 网页完成本人授权。':
+    started?'网页登录助手已启动，请在任务栏打开 mautrix-manager，点击 Facebook Messenger，然后选择 facebook.com。':
+      '官方网页登录助手没有启动，请返回连接页面重试。';
   res.writeHead(started?200:503,{...jsonHeaders,'content-type':'text/html; charset=utf-8',
     'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"});
   res.end('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>'+title+

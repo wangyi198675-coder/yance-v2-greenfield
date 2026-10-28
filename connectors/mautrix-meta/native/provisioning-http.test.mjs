@@ -36,7 +36,7 @@ test('user-click route is a nontechnical native Messenger login page',async()=>{
     // no-referrer policy was making Chromium/Opera send Origin:null.
     assert.equal(r.headers.get('referrer-policy'),'same-origin');
     const html=await r.text();
-    assert.match(html,/native-login-ui\.mjs/);
+    assert.match(html,/action="\/api\/v2\/providers\/fb-personal\/launch-manager"/);
     assert.doesNotMatch(html,/Homeserver|127\.0\.0\.1:29319|Matrix用户名/);
     assert.doesNotMatch(html,/fake-qr|base64-qr/i);
     const setup=await (await fetch(BASE+'/setup')).json();
@@ -96,7 +96,7 @@ test('UTM canonical redirect renders native login without technical Matrix param
     r=await fetch(BASE+'/connect?utm_source=chatgpt.com');
     assert.equal(r.status,200);
     const html=await r.text();
-    assert.match(html,/native-login-ui\.mjs/);
+    assert.match(html,/action="\/api\/v2\/providers\/fb-personal\/launch-manager"/);
     assert.equal(new URL(r.url).search,'');
     r=await fetch(BASE+'/setup?utm_source=chatgpt.com');
     assert.equal(r.status,200);
@@ -133,7 +133,7 @@ test('legacy optional manager launch remains protected by single-use same-origin
     const page=await (await fetch(BASE+'/connect')).text();
     const match=page.match(/name="ticket" value="([a-f0-9]{48})"/);
     assert.ok(match,'page must provide a one-time unguessable launch ticket');
-    assert.match(page,/native-login-ui\.mjs/); // Manager stays a legacy diagnostic endpoint only.
+    assert.match(page,/action="\/api\/v2\/providers\/fb-personal\/launch-manager"/); // Official manager is the primary web login flow.
     assert.equal(launches,0,'visiting page alone must never launch the GUI');
     const submit=()=>fetch(BASE+'/launch-manager',{method:'POST',
       headers:{Origin:'http://127.0.0.1:'+PORT,
@@ -141,7 +141,7 @@ test('legacy optional manager launch remains protected by single-use same-origin
         'Sec-Fetch-Site':'same-origin'},
       body:'ticket='+match[1]});
     const result=await submit();assert.equal(result.status,200);
-    assert.match(await result.text(),/官方mautrix-manager已启动/);
+    assert.match(await result.text(),/Facebook 网页登录窗口已打开/);
     assert.equal(launches,1);
     const replay=await submit();assert.equal(replay.status,403);
     assert.equal(launches,1);
