@@ -41,7 +41,26 @@ const manualPageSendPort=Object.freeze({
    body:JSON.stringify({pageId:match[1],conversationId:match[2],text,businessMessageId})
   });
   const reply=await response.json();
-  if(!response.ok||reply.ok!==true)throw Error('Pancake 暂未接受发送，请检查当前 Page 授权');
+  if(!response.ok||reply.ok!==true){
+   const code=typeof reply.detailCode==='string'?reply.detailCode:
+    typeof reply.error==='string'?reply.error:'UNVERIFIED';
+   const descriptions={
+    PAGE_ACCOUNT_BINDING_PENDING:'Page 账号授权登记未完成',
+    PAGE_ACCOUNT_BINDING_REVOKED:'Page 账号授权已撤销或版本已变化',
+    PAGE_PEER_BINDING_PENDING:'当前联系人授权绑定未完成',
+    PAGE_SEND_CONSENT_PENDING:'本次人工发送尚未获得有效授权',
+    PAGE_HUMAN_TAKEOVER_PENDING:'当前联系人仍在托管接管状态',
+    PAGE_CURRENT_W24_W44_DENIED:'当前联系人发送授权校验未通过',
+    PAGE_PEER_OR_TOKEN_CHANGED:'Page 或收件人已变更，请刷新会话',
+    PAGE_CREDENTIAL_REVOKED:'Page Token 已被撤销',
+    CURRENT_PAGE_PEER_OR_W24_W44_SEND_NOT_READY:'Page 账号或联系人发送资格未就绪',
+    INVALID_PAGE_CONVERSATION:'页面或会话参数无效',
+    USER_CLICK_CSRF_REQUIRED:'当前本机会话已失效，请刷新',
+    PANCAKE_PAGE_AUTH_REJECTED:'Pancake 拒绝当前 Page Token'
+   };
+   throw Error('发送未成功：'+(descriptions[code]||'官方授权或发送链路未通过')+
+    '（'+code+'，HTTP '+response.status+'）。消息保留在草稿中。');
+  }
   return reply;
  }
 });

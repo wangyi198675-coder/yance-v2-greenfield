@@ -127,6 +127,7 @@ function endIME(event){
   compositionK.value=null;
 }
 const mediaUploading=ref(false);
+const attachmentInput=ref(null);
 const mediaClient=computed(()=>props.mediaAuthorityPort?.currentScope?
  createW23BrowserMediaClient({fetchImpl:props.fetchImpl||globalThis.fetch,scopePort:props.mediaAuthorityPort}):null);
 async function attachRealFiles(raw,kind){
@@ -221,9 +222,19 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-plus" aria-haspopup="dialog" aria-controls="w46-contact-experts-menu" :aria-expanded="expertsOpen" @click="toggleContactMenu('experts')">＋ 专家</Button>
       <Button size="sm" variant="ghost" type="button" data-test="w46-composer-model" aria-haspopup="menu" aria-controls="w46-contact-model-menu" :aria-expanded="contactMenu==='model'" @click="toggleContactMenu('model')">模型</Button>
       <button type="button" class="bc-mode-label bc-compact-menu-trigger" data-test="w46-contact-mode" aria-haspopup="menu" aria-controls="w46-contact-mode-menu" :aria-expanded="contactMenu==='mode'" @click="toggleContactMenu('mode')">人工 · 辅助 · 自动（待核验）⌄</button>
-      <label class="bc-file-label">附件<input type="file" multiple @change="onAttach" :disabled="!current.key||mediaUploading||!mediaClient" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/wav,audio/mpeg,audio/ogg"/></label>
-      <span class="bc-send-hold" title="真人发送通过原 W25 唯一 MessageDelivery">{{manualReady?(manualHold?(nativeMessengerRoom.startsWith('PAGE|')?'待 Pancake 确认':'待 Messenger 确认'):manualBusy?'发送中…':'人工发送'):'未授权 · 不能发送'}}</span>
-      <Button size="sm" :disabled="!manualReady||!manualText.trim()||manualBusy||manualHold" @click="sendManual">{{manualReady?'发送':'发送不可用'}}</Button>
+      <button type="button" class="bc-attachment-button" data-test="composer-attachment-control"
+       :disabled="!current.key||mediaUploading||!mediaClient"
+       :title="!current.key?'当前 Page 附件发送需要 W24 联系人授权':!mediaClient?'W23 原生附件授权尚未接通':mediaUploading?'正在上传附件':'选择附件'"
+       @click="attachmentInput?.click()">📎 {{!current.key||!mediaClient?'附件未接通':'添加附件'}}</button>
+      <input ref="attachmentInput" class="bc-file-hidden" type="file" multiple
+       @change="onAttach" :disabled="!current.key||mediaUploading||!mediaClient"
+       accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,audio/wav,audio/mpeg,audio/ogg"/>
+      <span v-if="!manualReady||manualBusy||manualHold" class="bc-send-hold" role="status"
+       title="真实发送由原 W25 唯一 MessageDelivery 校验">{{!manualReady?'当前会话不可发送':manualBusy?'正在提交…':nativeMessengerRoom.startsWith('PAGE|')?'等待 Pancake 回执':'等待 Messenger 回执'}}</span>
+      <Button size="sm" data-test="composer-real-send" type="button"
+       title="点击提交当前消息，实际结果以平台回执为准"
+       :disabled="!manualReady||!manualText.trim()||manualBusy||manualHold"
+       @click="sendManual">{{manualBusy?'发送中…':manualReady?'发送':'发送不可用'}}</Button>
     </div>
     <BCNativeExpertPicker v-if="expertsOpen" :fetch-impl="fetchImpl"
       @close="closeContactMenu(true)" @navigate="section=>{closeContactMenu();emit('navigate',section)}"/>
@@ -249,7 +260,10 @@ defineExpose({sourceQuote,onVoiceReady}); // Parent timeline source MID, never s
 .bc-card p{margin:0}.bc-card small{overflow-wrap:anywhere;opacity:.7}.bc-warning{font-size:12px;color:var(--destructive,inherit)}
 .bc-footer{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:12px}
 .bc-file-label{display:flex;gap:4px;align-items:center;max-width:160px}
-.bc-file-label input{width:95px;max-width:100%}
+.bc-file-hidden{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
+.bc-attachment-button{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface-soft,var(--surface));color:var(--ink);font-size:11px;cursor:pointer}
+.bc-attachment-button:disabled{opacity:.55;cursor:not-allowed}
+.bc-attachment-button:not(:disabled):hover{border-color:var(--accent)}
 @media(max-width:430px){.bc-native-composer{padding:10px}.bc-footer{align-items:flex-start}}
 
 .bc-native-composer{gap:8px!important;border-top:1px solid var(--border);background:var(--bg2);border-radius:0 0 13px 13px;padding:9px 12px!important;max-height:min(42vh,360px);overflow-y:auto}
