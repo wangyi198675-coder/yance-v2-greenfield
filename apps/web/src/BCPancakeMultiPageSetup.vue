@@ -82,7 +82,9 @@ async function refresh(){
  const existing=await execute('pages');
  if(!alive)return;
  if(existing){pages.value=existing.pages;accountConnected.value=true;
-  notice.value='已列出当前账户的主页与另外单独验证的主页。其他账号管理的 Page 可在下方用各自的 Page Token 添加。'}
+  notice.value=existing.accountVerified===false?
+   'Pancake 官方账户列表暂时限流；已保存的主页仍然保留。你仍可用其他账号 Page 的独立 Token 继续添加，不会覆盖原连接。':
+   '已列出当前账户的主页与另外单独验证的主页。其他账号管理的 Page 可在下方用各自的 Page Token 添加。'}
  else{
   accountConnected.value=false;pages.value=[];
   // No account provisioned yet. Stay on the real account setup step.

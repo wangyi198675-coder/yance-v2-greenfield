@@ -38,6 +38,7 @@ test('R4 Facebook Page frontend renders multi-page setup, never old single-Page 
  assert.match(ui,/data-test="pancake-independent-page-id"/);
  assert.match(ui,/data-test="pancake-select-independent-page"/);
  assert.match(ui,/selectedPage=independentPageId/);
+ assert.match(ui,/existing\.accountVerified===false/);
  assert.doesNotMatch(ui,/localStorage|sessionStorage/);
  assert.doesNotMatch(ui,/generate_page_access_token/);
 });
