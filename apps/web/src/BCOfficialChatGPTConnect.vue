@@ -3,7 +3,7 @@ import {ref,onMounted,onBeforeUnmount} from 'vue';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const session=ref(null),models=ref([]),selected=ref(''),message=ref('');
 const busy=ref(false),connecting=ref(false),testText=ref(''),response=ref('');
-let disposed=false,poll=null,csrf='';
+let disposed=false,poll=null,csrf='',sessionInFlight=null;
 const request=(url,options={})=>(props.fetchImpl||globalThis.fetch)(url,{
  credentials:'same-origin',cache:'no-store',redirect:'error',...options});
 const read=async(url,options)=>{
@@ -12,28 +12,54 @@ const read=async(url,options)=>{
  if(!res.ok)throw Error(String(data?.error||'HTTP_'+res.status));
  return data;
 };
-async function ensureCurrentSession(){
- let s=await read('/api/v2/local-session/status');
- if(s?.sessionKind==='WEB_LOCAL_PRIVATE'&&s?.authorized===true&&s.csrfToken){
-  csrf=s.csrfToken;return;
+const sessionExpired=e=>['LOCAL_SESSION_REQUIRED','CURRENT_LOCAL_SESSION_OR_CSRF_REQUIRED',
+ 'CURRENT_SESSION_REVOKED_DURING_ROUTING'].includes(String(e?.message||e));
+async function ensureCurrentSession({renew=false}={}){
+ // Multiple settings requests share one local-session bootstrap instead of
+ // racing cookies. This is NOT a new login or an additional permission gate.
+ if(sessionInFlight)return sessionInFlight;
+ const current=(async()=>{
+  if(!renew){
+   const s=await read('/api/v2/local-session/status');
+   if(s?.sessionKind==='WEB_LOCAL_PRIVATE'&&s?.authorized===true&&
+     typeof s.csrfToken==='string'&&/^[a-f0-9]{64}$/.test(s.csrfToken)){
+    csrf=s.csrfToken;return;
+   }
+  }
+  const s=await read('/api/v2/local-session/web-private-start',{
+   method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  if(s?.sessionKind!=='WEB_LOCAL_PRIVATE'||
+    typeof s.csrfToken!=='string'||!/^[a-f0-9]{64}$/.test(s.csrfToken))
+   throw Error('LOCAL_PRIVATE_SESSION_NOT_AVAILABLE');
+  csrf=s.csrfToken;
+ })();
+ sessionInFlight=current;
+ try{await current}finally{if(sessionInFlight===current)sessionInFlight=null}
+}
+async function currentSessionCall(action){
+ await ensureCurrentSession();
+ try{return await action()}
+ catch(e){
+  if(!sessionExpired(e))throw e;
+  // Another local API process may have replaced its in-memory cookie state.
+  // Re-issue the existing Web PRIVATE-only session once; never bypass an
+  // actual third-party provider grant or retry an external action blindly.
+  csrf='';
+  await ensureCurrentSession({renew:true});
+  return action();
  }
- // The user's ordinary local browser session is independent of social auth.
- s=await read('/api/v2/local-session/web-private-start',{
-  method:'POST',headers:{'content-type':'application/json'},body:'{}'});
- if(s?.sessionKind!=='WEB_LOCAL_PRIVATE'||typeof s.csrfToken!=='string')
-  throw Error('LOCAL_PRIVATE_SESSION_NOT_AVAILABLE');
- csrf=s.csrfToken;
 }
 const requestPost=(url,body={})=>read(url,{
  method:'POST',headers:{'content-type':'application/json','x-yance-csrf':csrf},body:JSON.stringify(body)
 });
 async function refresh(){
  try{
-  await ensureCurrentSession();
-  const data=await read('/api/v2/chatgpt/status');
+  const data=await currentSessionCall(()=>read('/api/v2/chatgpt/status'));
   if(disposed)return;
   session.value=data;connecting.value=data.connecting===true;
   if(data.lastError?.message)message.value=data.lastError.message;
+  else if(!data.connecting||sessionExpired({message:message.value.replace(/^连接状态：/,'')}))
+   message.value='';
   if(data.status==='connected'&&data.sharing){
    const list=await read('/api/v2/chatgpt/models');
    if(disposed)return;
@@ -50,8 +76,7 @@ async function connect(){
  if(busy.value)return;
  busy.value=true;message.value='正在打开 ChatGPT 官方登录页面…';
  try{
-  await ensureCurrentSession();
-  const s=await requestPost('/api/v2/chatgpt/sign-in');
+  const s=await currentSessionCall(()=>requestPost('/api/v2/chatgpt/sign-in'));
   if(s.status!=='CONNECTING')throw Error('SIGN_IN_NOT_STARTED');
   connecting.value=true;message.value='请在打开的浏览器页面登录并确认授权。完成后这里会自动更新。';
   if(poll)clearInterval(poll);
@@ -62,7 +87,7 @@ async function connect(){
 async function disconnect(){
  if(busy.value)return;
  busy.value=true;try{
-  await ensureCurrentSession();await requestPost('/api/v2/chatgpt/disconnect');
+  await currentSessionCall(()=>requestPost('/api/v2/chatgpt/disconnect'));
   message.value='已断开 ChatGPT';response.value='';await refresh();
  }catch(e){message.value=String(e.message||e).slice(0,140)}
  finally{busy.value=false}
@@ -71,8 +96,7 @@ async function test(){
  if(busy.value||!selected.value||!testText.value.trim())return;
  busy.value=true;message.value='正在请求官方 ChatGPT 模型的真实回答…';response.value='';
  try{
-  await ensureCurrentSession();
-  const receipt=await requestPost('/api/v2/chatgpt/test-turn',{model:selected.value,text:testText.value.trim()});
+  const receipt=await currentSessionCall(()=>requestPost('/api/v2/chatgpt/test-turn',{model:selected.value,text:testText.value.trim()}));
   if(receipt.verifiedProviderResponse!==true||!receipt.text)throw Error('MODEL_RESPONSE_NOT_CONFIRMED');
   response.value=receipt.text;message.value='官方 SDK 真实响应已返回。这是模型连接测试，未写入 Agno 历史。';
  }catch(e){message.value='测试失败：'+String(e.message||e).slice(0,140)}
