@@ -11,10 +11,10 @@ const vendors=[{id:'OPENROUTER_USER_API',label:'OpenRouter'},
  {id:'OPENAI_USER_API',label:'OpenAI API'}] as const;
 const provider=ref<Provider>('OPENROUTER_USER_API');
 const key=ref(''),current=ref<Status|null>(null);
-const ready=ref(!!native),busy=ref(false),message=ref('');
+const ready=ref(!!native),busy=ref(false),message=ref(''),stale=ref(false);
 const webCsrfOk=computed(()=>typeof props.webCsrf==='string'&&/^[a-f0-9]{64}$/.test(props.webCsrf));
 const webActive=computed(()=>typeof native!=='function'&&ready.value&&webCsrfOk.value);
-const canConfigure=computed(()=>typeof native==='function'||webActive.value);
+const canConfigure=computed(()=>(typeof native==='function'||webActive.value)&&!stale.value);
 const nativeId=(p:Provider)=>p==='OPENROUTER_USER_API'?'OPENROUTER':'OPENAI_API';
 function verifiedStatus(v:unknown,p:Provider):Status{
  if(!v||typeof v!=='object'||Array.isArray(v))throw Error('INVALID_STATUS');
@@ -71,12 +71,12 @@ async function readStatus(p:Provider){
 }
 async function refresh(){
  if(busy.value)return;
- busy.value=true;message.value='';key.value='';current.value=null;
+ busy.value=true;message.value='正在读取服务端密钥状态…';key.value='';
  const p=provider.value;
  try{
   const status=await readStatus(p);
-  if(provider.value===p){current.value=status;ready.value=true}
- }catch(e){ready.value=typeof native==='function';message.value=userError(e)}
+  if(provider.value===p){current.value=status;ready.value=true;stale.value=false;message.value='状态已从服务端确认 · 版本 '+status.revision}
+ }catch(e){stale.value=true;ready.value=typeof native==='function';message.value='刷新失败；以下仅为上次确认的状态，不能表示当前仍有效。'+userError(e)}
  finally{busy.value=false}
 }
 async function save(){
@@ -101,8 +101,8 @@ async function save(){
   if(provider.value===p){current.value=verified;message.value='服务端已确认密钥保存状态'}
   emit('changed');
  }catch(e){
-  current.value=null;ready.value=typeof native==='function';
-  message.value=userError(e);
+  current.value=previous;stale.value=true;ready.value=typeof native==='function';
+  message.value='保存结果尚未取得可靠回读；原状态不能视为已删除。'+userError(e);
  }finally{pending='';busy.value=false}
 }
 async function revoke(){
@@ -123,10 +123,10 @@ async function revoke(){
    throw Error('STATUS_NOT_CONFIRMED');
   if(provider.value===p){current.value=verified;message.value='服务端已确认密钥撤销'}
   emit('changed');
- }catch(e){current.value=null;ready.value=typeof native==='function';message.value=userError(e)}
+ }catch(e){current.value=previous;stale.value=true;ready.value=typeof native==='function';message.value='撤销状态未取得可靠回读；请重新验证。'+userError(e)}
  finally{busy.value=false}
 }
-function onProviderChange(){key.value='';void refresh()}
+function onProviderChange(){key.value='';current.value=null;stale.value=false;void refresh()}
 onMounted(refresh);
 watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
 </script>
@@ -139,14 +139,15 @@ watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
     <option v-for="p in vendors" :key="p.id" :value="p.id">{{p.label}}</option>
    </select>
   </label>
-  <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">
-   网页版云端密钥暂未接通，当前不会接收或保存 API Key。可继续使用已配置的本地 Qwen3。
-  </p>
-  <template v-else>
-   <p role="status" data-test="cloud-redacted-status">
-    {{current?.configured?'已保存':current?.revoked?'已撤销':'未配置'}}
+  <p role="status" data-test="cloud-redacted-status">
+    {{stale?'上次已确认（当前状态未核验）':current?.configured?'已保存':current?.revoked?'已撤销':current?'未配置':'待读取'}}
     <span v-if="current"> · 版本 {{current.revision}}</span>
    </p>
+   <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">
+   当前会话或服务端密钥状态未确认，暂不能提交新 Key。刷新失败不会删除已保存的密钥。
+  </p>
+  <button v-if="!canConfigure" type="button" data-test="cloud-refresh-pending" :disabled="busy" @click="refresh">重新检查状态</button>
+   <template v-else>
    <form @submit.prevent="save">
     <label>API Key
      <input v-model="key" type="password" autocomplete="off" autocapitalize="off"

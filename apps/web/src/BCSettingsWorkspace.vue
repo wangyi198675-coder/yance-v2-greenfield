@@ -4,6 +4,7 @@ import {R4_SETTINGS_CATEGORIES,readWorkspaceSnapshot} from './product-workspace-
 import {mediaCapabilitiesRead} from './w23-media-browser-consumer.mjs';
 import BCChannelAccountSetup from './BCChannelAccountSetup.vue';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
+import BCModelCenter from './BCModelCenter.vue';
 import BCOfficialChatGPTConnect from './BCOfficialChatGPTConnect.vue';
 import {currentFirstPartyWebSession} from './local-first-party-session.mjs';
 import BCNativeHostSession from './BCNativeHostSession.vue';
@@ -170,14 +171,8 @@ function requestNotificationPermission(){
     </article>
    </template>
    <template v-else-if="category==='model'">
-    <article data-test="settings-panel-model"><h3>本地与云端AI模型</h3>
-     <p>原唯一PRIVATE Agno模型仍在闺蜜大脑中进行选择，模型费用需本人确认，联系人不继承PRIVATE权限。</p>
-     <button type="button" data-test="settings-open-brain" @click="emit('navigate','BRAIN')">进入原闺蜜大脑选择模型</button>
-     <p>{{csrf?'已验证本机会话，可使用原W47受保护密钥设置':'本机会话CSRF未确认，不能保存云端API Key'}}</p>
-     <BCOfficialChatGPTConnect :fetch-impl="fetchImpl"/>
-     <BCNativeCloudKeySettings v-if="csrf" :web-csrf="csrf" @changed="refresh"/>
-    </article>
-   </template>
+      <BCModelCenter :web-csrf="csrf||''" :fetch-impl="fetchImpl" :active="active&&category==='model'" @navigate="emit('navigate',$event)"/>
+    </template>
    <template v-else-if="category==='translate'">
     <article data-test="settings-panel-translate"><h3>翻译来源与偏好</h3>
      <p>原W45翻译接口：{{state==='ready'?'已返回当前授权来源':'无可核验的消息译文或翻译偏好'}}</p>
