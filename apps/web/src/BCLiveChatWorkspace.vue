@@ -104,7 +104,7 @@ async function readSelectedChannelStatus(){
   '/api/v2/providers/whatsapp-personal/native/status':
   '/api/v2/providers/telegram-personal/status';
  try{
-  const response=await api.value(endpoint,{method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
+  const response=await globalThis.fetch(endpoint,{method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
   const result=await response.json();
   if(!mounted||revision!==channelStatusRevision||channel.value!==selectedChannel)return;
   if(selectedChannel==='WHATSAPP_PERSONAL'){
