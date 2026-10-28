@@ -90,9 +90,9 @@ function reconcileFilter(){
 }
 function onChannelFilterChange(){
  if(account.value!=='ALL'&&!accountIds.value.includes(account.value))account.value='ALL';
- reconcileFilter();
+ reconcileFilter();filterOpen.value=false;
 }
-function onAccountFilterChange(){reconcileFilter()}
+function onAccountFilterChange(){reconcileFilter();filterOpen.value=false}
 function clearContactFilter(){channel.value='ALL';account.value='ALL';filterOpen.value=false;reconcileFilter()}
 const pinned=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized===true&&c.pinned===true));
 const regular=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized!==true||c.pinned!==true));
