@@ -191,3 +191,26 @@ test('native room space missing is unknown, not zero verified contacts',async()=
   assert.equal(s.accounts[0].roomHints,null);
   assert.equal(s.realPeers,null);
 });
+
+test('modern opaque Tuwunel Matrix room IDs retain real official space children',async()=>{
+ const space='!A_b-cdefghijklmnopqrst1234',childA='!room_abcdefghijklmno12345',childB='!room_abcdefghijklmno12346';
+ const base=upstream({logins:[{id:'fb.real',state:{state_event:'CONNECTED'},space_room:space}]});
+ const fetchImpl=async(url,options)=>{
+  if(url.includes('/rooms/')){
+   assert.ok(url.includes(encodeURIComponent(space)));
+   return Response.json([
+    {type:'m.space.child',sender:'@facebookbot:yance-w26.invalid',state_key:childA,content:{via:['yance-w26.invalid']}},
+    {type:'m.space.child',sender:'@facebookbot:yance-w26.invalid',state_key:childB,content:{via:['yance-w26.invalid']}},
+    {type:'m.space.child',sender:'@wrong:yance-w26.invalid',state_key:'!unauthorized123456789012',content:{via:['yance-w26.invalid']}},
+    {type:'m.space.child',sender:'@facebookbot:yance-w26.invalid',state_key:'!short',content:{via:['yance-w26.invalid']}}
+   ]);
+  }
+  return base(url,options);
+ };
+ const s=await readNativePeerHints('valid-matrix-token',{fetchImpl});
+ assert.equal(s.accounts.length,1);
+ assert.deepEqual(s.accounts[0].roomHints,[childA,childB]);
+ assert.equal(s.peerOwnershipVerified,false);
+ assert.equal(s.realPeers,null);
+ assert.equal(s.canSend,false);
+});

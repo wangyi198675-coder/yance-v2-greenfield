@@ -15,7 +15,12 @@ export class ProviderAuthDenied extends Error {
 function deny(code,status){throw new ProviderAuthDenied(code,status);}
 function safeString(x){return typeof x==='string'?x.slice(0,180):null;}
 function validMXC(x){return typeof x==='string'&&/^mxc:\/\/[a-zA-Z0-9.:-]+\/[a-zA-Z0-9_-]+$/.test(x)?x:null;}
-function validRoom(x){return typeof x==='string'&&/^![^\s:]{1,220}:[a-zA-Z0-9.-]+$/.test(x)?x:null;}
+// Matrix room IDs may be opaque !<id> without a homeserver suffix (v12+).
+// Accept those only as candidate room hints. W24 still must independently
+// prove a real provider peer before a contact or outbound authority is issued.
+function validRoom(x){return typeof x==='string'&&
+  (/^![A-Za-z0-9._=-]{12,200}$/.test(x)||
+   /^![^\s:]{1,220}:[a-zA-Z0-9.-]+$/.test(x))?x:null;}
 async function jsonRequest(target,token,{method='GET',fetchImpl=fetch}={}){
   const r=await fetchImpl(target,{method,redirect:'error',signal:AbortSignal.timeout(5500),
     headers:{Authorization:`Bearer ${token}`,Accept:'application/json',

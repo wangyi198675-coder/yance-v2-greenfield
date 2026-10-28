@@ -2,7 +2,8 @@
  * W26 channel-scoped 127.0.0.1 only owner API.
  * Public setup/status reveal NO real account info. Matrix access tokens are
  * accepted only for authenticated upstream Provisioning v3 reads/revocation.
- * The official mautrix-manager app, not W26, performs all Facebook login steps.
+ * The installed official BridgeV2 Provisioning V3 performs Facebook login steps;
+ * W56 only exposes its actual step DTOs through a localhost user interface.
  * W47 remains the sole first-party API authority for product UI integration.
  */
 import {createServer} from 'node:http';
@@ -11,12 +12,17 @@ import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {inspectRealBridge} from './bridge-runtime.mjs';
+import {createOfficialMessengerLogin} from './official-messenger-login.mjs';
+import {joinOfficialFacebookInvites} from './official-room-autojoin.mjs';
+import {readOfficialFacebookInbox,readOfficialFacebookMessages,readOfficialFacebookAvatar} from './official-matrix-inbox.mjs';
+import {getProtectedNativeMatrixSession} from './native-matrix-session.mjs';
 import {launchInstalledOfficialManager} from './native-manager-launch.mjs';
 import {readNativeAccountStatus,readNativeLoginFlows,readNativePeerHints,revokeNativeLogin,
   ProviderAuthDenied,NATIVE_AUTH_ACTIONS} from './provisioning-auth.mjs';
 const HOST='127.0.0.1',PORT=29321;
 const BASE='/api/v2/providers/fb-personal';
 const AUTH_ENTRY_HTML=readFileSync(new URL('./auth-entry.html',import.meta.url),'utf8');
+const NATIVE_LOGIN_JS=readFileSync(new URL('./native-login-ui.mjs',import.meta.url),'utf8');
 const jsonHeaders={'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store','x-content-type-options':'nosniff',
   'referrer-policy':'no-referrer',
@@ -31,15 +37,15 @@ function sendAuthPage(res,ticket){
     // "no-referrer" causes a null Origin on privacy-preserving browsers;
     // same-origin still prevents referrer disclosure to external websites.
     'referrer-policy':'same-origin',
-    'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'"});
+    'content-security-policy':"default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'"});
   res.end(AUTH_ENTRY_HTML.replace('__W26_LAUNCH_TICKET__',ticket));
 }
 function sendLaunchResult(res,result){
   const started=result?.launched===true,foreground=result?.foregroundVerified===true;
-  const title=started?'官方mautrix-manager已启动':'官方mautrix-manager启动失败';
-  const detail=foreground?'官方窗口已显示在前台，请自行选择登录。':
-    started?'Windows已启动官方程序，但系统不允许后台进程强制切换前台。请在Windows任务栏点击mautrix-manager，或按Alt+Tab选择该窗口。':
-      '官方管理器启动失败。请通过Windows开始菜单运行mautrix-manager，或返回检查安装状态。';
+  const title=started?'Facebook 网页登录窗口已打开':'Facebook 网页登录助手启动失败';
+  const detail=foreground?'请在已打开的官方管理器中点击 Facebook Messenger，再选择 facebook.com，通过弹出的 Facebook 网页完成本人授权。':
+    started?'网页登录助手已启动，请在任务栏打开 mautrix-manager，点击 Facebook Messenger，然后选择 facebook.com。':
+      '官方网页登录助手没有启动，请返回连接页面重试。';
   res.writeHead(started?200:503,{...jsonHeaders,'content-type':'text/html; charset=utf-8',
     'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"});
   res.end('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>'+title+
@@ -70,6 +76,18 @@ function auth(req){
     throw new ProviderAuthDenied('MATRIX_AUTH_REQUIRED',401);
   return v.slice(7);
 }
+async function boundedLoginJSON(req){
+  if(req.headers['content-type']?.split(';')[0]!=='application/json')
+    throw new ProviderAuthDenied('LOGIN_JSON_REQUIRED',415);
+  let body='',size=0;
+  for await(const chunk of req){size+=chunk.length;
+    if(size>16000)throw new ProviderAuthDenied('LOGIN_INPUT_OVERSIZED',413);
+    body+=chunk.toString('utf8');}
+  try {const parsed=JSON.parse(body);
+    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error();
+    return parsed;
+  }catch{throw new ProviderAuthDenied('INVALID_LOGIN_JSON',422)}
+}
 async function boundedJSON(req) {
   let bytes=0,text='';
   for await(const c of req){
@@ -82,7 +100,8 @@ async function boundedJSON(req) {
 }
 export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
   provider={readNativeAccountStatus,readNativeLoginFlows,readNativePeerHints,revokeNativeLogin},
-  installed=managerInstalled,launcher=launchInstalledOfficialManager}={}){
+  installed=managerInstalled,launcher=launchInstalledOfficialManager,
+  officialLogin=createOfficialMessengerLogin({getSession:getProtectedNativeMatrixSession})}={}){
   const launchTickets=new Map();
   return createServer(async(req,res)=>{
     const h=req.headers.host;
@@ -93,6 +112,25 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
       return send(res,403,{ok:false,error:'CROSS_ORIGIN_ACTION_FORBIDDEN'});
     try{
       const url=new URL(req.url||'/', 'http://127.0.0.1:'+port);
+      // W47's existing authenticated same-origin app API is the public UI
+      // boundary. This 29321 private bridge read is only for local Node fetch.
+      if(req.method==='GET'&&[BASE+'/inbox',BASE+'/inbox/messages',BASE+'/inbox/avatar'].includes(url.pathname)){
+        if(req.headers.origin||req.headers['sec-fetch-site'])
+          return send(res,403,{ok:false,error:'NATIVE_SERVER_READ_ONLY'});
+        if(url.pathname===BASE+'/inbox'&&!url.search)
+          return send(res,200,await readOfficialFacebookInbox());
+        if(url.pathname===BASE+'/inbox/avatar'&&url.searchParams.size===1&&
+           url.searchParams.getAll('room').length===1){
+          const avatar=await readOfficialFacebookAvatar(url.searchParams.get('room'));
+          res.writeHead(200,{'content-type':avatar.mime,'content-length':avatar.data.length,
+            'cache-control':'private, max-age=180', 'x-content-type-options':'nosniff'});
+          return res.end(avatar.data);
+        }
+        if(url.pathname===BASE+'/inbox/messages'&&url.searchParams.size===1&&
+           url.searchParams.getAll('room').length===1)
+          return send(res,200,await readOfficialFacebookMessages(url.searchParams.get('room')));
+        return send(res,422,{ok:false,error:'INVALID_INBOX_SELECTOR'});
+      }
       if(url.search){
         // ChatGPT can append ordinary UTM attribution to user-clicked local
         // links. Strip ONLY harmless tracking parameters on public GET pages.
@@ -110,14 +148,36 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
         return send(res,422,{ok:false,error:'NO_QUERY_INPUT'});
       }
       if(req.method!=='GET'&&!(req.method==='POST'&&
-        [BASE+'/auth/revoke',BASE+'/launch-manager'].includes(url.pathname)))
+        [BASE+'/auth/revoke',BASE+'/launch-manager',BASE+'/native-login/flows',
+          BASE+'/native-login/start',BASE+'/native-login/step'].includes(url.pathname)))
         return send(res,403,{ok:false,error:'NO_UNAPPROVED_PROVIDER_ACTION'});
+      if(req.method==='GET'&&url.pathname===BASE+'/native-login-ui.mjs'){
+        res.writeHead(200,{...jsonHeaders,'content-type':'text/javascript; charset=utf-8'});
+        return res.end(NATIVE_LOGIN_JS);
+      }
+      if(req.method==='POST'&&url.pathname.startsWith(BASE+'/native-login/')){
+        if(req.headers.origin!=='http://'+h||
+          (req.headers['sec-fetch-site']&&req.headers['sec-fetch-site']!=='same-origin'))
+          return send(res,403,{ok:false,error:'LOCAL_USER_GESTURE_REQUIRED'});
+        const ticket=req.headers['x-yance-native-login-ticket'];
+        if(typeof ticket!=='string'||!/^[a-f0-9]{48}$/.test(ticket)||
+          (launchTickets.get(ticket)||0)<=Date.now())
+          return send(res,403,{ok:false,error:'NATIVE_LOGIN_TICKET_INVALID'});
+        const body=await boundedLoginJSON(req);
+        if(url.pathname===BASE+'/native-login/flows')
+          return send(res,200,{ok:true,...await officialLogin.flows()});
+        if(url.pathname===BASE+'/native-login/start')
+          return send(res,200,{ok:true,...await officialLogin.start(body.flowId)});
+        if(url.pathname===BASE+'/native-login/step')
+          return send(res,200,{ok:true,...await officialLogin.advance(body.handle,body.fields)});
+        return send(res,404,{ok:false,error:'UNKNOWN_NATIVE_LOGIN_OPERATION'});
+      }
       if(req.method==='GET'&&url.pathname===BASE+'/connect'){
         const now=Date.now();
         for(const [ticket,expiry] of launchTickets)if(expiry<=now)launchTickets.delete(ticket);
         if(launchTickets.size>60)launchTickets.clear();
         const ticket=randomBytes(24).toString('hex');
-        launchTickets.set(ticket,now+300000);
+        launchTickets.set(ticket,now+1800000);
         return sendAuthPage(res,ticket);
       }
       if(req.method==='POST'&&url.pathname===BASE+'/launch-manager'){
@@ -137,30 +197,37 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
           return sendLaunchResult(res,result);
         }catch{return sendLaunchResult(res,{launched:false});}
       }
-      if(req.method==='GET'&&url.pathname===BASE+'/status')
-        return send(res,200,{ok:true,...await probe()});
+      if(req.method==='GET'&&url.pathname===BASE+'/status'){
+        // A real BridgeV2 login is NOT a W24 application-account binding.
+        // Read only a boolean from a trusted, DPAPI-protected Matrix session.
+        // Never expose the user ID, login ID, token, or provider profile.
+        let nativeProviderSessionConnected=false;
+        try{
+          const session=await getProtectedNativeMatrixSession();
+          const actual=await provider.readNativeAccountStatus(session.token);
+          nativeProviderSessionConnected=actual?.source===
+            'REAL_BRIDGE_V3_PROVISIONING_AUTHENTICATED'&&
+            actual.connectedCount>0&&
+            actual.realAccountState==='UPSTREAM_CONNECTED_W24_BINDING_PENDING';
+        }catch{}
+        return send(res,200,{ok:true,...await probe(),
+          nativeProviderSessionConnected,canSend:false});
+      }
       if(req.method==='GET'&&(url.pathname===BASE+'/setup' ||
          url.pathname===BASE+'/authorize')){
-        const state=await probe(),hasManager=installed();
+        const state=await probe();
+        let upstreamFlows=[];
+        try{upstreamFlows=(await officialLogin.flows()).flows||[]}catch{}
+        const ready=state.bridgeBotProfileVerified===true&&upstreamFlows.length>0;
         return send(res,200,{channel:'FB_PERSONAL',origin:'OFFICIAL_MAUTRIX_META',
-          currentBridgeState:state.bridgeState,
-          authorizedSocialAccount:'MATRIX_AUTH_REQUIRED',realAccountState:'WAITING_USER_AUTH',
+          currentBridgeState:state.bridgeState,realAccountState:'WAITING_USER_AUTH',
           sdkInstalled:state.binaryIntegrity==='OFFICIAL_SHA_VERIFIED',
           officialBridgeRunning:state.bridgeBotProfileVerified===true,
-          officialManagerInstalled:hasManager,
-          action:hasManager&&state.bridgeBotProfileVerified?'OPEN_NATIVE_MANAGER':
-             'INSTALL_OR_INITIALIZE_OFFICIAL_MATRIX_MANAGER',
-          nextUserClick:hasManager?NATIVE_AUTH_ACTIONS.managerSchemeURL:null,
+          action:ready?'OPEN_NATIVE_MESSENGER_LOGIN':'INTERNAL_SETUP_PENDING',
+          nativeLoginStepReady:ready,
           clickableAuthorizationURL:'http://127.0.0.1:'+port+BASE+'/connect',
-          nativeManager:NATIVE_AUTH_ACTIONS,
-          serverSetupPhase:'MATRIX_OPERATOR_SESSION_REQUIRED_FOR_MANAGER_LOGIN',
-          officialLoginFlows:['facebook','messenger','messenger-lite','messenger-lite-android'],
-          officialSetup:'https://docs.mau.fi/bridges/go/setup.html?bridge=meta',
-          officialAuthentication:'https://docs.mau.fi/bridges/go/meta/authentication.html',
-          nextUserAction:['Open installed official mautrix-manager using the nextUserClick protocol link.',
-            'Sign in to the local Matrix homeserver as the user who owns this install.',
-            'Add the existing running bridge URL from nativeManager.bridgeURL and select the real official Messenger login flow.',
-            'Only after user authorization, W24/W44 bind the verified Facebook account and peers.'],
+          officialLoginFlows:upstreamFlows.map(f=>f.id),
+          nextUserAction:ready?'OPEN_MESSENGER_LOGIN':'WAIT_FOR_INTERNAL_SERVICE',
           canSend:false,autoReply:false});
       }
       if(req.method==='GET'&&url.pathname===BASE+'/account/status'){
@@ -186,7 +253,7 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
       }
       if(req.method==='GET'&&url.pathname==='/health')return send(res,200,{
         ok:true,channel:'FB_PERSONAL',dataSource:'REAL_WSL_OFFICIAL_UPSTREAM',
-        providerLoginManagedBy:'MAUTRIX_MANAGER',bridge:await probe()});
+        providerLoginManagedBy:'MAUTRIX_BRIDGEV2_PROVISIONING_V3',bridge:await probe()});
       return send(res,404,{ok:false,error:'NOT_FOUND'});
     }catch(e){
       if(e instanceof ProviderAuthDenied)return send(res,e.status,{ok:false,error:e.code,
@@ -199,4 +266,16 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
   const s=createBridgeStatusServer();
   s.listen(PORT,HOST,()=>process.stdout.write('W26 genuine bridge owner API http://'+HOST+':'+PORT+'\n'));
+  // Recover only provider-bot-verified Matrix room invitations. This is a
+  // local Matrix membership action, never an outbound Facebook message.
+  let checking=false;
+  const checkInvites=async()=>{
+    if(checking)return;
+    checking=true;
+    try {await joinOfficialFacebookInvites()}catch { /* no implicit login retries */ }
+    finally {checking=false}
+  };
+  const timer=setInterval(checkInvites,15000);
+  timer.unref();
+  void checkInvites();
 }
