@@ -4,6 +4,7 @@ import {currentFirstPartyWebSession,renewFirstPartyWebSession} from './local-fir
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const session=ref(null),models=ref([]),selected=ref(''),message=ref('');
 const busy=ref(false),connecting=ref(false),testText=ref(''),response=ref('');
+const manageOpen=ref(false),diagnosticsOpen=ref(false);
 let disposed=false,poll=null,csrf='';
 const request=(url,options={})=>(props.fetchImpl||globalThis.fetch)(url,{
  credentials:'same-origin',cache:'no-store',redirect:'error',...options});
@@ -96,12 +97,13 @@ onBeforeUnmount(()=>{disposed=true;if(poll)clearInterval(poll)});
 </script>
 <template>
  <section class="bc-siwc" data-test="chatgpt-official-sdk">
-  <header><strong>ChatGPT 官方账号连接</strong><small>OpenAI @siwc/local · 独立于 API Key</small></header>
+  <header><strong>ChatGPT 官方账号</strong></header>
   <div class="bc-siwc-state" data-test="chatgpt-official-state">
    <span>{{session?.status==='connected'?(session.sharing?'已连接 · 已获模型使用授权':'已登录 · 模型使用尚未授权'):connecting?'正在等待登录':'未连接'}}</span>
    <small v-if="session?.identity?.email">{{session.identity.email}}</small>
   </div>
-  <div class="bc-siwc-actions">
+  <button v-if="session?.status==='connected'" type="button" data-test="chatgpt-manage-toggle" @click="manageOpen=!manageOpen;diagnosticsOpen=false">{{manageOpen?'收起':'管理'}}</button>
+   <div v-if="session?.status!=='connected'||manageOpen" class="bc-siwc-actions">
    <button type="button" data-test="chatgpt-official-connect" :disabled="busy||connecting"
     @click="connect">{{connecting?'请完成浏览器授权':session?.status==='connected'?'重新连接 ChatGPT':'使用 ChatGPT 登录'}}</button>
    <button v-if="session?.status==='connected'" type="button" data-test="chatgpt-official-disconnect"
@@ -109,7 +111,8 @@ onBeforeUnmount(()=>{disposed=true;if(poll)clearInterval(poll)});
    <button type="button" :disabled="busy" data-test="chatgpt-official-refresh" @click="refresh">检查状态</button>
   </div>
   <p v-if="message" role="status" data-test="chatgpt-official-message">{{message}}</p>
-  <div v-if="session?.status==='connected'&&session.sharing" class="bc-siwc-test">
+  <button v-if="manageOpen&&session?.status==='connected'&&session.sharing" type="button" data-test="chatgpt-optional-diagnostics" @click="diagnosticsOpen=!diagnosticsOpen">{{diagnosticsOpen?'收起高级检测':'高级检测'}}</button>
+   <div v-show="manageOpen&&diagnosticsOpen&&session?.status==='connected'&&session.sharing" class="bc-siwc-test">
    <label>测试官方模型连接
     <select v-model="selected" data-test="chatgpt-official-model">
      <option v-for="m in models" :key="m.modelId" :value="m.modelId">{{m.name}}</option>
@@ -125,9 +128,9 @@ onBeforeUnmount(()=>{disposed=true;if(poll)clearInterval(poll)});
  </section>
 </template>
 <style>
-.bc-siwc{display:grid;gap:12px;border:1px solid var(--border);border-radius:14px;padding:18px;background:var(--bg2);min-width:0}
+.bc-siwc{display:grid;gap:9px;border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--bg2);min-width:0}
 .bc-siwc>header{display:flex;gap:7px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
-.bc-siwc>header strong{font-size:17px}
+.bc-siwc>header strong{font-size:14px}
 .bc-siwc>header small,.bc-siwc-state small{color:var(--muted);font-size:12px}
 .bc-siwc-state{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px}
 .bc-siwc-actions{display:flex;gap:9px;flex-wrap:wrap}

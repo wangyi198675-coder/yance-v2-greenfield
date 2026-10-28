@@ -19,6 +19,7 @@ const PROVIDERS=Object.freeze({
  LLAMACPP_LOCAL_QWEN3_8B_FREE:'本地 Qwen3',CHATGPT_PLAN_SIWC:'ChatGPT 官方账号'
 });
 const tab=ref('overview'),busy=ref(false),saving=ref(false),status=ref('idle');
+const vclawOpen=ref(false),localDetails=ref(false);
 const message=ref(''),error=ref(''),lastCheck=ref('');
 const modelConfig=ref(null),cloudKeys=ref(null),keysVerified=ref(false);
 const selected=ref(''),costApproved=ref(false),stale=ref(true);
@@ -36,7 +37,7 @@ const keyProviders=computed(()=>keysVerified.value&&Array.isArray(cloudKeys.valu
 const keyStatus=p=>{
  if(!keysVerified.value)return cloudKeys.value?'上次状态，未核验':'未取得状态';
  const x=keyProviders.value.find(x=>x.provider===p);
- return !x?'未确认':x.configured===true?'已保存 · rev '+x.revision:x.revoked===true?'已撤销':'未配置';
+ return !x?'未确认':x.configured===true?'已连接':x.revoked===true?'已撤销':'未配置';
 };
 const providerName=p=>PROVIDERS[p]||'未知来源';
 const friendly=e=>{
@@ -75,7 +76,7 @@ async function refresh(){
  status.value=errs.length?'partial':'ready';
  error.value=[...new Set(errs)].join('；');
  lastCheck.value=new Date().toLocaleTimeString();
- message.value=errs.length?'部分原生状态不可用；旧显示不会当作现时有效状态':'原生状态已重新读取';
+ message.value=errs.length?'连接状态未确认':' ';
  busy.value=false;
 }
 async function saveBrainModel(){
@@ -105,16 +106,16 @@ onMounted(()=>{if(props.active)void refresh()});
 <template>
  <section class="model-center" data-test="ai-model-center">
   <header class="mc-top">
-   <div><h2>AI 模型中心</h2><p>一个入口管理模型来源、私人会话模型与真实连接状态。</p></div>
+   <div><h2>AI 模型中心</h2></div>
    <button type="button" data-test="model-center-refresh" :disabled="busy" @click="refresh">刷新状态</button>
   </header>
   <div class="mc-cards">
    <article><span>闺蜜大脑当前模型</span><strong>{{currentModel||'尚未确认'}}</strong><small>{{providerName(currentProvider)}}</small></article>
    <article><span>云端密钥</span><strong>{{keyStatus('OPENROUTER_USER_API')}}</strong><small>OpenAI：{{keyStatus('OPENAI_USER_API')}}</small></article>
-   <article><span>本地 Qwen3</span><strong>{{isAuthoritative?(localModels.length?'候选可用':'未确认在线'):'未验证'}}</strong><small>只有原生资格回读可确认连接</small></article>
-   <article><span>V-Claw 第三方 API</span><strong>协议候选 · 未授权</strong><small>发现 /v1/models 鉴权；未验证真实推理</small></article>
+   <article><span>本地 Qwen3</span><strong>{{isAuthoritative&&localModels.length?'已连接':'未连接'}}</strong><small>使用 W47 原生模型资格检测</small></article>
+   <article><span>V-Claw</span><strong>未连接</strong><small>待完成原生密钥接入</small></article>
   </div>
-  <p class="mc-status" data-test="model-center-status" role="status">
+  <p v-if="busy||error||status==='partial'" class="mc-status" data-test="model-center-status" role="status">
    <b>{{busy?'正在核对':stale?'状态未核验':'原生状态已确认'}}</b> {{message}}
    <span v-if="error">{{error}}</span><small v-if="lastCheck">检查于 {{lastCheck}}</small>
   </p>
@@ -125,16 +126,16 @@ onMounted(()=>{if(props.active)void refresh()});
   </nav>
   <section v-show="tab==='overview'" class="mc-routes">
    <h3>项目功能与模型状态</h3>
-   <p>各项功能继续使用原生执行 Owner；不另建七套模型路由器。</p>
+
    <div class="mc-route" v-for="f in FUNCTIONS" :key="f[0]">
-    <div><strong>{{f[1]}}</strong><small>{{f[2]}}</small></div>
+    <div><strong>{{f[1]}}</strong></div>
     <span>{{f[0]==='PRIVATE_BRAIN'?currentModel||'未确认':'当前未提供独立模型选择'}}</span>
     <button type="button" :disabled="f[0]!=='PRIVATE_BRAIN'" @click="tab='routes'">{{f[0]==='PRIVATE_BRAIN'?'选择模型':'待原生接线'}}</button>
    </div>
   </section>
   <section v-show="tab==='routes'" class="mc-selection" data-test="model-routing-editor">
    <h3>闺蜜大脑 · 原生模型选择</h3>
-   <p>当前由 W47/W43 和现有 Agno 负责真正执行，不额外保存自建 JSON 模型路由。</p>
+
    <label>模型来源与型号
     <select v-model="selected" data-test="route-model-select" :disabled="busy||saving||stale||!isAuthoritative||!csrfOk">
      <option value="">请选择原生已授权模型</option>
@@ -144,7 +145,7 @@ onMounted(()=>{if(props.active)void refresh()});
     </select>
    </label>
    <p class="mc-note" v-if="!isAuthoritative">当前没有取得原生模型配置权威回读，不能提交变更。</p>
-   <p class="mc-note">翻译、回复建议、专家及自动托管的专属模型切换需要各自原生执行接口；不把偏好选项冒充真实执行。</p>
+
    <label v-if="selectedModel&&['OPENROUTER_USER_API','OPENAI_USER_API'].includes(selectedModel.provider)" class="mc-check">
     <input type="checkbox" v-model="costApproved" data-test="route-cost-confirm"/>我确认该云端模型可能产生 API 费用；此操作只设置模型，不会发出推理请求。
    </label>
@@ -153,28 +154,30 @@ onMounted(()=>{if(props.active)void refresh()});
    </button>
   </section>
   <section v-show="tab==='providers'" class="mc-providers" data-test="model-providers">
-   <article><h3>ChatGPT 官方账号</h3><p>账号连接与 API 密钥独立。</p>
-    <BCOfficialChatGPTConnect :fetch-impl="fetchImpl"/></article>
-   <article><h3>云端 API 密钥</h3><p>沿用 W55 本机安全保管与原生同源接口。</p>
-    <BCNativeCloudKeySettings v-if="csrfOk" :web-csrf="webCsrf" @changed="refresh"/>
+   <article><BCOfficialChatGPTConnect :fetch-impl="fetchImpl"/></article>
+   <article><BCNativeCloudKeySettings v-if="csrfOk" :web-csrf="webCsrf" @changed="refresh"/>
     <p v-else>私人会话未授权，不能保存密钥。请先进入闺蜜大脑建立会话。</p>
    </article>
-   <article><h3>本地模型</h3><p v-if="!isAuthoritative">尚未验证原生 Qwen3 服务状态</p>
-    <p v-else-if="!localModels.length">原生模型目录未确认可用 Qwen3</p>
-    <p v-for="m in localModels" :key="m.modelId">{{m.modelId}}</p>
-    <button type="button" @click="refresh">重新检测</button></article>
-   <article><h3>V-Claw 第三方 API</h3>
-    <p>候选地址：https://token.v-claw.org/v1</p>
-    <p data-test="vclaw-pending">/v1/models 未携带密钥返回 401。真实 Key 鉴权、模型能力、计费与工具调用尚未验收；此处不会接收或保存密钥。</p>
-    <a href="https://token.v-claw.org/keys" target="_blank" rel="noopener noreferrer">打开密钥管理</a></article>
+   <article><h3>本地 Qwen3</h3>
+    <strong>{{isAuthoritative&&localModels.length?'已连接':'未连接'}}</strong>
+    <p v-if="localModels.length" v-for="m in localModels" :key="m.modelId">{{m.modelId}}</p>
+    <div class="mc-source-actions"><button type="button" data-test="local-model-recheck" @click="refresh">重新检测</button><button type="button" data-test="local-model-details" @click="localDetails=!localDetails">{{localDetails?'收起':'原因'}}</button></div>
+    <p v-if="localDetails" data-test="local-model-diagnostics">言策当前使用 W47 的 llama.cpp 连接（127.0.0.1:11605），不是 Ollama 默认端口。原生服务未就绪时不能假报连接。</p></article>
+   <article><h3>V-Claw</h3><strong>未连接</strong>
+    <button type="button" data-test="vclaw-manage-inline" @click="vclawOpen=!vclawOpen">{{vclawOpen?'收起':'在言策内配置'}}</button>
+    <div v-if="vclawOpen" data-test="vclaw-pending"><p>当前密钥保管仅支持 OpenRouter 和 OpenAI；V-Claw 还没有受保护的密钥入口。</p><small>候选接口：token.v-claw.org/v1。请勿将密钥填入其他供应商。</small></div></article>
   </section>
-  <p class="mc-foot">密钥已保存 ≠ 模型在线；模型已选择 ≠ 第三方推理已验证。所有真人发信继续由原发送授权独立控制。</p>
+
  </section>
 </template>
 <style scoped>
 .model-center{color:inherit;display:grid;gap:15px;min-width:0;font-size:13px;--mc-line:color-mix(in srgb,currentColor 14%,transparent);--mc-panel:color-mix(in srgb,currentColor 6%,transparent)}
 .mc-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.mc-top h2{margin:0 0 6px;font-size:22px}.mc-top p,.mc-foot,.mc-selection p,.mc-routes>p{opacity:.77;margin:0}.mc-top button,.mc-tabs button,.mc-route button,.mc-providers button,.mc-primary{font:inherit;cursor:pointer;border-radius:8px;padding:9px 12px;border:1px solid var(--mc-line);background:var(--mc-panel);color:inherit}.mc-top button:disabled,.mc-route button:disabled,.mc-primary:disabled{opacity:.5;cursor:not-allowed}
 .mc-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.mc-cards article{background:var(--mc-panel);border:1px solid var(--mc-line);border-radius:12px;padding:13px;display:grid;gap:8px;min-height:105px;align-content:start}.mc-cards span,.mc-cards small{font-size:12px;opacity:.74}.mc-cards strong{font-size:15px;overflow-wrap:anywhere}.mc-status{display:flex;flex-wrap:wrap;gap:8px;padding:11px;border:1px solid var(--mc-line);border-radius:9px;margin:0;background:var(--mc-panel)}.mc-status span{color:#fbbf73}.mc-status small{margin-left:auto;opacity:.7}
-.mc-tabs{display:flex;gap:6px;border-bottom:1px solid var(--mc-line);padding-bottom:9px}.mc-tabs .active{background:#2563c8;color:white;border-color:#6299ee}.mc-routes,.mc-selection{display:grid;gap:12px}.mc-routes h3,.mc-selection h3,.mc-providers h3{margin:0;font-size:16px}.mc-route{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(130px,1fr) auto;gap:12px;align-items:center;background:var(--mc-panel);padding:12px;border-radius:9px;border:1px solid var(--mc-line)}.mc-route>div{display:grid;gap:4px}.mc-route small{opacity:.65}.mc-route>span{opacity:.85}.mc-selection,.mc-providers>article{border:1px solid var(--mc-line);background:var(--mc-panel);padding:18px;border-radius:12px}.mc-selection label{display:grid;gap:8px}.mc-selection select{min-width:0;width:100%;padding:11px;border:1px solid var(--mc-line);background:var(--mc-panel);color:inherit;border-radius:8px}.mc-selection .mc-check{display:flex;align-items:center;gap:8px}.mc-primary{background:#2469d8;color:white;width:max-content}.mc-note{padding:10px;border-radius:8px;border:1px solid var(--mc-line)}.mc-providers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.mc-providers>article{display:grid;gap:13px;align-content:start;min-width:0}.mc-providers>article p{margin:0;overflow-wrap:anywhere}.mc-foot{font-size:12px;padding-bottom:6px}
+.mc-tabs{display:flex;gap:6px;border-bottom:1px solid var(--mc-line);padding-bottom:9px}.mc-tabs .active{background:#2563c8;color:white;border-color:#6299ee}.mc-routes,.mc-selection{display:grid;gap:12px}.mc-routes h3,.mc-selection h3,.mc-providers h3{margin:0;font-size:16px}.mc-route{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(130px,1fr) auto;gap:12px;align-items:center;background:var(--mc-panel);padding:12px;border-radius:9px;border:1px solid var(--mc-line)}.mc-route>div{display:grid;gap:4px}.mc-route small{opacity:.65}.mc-route>span{opacity:.85}.mc-selection,.mc-providers>article{border:1px solid var(--mc-line);background:var(--mc-panel);padding:18px;border-radius:12px}.mc-selection label{display:grid;gap:8px}.mc-selection select{min-width:0;width:100%;padding:11px;border:1px solid var(--mc-line);background:var(--mc-panel);color:inherit;border-radius:8px}.mc-selection .mc-check{display:flex;align-items:center;gap:8px}.mc-primary{background:#2469d8;color:white;width:max-content}.mc-note{padding:10px;border-radius:8px;border:1px solid var(--mc-line)}.mc-providers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.mc-providers>article{display:grid;gap:13px;align-content:start;min-width:0}.mc-providers>article p{margin:0;overflow-wrap:anywhere}.mc-source-actions{display:flex;gap:8px;flex-wrap:wrap}.mc-providers>article strong{font-size:14px}.mc-providers>article small{opacity:.7}.mc-foot{font-size:12px;padding-bottom:6px}
 @media(max-width:950px){.mc-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.mc-providers{grid-template-columns:1fr}}@media(max-width:620px){.mc-cards{grid-template-columns:1fr}.mc-route{grid-template-columns:1fr 1fr}.mc-route button{grid-column:2}.mc-top{flex-wrap:wrap}.mc-tabs{overflow:auto}}
+.model-center :deep(.bc-siwc),.model-center :deep(.cloud-key-panel){border:0;padding:0;background:transparent;box-shadow:none}
+.model-center :deep(.bc-siwc-test){border-top:1px solid var(--mc-line);padding-top:10px}
+.model-center :deep(.cloud-key-panel>strong){font-size:14px}
+.model-center .mc-providers>article{gap:10px}
 </style>

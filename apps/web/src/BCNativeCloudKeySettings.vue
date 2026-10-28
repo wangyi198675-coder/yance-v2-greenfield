@@ -10,7 +10,7 @@ const path='/api/v2/private-brain/cloud-keys';
 const vendors=[{id:'OPENROUTER_USER_API',label:'OpenRouter'},
  {id:'OPENAI_USER_API',label:'OpenAI API'}] as const;
 const provider=ref<Provider>('OPENROUTER_USER_API');
-const key=ref(''),current=ref<Status|null>(null);
+const key=ref(''),current=ref<Status|null>(null),manageOpen=ref(false);
 const ready=ref(!!native),busy=ref(false),message=ref(''),stale=ref(false);
 const webCsrfOk=computed(()=>typeof props.webCsrf==='string'&&/^[a-f0-9]{64}$/.test(props.webCsrf));
 const webActive=computed(()=>typeof native!=='function'&&ready.value&&webCsrfOk.value);
@@ -75,7 +75,7 @@ async function refresh(){
  const p=provider.value;
  try{
   const status=await readStatus(p);
-  if(provider.value===p){current.value=status;ready.value=true;stale.value=false;message.value='状态已从服务端确认 · 版本 '+status.revision}
+  if(provider.value===p){current.value=status;ready.value=true;stale.value=false;message.value=''}
  }catch(e){stale.value=true;ready.value=typeof native==='function';message.value='刷新失败；以下仅为上次确认的状态，不能表示当前仍有效。'+userError(e)}
  finally{busy.value=false}
 }
@@ -98,7 +98,7 @@ async function save(){
   const verified=await readStatus(p);
   if(!verified.configured||verified.revoked||
     verified.revision<=(previous?.revision||0))throw Error('STATUS_NOT_CONFIRMED');
-  if(provider.value===p){current.value=verified;message.value='服务端已确认密钥保存状态'}
+  if(provider.value===p){current.value=verified;message.value='已连接';manageOpen.value=false}
   emit('changed');
  }catch(e){
   current.value=previous;stale.value=true;ready.value=typeof native==='function';
@@ -126,29 +126,29 @@ async function revoke(){
  }catch(e){current.value=previous;stale.value=true;ready.value=typeof native==='function';message.value='撤销状态未取得可靠回读；请重新验证。'+userError(e)}
  finally{busy.value=false}
 }
-function onProviderChange(){key.value='';current.value=null;stale.value=false;void refresh()}
+function onProviderChange(){key.value='';current.value=null;stale.value=false;manageOpen.value=false;void refresh()}
 onMounted(refresh);
 watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
 </script>
 <template>
  <section class="cloud-key-panel" data-test="cloud-key-native" aria-label="云端 AI Key 设置">
-  <strong>云端 AI 密钥</strong>
-  <p>可以使用自己的 OpenRouter 或 OpenAI API Key。本地 Qwen3 不受云端设置影响。</p>
+  <strong>云端 API 密钥</strong>
   <label>来源
    <select v-model="provider" data-test="cloud-provider" :disabled="busy" @change="onProviderChange">
     <option v-for="p in vendors" :key="p.id" :value="p.id">{{p.label}}</option>
    </select>
   </label>
   <p role="status" data-test="cloud-redacted-status">
-    {{stale?'上次已确认（当前状态未核验）':current?.configured?'已保存':current?.revoked?'已撤销':current?'未配置':'待读取'}}
+    {{stale?'上次已确认（当前状态未核验）':current?.configured?'已连接':current?.revoked?'已撤销':current?'未配置':'待读取'}}
     <span v-if="current"> · 版本 {{current.revision}}</span>
    </p>
    <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">
    当前会话或服务端密钥状态未确认，暂不能提交新 Key。刷新失败不会删除已保存的密钥。
   </p>
-  <button v-if="!canConfigure" type="button" data-test="cloud-refresh-pending" :disabled="busy" @click="refresh">重新检查状态</button>
+  <button v-if="current?.configured&&!stale" type="button" data-test="cloud-key-manage-toggle" @click="manageOpen=!manageOpen">{{manageOpen?'收起':'管理'}}</button>
+   <button v-if="!canConfigure" type="button" data-test="cloud-refresh-pending" :disabled="busy" @click="refresh">重新检查状态</button>
    <template v-else>
-   <form @submit.prevent="save">
+   <form v-if="!current?.configured||manageOpen" @submit.prevent="save">
     <label>API Key
      <input v-model="key" type="password" autocomplete="off" autocapitalize="off"
       spellcheck="false" data-lpignore="true" placeholder="输入自己的 API Key"
@@ -163,12 +163,12 @@ watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
     <button type="button" data-test="cloud-refresh" :disabled="busy" @click="refresh">刷新状态</button>
    </form>
   </template>
-  <p>Key 不会回填到输入框。密钥设置不自动启动收费推理；首次选择收费模型或主动切换收费来源时确认一次，之后同一已授权模型正常连续聊天。</p>
+
   <p v-if="message" role="status" data-test="cloud-action-result">{{message}}</p>
  </section>
 </template>
 <style scoped>
-.cloud-key-panel{display:grid;gap:10px;border:1px solid var(--w46-edge,#777);padding:14px;border-radius:10px;min-width:0}
+.cloud-key-panel{display:grid;gap:8px;border:1px solid var(--w46-edge,#777);padding:12px;border-radius:10px;min-width:0}
 .cloud-key-panel form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
 .cloud-key-panel label{display:grid;gap:5px;min-width:0}
 .cloud-key-panel input,.cloud-key-panel select{border:1px solid var(--w46-edge,#777);border-radius:6px;padding:8px;background:transparent;color:inherit;max-width:330px;min-width:0;width:100%;box-sizing:border-box}
