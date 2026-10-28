@@ -7,7 +7,7 @@ import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModel
   verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody} from './private-brain-ui-contract.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
-const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
+const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false),historyBox=ref(null);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=ref(false),text=ref('');
 const chosen=ref(''),requestInFlight=ref(false);
 const modelCostApproved=ref(false),brainExpertOpen=ref(false),brainRoot=ref(null);
@@ -318,6 +318,8 @@ async function send(){
    m.provider===catalog.value.selectedProvider&&m.available&&m.configured);
  if(!model)return; // Cloud fee consent was verified once at model selection by W47.
  const id=++revision;requestInFlight.value=true;notice.value='';
+ await nextTick();
+ if(historyBox.value)historyBox.value.scrollTop=historyBox.value.scrollHeight;
  try{
   ensureCurrent();
   const requestId='req_'+Array.from(crypto.getRandomValues(new Uint8Array(18)),b=>b.toString(16).padStart(2,'0')).join('');
@@ -400,7 +402,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
    <p class="bc-brain-model-footer-note" data-test="brain-native-key-hold">密钥仅在本机受保护的服务端保存。模型未配置时不会调用付费 API。</p>
   </section>
  </div>
-  <div class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
+  <div ref="historyBox" class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
    <div v-if="!messages.length" class="bc-brain-empty-state" data-test="brain-empty-state">
     <div class="bc-brain-empty-symbol" aria-hidden="true">✦</div>
     <h2>{{loadState==='ready'?'有什么想聊的？':'开始和闺蜜大脑聊天'}}</h2>
@@ -411,6 +413,10 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
     <strong>{{m.role==='user'?'你':m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
     <p>{{m.content}}</p>
    </article>
+   <div v-if="requestInFlight" class="bc-brain-pending" role="status" aria-live="polite" data-test="brain-generating">
+    <span class="bc-brain-pending-dot" aria-hidden="true"></span>
+    <span>ChatGPT 正在生成回复。完成后会保存到原 Agno 对话历史，不会发送给联系人。</span>
+   </div>
   </div>  <div v-if="brainExpertOpen" class="bc-brain-context-menu" data-test="brain-expert-popup" id="w46-brain-expert-menu" role="menu" aria-label="闺蜜大脑专家选择">
     <div class="bc-brain-popup-head"><strong>选择专家</strong><button type="button" data-test="brain-expert-close" @click="toggleBrainExpert">关闭</button></div>
     <p v-if="expertsState==='loading'">正在读取W47原生专家目录…</p>
@@ -451,7 +457,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
 
     </div>
     <Button type="submit" data-test="brain-send"
-     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送 ↗'}}</Button>
+     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'生成中…':'发送 ↗'}}</Button>
    </div>
   </form>
 
@@ -572,7 +578,45 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
  .bc-private-history article{max-width:92%!important}
  .bc-private-brain .bc-private-compose{width:calc(100% - 18px)}
 }
-@media(prefers-reduced-motion:reduce){.bc-private-compose,.bc-private-history article{box-shadow:none}}
+/* Make the conversation readable without reviving empty left/right sidebars.
+   Use one centered message lane inside the full-width main workspace. */
+.bc-private-brain .bc-private-history{
+ padding-left:max(16px,calc((100% - 940px)/2))!important;
+ padding-right:max(16px,calc((100% - 940px)/2))!important;
+}
+.bc-private-history article{
+ max-width:min(82%,740px)!important;
+ margin-top:4px;margin-bottom:8px;
+ font-size:13px;line-height:1.65;
+ padding:11px 15px;
+}
+.bc-private-history article p{font-size:13px;line-height:1.65;margin-top:4px}
+.bc-private-history article strong{font-size:11px}
+.bc-private-brain .bc-private-compose{max-width:940px!important}
+.bc-brain-pending{
+ display:flex;align-items:center;gap:10px;
+ max-width:min(82%,740px);margin:9px 0 16px;
+ border:1px solid var(--border);background:var(--surface);
+ padding:13px 16px;border-radius:14px;
+ color:var(--muted);font-size:12px;line-height:1.6;
+}
+.bc-brain-pending-dot{
+ display:block;flex:0 0 9px;width:9px;height:9px;
+ border-radius:50%;background:var(--accent);opacity:.85;
+ animation:brain-pending-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes brain-pending-pulse{to{opacity:.28;transform:scale(.72)}}
+@media(max-width:760px){
+ .bc-private-brain .bc-private-history{
+  padding-left:12px!important;padding-right:12px!important
+ }
+ .bc-private-history article{max-width:93%!important;font-size:13px}
+ .bc-brain-pending{max-width:93%}
+}
+@media(prefers-reduced-motion:reduce){
+ .bc-private-compose,.bc-private-history article{box-shadow:none}
+ .bc-brain-pending-dot{animation:none}
+}
 /* Input-adjacent R4 popovers retain original PRIVATE Agno model config and cost safety. */
 .bc-brain-context-menu{box-sizing:border-box;position:absolute;left:max(10px,calc((100% - 844px)/2 + 12px));bottom:103px;z-index:35;width:min(320px,calc(100vw - 24px));max-height:min(350px,65vh);overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised);color:var(--ink)}
 .bc-brain-popup-head{display:flex;justify-content:space-between;align-items:center}
