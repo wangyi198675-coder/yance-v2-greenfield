@@ -15,6 +15,8 @@ const unreadAuthoritative=computed(()=>contacts.value.some(c=>c.unreadAuthorized
 const api=computed(()=>props.fetchImpl||globalThis.fetch);
 const state=ref('checking'),error=ref(''),contacts=ref([]),accounts=ref(0),chosen=ref(null);
 const timeline=ref([]),timelineState=ref('none'),timelineError=ref('');
+const incomingNotice=ref('');
+let refreshTimer=null,pollBusy=false;
 const search=ref(''),channel=ref('ALL'),account=ref('ALL');
 let currentRevision=0,sourceRevision=0,mounted=true;
 const selected=computed(()=>contacts.value.find(c=>c.contactRef===chosen.value?.contactRef)||null);
@@ -76,7 +78,7 @@ async function chooseContact(contact){
  if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
- if(!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
+ if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
   const result=await readLiveTimeline({fetchImpl:api.value,contact});
   if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
@@ -100,8 +102,39 @@ const lastNativeMessage=computed(()=>{
   delivery:'NOT_REQUESTED',canSend:false,suggestions:[]
  }:null;
 });
-onMounted(()=>{window.addEventListener('keydown',onKeyDown);void refresh()});
-onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=false;currentRevision++;sourceRevision++;contacts.value=[];timeline.value=[]});
+async function pollVerifiedMessages(){
+ if(pollBusy||state.value!=='ready'||!contacts.value.some(c=>c.readOnly))return;
+ pollBusy=true;
+ try{
+  const next=await readLiveContacts({fetchImpl:api.value});
+  if(!mounted||!next.contacts.some(c=>c.readOnly))return;
+  const old=new Map(contacts.value.map(c=>[c.contactRef,c.lastMessageTimestamp||0]));
+  const updates=next.contacts.filter(c=>c.readOnly&&c.lastMessageTimestamp&&
+    old.has(c.contactRef)&&c.lastMessageTimestamp>old.get(c.contactRef));
+  if(updates.length){
+   incomingNotice.value='Facebook Messenger 收到新消息';
+   if(document.hidden&&globalThis.Notification?.permission==='granted')
+    new Notification('Facebook Messenger 新消息',{body:'言策已同步新的入站消息'});
+  }
+  contacts.value=next.contacts;
+  if(chosen.value){
+   const same=next.contacts.find(c=>c.contactRef===chosen.value.contactRef);
+   if(same){chosen.value=same;
+    if(updates.some(c=>c.contactRef===same.contactRef)){
+     const latest=await readLiveTimeline({fetchImpl:api.value,contact:same});
+     timeline.value=latest.messages;timelineState.value='ready';
+    }
+   }
+  }
+ }catch{/* Preserve current real timeline when a poll fails. */}
+ finally{pollBusy=false}
+}
+onMounted(()=>{window.addEventListener('keydown',onKeyDown);void refresh();
+ refreshTimer=setInterval(()=>void pollVerifiedMessages(),8000);
+});
+onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
+ if(refreshTimer!==null)clearInterval(refreshTimer);
+ mounted=false;currentRevision++;sourceRevision++;contacts.value=[];timeline.value=[]});
 </script>
 <template>
  <section class="bc-real-chat" :class="{'mobile-conversation':mobileChat}" data-test="w46-real-chat" aria-label="B＋C实际联系人与聊天工作台">
@@ -133,6 +166,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
 
     <button type="button" @click="channel='ALL';account='ALL';filterOpen=false">清除筛选</button>
    </div>
+   <p v-if="incomingNotice" role="status" class="bc-inbox-state" data-test="w56-real-inbound-notice" @click="incomingNotice=''">{{incomingNotice}}</p>
    <div class="bc-inbox-list-scroll" data-test="w46-contacts-scroll">
     <p v-if="state==='checking'&&!contacts.length" class="bc-inbox-state">正在读取本机联系人…</p>
     <div v-else-if="state!=='ready'" class="bc-inbox-state" data-test="w46-contact-waiting">
@@ -165,7 +199,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
      <span class="bc-contact-avatar" aria-hidden="true">{{selected.displayName.slice(0,1)}}</span>
-     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.channel}} · 绑定修订 {{selected.bindingRevision}}</small></div>
+     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnly?'官方 Messenger 入站已同步 · 只读':selected.channel+' · 绑定修订 '+selected.bindingRevision}}</small></div>
      <button type="button" :disabled="timelineState==='checking'" aria-label="从原生服务刷新消息" @click="chooseContact(selected)">刷新消息</button>
     </header>
     <p v-if="timelineState==='checking'" class="bc-inbox-state">正在读取有来源的聊天记录…</p>
@@ -183,7 +217,8 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
       </div>
      </div>
     </div>
-    <p v-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">暂时无法读取此对话，请重新连接账号后重试。</p>
+    <p v-if="selected.readOnly" class="bc-inbox-state bc-composer-hold">此联系人与消息来自官方 Messenger 桥接，现可阅读；真人发送仍需原 W24/W25 账号及 Peer 授权，不需要重新登录 Facebook。</p>
+    <p v-else-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">暂时无法读取此对话，请重新连接账号后重试。</p>
    </template>
    <div v-else class="bc-real-no-contact" data-test="w46-empty-chat">
     <div aria-hidden="true" class="bc-empty-glow">✦</div>
