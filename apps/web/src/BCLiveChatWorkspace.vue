@@ -17,10 +17,16 @@ const api=computed(()=>props.fetchImpl||globalThis.fetch);
 const state=ref('checking'),error=ref(''),contacts=ref([]),accounts=ref(0),chosen=ref(null);
 const timeline=ref([]),timelineState=ref('none'),timelineError=ref('');
 const messengerManual=ref({roomId:'',ready:false});
-const pageManual=ref({pageId:'',conversationId:'',ready:false});
-const pageManualTarget=computed(()=>selected.value?.readOnlyPreview===true&&pageManual.value.ready===true&&
-  pageManual.value.pageId===selected.value.pageId&&pageManual.value.conversationId===selected.value.conversationId?
-  'PAGE|'+selected.value.pageId+'|'+selected.value.conversationId:'');
+// A verified Pancake inbox contact may use the original Composer. The
+// actual POST is authorized again by W55/Page/PSID + W24/W44/W25 before send;
+// never confuse a UI hint with network-send authority.
+const pageManualTarget=computed(()=>{
+ const c=selected.value;
+ return c?.readOnlyPreview===true&&
+  /^[0-9]{1,40}$/.test(c.pageId||'')&&
+  /^(?:[0-9]{1,40}|[A-Za-z0-9._:-]{8,160})$/.test(c.conversationId||'')?
+  'PAGE|'+c.pageId+'|'+c.conversationId:'';
+});
 const manualPageSendPort=Object.freeze({
  async send(target,text,businessMessageId){
   const match=/^PAGE\|([0-9]{1,40})\|([a-zA-Z0-9._:-]{8,160})$/.exec(target);
@@ -170,36 +176,10 @@ async function refresh(){
   contacts.value=[];accounts.value=0;chosen.value=null;timeline.value=[];mobileChat.value=false;
  }
 }
-// Verify the Page send target independently of history rendering. Pancake
-// history can be available while the prior chained read never reaches this
-// eligibility check. A failed or stale proof keeps the original Composer OFF.
-async function verifyPageManual(contact,ticket){
- if(!contact.readOnlyPreview)return;
- const path='/api/v2/providers/fb-page/manual-send?pageId='+
-  encodeURIComponent(contact.pageId)+'&conversationId='+encodeURIComponent(contact.conversationId);
- for(let attempt=0;attempt<2;attempt++){
-  if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
-  await new Promise(resolve=>setTimeout(resolve,attempt===0?550:1300));
-  try{
-   const response=await api.value(path,{credentials:'same-origin',cache:'no-store'});
-   const eligibility=await response.json();
-   if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
-   if(response.ok&&eligibility.readyForManualSend===true&&eligibility.channel==='FB_PAGE'&&
-      eligibility.pageId===contact.pageId&&eligibility.conversationId===contact.conversationId){
-    pageManual.value={pageId:contact.pageId,conversationId:contact.conversationId,ready:true};
-    return;
-   }
-   if(attempt===0&&response.status===409)continue;
-   return;
-  }catch{if(attempt===1)return;}
- }
-}
 async function chooseContact(contact){
  if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
- pageManual.value={pageId:'',conversationId:'',ready:false};
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
- if(contact.readOnlyPreview)void verifyPageManual(contact,ticket);
  if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
   const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
