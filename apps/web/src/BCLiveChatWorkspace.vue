@@ -5,6 +5,11 @@ import {ScrollArea} from '../../../design/nonproduction/approved-clickable-abc-b
 import {Bubble,BubbleContent} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/bubble';
 import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/message';
 import BCNativeComposer from './BCNativeComposer.vue';
+import metaBrandLogo from './assets/channels/meta.svg';
+import facebookBrandLogo from './assets/channels/facebook.svg';
+import messengerBrandLogo from './assets/channels/messenger.svg';
+import whatsappBrandLogo from './assets/channels/whatsapp.svg';
+import telegramBrandLogo from './assets/channels/telegram.svg';
 import {createTrustedTakeoverPort} from './native-takeover-port.mjs';
 import {readLiveContacts,readLiveTimeline,explainNativeFailure} from './live-chat-source.mjs';
 import {pancakeMultiApi} from './pancake-multi-browser.mjs';
@@ -111,6 +116,21 @@ const filtered=computed(()=>{
 const accountIds=computed(()=>['ALL',...new Set(contacts.value.filter(c=>channel.value==='ALL'||c.channel===channel.value).map(c=>c.accountRef))]);
 const filterActive=computed(()=>channel.value!=='ALL'||account.value!=='ALL'||search.value.trim()!=='');
 const platformName=c=>channels.find(x=>x.id===c)?.label||c;
+// Use real multi-color SVG brand assets from the open-source Iconify Logos set.
+// Meta is the parent-company mark, NOT the Facebook Page app mark.
+const channelBrandIcon=channel=>({
+ FB_PERSONAL:messengerBrandLogo,FB_PAGE:facebookBrandLogo,
+ WHATSAPP_PERSONAL:whatsappBrandLogo,TELEGRAM_PERSONAL:telegramBrandLogo
+})[channel]||'';
+const headerBrandIcon=channel=>channel==='FB_PERSONAL'||channel==='FB_PAGE'?metaBrandLogo:channelBrandIcon(channel);
+const channelTooltip=c=>{
+ if(!c)return '当前聊天渠道';
+ if(c.channel==='FB_PAGE')return c.readOnlyPreview?
+  (pageManualTarget.value?'Facebook Page · Pancake 接入 · 当前人工发送由服务端核验':'Facebook Page · Pancake 接入 · 发送资格待核验'):
+  'Facebook Page';
+ if(c.channel==='FB_PERSONAL')return 'Facebook Messenger · 个人聊天';
+ return platformName(c.channel);
+};
 // A provider can return a real message ID with no textual body (for example,
 // metadata-only events or unqualified media). Preserve the entry and never
 // misrepresent its unknown type as a verified photo, sticker or attachment.
@@ -455,16 +475,14 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
      <template v-if="pinned.length">
       <button type="button" class="bc-group-title" :aria-expanded="pinnedExpanded" @click="pinnedExpanded=!pinnedExpanded">置顶 <span>{{pinnedExpanded?'⌄':'›'}}</span></button>
       <template v-if="pinnedExpanded">
-       <button v-for="c in pinned" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-        <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
-        <span class="bc-channel-mark" data-test="w46-contact-channel" :title="platformName(c.channel)">{{c.channel==='FB_PERSONAL'?'FB':c.channel==='FB_PAGE'?'Page':c.channel==='WHATSAPP_PERSONAL'?'WA':'TG'}}</span>
+       <button v-for="c in pinned" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
+        <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
        </button>
       </template>
      </template>
-     <button v-for="c in regular" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-      <span class="bc-contact-avatar" aria-hidden="true"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
-      <span class="bc-channel-mark" data-test="w46-contact-channel" :title="platformName(c.channel)">{{c.channel==='FB_PERSONAL'?'FB':c.channel==='FB_PAGE'?'Page':c.channel==='WHATSAPP_PERSONAL'?'WA':'TG'}}</span>
+     <button v-for="c in regular" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
+      <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
      </button>
      <p v-if="!filtered.length" class="bc-inbox-state" data-test="w46-filter-empty">{{channelStatusMessage||'没有匹配的当前授权联系人'}}</p>
@@ -478,8 +496,8 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
    <template v-if="selected">
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
-     <span class="bc-contact-avatar" aria-hidden="true"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span>
-     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.readOnlyPreview?(pageManualTarget?'Pancake Facebook Page · 可人工回复':'Pancake Facebook Page · 正在核验发送资格'):selected.readOnly?'Messenger':selected.channel==='FB_PERSONAL'?'Messenger':selected.channel==='FB_PAGE'?'Facebook Page':selected.channel==='WHATSAPP_PERSONAL'?'WhatsApp':selected.channel==='TELEGRAM_PERSONAL'?'Telegram':'聊天'}}</small></div>
+     <span class="bc-contact-avatar-wrap bc-header-avatar" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(selected.channel)" class="bc-native-channel-badge" :src="channelBrandIcon(selected.channel)" alt=""/></span>
+     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><span class="bc-header-native-channel" role="img" :title="channelTooltip(selected)" :aria-label="channelTooltip(selected)"><img v-if="headerBrandIcon(selected.channel)" :src="headerBrandIcon(selected.channel)" alt="" decoding="async"/></span></div>
      <button type="button" :disabled="timelineState==='checking'" aria-label="刷新消息" title="刷新消息" @click="chooseContact(selected)">⟳</button>
     </header>
     <p v-if="timelineState==='checking'" class="bc-inbox-state">正在加载消息…</p>
@@ -531,7 +549,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
 .bc-inbox-list-scroll{min-height:0;flex:1 1 auto;overflow:auto;scrollbar-width:thin;overscroll-behavior:contain}
 .bc-real-contact{position:relative;min-height:68px;width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:0;border-left:2px solid transparent;border-bottom:1px solid var(--border);background:transparent;color:var(--ink);padding:10px 11px;cursor:pointer;transition:background .14s,box-shadow .14s}
 .bc-real-contact:hover{background:var(--surface-soft)}.bc-real-contact.selected{border-left-color:var(--accent);background:linear-gradient(96deg,rgba(var(--accent-rgb),.15),rgba(var(--accent-rgb),.025) 80%);box-shadow:inset 2px 0 0 rgba(var(--accent-rgb),.55)}
-.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700;position:relative;overflow:hidden}.bc-contact-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
+.bc-contact-avatar-wrap{width:40px;height:40px;flex:none;display:block;position:relative;isolation:isolate}.bc-native-channel-badge{position:absolute;right:-4px;bottom:-4px;width:17px;height:17px;border-radius:50%;object-fit:contain;z-index:2;background:var(--bg2);border:2px solid var(--bg2);box-sizing:content-box}.bc-header-native-channel{display:flex;align-items:center;width:max-content;height:16px;max-width:100%;cursor:help}.bc-header-native-channel img{display:block;width:26px;height:16px;object-fit:contain;object-position:left center}.bc-chat-heading .bc-header-avatar{margin-right:1px}.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700;position:relative;overflow:hidden}.bc-contact-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
 .bc-group-title{width:100%;padding:9px 13px;text-align:left;color:var(--muted);border:0;background:var(--surface-soft);cursor:pointer}.bc-group-title span{float:right}
 .bc-action-popover{position:absolute;right:10px;top:54px;width:min(285px,calc(100% - 20px));z-index:30;display:grid;gap:9px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised);box-shadow:0 14px 40px #0006}
 .bc-action-popover button,.bc-action-popover select{min-height:35px;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:9px;padding:8px}
