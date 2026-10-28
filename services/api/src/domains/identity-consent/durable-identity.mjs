@@ -13,11 +13,33 @@ const privileged=new Set(['REGISTER_ACCOUNT','BIND_PEER','CREATE_CONSENT','RELIN
 const isCommitted=s=>s?.ok===true&&s.status==='COMMITTED';
 const isPending=s=>s?.status==='PENDING';
 const freeze=x=>Object.freeze({...x});
-function check(ctx,k){
- canonicalK(k);
+function formatTrustedK(k){
+ if(k?.tenant==='SYNTHETIC_TEST_ONLY')return canonicalK(k);
+ const fields=['tenant','account','channel','peer_id'];
+ if(!k||fields.some(n=>typeof k[n]!=='string'||
+    !/^[A-Za-z0-9_.:-]{1,120}$/.test(k[n]))||
+    !['FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL'].includes(k.channel)||
+    !positive(k.binding_revision))fail('INVALID_NATIVE_CANONICAL_K');
+ return [k.tenant,k.account,k.channel,k.peer_id,k.binding_revision].join('|');
+}
+function check(ctx,k,verifyTrustedRealPrincipal){
+ formatTrustedK(k);
  if(ctx?.input_domain!=='CONTACT'||ctx.tenant!==k.tenant||
-    typeof ctx.principal_id!=='string'||!ctx.principal_id.startsWith('fake-'))
+    typeof ctx.principal_id!=='string'||!ctx.principal_id.length)
    fail('TRUSTED_CONTACT_ACTOR_REQUIRED');
+ if(k.tenant==='SYNTHETIC_TEST_ONLY'){
+   if(!ctx.principal_id.startsWith('fake-'))fail('TRUSTED_CONTACT_ACTOR_REQUIRED');
+ }else{
+   if(typeof verifyTrustedRealPrincipal!=='function')fail('NONPRODUCTION_TENANT_ONLY');
+   // Server-injected W54 native-session verifier, current W26 owner check;
+   // no WebPrivate, localhost claim, OS username or browser self-attestation.
+   const p=verifyTrustedRealPrincipal?.({ctx,k});
+   if(p?.then||p?.verified!==true||
+      p.proofSource!=='W54_SIGNED_NATIVE_SESSION_AND_W26_OWNER'||
+      p.principalId!==ctx.principal_id||p.tenant!==k.tenant||
+      p.nativeSessionCurrent!==true||p.providerOwnerCurrent!==true)
+    fail('W54_REAL_PRINCIPAL_REQUIRED');
+ }
  return ctx.principal_id;
 }
 function requireStore(store){
@@ -37,14 +59,18 @@ function proof(proofAuthority,ctx,k,kind,payload){
   proof_ref:payload.bindingProofRef??payload.peerProofRef??payload.proofRef,
   purpose:payload.purpose,operation:payload.operation,subject_id:payload.subjectId});
  if(result?.then)fail('ASYNC_DURABLE_PROOF_UNSUPPORTED');
- if(result?.approved!==true)fail('DURABLE_PROOF_NOT_VERIFIED');
+ if(result?.approved!==true||
+   (k.tenant!=='SYNTHETIC_TEST_ONLY'&&
+    !['W26_OFFICIAL_PROVIDER','W54_SIGNED_USER_CONSENT'].includes(result.proofSource)))
+  fail('DURABLE_PROOF_NOT_VERIFIED');
 }
 /** Caller MUST separately configure W44 verifyOwnerMutation to re-verify
  * trusted W24 proof in the SAME W44 transaction, not trust payload.approved. */
-export function createDurableIdentityDriver({store,proofAuthority,grantAuthority}={}){
+export function createDurableIdentityDriver({store,proofAuthority,grantAuthority,
+  verifyTrustedRealPrincipal=null}={}){
  requireStore(store);
  function read(ctx,k){
-   const actor=check(ctx,k),s=store.readIdentityAuthority({actor,identity:k});
+   const actor=check(ctx,k,verifyTrustedRealPrincipal),s=store.readIdentityAuthority({actor,identity:k});
    if(!s||typeof s.valid!=='boolean'||!Number.isSafeInteger(s.bindingRevision)||
        !Number.isSafeInteger(s.accountEpoch)||!Number.isSafeInteger(s.consentEpoch)||
        !Number.isSafeInteger(s.custodyEpoch)||!Array.isArray(s.consents))
@@ -56,7 +82,7 @@ export function createDurableIdentityDriver({store,proofAuthority,grantAuthority
    const s=read(ctx,k);
    if(!s.valid)fail(s.bindingRevision!==k.binding_revision?
      'STALE_BINDING_REVISION':'ACCOUNT_OR_PEER_UNBOUND');
-   return freeze({...k,identity_key:canonicalK(k),account_revocation_epoch:s.accountEpoch});
+   return freeze({...k,identity_key:formatTrustedK(k),account_revocation_epoch:s.accountEpoch});
  }
  function epoch(ctx,k){
    current(ctx,k);
@@ -65,7 +91,7 @@ export function createDurableIdentityDriver({store,proofAuthority,grantAuthority
    return e;
  }
  function mutate(ctx,k,kind,scope,payload,options={}){
-   const actor=check(ctx,k);
+   const actor=check(ctx,k,verifyTrustedRealPrincipal);
    proof(proofAuthority,ctx,k,kind,payload);
    const s=read(ctx,k);
    if(kind!=='REGISTER_ACCOUNT'&&!s.account)fail('ACCOUNT_UNBOUND');
@@ -77,8 +103,11 @@ export function createDurableIdentityDriver({store,proofAuthority,grantAuthority
    }
    const fence=store.readMutationFence({actor,identity:k,scope});
    if(!fence?.ok||!Number.isSafeInteger(fence.generation))fail('W44_FENCE_UNAVAILABLE');
-   const idempotencyKey=options.idempotencyKey??('fake-w24-'+randomUUID());
-   if(typeof idempotencyKey!=='string'||!idempotencyKey.startsWith('fake-'))
+   const idempotencyKey=options.idempotencyKey??
+     ((k.tenant==='SYNTHETIC_TEST_ONLY'?'fake-w24-':'native-w24-')+randomUUID());
+   if(typeof idempotencyKey!=='string'||
+      (k.tenant==='SYNTHETIC_TEST_ONLY'?!idempotencyKey.startsWith('fake-'):
+        idempotencyKey.startsWith('fake-')))
      fail('INVALID_IDEMPOTENCY_KEY');
    const request=store.requestMutationFence({actor,identity:k,kind,scope,payload,
      idempotencyKey,expectedGeneration:fence.generation,
@@ -118,7 +147,7 @@ export function createDurableIdentityDriver({store,proofAuthority,grantAuthority
      peer_id:raw?.peer_id,binding_revision:raw?.binding_revision};
    const result=mutate(ctx,k,'BIND_PEER','CONTACT',
      {peerProofRef:raw?.peer_proof_ref},{idempotencyKey:raw?.idempotency_key});
-   return freeze({...k,identity_key:canonicalK(k),...result});
+   return freeze({...k,identity_key:formatTrustedK(k),...result});
  }
  function revokeAccount(ctx,raw){
    const k={tenant:raw?.tenant,account:raw?.account,channel:raw?.channel,
@@ -210,7 +239,7 @@ export function createDurableIdentityDriver({store,proofAuthority,grantAuthority
       after.consentEpoch!==expectedConsentEpoch)
      fail('TAKEOVER_POST_VERIFY_FAILED');
    return freeze({status:'COMMITTED',accepted:true,confirmedByGet:true,
-     identity:freeze(k),identityKey:canonicalK(k),mode:'HUMAN',
+     identity:freeze(k),identityKey:formatTrustedK(k),mode:'HUMAN',
      epoch:after.custodyEpoch,accountRevocationEpoch:after.accountEpoch,
      consentEpoch:after.consentEpoch,canSend:false,requestId:result.requestId});
  }
@@ -238,13 +267,26 @@ export function createDurableIdentityDriver({store,proofAuthority,grantAuthority
 
 /** W24 Owner PURE proof used by W44 inside the same SQLite transaction.
  * No callbacks may mutate W24 memory, W44 rows, or make async/provider calls. */
-export function createW24DurableProofVerifier({proofAuthority,authorizeOperator}={}){
+export function createW24DurableProofVerifier({proofAuthority,authorizeOperator,
+  verifyTrustedRealPrincipal=null}={}){
  if(typeof authorizeOperator!=='function')fail('TRUSTED_OWNER_PROOF_PORT_REQUIRED');
  return ({actor,kind,identity,mutation})=>{
   try{
-   if(typeof actor!=='string'||!actor.startsWith('fake-')||
-     !identity||!mutation||typeof mutation!=='object'||
+   if(typeof actor!=='string'||!identity||!mutation||
+     typeof mutation!=='object'||
      authorizeOperator({actor,kind,identity})!==true)return {verified:false};
+   if(identity.tenant==='SYNTHETIC_TEST_ONLY'){
+     if(!actor.startsWith('fake-'))return {verified:false};
+   }else{
+     const attested=verifyTrustedRealPrincipal?.({
+      ctx:{tenant:identity.tenant,principal_id:actor,input_domain:'CONTACT'},
+      k:identity,operation:kind});
+     if(attested?.then||attested?.verified!==true||
+        attested.proofSource!=='W54_SIGNED_NATIVE_SESSION_AND_W26_OWNER'||
+        attested.principalId!==actor||attested.tenant!==identity.tenant||
+        attested.nativeSessionCurrent!==true||attested.providerOwnerCurrent!==true)
+       return {verified:false};
+   }
    if(kind==='HUMAN_TAKEOVER')
      return {verified:mutation.action==='USER_EDIT'};
    if(kind==='REVOKE_ACCOUNT'||kind==='REVOKE_CONSENT'||
@@ -252,14 +294,18 @@ export function createW24DurableProofVerifier({proofAuthority,authorizeOperator}
    if(!privileged.has(kind)||typeof proofAuthority?.evaluate!=='function')
      return {verified:false};
    const proofRef=mutation.bindingProofRef??mutation.peerProofRef??mutation.proofRef;
-   if(typeof proofRef!=='string'||!proofRef.startsWith('fake-'))
+   if(typeof proofRef!=='string'||
+     (identity.tenant==='SYNTHETIC_TEST_ONLY'?!proofRef.startsWith('fake-'):
+       proofRef.startsWith('fake-')))
      return {verified:false};
    const ctx={tenant:identity.tenant,principal_id:actor,input_domain:'CONTACT'};
    const response=proofAuthority.evaluate({ctx:freeze(ctx),k:freeze(identity),kind,
      proof_ref:proofRef,purpose:mutation.purpose,
      operation:mutation.operation,subject_id:mutation.subjectId});
    if(response?.then)throw Error('ASYNC_MUTATION_PROOF_NOT_ATOMIC');
-   return {verified:response?.approved===true};
+   return {verified:response?.approved===true&&
+     (identity.tenant==='SYNTHETIC_TEST_ONLY'||
+      ['W26_OFFICIAL_PROVIDER','W54_SIGNED_USER_CONSENT'].includes(response?.proofSource))};
   }catch{return {verified:false}}
  };
 }

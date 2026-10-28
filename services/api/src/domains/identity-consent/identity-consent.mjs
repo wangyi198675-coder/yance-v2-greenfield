@@ -33,6 +33,8 @@ function peerKey(v) {
 }
 export function canonicalK(raw) {
   if (!raw || typeof raw !== 'object') deny('MISSING_K');
+  // Canonical K is an identity formatter, not a grant. Real K remains
+  // unusable until the durable driver and W44 verify current W54/W26 actor.
   const tenant = id(raw.tenant, 'TENANT');
   synthetic(tenant);
   const account = id(raw.account, 'ACCOUNT');
@@ -85,12 +87,14 @@ export class IdentityConsentService {
   #durable = null;
 
   constructor({grantAuthority = null, proofAuthority = null,
-    requireDurableIdentity = false, durableAuthority = null} = {}) {
+    requireDurableIdentity = false, durableAuthority = null,
+    verifyTrustedRealPrincipal = null} = {}) {
     this.#grantAuthority = grantAuthority;
     this.#proofAuthority = proofAuthority;
     if(requireDurableIdentity){
       this.#durable = createDurableIdentityDriver({
-        store:durableAuthority,proofAuthority,grantAuthority
+        store:durableAuthority,proofAuthority,grantAuthority,
+        verifyTrustedRealPrincipal
       });
     }
   }
