@@ -178,6 +178,50 @@ function sourceQuote(m){
  });
 }
 const canShowData=computed(()=>state.value==='ready'&&accounts.value>0);
+// W26 already has 41 genuine mautrix-meta Messenger rooms. W24 /contacts
+// may be unavailable while bindings are pending; never erase proven history.
+async function readOfficialMessengerContacts(){
+ const response=await api.value('/api/v2/facebook-inbox',{method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
+ if(!response.ok)throw Error('FB_OFFICIAL_READ_'+response.status);
+ const result=await response.json();
+ if(result?.ok!==true||result.source!=='OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY'||
+   result.providerPeerBindingPending!==true||result.canSend!==false||
+   !Number.isSafeInteger(result.connectedAccountCount)||result.connectedAccountCount<1||
+   !Array.isArray(result.contacts)||result.contacts.length>500)
+   throw Error('FB_OFFICIAL_SOURCE_NOT_VERIFIED');
+ const seen=new Set(),rows=[];
+ for(const c of result.contacts){
+  if(c?.channel!=='FB_PERSONAL'||c.canSend!==false||
+    typeof c.roomId!=='string'||!/^![^\\s]{6,239}$/.test(c.roomId)||
+    typeof c.displayName!=='string'||!c.displayName.trim()||
+    c.displayName.length>180||seen.has(c.roomId))continue;
+  seen.add(c.roomId);
+  rows.push(Object.freeze({
+   contactRef:'FB_BRIDGE_READ_ONLY|'+c.roomId,accountRef:String(c.accountRef||'Messenger'),
+   channel:'FB_PERSONAL',peerRef:c.roomId,roomId:c.roomId,
+   displayName:c.displayName,lastMessage:typeof c.lastMessage==='string'?c.lastMessage:'',
+   lastMessageTimestamp:c.lastMessageTimestamp||0,
+   messengerOfficial:true,readOnly:true,identity:null,identityKey:null,canSend:false,
+   unread:null,unreadAuthorized:false
+  }));
+ }
+ if(!rows.length)throw Error('FB_OFFICIAL_NO_VALID_ROOMS');
+ return {contacts:rows,connectedAccountCount:result.connectedAccountCount,trustedSession:true};
+}
+async function readOfficialMessengerTimeline(contact){
+ const response=await api.value('/api/v2/facebook-inbox/messages?room='+encodeURIComponent(contact.roomId),
+  {method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
+ if(!response.ok)throw Error('FB_HISTORY_'+response.status);
+ const data=await response.json();
+ if(data?.ok!==true||data.source!=='OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY'||
+   data.roomId!==contact.roomId||data.canSend!==false||
+   data.providerPeerBindingPending!==true||!Array.isArray(data.messages)||
+   data.messages.length>500)throw Error('FB_HISTORY_NOT_VERIFIED');
+ return {messages:data.messages.filter(m=>typeof m?.mid==='string'&&
+  typeof m.original==='string'&&['INBOUND','OUTBOUND'].includes(m.direction))
+  .map(m=>({mid:m.mid,original:m.original,direction:m.direction,
+   providerSource:m.providerSource||data.source,canSend:false}))};
+}
 async function readPancakeContacts(){
  const inventory=await pancakeMultiApi('pages',{fetchImpl:api.value});
  const pages=inventory.pages.filter(p=>p.tokenConfigured===true).slice(0,4);
@@ -211,16 +255,17 @@ async function refresh(){
  const selectedRef=chosen.value?.contactRef;
  state.value='checking';error.value=''; // Keep scroll, current draft, selection until verified new identity snapshot.
  try{
-  let native=null,pancake=null,readError=null;
+  let native=null,pancake=null,messenger=null,readError=null;
   try{native=await readLiveContacts({fetchImpl:api.value})}catch(e){readError=e}
-  try{pancake=await readPancakeContacts()}catch(e){if(!native)readError=e}
-  if(!native&&!pancake)throw readError||Error('NO_CURRENT_PROVIDER_SOURCE');
-  const nativeContacts=native?.contacts||[];
+  if(!native)try{messenger=await readOfficialMessengerContacts()}catch(e){if(!readError)readError=e}
+  try{pancake=await readPancakeContacts()}catch(e){if(!native&&!messenger)readError=e}
+  if(!native&&!pancake&&!messenger)throw readError||Error('NO_CURRENT_PROVIDER_SOURCE');
+  const nativeContacts=[...(native?.contacts||[]),...(messenger?.contacts||[])];
   const other=pancake?.contacts||[];
   const existing=new Set(nativeContacts.map(c=>c.contactRef));
   const snap={contacts:[...nativeContacts,...other.filter(c=>!existing.has(c.contactRef))],
-   connectedAccountCount:(native?.connectedAccountCount||0)+(pancake?.connectedAccountCount||0),
-   trustedSession:native?.trustedSession===true||pancake?.trustedSession===true};
+   connectedAccountCount:(native?.connectedAccountCount||messenger?.connectedAccountCount||0)+(pancake?.connectedAccountCount||0),
+   trustedSession:native?.trustedSession===true||messenger?.trustedSession===true||pancake?.trustedSession===true};
   if(!mounted||rev!==currentRevision)return;
   contacts.value=snap.contacts;
   accounts.value=snap.connectedAccountCount;
@@ -240,7 +285,9 @@ async function chooseContact(contact){
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
  if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
-  const result=contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):await readLiveTimeline({fetchImpl:api.value,contact});
+  const result=contact.messengerOfficial?await readOfficialMessengerTimeline(contact):
+   contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):
+    await readLiveTimeline({fetchImpl:api.value,contact});
   if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
   timeline.value=result.messages;timelineState.value='ready';
  }catch(e){
