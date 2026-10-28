@@ -257,10 +257,14 @@ async function refresh(){
  try{
   let native=null,pancake=null,messenger=null,readError=null;
   try{native=await readLiveContacts({fetchImpl:api.value})}catch(e){readError=e}
-  if(!native)try{messenger=await readOfficialMessengerContacts()}catch(e){if(!readError)readError=e}
+  // Always read the official W26 source independently. A partial but valid
+  // W24 snapshot must not suppress 41 existing Messenger conversations.
+  try{messenger=await readOfficialMessengerContacts()}catch(e){if(!readError)readError=e}
   try{pancake=await readPancakeContacts()}catch(e){if(!native&&!messenger)readError=e}
   if(!native&&!pancake&&!messenger)throw readError||Error('NO_CURRENT_PROVIDER_SOURCE');
-  const nativeContacts=[...(native?.contacts||[]),...(messenger?.contacts||[])];
+  const signedRooms=new Set((native?.contacts||[]).map(c=>c.roomId).filter(Boolean));
+  const nativeContacts=[...(native?.contacts||[]),
+   ...(messenger?.contacts||[]).filter(c=>!signedRooms.has(c.roomId))];
   const other=pancake?.contacts||[];
   const existing=new Set(nativeContacts.map(c=>c.contactRef));
   const snap={contacts:[...nativeContacts,...other.filter(c=>!existing.has(c.contactRef))],
@@ -323,7 +327,19 @@ async function pollVerifiedMessages(){
    if(document.hidden&&globalThis.Notification?.permission==='granted')
     new Notification('Facebook Messenger 新消息',{body:'言策已同步新的入站消息'});
   }
-  contacts.value=[...next.contacts,...contacts.value.filter(c=>c.readOnlyPreview)];
+  // Preserve platform-sourced Messenger conversations during W24 polling.
+  // Re-read W26 before updating: never silently drop or trust stale Messenger
+  // identities and never turn read-only rooms into authorized senders.
+  const hadOfficial=contacts.value.some(c=>c.messengerOfficial);
+  let official=null;
+  try{official=await readOfficialMessengerContacts()}catch{
+   if(hadOfficial)return; // Keep current view, never replace with partial data.
+  }
+  if(!mounted||state.value!=='ready')return;
+  const seenRooms=new Set(next.contacts.map(c=>c.roomId).filter(Boolean));
+  const officialRows=(official?.contacts||[]).filter(c=>!seenRooms.has(c.roomId));
+  const pageRows=contacts.value.filter(c=>c.readOnlyPreview);
+  contacts.value=[...next.contacts,...officialRows,...pageRows];
   if(chosen.value){
    const same=next.contacts.find(c=>c.contactRef===chosen.value.contactRef);
    if(same){chosen.value=same;
