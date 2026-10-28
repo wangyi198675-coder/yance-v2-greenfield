@@ -1,0 +1,61 @@
+{
+  "status": "SECURE_PIN_OWNER_PROOFS_PASS_PENDING_INDEPENDENT",
+  "lock": "852f14da6e4918b0c56dfb0e5a140a226e1e01a465c36ca80996bf3d84afffd8",
+  "installed": 74,
+  "sriPass": 74,
+  "bom": "3a4a1bfe3d4bf80f6750963d8453b1801688905d2283b1b9631776c1a139d7e3",
+  "notice": "cf497a49d12f609829b218e7043e2cfea483ce5e9dd067424f42fe2014b66497",
+  "bomEdges": 97,
+  "auditFull": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "auditProd": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "tests": {
+    "chromeTasks": 44,
+    "collisionNegatives": 7,
+    "responsiveAndThemes": 76,
+    "chromeCSP": 4,
+    "chromeProviderNetworkExternal": 0,
+    "typescript": "PASS",
+    "viteBuild": "PASS"
+  },
+  "build": [
+    {
+      "path": "dist/assets/browser-tests-CF4-AuJA.js",
+      "sha256": "353381e1befbb2d8a978eb2441309091b5bb8c2a36e4b1513e9ab0e78f7b1782",
+      "bytes": 10160
+    },
+    {
+      "path": "dist/assets/collision-runtime-tests-Zp-L6QIy.js",
+      "sha256": "8282ec875bdcfe919705c885202754ff85ce0846f37c611e4449f6dc178764e3",
+      "bytes": 1527
+    },
+    {
+      "path": "dist/assets/index-CV2rfjhi.js",
+      "sha256": "b6170f642210d3f588fdc39756f62fafaca8b0e8fc3ca6df2e12240888bb4867",
+      "bytes": 340435
+    },
+    {
+      "path": "dist/assets/index-gLJcKhhR.css",
+      "sha256": "8d010bbc0db3d5c57a02ae9d83b87791133232c0a68b4a27ca2f8cf6bd1e7371",
+      "bytes": 40317
+    },
+    {
+      "path": "dist/index.html",
+      "sha256": "60f482c4c635c67b34b07083fd6603fd1ec9cf320a437f7efc6b647db371c7b7",
+      "bytes": 735
+    }
+  ]
+}

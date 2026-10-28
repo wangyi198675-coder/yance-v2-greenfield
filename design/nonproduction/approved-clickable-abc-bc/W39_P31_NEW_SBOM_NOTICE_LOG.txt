@@ -1,0 +1,1 @@
+{"approvedDirect":14,"installed":74,"lockEntries":151,"missingLicenseTexts":[],"absent":77,"lockSHA":"852f14da6e4918b0c56dfb0e5a140a226e1e01a465c36ca80996bf3d84afffd8","SBOMSHA":"3a4a1bfe3d4bf80f6750963d8453b1801688905d2283b1b9631776c1a139d7e3","noticeSHA":"cf497a49d12f609829b218e7043e2cfea483ce5e9dd067424f42fe2014b66497"}

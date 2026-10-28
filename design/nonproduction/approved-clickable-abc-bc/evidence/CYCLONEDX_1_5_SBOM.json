@@ -1,0 +1,3048 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:6d6b0ceb-738c-4f5d-86a9-d6e7d52b88dd",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-24T23:52:55.347Z",
+    "component": {
+      "type": "application",
+      "name": "yance-v2-p3-1-clickable-offline",
+      "version": "0.0.1"
+    },
+    "properties": [
+      {
+        "name": "YANCE:stage",
+        "value": "P3_1_OFFLINE_NONPRODUCTION_ONLY"
+      },
+      {
+        "name": "YANCE:lockSHA256",
+        "value": "852f14da6e4918b0c56dfb0e5a140a226e1e01a465c36ca80996bf3d84afffd8"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "@babel/helper-string-parser",
+      "version": "7.29.11",
+      "bom-ref": "pkg:npm/%40babel/helper-string-parser@7.29.11",
+      "purl": "pkg:npm/%40babel/helper-string-parser@7.29.11",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@babel/helper-string-parser"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "0234b3c69a740beb04bdcfa2781c6538fa4e30281ffab36566b1c140e9eb4c2e"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b2765b3bb3040cea1ffa1bcd6bdec48c463ba83ee1da4c2f42be40242dd9850b9d296e5d9de8fa93790ff4d415f3c849c1a4bcbc3a912c5a3dae2bcb12195eda"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "bom-ref": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+      "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@babel/helper-validator-identifier"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "1ad6aeced8b186ac259da45fea50ab9d65d3d958f6458c80e3c8013649d1b12d"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a9e8711a4463e7987f7dff0431a27e71887268a947231a980e7ebcdb0403ed1369f54ba3390b07a20dae4b4af6bf3af8a56fac5dff7435e79aca370d697ddf16"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@babel/parser",
+      "version": "7.29.11",
+      "bom-ref": "pkg:npm/%40babel/parser@7.29.11",
+      "purl": "pkg:npm/%40babel/parser@7.29.11",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@babel/parser"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "3948f957202d8563c5b4e342cc47a22ac32715a9ccb2d22a569ddd83c639b74d"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "399ebea1a2bb18cca0dc87c2a63f093a69fc9fec36ac96c34f42cb7d50d32dbd5915e2838770223442e008c530d7be482474a42e5ef8846d0cd152ecbf1fa06a"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@babel/types",
+      "version": "7.29.11",
+      "bom-ref": "pkg:npm/%40babel/types@7.29.11",
+      "purl": "pkg:npm/%40babel/types@7.29.11",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@babel/types"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "f95affd2cacde94b37022491e746d009118de3c104e8e002c83b46d17afacd19"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "582b1e996e340a973a828b82d52ad8e8f05a67ea0b46511563d5c1bd9048ee297f1f252b6f69c9e74e70135307105c8364d9eb58312ecb88cbe745951df4d349"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@esbuild/win32-x64",
+      "version": "0.28.1",
+      "bom-ref": "pkg:npm/%40esbuild/win32-x64@0.28.1",
+      "purl": "pkg:npm/%40esbuild/win32-x64@0.28.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@esbuild/win32-x64"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "4a63b84fa1059fef348e29e3a39c26168213bb7f0aa1ac0174e439cc1e62a9f8"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6e6e0ca30aeff865cc969597fbe11c5f0fe22f2775a37f9b2640b60e4597615be0642a83fdb4a3f5cb59780302ddc2318234554760ee7da8aee183f1af9816d4"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@floating-ui/core",
+      "version": "1.8.0",
+      "bom-ref": "pkg:npm/%40floating-ui/core@1.8.0",
+      "purl": "pkg:npm/%40floating-ui/core@1.8.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@floating-ui/core"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "2f24216dd2a32b10e6c868173832a0667c3cdbee92886797b219aadac48d8b99"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d02219e62b69b3ff31ec11bc744221b39dc1bc2507d8f0a8a20b5a930453badf80ae6e7cb09a2827402e6612f0d87258211e5c30b34f0524bbdbcb0f868da485"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@floating-ui/dom",
+      "version": "1.8.0",
+      "bom-ref": "pkg:npm/%40floating-ui/dom@1.8.0",
+      "purl": "pkg:npm/%40floating-ui/dom@1.8.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@floating-ui/dom"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "59643af1b1bfc5a80b172c21ccbe21ea56eaa0115378f6077d9934458db25ac1"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c974abcde1d905365a74b3a57f28429091cd78b2671d19d1227c1d678d0bed989a02dac1c28625b03ad7defe7307552d93b08b7f370e5675555a85c4932ec27a"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@floating-ui/utils",
+      "version": "0.2.12",
+      "bom-ref": "pkg:npm/%40floating-ui/utils@0.2.12",
+      "purl": "pkg:npm/%40floating-ui/utils@0.2.12",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@floating-ui/utils"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "b2138e8855520f4313f26ace0d93a9a9c9e6a862f0299a5aeaccb2370dd1bf40"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1e90a8f2d996ccb55a779b36775f44840cf9ceaaeb43ab3af6a77a9a83cc42f90eb92c034f562045f59256e7387a79eaae0bf7387a6988e18c43ba02d77c88c3"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@floating-ui/vue",
+      "version": "2.0.1",
+      "bom-ref": "pkg:npm/%40floating-ui/vue@2.0.1",
+      "purl": "pkg:npm/%40floating-ui/vue@2.0.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@floating-ui/vue"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "e6f2d72614e033d21a1be776da2dbef2d2af8b829aa80afa00bba2b04cd81535"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d38dddc84283f530d27f3d3cd181f6be86ee6e083e348a3ff45c3844097bb043290fc026d4336bad24e5fc6a4c063c861e80ff15b258d902dac18f87490b0420"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@internationalized/date",
+      "version": "3.12.4",
+      "bom-ref": "pkg:npm/%40internationalized/date@3.12.4",
+      "purl": "pkg:npm/%40internationalized/date@3.12.4",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@internationalized/date"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "4281dc43c61985ac225c305454d343bc20877af36b48697c808c3c09b52d14aa"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "3357449f87355351ec4a569547cba966d4aabd7ad39070dfbf5f07d35b82489ca354b0f19c1477f2ffdf33179c9a5c17291e22f4779972681000f13a03e68625"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@internationalized/number",
+      "version": "3.6.9",
+      "bom-ref": "pkg:npm/%40internationalized/number@3.6.9",
+      "purl": "pkg:npm/%40internationalized/number@3.6.9",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@internationalized/number"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "7af48bce2c9654f76bbe74d633ee9f4d821f288db500d812333e35cf0dca044c"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1a05b2d9c68effe855f6c4ffa024d6187bdb8e624c3d3f64917ce82912e7904abb69d821851ed4a6b86f63db17aca7eba7735c0df845e904075d1d4a7d06c1f2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "bom-ref": "pkg:npm/%40jridgewell/gen-mapping@0.3.13",
+      "purl": "pkg:npm/%40jridgewell/gen-mapping@0.3.13",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@jridgewell/gen-mapping"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "6264fca78382a9782f8e8d5e653e7bf43dc8aa6d469f3322a82e531093896a01"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "da492dffb9e227a32010fc45d1b61d43a7ad65a03e7d0bc370b29c921cb5c8840ecdaa0a8c10634a3eb7fda2d58d8137aa146de5dbccfae5327c283a50a0816c"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@jridgewell/remapping",
+      "version": "2.3.5",
+      "bom-ref": "pkg:npm/%40jridgewell/remapping@2.3.5",
+      "purl": "pkg:npm/%40jridgewell/remapping@2.3.5",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@jridgewell/remapping"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "cc535fb0665977104146fb8fe6c81ff63d2c9ae7f7b783d86e7f7db064cde57a"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2c8f6effe95a606e03b354c3292256d983eb22571560ec22d9f502eb1078de5b9e0a383157895f7ce0990ad605887e9334e5feb50297c7ded3e082876e1c8711"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "bom-ref": "pkg:npm/%40jridgewell/resolve-uri@3.1.2",
+      "purl": "pkg:npm/%40jridgewell/resolve-uri@3.1.2",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@jridgewell/resolve-uri"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "0793e722ffe08f3b4f1862c4dc96d920a62d6811a3648b4feb02f06c63227e8b"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6d12128022233f6d3fb5b5923d63048b9e1054f45913192e0fd9492fe508c542adc15240f305b54eb6f58ccb354455e8d42053359ff98690bd42f98a59da292b"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "bom-ref": "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0",
+      "purl": "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@jridgewell/sourcemap-codec"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "ac7afd57294dbee1f891ca797e19e405340f2cd6031808e6d3845fec60a5b43f"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4fb8dffb9ce0b191f0349e25bd0eff69ecdbca4d27357fb32555a998703b558b04c7b6bbaabe5183921bb4916a920cdee58dacaeeab545463c43cdfb39dee217"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "bom-ref": "pkg:npm/%40jridgewell/trace-mapping@0.3.31",
+      "purl": "pkg:npm/%40jridgewell/trace-mapping@0.3.31",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@jridgewell/trace-mapping"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "7f5eacc669d36013f9b792ab15721a97d48b26b093100122aa6c8691ebe656be"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "cf3351f9275048327373c8e869e3fc410a0242bf0db98c76748232b65d507811191c9f6e5ba85e6ecad881bcfc849c1441aa374d608cb667d5f0dbb5b7038b03"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@lucide/vue",
+      "version": "1.55.0",
+      "bom-ref": "pkg:npm/%40lucide/vue@1.55.0",
+      "purl": "pkg:npm/%40lucide/vue@1.55.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@lucide/vue"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "678ee4f4dfb8f8da7dea4a34f8b70fec799127a0d78761d9be044525e2e78514"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "de5a6e4e254620c6c6eef11585c0e71ef22ef999235e46bb78ea7db4803d8833eee861e97eac32915c806fe2ccd6e618560488f4cca8e071b34ef5674d2d82c8"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@rolldown/pluginutils",
+      "version": "1.0.1",
+      "bom-ref": "pkg:npm/%40rolldown/pluginutils@1.0.1",
+      "purl": "pkg:npm/%40rolldown/pluginutils@1.0.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@rolldown/pluginutils"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "c3d2bfe0ff94de71fd5b82e6f3a01b12ee4d99b8f1b34cc00b984b9acde61cfa"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "da3f5b1ade4987c863faf3ed8333ed97bda3d324711c0cae9a8a3a4cd7c08ec2c1d3852da52bcf6cf703701331cfb9fef42601d1cd46c501716118368e29aa1b"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@rollup/rollup-win32-x64-gnu",
+      "version": "4.65.0",
+      "bom-ref": "pkg:npm/%40rollup/rollup-win32-x64-gnu@4.65.0",
+      "purl": "pkg:npm/%40rollup/rollup-win32-x64-gnu@4.65.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@rollup/rollup-win32-x64-gnu"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "41c535aad70ae72755471841fa6f18ac3dfff6caecc49915f405385195de7a5a"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "5df2981561c83ece073ce0c832c185d482a54b71f57b75a89146488299a7e3eb8d9d90659d10c31c4ca53726b36d05f084c299adeebc3a3b5161b2aa6f9fa3f3"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@rollup/rollup-win32-x64-msvc",
+      "version": "4.65.0",
+      "bom-ref": "pkg:npm/%40rollup/rollup-win32-x64-msvc@4.65.0",
+      "purl": "pkg:npm/%40rollup/rollup-win32-x64-msvc@4.65.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@rollup/rollup-win32-x64-msvc"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "9b12ff8fb008831e56d99d3017b6c6b2e4e0f28ae804b1f74f0b059aa5056489"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c0f5a2fbe2b806cd554785e284e85f1a2e08197e82b9bec595ead37fc5f6bfed81b431dd7604aa5825f0183fa1db201ee3f9e2221343c0096d8a8382fb012881"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@swc/helpers",
+      "version": "0.5.23",
+      "bom-ref": "pkg:npm/%40swc/helpers@0.5.23",
+      "purl": "pkg:npm/%40swc/helpers@0.5.23",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@swc/helpers"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "10ee79b75759afbf8cfa2b8e5a2eff946c487143e935fc31b2433aa68be84596"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e654ac30e4d751178f8250dfbee01052a9067a4f47836924b0e61acb69b4f9747ef9bd8d5982ffe2c5b2baf54122cf282a725ac64762f7085a2ffb2a375dda7f"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@tailwindcss/node",
+      "version": "4.3.3",
+      "bom-ref": "pkg:npm/%40tailwindcss/node@4.3.3",
+      "purl": "pkg:npm/%40tailwindcss/node@4.3.3",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@tailwindcss/node"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "2afa932dc85e4edc27126e83f8b31df2d5ec5b15f86b5033182d6a82466ed43f"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "fd3f08284b1ff554d4ead2e3802efeb2fda638fb50c731368ccc3bbb84ede344f1f90499c69ce1f79fc7e9c30aa236bd5ee5bb88c74b258041d28f46d4268082"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@tailwindcss/oxide",
+      "version": "4.3.3",
+      "bom-ref": "pkg:npm/%40tailwindcss/oxide@4.3.3",
+      "purl": "pkg:npm/%40tailwindcss/oxide@4.3.3",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@tailwindcss/oxide"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "d57385a0a2f680b35a488f9a9816490a6580cc7a989a430e3e426b4c24af212e"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "92b5e302292268548f68afc5900413e544f1dd5a2b9906a2679841165259f54150181febc20d4c648847006f6c98c4114ddc89c4fe90b7933032d772539156ac"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@tailwindcss/oxide-win32-x64-msvc",
+      "version": "4.3.3",
+      "bom-ref": "pkg:npm/%40tailwindcss/oxide-win32-x64-msvc@4.3.3",
+      "purl": "pkg:npm/%40tailwindcss/oxide-win32-x64-msvc@4.3.3",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@tailwindcss/oxide-win32-x64-msvc"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "09657fdd8d8e83db093959eb5a8aec87cadb50bbb084cf403c490a8b94d557ed"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c89d29c0855cfe761e1a8574d96b6c37c298c8b42fee4c88db00e791ecf22651868e477840bc03180c25e3b6293c97ae23433439b6971923e3bd60cf7933e083"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@tailwindcss/vite",
+      "version": "4.3.3",
+      "bom-ref": "pkg:npm/%40tailwindcss/vite@4.3.3",
+      "purl": "pkg:npm/%40tailwindcss/vite@4.3.3",
+      "scope": "excluded",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@tailwindcss/vite"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "cba2bb8613106ca608bbd757998b2cf56a464584e3848310338fe3fe3b4761aa"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c9853c72880b79287f9acda387c163ee369b6bf1166bb25ae86a14a9865aada12e088e584ba9ace8e6d98238de766fa39ba5d98dd351581a4f3fa67cea83b173"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@tanstack/virtual-core",
+      "version": "3.19.6",
+      "bom-ref": "pkg:npm/%40tanstack/virtual-core@3.19.6",
+      "purl": "pkg:npm/%40tanstack/virtual-core@3.19.6",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@tanstack/virtual-core"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "49a5c28fc5a1f54d7089889203c838684db17733662bbbee36b78a3329749793"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0ac4d6f3ddb3db7832ec8cb16134e8ad5bb5b99581fb4377e3dad23202b3e2b14b3e92f36bb17b4e970229e2398940306100adf10525394ebb27e2970b1b691b"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@tanstack/vue-virtual",
+      "version": "3.13.47",
+      "bom-ref": "pkg:npm/%40tanstack/vue-virtual@3.13.47",
+      "purl": "pkg:npm/%40tanstack/vue-virtual@3.13.47",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@tanstack/vue-virtual"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "e221b1dc8fbc4b0d42a099fb6d75b38308e5b78a5d251ccadea58a33a56c4b87"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e87cdd60af5b0f20e80fd43f3637a99c2e30183699ee6165e73cfcb5b9f7166cbb14389c23df1927e477ef3b45b2c9e84cca0242163719f521973fa95bfbce4e"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/estree",
+      "version": "1.0.9",
+      "bom-ref": "pkg:npm/%40types/estree@1.0.9",
+      "purl": "pkg:npm/%40types/estree@1.0.9",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@types/estree"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "3537a6a503f57901111d8a29df81962887653deb199b9a795c7fb50bbfdd1bdc"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1a174f832d5e978fc898fd395f4e54c38730dbf33ddc10949a712f599352b650b310a304e05924f98a680393a21cd426a12ec269f6fc5dadcfc9af26d50af37a"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@types/web-bluetooth",
+      "version": "0.0.21",
+      "bom-ref": "pkg:npm/%40types/web-bluetooth@0.0.21",
+      "purl": "pkg:npm/%40types/web-bluetooth@0.0.21",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@types/web-bluetooth"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "74f7dfe22ba2256a690ed3859d832bfeeb0470d019f0064613e4d25c6a8ca67a"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a0840b0865ad705672d895bbee3f64f271f300ea6a3072d07a30c0e3c5d73161fab630901f3e51085cf56f3b2644ec8be8f526f8b2e75222380429f6db58a7c4"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vitejs/plugin-vue",
+      "version": "6.0.10",
+      "bom-ref": "pkg:npm/%40vitejs/plugin-vue@6.0.10",
+      "purl": "pkg:npm/%40vitejs/plugin-vue@6.0.10",
+      "scope": "excluded",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vitejs/plugin-vue"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "a085b679424a98c0f5db01103728058c74f6858eb8bc96389a0741fbde81e528"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6fcd1a5108779fea84cf3666e68429deb4f640899e0b1e7c2ba78597f46427777ae4a5b4913bafe6536c2d15408db5bd611529a3fc339afccc815df86d3008b4"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/compiler-core",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/compiler-core@3.5.44",
+      "purl": "pkg:npm/%40vue/compiler-core@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/compiler-core"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "6acfc2ace205484f396baf1a122520d267d0d621476780cce1ef4e6d37cb2a47"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "937e270b2b5b2bc3d0d6047698644e60ec3a3e7bff9ae9aa21dad9df1dad6f25d90d69bb5622862d37dd07e0d1ad6a8442c2e0189be7d1637d8c189fe730932d"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/compiler-dom",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/compiler-dom@3.5.44",
+      "purl": "pkg:npm/%40vue/compiler-dom@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/compiler-dom"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "497ca61820e335199b2efa44ed56b6a16eb2201b01cfd75fa2528932d2249184"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "5b902804559dc3595000a887a3091f80528569bf36a12453eac1ac3dfc3fab51918eccbf64914b1c6849c8144814df403cb4d476e0c7f54d890223ce2322ae62"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/compiler-sfc",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/compiler-sfc@3.5.44",
+      "purl": "pkg:npm/%40vue/compiler-sfc@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/compiler-sfc"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "60251260a85f9da39a79738b445cbc4b6d2db6725a7c7dc004eb0420a773e312"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "7731e64388d74e976be458c84147b29156a437fbb3a856d4a3dfc2e62901160ddadcf78ceae47179ccf1d596d704c2f4ff326cb44877ca0622a7347967b6f63f"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/compiler-ssr",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/compiler-ssr@3.5.44",
+      "purl": "pkg:npm/%40vue/compiler-ssr@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/compiler-ssr"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "6f299f4f51404261be9b7a311bd5c60dbef84a33ad3bd6d8a67c9e96bdeeac54"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c6be606f52551e57d72704a5473d4578feaec686b37731ee31354b13bba9fb856bab1936d7d0afc4b3f10fd35706de3bcaf656efea780d77f2a783b57e407220"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/reactivity",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/reactivity@3.5.44",
+      "purl": "pkg:npm/%40vue/reactivity@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/reactivity"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "bd2bef5fd14b64973ff4afe3686b9a7da36ef5a92bc4801e95a02f84df4b156e"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "bbe40974a78104400390f75ebec2fee84d764256157c10fc65cc39aa30d02ad6a623a975e0acaa6b324ca1b84229e96158de73a722948840e84f21c4f7772a5b"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/runtime-core",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/runtime-core@3.5.44",
+      "purl": "pkg:npm/%40vue/runtime-core@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/runtime-core"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "0f0e36296572ecb0d86237bd91f754afd2acf1ca3ade47175d4c973fb8782444"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b846bf9ddc2386bae19ce7dbda9fac672eb37a86a624e212a9a2d224693ff11ea70014f5665769cdc2683f32a3fb31d5a265413dc9906320b6af82edbc357a09"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/runtime-dom",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/runtime-dom@3.5.44",
+      "purl": "pkg:npm/%40vue/runtime-dom@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/runtime-dom"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "fb407670fdbd5a3ef08f80b66a66718aaa971b333a381dad86d4c429720af2ab"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ddf738011717561541689dee8d688d6490110faa64c917301be65884cce32ad294a7b3006341cbc2beebdd299ea772e2e996964fa7b0766c7c5ea75a0f9a0d66"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/server-renderer",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/server-renderer@3.5.44",
+      "purl": "pkg:npm/%40vue/server-renderer@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/server-renderer"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "c25d2418ee34e0f8fdbf4ff41f1f110e54b2997ff64cc2981375aed34340ba33"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4784b55281f887916badabaff19e571394f157da018944a05880b84f254ad452be4687119ce2f0140e57726a36d35d51960269f806d90a7c3a69fae196046e51"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vue/shared",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/%40vue/shared@3.5.44",
+      "purl": "pkg:npm/%40vue/shared@3.5.44",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vue/shared"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "ff0ebcaef70170c29ecc3df6586fc9e2879ca1ddeb8ea508602eee2892a96289"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1fcd972c7d038e648e75b1303b5e71dd04e8d5fe4f584b6fdb7ede2e960a7349aa2eef81f219ead7a9455a6b8198dbab91e886df0afea0cd4584e965fd854546"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vueuse/core",
+      "version": "14.1.0",
+      "bom-ref": "pkg:npm/%40vueuse/core@14.1.0",
+      "purl": "pkg:npm/%40vueuse/core@14.1.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vueuse/core"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "a82584818c569f70c718cdcaaac1d3946de0447856d8efe2cd663393b3d41f1f"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ae00629cab34ee1018c8f17cdf89834e2807ec1b4faaf6773ebcaecedd520ff960e7011c5aabf0cd75d81840dbdbf70fd128f9cd2bc79775a498c10baf991f5b"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vueuse/metadata",
+      "version": "14.1.0",
+      "bom-ref": "pkg:npm/%40vueuse/metadata@14.1.0",
+      "purl": "pkg:npm/%40vueuse/metadata@14.1.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vueuse/metadata"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "3a6b0ae96c03bb570260505b60dd5f58da10af1a7073d7be788c2561cc7a3998"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ee12b8834d79ad69f63e129c67df4dc93f990fdb1bc26ed21afa7b93e93eaca1969cb8d2fe8428ce8219cd67c27b04947819a726421bf8236bed973f1324679c"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@vueuse/shared",
+      "version": "14.1.0",
+      "bom-ref": "pkg:npm/%40vueuse/shared@14.1.0",
+      "purl": "pkg:npm/%40vueuse/shared@14.1.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/@vueuse/shared"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "8eb42cac4e3600eebcebdfc2131beea258ff465ecaf0d2a7ae4d183781abeed3"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "11c2b1b58be7ea0c7517ccfd279febb20dfe953427bceaee41df1f51e716f7d0c22b4e019160fbcf9290ff04c0c7e0dacf2a0413d749b7fcd5f0e20441b33a93"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "aria-hidden",
+      "version": "1.2.6",
+      "bom-ref": "pkg:npm/aria-hidden@1.2.6",
+      "purl": "pkg:npm/aria-hidden@1.2.6",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/aria-hidden"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "46d066afef535db19d7ba05d8e38ac50662b17a515845deb3ca70613f9623933"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8a4dd9802f5d63f95855533ef8e212b1a6037a0d6d6f456d3f9b8bde8ba1d64a0639a50c0cfa5b1487a2e099058a659414f9fdd2c6cc34c5d000854e96760a24"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "class-variance-authority",
+      "version": "0.7.1",
+      "bom-ref": "pkg:npm/class-variance-authority@0.7.1",
+      "purl": "pkg:npm/class-variance-authority@0.7.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/class-variance-authority"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "f487885eb010b36aec829ab8fb5fc845918006c4633e3c88c750e73bd35c6381"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "29afbd4ebbadbfb1bc33a593e927a2456cfbf762b9a84a881841b35ca84013ac4e58063aa4f1fc53ef48637a0232fea4a9398bb2fed787fdb0d918a091e3ccb2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "clsx",
+      "version": "2.1.1",
+      "bom-ref": "pkg:npm/clsx@2.1.1",
+      "purl": "pkg:npm/clsx@2.1.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/clsx"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "a5e616b9883177fb47c1fca22b6a4ab42be1c3ed6ffae8595a5c7d88630eeec2"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "7989b441606d52b0566561b4777f3a386030d7a67df793e2395a3607b6e35926c779d1a5e5ed1959aabae6438681448d7ac1080e407d2126d383f24af5d84264"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "csstype",
+      "version": "3.2.3",
+      "bom-ref": "pkg:npm/csstype@3.2.3",
+      "purl": "pkg:npm/csstype@3.2.3",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/csstype"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "c818b74a9bc1556488b7ec2a65399224738f6619228f9a6491c5c02ca91f849e"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "cf51c629c632db103c00641fc2b9f43c0cbe3c1ed7fc64a3dd45495bda8aca7e37c566be825e675e6538aaa2cc4735952c50bc2aeb145fc4ffd240a2398a4021"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "defu",
+      "version": "6.1.7",
+      "bom-ref": "pkg:npm/defu@6.1.7",
+      "purl": "pkg:npm/defu@6.1.7",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/defu"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "a2cf72e05920ca73e75922ddc8696cdc58c7d5dd6f3e013b5a494f4011bfbeb7"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "ef3db6426516890ff67742a475898035b45454006967d48d6321f9bf1e8f67e9c4e5b702d25eee16f11f1e5ca577f1dc1811532f9dfa0a50eddc311c4a510901"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "detect-libc",
+      "version": "2.1.2",
+      "bom-ref": "pkg:npm/detect-libc@2.1.2",
+      "purl": "pkg:npm/detect-libc@2.1.2",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/detect-libc"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "ee88e5b954fdf3a8480b1d01ef767d68d8ca2c6da269f58c5cf1c5550e9aa2a7"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "06d8f604e38ef37a375b21f9f5ef0c817b3111055c6ab9143a9118aee6c1d2eaf09cdd74c90dfae2bb22072535d67665a966199b4e62fe87fb8a8e26ce2841b5"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "enhanced-resolve",
+      "version": "5.26.0",
+      "bom-ref": "pkg:npm/enhanced-resolve@5.26.0",
+      "purl": "pkg:npm/enhanced-resolve@5.26.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/enhanced-resolve"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "445abd049d409dcf5b42df10e6f524fc65a76f6ae33ea037d301c5199a42c7f9"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f6f85e772945a276f6606a20cd4297ebe25aef680e25b37540702a76bbea2f085d97f4166caa29ce8502f446d0355b009ecfdbc7fe2ecaa6a5ad0028cb5201cb"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "entities",
+      "version": "7.0.1",
+      "bom-ref": "pkg:npm/entities@7.0.1",
+      "purl": "pkg:npm/entities@7.0.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-2-Clause"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/entities"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "b33b5d3fd4a8e196d3245c10ebb8feb2e076fc8d392f99a1050377d6e2b8b641"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4d6ae02ce1544131fdf78614ca5d724f8bb26af6399cd0799ae7dff91b566aa3550802b8d3c6f96679db34050458b4c2a6e9bdc3a6ab4fbd22d57750e1478e3c"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "esbuild",
+      "version": "0.28.1",
+      "bom-ref": "pkg:npm/esbuild@0.28.1",
+      "purl": "pkg:npm/esbuild@0.28.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/esbuild"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1eb26bbd9bf96b2c41ccf7f0a613a837393338822589fce4d0a26b18ad9cf11e3e2caa4cb6960b41e51d8e7c235affcb665907da569993ee30efca62f7d0f857"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "estree-walker",
+      "version": "2.0.2",
+      "bom-ref": "pkg:npm/estree-walker@2.0.2",
+      "purl": "pkg:npm/estree-walker@2.0.2",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/estree-walker"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "6f08430331daeaedaa35e7a8ca347cdb7493922fe9485bf57eb4d619cfb0b3ad"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "45f924fcca7f0cbec95637b7bb5f05c45ba34254cd476aba41f312301ec0bc2071f753468ff6dade409fcdad1fe9d5436f0ed89517ff9c3ae7ee942b082c90ff"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fdir",
+      "version": "6.5.0",
+      "bom-ref": "pkg:npm/fdir@6.5.0",
+      "purl": "pkg:npm/fdir@6.5.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/fdir"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "aca49395d61ef383a09f74555c66ed45817ca2b5724e710a4dc9e0471b83d8f5"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b486d8b596ee70eb340511aa3c992c84951874bf920c7edd54cf208f2f84469dd60148cb105244fb4da46a7c87b708d63a7c2b298062c0098cd29e242c90275e"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "graceful-fs",
+      "version": "4.2.11",
+      "bom-ref": "pkg:npm/graceful-fs@4.2.11",
+      "purl": "pkg:npm/graceful-fs@4.2.11",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/graceful-fs"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "5747d4ba6b17165c6ecac30ab3a331715f41c7ad546e1f1574dab1bdcb116181"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "45b279fe398570d342703579a3d7939c12c9fc7b33595d0fef76dcf857f89d2feb263f98692e881b288e2f45680585fe9755ab97793ade1fcaac7fa7849d17bd"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "jiti",
+      "version": "2.7.0",
+      "bom-ref": "pkg:npm/jiti@2.7.0",
+      "purl": "pkg:npm/jiti@2.7.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/jiti"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "aab8aafc42d9aeec14a6e2fe0e15ea1514c0c205a624055a7e776f2ec456283c"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "002ffb2687c9bd91abae779635a12725e38b531f89946b7bb4d6b4c198913d3e0c635c267ca8eddbee8eda9daecf6fac92597c39966624c36a7a47bb90a6cd81"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "lightningcss",
+      "version": "1.32.0",
+      "bom-ref": "pkg:npm/lightningcss@1.32.0",
+      "purl": "pkg:npm/lightningcss@1.32.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/lightningcss"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "1b7fbd47a660ecb37d1fa8304a14b726aa44a31bb3d3338f417593f6276b762f"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "357601ce29cdadb95fada3c6cab6cfa03d7d0b587d95f23fd66ce0598bd75137b8d781b3fd7d450f65c165264ceeb453acc03c24bdceb4068689fac82a1439c9"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "lightningcss-win32-x64-msvc",
+      "version": "1.32.0",
+      "bom-ref": "pkg:npm/lightningcss-win32-x64-msvc@1.32.0",
+      "purl": "pkg:npm/lightningcss-win32-x64-msvc@1.32.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/lightningcss-win32-x64-msvc"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "76456a8ca20848b96b5819f115368bebfbb941c51c860b62073e3e591c836b8b"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "026abd07f4a86587438b5905ae88e7a2a3cbc58850e16a395e22fc11526b56c07c011a02d4f596e951ad4f458a09e9a3cbc682fa5a2e2678d2ed4d7cc776f4e9"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "magic-string",
+      "version": "0.30.21",
+      "bom-ref": "pkg:npm/magic-string@0.30.21",
+      "purl": "pkg:npm/magic-string@0.30.21",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/magic-string"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "86814aaf7dacba9d31fbf361c3285981f1cbbda0a87108caa4131d297bd9eba2"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "bddd85e1853211728670b1e8abe4c4c828f1b9e49e1e7171cb28cda7cd328345d5e2f5219c37abfe5bef96a33f6ab0796d740de4adbfde88a7c82472c7c4f609"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "nanoid",
+      "version": "3.3.20",
+      "bom-ref": "pkg:npm/nanoid@3.3.20",
+      "purl": "pkg:npm/nanoid@3.3.20",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/nanoid"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "e2a77185ded1c006171e4e2f8b316d0e3b4c51a135a190851cfc888ea428f6bf"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b8a760d86dc63422909fd6f260ea716c6aab4f67c63b9291b7927ff1bde9a24f2b4faab119617a871332262118b407fe155c98b83f6145a0ea5f9b8f15827865"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "ohash",
+      "version": "2.0.12",
+      "bom-ref": "pkg:npm/ohash@2.0.12",
+      "purl": "pkg:npm/ohash@2.0.12",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/ohash"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "d19ecffe989da6710978f4d59b9de1feb8f26bdc74b2ffb3aa1ec2a1b8c162ad"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "eb94bfe6093d612b1a4637327fb35f6ba87f77713cff582c9695df2385bb0f19ffa1aa7c20a46e353e555e42d0d5814a2048386a9458e0f8fa6a2c05ceb0dd9b"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "picocolors",
+      "version": "1.1.1",
+      "bom-ref": "pkg:npm/picocolors@1.1.1",
+      "purl": "pkg:npm/picocolors@1.1.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/picocolors"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "ef2ac226c4811d312e12c64214c453878653e834482125ae475f27cea60de737"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c5c787dac9e1b5be4cf658aa0ec984c39ea57b7efa993664117fe311bfd1c4d1727a036e97b78db250973fd1438ff2dcbb45fc284c8c71e3f69eda5a1eb0c454"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "picomatch",
+      "version": "4.0.7",
+      "bom-ref": "pkg:npm/picomatch@4.0.7",
+      "purl": "pkg:npm/picomatch@4.0.7",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/picomatch"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "479b70b87aa7b44344d62c8a459ae7e53dd2bca6c61f1396bd55e63e9de73fc6"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a9c26ef3c436216a89b030f9dbd24a31dc069bf76f2275b81ef427470887f49b62849bf318eb1c0ed1c4df1d6904a794393cac43c91598b9c9da426eef285c18"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "postcss",
+      "version": "8.5.31",
+      "bom-ref": "pkg:npm/postcss@8.5.31",
+      "purl": "pkg:npm/postcss@8.5.31",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/postcss"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "2bc68f53bee43580a7229a351c94ba72ebdea65a885746d481586313c5426da9"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6146d6602804af09cc01592352761af8a94c0731a91f0888b7f0c4edfd06df702e5f62c7f5471393a2a05b1777cd153ea4ddeefc2f9797712730b3381de6bb4a"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "reka-ui",
+      "version": "2.11.0",
+      "bom-ref": "pkg:npm/reka-ui@2.11.0",
+      "purl": "pkg:npm/reka-ui@2.11.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/reka-ui"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "b3478b95f455e7df7d17428e164a580f3288561b377de5b2f5c62b1910894f44"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8a59299b86c80289788f0ce6e2da66dd655c7dfc863a9aa4b0d64bd64d6a3bd426230000faaf23ae8c6391418b127fc675d7dd13115fbe87d67d088a66ccd479"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "rollup",
+      "version": "4.65.0",
+      "bom-ref": "pkg:npm/rollup@4.65.0",
+      "purl": "pkg:npm/rollup@4.65.0",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/rollup"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "9e2c0facf05467213deede418db24ac850435b3711e04fd3622b00a57d3a1773"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4150af4144c60cde894708b78d51826371f86931ef8bdad7d0bca804c90652f761fd9e8ee750b370bcfce415996930831a197ac921aa619b3ec48d6398fa8673"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "source-map-js",
+      "version": "1.2.2",
+      "bom-ref": "pkg:npm/source-map-js@1.2.2",
+      "purl": "pkg:npm/source-map-js@1.2.2",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/source-map-js"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "9f1ea63b1661d0f6e5fcd50b625d86cddd77de870a0019b23262360987b487f5"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2868fff18e37c77e5a6550edb7e27898ad61a0b18750b3187d290e0c93508cd0c2de85b53ea3e8c4cc28d292d4b1633f5041b338dfcdc5e1f2c047cd5cd3f757"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tailwind-merge",
+      "version": "3.7.0",
+      "bom-ref": "pkg:npm/tailwind-merge@3.7.0",
+      "purl": "pkg:npm/tailwind-merge@3.7.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/tailwind-merge"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "048ace99e7a0c877d540e21fd3991795bfca07efe409aacd54465dfc51845939"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "5cf3d4c8073e72fb29cf79474dc47f4203df5b603496fff140d2235f71c684b47e36ada51da2eae4cb537ac1e7f0652bdd6dc382e4f6293e71dcd56046d63098"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tailwindcss",
+      "version": "4.3.3",
+      "bom-ref": "pkg:npm/tailwindcss@4.3.3",
+      "purl": "pkg:npm/tailwindcss@4.3.3",
+      "scope": "excluded",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/tailwindcss"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "3dc86b46c511947ca00838aa3f1776243abe923ac347c092e60a0cbc7ae68559"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "80e855dcfeee7c4eb64031a0d7355a4e0091f84b4fbfdda4da722155c54a70b9b14f5b1406c406867663d7be63f8ca91b78ccb17b89cfac0988df8713318fb61"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tapable",
+      "version": "2.3.3",
+      "bom-ref": "pkg:npm/tapable@2.3.3",
+      "purl": "pkg:npm/tapable@2.3.3",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/tapable"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "82d5903b3a6f9d6e41868f405176da8122799e8c71a51f5507087091862a2a3d"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "bb173fce9a8583ac7b0bcbce13b961e8b6dd6bc7842fdce6566fcf2de4cf051861d710a0756690f89d42522786a487e6d8776db14a51bfe1ec8626ac04c71ce8"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tinyglobby",
+      "version": "0.2.17",
+      "bom-ref": "pkg:npm/tinyglobby@0.2.17",
+      "purl": "pkg:npm/tinyglobby@0.2.17",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/tinyglobby"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "bd2b2af3c9ba0580f1acfb22c55d0b6d29abf683af5cac8a2efe82fa7c943f23"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c1747f758a5ca8a99f5a911d66388a24ec023459dd0f40cc9eb5bf7188d51adb449017d581c2c51e836b963e3b9a339589cf72c8dbbae5a96c805e0d4324dada"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tslib",
+      "version": "2.8.1",
+      "bom-ref": "pkg:npm/tslib@2.8.1",
+      "purl": "pkg:npm/tslib@2.8.1",
+      "scope": "optional",
+      "licenses": [
+        {
+          "license": {
+            "id": "0BSD"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/tslib"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "f02b4851df316f29bdfcd404aa1eb41e4e216b5859015f81fcd3e91caf8be931"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a0916ef781d06fe29576e49440bef09e99aa9df98bb0e03f9c087a6fa107d30084a0ad3f98f79753a737c0a0d5f373243ae1cf447b525ca294f7d2016b34bfdb"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "typescript",
+      "version": "5.9.3",
+      "bom-ref": "pkg:npm/typescript@5.9.3",
+      "purl": "pkg:npm/typescript@5.9.3",
+      "scope": "excluded",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/typescript"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "822ef7ca6452205657b6288b066481ecf508bfbf43455d715cf7d3ec457561e6"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8e5d6f6733c38a72ebf5e52ddc9feded5e8580d130f508ef04f772b33f4a7d00c3e357d0ac2d98e2f290762694a454f86d795bd511e12e9a7cc2d9ba3394e04b"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "vite",
+      "version": "7.3.7",
+      "bom-ref": "pkg:npm/vite@7.3.7",
+      "purl": "pkg:npm/vite@7.3.7",
+      "scope": "excluded",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/vite"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "aae1f593c0e6f320989b60af6e90f8ed4ea5137e5a0b9db663f9b0088333eb3c"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0071334ce44c6e2effeda5e9ef0eca679f8309475278bb09cf482b63cc47a5cf431dd61bd2f42ee83a897e6dad3b0de00c4c4d80f8272535f133ab326051da08"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "vue",
+      "version": "3.5.44",
+      "bom-ref": "pkg:npm/vue@3.5.44",
+      "purl": "pkg:npm/vue@3.5.44",
+      "scope": "required",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "YANCE:lock.location",
+          "value": "node_modules/vue"
+        },
+        {
+          "name": "YANCE:installedPackageJsonSHA256",
+          "value": "94139d37af28f8cd4bbfe2902d4e07fe920f786de8a0f35086aee1060243502e"
+        },
+        {
+          "name": "YANCE:integrityProvenance",
+          "value": "PACKAGE_LOCK_METADATA_VERIFY_TARBALL_SEPARATELY"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "76fbe668e086ee500c9094cfa8fc1678632c3d2e8322c16c7d90d4801a7d57a9877fd6f7fbfc32570611e04b3e595eae242d05291c69f3539b72ad19c1470615"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/%40babel/helper-string-parser@7.29.11",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40babel/parser@7.29.11",
+      "dependsOn": [
+        "pkg:npm/%40babel/types@7.29.11"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40babel/types@7.29.11",
+      "dependsOn": [
+        "pkg:npm/%40babel/helper-string-parser@7.29.11",
+        "pkg:npm/%40babel/helper-validator-identifier@7.29.7"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40esbuild/win32-x64@0.28.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40floating-ui/core@1.8.0",
+      "dependsOn": [
+        "pkg:npm/%40floating-ui/utils@0.2.12"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40floating-ui/dom@1.8.0",
+      "dependsOn": [
+        "pkg:npm/%40floating-ui/core@1.8.0",
+        "pkg:npm/%40floating-ui/utils@0.2.12"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40floating-ui/utils@0.2.12",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40floating-ui/vue@2.0.1",
+      "dependsOn": [
+        "pkg:npm/%40floating-ui/dom@1.8.0",
+        "pkg:npm/%40floating-ui/utils@0.2.12"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40internationalized/date@3.12.4",
+      "dependsOn": [
+        "pkg:npm/%40swc/helpers@0.5.23"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40internationalized/number@3.6.9",
+      "dependsOn": [
+        "pkg:npm/%40swc/helpers@0.5.23"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40jridgewell/gen-mapping@0.3.13",
+      "dependsOn": [
+        "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0",
+        "pkg:npm/%40jridgewell/trace-mapping@0.3.31"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40jridgewell/remapping@2.3.5",
+      "dependsOn": [
+        "pkg:npm/%40jridgewell/gen-mapping@0.3.13",
+        "pkg:npm/%40jridgewell/trace-mapping@0.3.31"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40jridgewell/resolve-uri@3.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40jridgewell/trace-mapping@0.3.31",
+      "dependsOn": [
+        "pkg:npm/%40jridgewell/resolve-uri@3.1.2",
+        "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40lucide/vue@1.55.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40rolldown/pluginutils@1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40rollup/rollup-win32-x64-gnu@4.65.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40rollup/rollup-win32-x64-msvc@4.65.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40swc/helpers@0.5.23",
+      "dependsOn": [
+        "pkg:npm/tslib@2.8.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40tailwindcss/node@4.3.3",
+      "dependsOn": [
+        "pkg:npm/%40jridgewell/remapping@2.3.5",
+        "pkg:npm/enhanced-resolve@5.26.0",
+        "pkg:npm/jiti@2.7.0",
+        "pkg:npm/lightningcss@1.32.0",
+        "pkg:npm/magic-string@0.30.21",
+        "pkg:npm/source-map-js@1.2.2",
+        "pkg:npm/tailwindcss@4.3.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40tailwindcss/oxide@4.3.3",
+      "dependsOn": [
+        "pkg:npm/%40tailwindcss/oxide-win32-x64-msvc@4.3.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40tailwindcss/oxide-win32-x64-msvc@4.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40tailwindcss/vite@4.3.3",
+      "dependsOn": [
+        "pkg:npm/%40tailwindcss/node@4.3.3",
+        "pkg:npm/%40tailwindcss/oxide@4.3.3",
+        "pkg:npm/tailwindcss@4.3.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40tanstack/virtual-core@3.19.6",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40tanstack/vue-virtual@3.13.47",
+      "dependsOn": [
+        "pkg:npm/%40tanstack/virtual-core@3.19.6"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40types/estree@1.0.9",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40types/web-bluetooth@0.0.21",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40vitejs/plugin-vue@6.0.10",
+      "dependsOn": [
+        "pkg:npm/%40rolldown/pluginutils@1.0.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/compiler-core@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40babel/parser@7.29.11",
+        "pkg:npm/%40vue/shared@3.5.44",
+        "pkg:npm/entities@7.0.1",
+        "pkg:npm/estree-walker@2.0.2",
+        "pkg:npm/source-map-js@1.2.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/compiler-dom@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40vue/compiler-core@3.5.44",
+        "pkg:npm/%40vue/shared@3.5.44"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/compiler-sfc@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40babel/parser@7.29.11",
+        "pkg:npm/%40vue/compiler-core@3.5.44",
+        "pkg:npm/%40vue/compiler-dom@3.5.44",
+        "pkg:npm/%40vue/compiler-ssr@3.5.44",
+        "pkg:npm/%40vue/shared@3.5.44",
+        "pkg:npm/estree-walker@2.0.2",
+        "pkg:npm/magic-string@0.30.21",
+        "pkg:npm/postcss@8.5.31",
+        "pkg:npm/source-map-js@1.2.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/compiler-ssr@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40vue/compiler-dom@3.5.44",
+        "pkg:npm/%40vue/shared@3.5.44"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/reactivity@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40vue/shared@3.5.44"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/runtime-core@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40vue/reactivity@3.5.44",
+        "pkg:npm/%40vue/shared@3.5.44"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/runtime-dom@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40vue/reactivity@3.5.44",
+        "pkg:npm/%40vue/runtime-core@3.5.44",
+        "pkg:npm/%40vue/shared@3.5.44",
+        "pkg:npm/csstype@3.2.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/server-renderer@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40vue/compiler-ssr@3.5.44",
+        "pkg:npm/%40vue/runtime-dom@3.5.44",
+        "pkg:npm/%40vue/shared@3.5.44"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vue/shared@3.5.44",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40vueuse/core@14.1.0",
+      "dependsOn": [
+        "pkg:npm/%40types/web-bluetooth@0.0.21",
+        "pkg:npm/%40vueuse/metadata@14.1.0",
+        "pkg:npm/%40vueuse/shared@14.1.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/%40vueuse/metadata@14.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40vueuse/shared@14.1.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/aria-hidden@1.2.6",
+      "dependsOn": [
+        "pkg:npm/tslib@2.8.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/class-variance-authority@0.7.1",
+      "dependsOn": [
+        "pkg:npm/clsx@2.1.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/clsx@2.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/csstype@3.2.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/defu@6.1.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/detect-libc@2.1.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/enhanced-resolve@5.26.0",
+      "dependsOn": [
+        "pkg:npm/graceful-fs@4.2.11",
+        "pkg:npm/tapable@2.3.3"
+      ]
+    },
+    {
+      "ref": "pkg:npm/entities@7.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/esbuild@0.28.1",
+      "dependsOn": [
+        "pkg:npm/%40esbuild/win32-x64@0.28.1"
+      ]
+    },
+    {
+      "ref": "pkg:npm/estree-walker@2.0.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/fdir@6.5.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/graceful-fs@4.2.11",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/jiti@2.7.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/lightningcss@1.32.0",
+      "dependsOn": [
+        "pkg:npm/detect-libc@2.1.2",
+        "pkg:npm/lightningcss-win32-x64-msvc@1.32.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/lightningcss-win32-x64-msvc@1.32.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/magic-string@0.30.21",
+      "dependsOn": [
+        "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/nanoid@3.3.20",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/ohash@2.0.12",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/picocolors@1.1.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/picomatch@4.0.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/postcss@8.5.31",
+      "dependsOn": [
+        "pkg:npm/nanoid@3.3.20",
+        "pkg:npm/picocolors@1.1.1",
+        "pkg:npm/source-map-js@1.2.2"
+      ]
+    },
+    {
+      "ref": "pkg:npm/reka-ui@2.11.0",
+      "dependsOn": [
+        "pkg:npm/%40floating-ui/vue@2.0.1",
+        "pkg:npm/%40internationalized/date@3.12.4",
+        "pkg:npm/%40internationalized/number@3.6.9",
+        "pkg:npm/%40tanstack/vue-virtual@3.13.47",
+        "pkg:npm/%40vueuse/core@14.1.0",
+        "pkg:npm/%40vueuse/shared@14.1.0",
+        "pkg:npm/aria-hidden@1.2.6",
+        "pkg:npm/defu@6.1.7",
+        "pkg:npm/ohash@2.0.12"
+      ]
+    },
+    {
+      "ref": "pkg:npm/rollup@4.65.0",
+      "dependsOn": [
+        "pkg:npm/%40types/estree@1.0.9",
+        "pkg:npm/%40rollup/rollup-win32-x64-gnu@4.65.0",
+        "pkg:npm/%40rollup/rollup-win32-x64-msvc@4.65.0"
+      ]
+    },
+    {
+      "ref": "pkg:npm/source-map-js@1.2.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/tailwind-merge@3.7.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/tailwindcss@4.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/tapable@2.3.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/tinyglobby@0.2.17",
+      "dependsOn": [
+        "pkg:npm/fdir@6.5.0",
+        "pkg:npm/picomatch@4.0.7"
+      ]
+    },
+    {
+      "ref": "pkg:npm/tslib@2.8.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/typescript@5.9.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/vite@7.3.7",
+      "dependsOn": [
+        "pkg:npm/esbuild@0.28.1",
+        "pkg:npm/fdir@6.5.0",
+        "pkg:npm/picomatch@4.0.7",
+        "pkg:npm/postcss@8.5.31",
+        "pkg:npm/rollup@4.65.0",
+        "pkg:npm/tinyglobby@0.2.17"
+      ]
+    },
+    {
+      "ref": "pkg:npm/vue@3.5.44",
+      "dependsOn": [
+        "pkg:npm/%40vue/compiler-dom@3.5.44",
+        "pkg:npm/%40vue/compiler-sfc@3.5.44",
+        "pkg:npm/%40vue/runtime-dom@3.5.44",
+        "pkg:npm/%40vue/server-renderer@3.5.44",
+        "pkg:npm/%40vue/shared@3.5.44"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+
+> yance-v2-p3-1-clickable-offline@0.0.1 build
+> vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+鉁?2653 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                    0.74 kB 鈹?gzip:  0.50 kB
+dist/assets/index-gLJcKhhR.css                    40.32 kB 鈹?gzip:  9.20 kB
+dist/assets/collision-runtime-tests-Zp-L6QIy.js    1.53 kB 鈹?gzip:  0.83 kB
+dist/assets/browser-tests-CF4-AuJA.js             10.16 kB 鈹?gzip:  3.95 kB
+dist/assets/index-CV2rfjhi.js                    340.44 kB 鈹?gzip: 94.38 kB
+鉁?built in 7.21s

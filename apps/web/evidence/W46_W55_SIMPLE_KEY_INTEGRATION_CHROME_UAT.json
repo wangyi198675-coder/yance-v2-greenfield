@@ -1,0 +1,53 @@
+{
+  "integrationSha": "24b959f533270b7d565bb2d30bac528c79439a66",
+  "qa": "REAL_WINDOWS_CHROME_NATIVE_W55_KEY_UI_NO_BROWSER_SECRET",
+  "notInstalledWebView2": true,
+  "noActualCloudApiKeyEntered": true,
+  "noPaidModelCalls": true,
+  "examples": [
+    {
+      "width": 320,
+      "height": 680,
+      "brain": 1,
+      "keyPanel": 1,
+      "noPlaintextInBrowser": true,
+      "sendDisabled": true,
+      "overX": 0,
+      "posts": [],
+      "errors": []
+    },
+    {
+      "width": 430,
+      "height": 850,
+      "brain": 1,
+      "keyPanel": 1,
+      "noPlaintextInBrowser": true,
+      "sendDisabled": true,
+      "overX": 0,
+      "posts": [],
+      "errors": []
+    },
+    {
+      "width": 950,
+      "height": 620,
+      "brain": 1,
+      "keyPanel": 1,
+      "noPlaintextInBrowser": true,
+      "sendDisabled": true,
+      "overX": 0,
+      "posts": [],
+      "errors": []
+    },
+    {
+      "width": 1360,
+      "height": 900,
+      "brain": 1,
+      "keyPanel": 1,
+      "noPlaintextInBrowser": true,
+      "sendDisabled": true,
+      "overX": 0,
+      "posts": [],
+      "errors": []
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+.native-build/
+runtime/
+*.log
+*.pdb
+*.exe
+*.dll
+*.lib
+*.exp
+*.obj
+*.ilk
+*.tmp

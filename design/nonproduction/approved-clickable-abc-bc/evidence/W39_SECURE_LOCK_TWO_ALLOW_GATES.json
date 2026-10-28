@@ -1,0 +1,230 @@
+{
+  "stage": "W39_EXACT_W42_TWO_SIGNED_CSV_LOCK_GATE",
+  "status": "ALLOW",
+  "sourceSHA": "fddf625d9a06f6919f753a7c89302563c1a98b25",
+  "signedCsvSha": {
+    "original": "8287614bdf28e28fd51eb994037f351adbd9e74110fa0f9ec48409c1dc4c9e60",
+    "six": "5e15e6ab12652c5e0e5f662bc322e443e6ad68596f900e1f5a5009c7fef94b60"
+  },
+  "lockSHA256": "852f14da6e4918b0c56dfb0e5a140a226e1e01a465c36ca80996bf3d84afffd8",
+  "oldNodes": 146,
+  "newNodes": 152,
+  "changes": [
+    {
+      "key": "",
+      "category": "ROOT",
+      "oldVersion": "0.0.1",
+      "newVersion": "0.0.1"
+    },
+    {
+      "key": "node_modules/@esbuild/aix-ppc64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/android-arm",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/android-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/android-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/darwin-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/darwin-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/freebsd-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/freebsd-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-arm",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-ia32",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-loong64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-mips64el",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-ppc64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-riscv64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-s390x",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/linux-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/netbsd-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/netbsd-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/openbsd-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/openbsd-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/openharmony-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/sunos-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/win32-arm64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/win32-ia32",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/@esbuild/win32-x64",
+      "category": "ESBUILD_PLATFORM",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/esbuild",
+      "category": "PIN",
+      "oldVersion": "0.27.7",
+      "newVersion": "0.28.1"
+    },
+    {
+      "key": "node_modules/vite",
+      "category": "PIN",
+      "oldVersion": "7.3.1",
+      "newVersion": "7.3.7"
+    },
+    {
+      "key": "node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/core",
+      "category": "W42_SIX_BUNDLE",
+      "oldVersion": null,
+      "newVersion": "1.11.1"
+    },
+    {
+      "key": "node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/runtime",
+      "category": "W42_SIX_BUNDLE",
+      "oldVersion": null,
+      "newVersion": "1.11.1"
+    },
+    {
+      "key": "node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/wasi-threads",
+      "category": "W42_SIX_BUNDLE",
+      "oldVersion": null,
+      "newVersion": "1.2.2"
+    },
+    {
+      "key": "node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@napi-rs/wasm-runtime",
+      "category": "W42_SIX_BUNDLE",
+      "oldVersion": null,
+      "newVersion": "1.1.4"
+    },
+    {
+      "key": "node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@tybys/wasm-util",
+      "category": "W42_SIX_BUNDLE",
+      "oldVersion": null,
+      "newVersion": "0.10.2"
+    },
+    {
+      "key": "node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/tslib",
+      "category": "W42_SIX_BUNDLE",
+      "oldVersion": null,
+      "newVersion": "2.8.1"
+    }
+  ],
+  "counts": {
+    "ROOT": 1,
+    "ESBUILD_PLATFORM": 26,
+    "PIN": 2,
+    "W42_SIX_BUNDLE": 6
+  }
+}
