@@ -92,7 +92,7 @@ async function readPancakeContacts(){
     inbox.pageId!==page.pageId||!Array.isArray(inbox.conversations))continue;
   verifiedPages++;
   for(const c of inbox.conversations){
-   if(typeof c.conversationId!=='string'||!/^[0-9]{1,40}$/.test(c.conversationId)||
+   if(typeof c.conversationId!=='string'||!/^(?:[0-9]{1,40}|[A-Za-z0-9._:-]{8,160})$/.test(c.conversationId)||
       typeof c.displayName!=='string')continue;
    rows.push(Object.freeze({
     contactRef:'PANCAKE_READ_ONLY|'+page.pageId+'|'+c.conversationId,
