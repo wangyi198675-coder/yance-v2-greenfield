@@ -23,7 +23,11 @@ async function api(route,body={}){
 }
 const withBusy=async f=>{
  if(busy)return;busy=true;error('');
- try{await f()}catch{error('Messenger 连接暂时不可用，请重新尝试。本机内部技术设置无需填写。')}
+ try{await f()}catch{
+  error('当前验证未完成。可以重新开始登录；如不恢复加密聊天记录，安全存储 PIN 可留空。');
+  byId('retry').textContent='重新开始登录';
+  byId('retry').classList.remove('hidden');
+ }
  finally{busy=false}
 };
 async function loadFlows(){
@@ -46,7 +50,11 @@ async function loadFlows(){
 function showStep(s){
  step=s;const target=byId('step');clear(target);
  if(!s||typeof s!=='object'){error('登录步骤不可用');return}
- if(s.instructions)target.append(element('p',s.instructions));
+ const hasOptionalRecoveryPin=Array.isArray(s.fields)&&s.fields.some(f=>
+   f.optional===true&&/pin|recovery|secure.storage/i.test([f.id,f.name].join(' ')));
+ if(hasOptionalRecoveryPin)target.append(element('p',
+   '安全存储 PIN 仅用于恢复已加密的聊天记录。不需要恢复历史时，可以留空直接继续。'));
+ else if(s.instructions)target.append(element('p',s.instructions));
  if(s.type==='complete'){
   state('Messenger 已完成原生登录，等待言策核验账号授权');
   target.append(element('p','登录步骤已完成。账号和联系人仍需通过言策现有授权验证，尚不能自动发送消息。'));
@@ -66,10 +74,12 @@ function showStep(s){
    }else for(const v of f.options||[]){
     const option=element('option',v);option.value=v;field.append(option);
    }
+   field.required=f.optional!==true;
+   if(f.optional===true)lab.append(element('small','可选，可留空继续'));
    lab.append(field);form.append(lab);
    if(f.description)form.append(element('small',f.description));
   }
-  const submit=element('button','继续验证');submit.type='submit';form.append(submit);
+  const submit=element('button',hasOptionalRecoveryPin?'继续（可跳过历史恢复）':'继续验证');submit.type='submit';form.append(submit);
   form.onsubmit=ev=>{
    ev.preventDefault();
    const fields=Object.fromEntries(new FormData(form).entries());

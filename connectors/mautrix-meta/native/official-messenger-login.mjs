@@ -19,8 +19,14 @@ function normalizeStep(step){
     common.fields=fields.map(f=>{
       if(!idValid(f.id)||!['username','phone_number','email','password','2fa_code','token','url','domain','select'].includes(f.type))
         deny('INVALID_OFFICIAL_LOGIN_FIELD',503);
+      // Messenger secure-storage restoration is optional when upstream says
+      // "leave empty to continue". Do not mistake this for a mandatory login PIN.
+      const guidance=[step.instructions,f.description].filter(x=>typeof x==='string').join(' ');
+      const isRecoveryPin=/pin|secure.storage|recovery/i.test([f.id,f.name].join(' '));
+      const upstreamSaysSkip=/(leave.{0,18}(?:empty|blank)|without restor|skip.{0,20}(?:pin|restore)|留空|跳过|不恢复)/i.test(guidance);
       return {id:f.id,type:f.type,name:String(f.name||f.id).slice(0,100),
         description:String(f.description||'').slice(0,300),
+        optional:f.optional===true||(isRecoveryPin&&upstreamSaysSkip),
         options:Array.isArray(f.options)?f.options.filter(x=>typeof x==='string').slice(0,50):[]};
     });
   }

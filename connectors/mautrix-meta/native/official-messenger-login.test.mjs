@@ -16,6 +16,15 @@ function upstream(){
     {id:'messenger-lite',name:'Messenger iOS'},
     {id:'messenger-lite-android',name:'Messenger Android'},
     {id:'facebook',name:'Cookie method'}]});
+  if(u.pathname.endsWith('/login/start/messenger-lite-android'))
+   return Response.json({login_id:'process-pin',step_id:'storage-pin',txn_id:'tx-pin',
+    type:'user_input',
+    instructions:'Enter your Messenger secure storage PIN to restore encrypted chat history. Leave it empty to continue without restoring history.',
+    user_input:{fields:[{id:'recovery_pin',type:'password',name:'Secure Storage PIN'}]}});
+  if(u.pathname.endsWith('/login/step/process-pin/storage-pin/user_input')){
+   assert.equal(JSON.parse(init.body).recovery_pin,'');
+   return Response.json({type:'complete',login_id:'process-pin'});
+  }
   if(u.pathname.endsWith('/login/start/messenger-lite'))
    return Response.json({login_id:'process-1',step_id:'credentials',txn_id:'tx1',
     type:'user_input',instructions:'Enter your Messenger credentials',
@@ -49,6 +58,16 @@ test('real BridgeV2 endpoints are used without exposing Matrix bearer',async()=>
  await assert.rejects(()=>controller.advance(first.handle,{username:'qa'}),/LOGIN_PROCESS_EXPIRED_OR_MISSING/);
  assert.ok(calls.some(x=>x.path.endsWith('/login/start/messenger-lite')));
  assert.ok(calls.some(x=>x.path.endsWith('/user_input')));
+});
+test('upstream optional encrypted-history recovery PIN accepts blank submission',async()=>{
+ const {controller}=upstream();
+ const response=await controller.start('messenger-lite-android');
+ assert.equal(response.step.type,'user_input');
+ assert.equal(response.step.fields[0].optional,true);
+ assert.equal(response.step.fields[0].id,'recovery_pin');
+ const done=await controller.advance(response.handle,{recovery_pin:''});
+ assert.equal(done.step.type,'complete');
+ assert.equal(done.canSend,false);
 });
 test('missing internal technical Matrix session fails closed',async()=>{
  const controller=createOfficialMessengerLogin({getSession:async()=>null});
