@@ -98,9 +98,10 @@ function reconcileFilter(){
 }
 async function readSelectedChannelStatus(){
  const selectedChannel=channel.value,revision=++channelStatusRevision;
- console.info('YANCE_CHANNEL_STATUS_CHECK',selectedChannel);
  channelStatusMessage.value='';
  if(!['WHATSAPP_PERSONAL','TELEGRAM_PERSONAL'].includes(selectedChannel))return;
+ channelStatusMessage.value=selectedChannel==='WHATSAPP_PERSONAL'?
+  '正在核对 WhatsApp 连接状态…':'正在核对 Telegram 原生授权…';
  const endpoint=selectedChannel==='WHATSAPP_PERSONAL'?
   '/api/v2/providers/whatsapp-personal/native/status':
   '/api/v2/providers/telegram-personal/status';
@@ -115,14 +116,13 @@ async function readSelectedChannelStatus(){
     'WhatsApp 已连接，但尚未从可信联系人源读到会话。':
     'WhatsApp 联系状态未核实，请在账号管理检查。';
   }else{
-   channelStatusMessage.value=response.status===401&&result.reason==='W54_SIGNED_INSTALLED_SESSION_REQUIRED'?
-    'Telegram 当前需要安装版的原生授权会话，网页无法读取联系人。':
+   channelStatusMessage.value=response.status===401?
+    'Telegram 当前未获得安装版会话授权，请在桌面版完成账号登录。':
     response.ok&&result.authorized===true?
     'Telegram 已授权，但尚未从可信联系人源读到会话。':
     'Telegram 连接状态尚未核实，请在账号管理检查。';
   }
- }catch(error){
-  console.info('YANCE_CHANNEL_STATUS_ERROR',String(error?.message||error));
+ }catch{
   if(mounted&&revision===channelStatusRevision&&channel.value===selectedChannel)
    channelStatusMessage.value=selectedChannel==='WHATSAPP_PERSONAL'?
     'WhatsApp 连接状态暂时无法读取。':'Telegram 连接状态暂时无法读取。';
