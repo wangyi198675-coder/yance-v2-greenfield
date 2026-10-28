@@ -18,6 +18,8 @@ import {createWebPrivateLocalQwen} from './web-private-local-qwen.mjs';
 import {createWebPrivateCloudByok} from './web-private-cloud-byok.mjs';
 import {createWebPrivateCloudHttp} from './web-private-cloud-http.mjs';
 import {createW55WebNativeStdioPort} from './w55-web-native-stdio.mjs';
+import {createPancakeMultiOnboardingHttp} from './pancake-multi-onboarding-http.mjs';
+import {createW55PancakeWebCustody} from './w55-pancake-web-custody.mjs';
 import {createPrivateModelHttp} from './private-model-http.mjs';
 import {createNativeOwnerReadHttp} from './native-authoritative-reads.mjs';
 import {createNativeProviderGateway,makeW26DiagnosticPort} from './native-provider-gateway.mjs';
@@ -71,9 +73,11 @@ const webPrivateQwen=webPrivateRoot&&existingLocalQwenKey?
 // W55's ORIGINAL Rust WinCred host is optional for a local-Qwen-only user.
 // W55 owns the executable, WinCred scope and OS checks, not the browser.
 let webCloudByok=null;
+let webNativeCredentialPort=null;
 if(webPrivateRoot&&process.env.YANCE_W55_WEB_NATIVE_EXE){
  const nativeWinCred=createW55WebNativeStdioPort({
   executable:process.env.YANCE_W55_WEB_NATIVE_EXE});
+ webNativeCredentialPort=nativeWinCred;
  webCloudByok=createWebPrivateCloudByok({
   appLocalDataRoot:webPrivateRoot,nativeKeyPort:nativeWinCred});
 }
@@ -198,6 +202,11 @@ const nativeMessages=createNativeMessageReadHttp({
 // W54 current user, W24 real account/peer, and W55 protected Signal creds are
 // installed in-process. Current unprovisioned QA must explicitly remain 503.
 const whatsAppNativeHttp=whatsAppLive?.handler??null;
+const pancakeCustody=webPrivatePrincipal&&webNativeCredentialPort?
+ createW55PancakeWebCustody({nativeKeyPort:webNativeCredentialPort}):null;
+const pancakeOnboarding=createPancakeMultiOnboardingHttp({
+ sessionAuthority:localSessionAuthority,webOrigin,custody:pancakeCustody
+});
 const nativeProviders=createNativeProviderGateway({
  sessionAuthority:localSessionAuthority,
  readW26Status:makeW26DiagnosticPort(process.env.YANCE_W47_W26_READONLY_PORT)
@@ -320,6 +329,15 @@ const handler=(req,res)=>{
         if(!res.headersSent)deny(res,503,'W28_NATIVE_HANDLER_UNAVAILABLE');
         else res.destroy();
       });return;
+    }
+    if(url.pathname.startsWith('/api/v2/providers/fb-page/onboarding/')){
+      void pancakeOnboarding(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'PANCAKE_ONBOARDING_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'PANCAKE_ONBOARDING_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
     }
     if(/^\/api\/v2\/providers\/(fb-page|telegram-personal)\/native\//.test(url.pathname)){
       return deny(res,503,'NATIVE_CHANNEL_AUTH_OWNER_PORT_NOT_CONNECTED');
