@@ -52,17 +52,33 @@ export function createOfficialMessengerLogin({getSession,fetchImpl=fetch,clock=D
     if(principal!==s.principal)deny('MATRIX_TECH_PRINCIPAL_MISMATCH',503);
     return {token:s.token,principal};
   }
-  async function call(session,path,method='GET',body){
+  async function call(session,path,method='GET',body,{timeout=12000}={}){
     const url=new URL(ROOT+path);
     url.searchParams.set('user_id',session.principal);
-    const response=await fetchImpl(url.toString(),{method,redirect:'error',
-      signal:AbortSignal.timeout(12000),
-      headers:{Authorization:'Bearer '+session.token,Accept:'application/json',
-        ...(body?{'Content-Type':'application/json'}:{})},
-      ...(body?{body:JSON.stringify(body)}:{})});
-    if(!response.ok)deny(response.status===401?'MATRIX_TECH_SESSION_EXPIRED':
-      response.status===404?'OFFICIAL_LOGIN_PROCESS_NOT_FOUND':'UPSTREAM_LOGIN_STEP_FAILED',
-      [401,404].includes(response.status)?response.status:503);
+    let response;
+    try{
+      response=await fetchImpl(url.toString(),{method,redirect:'error',
+        signal:AbortSignal.timeout(timeout),
+        headers:{Authorization:'Bearer '+session.token,Accept:'application/json',
+          ...(body?{'Content-Type':'application/json'}:{})},
+        ...(body?{body:JSON.stringify(body)}:{})});
+    }catch(error){
+      if(error?.name==='TimeoutError'||error?.name==='AbortError')
+        deny('UPSTREAM_LOGIN_TIMEOUT_STATUS_UNKNOWN',504);
+      deny('UPSTREAM_LOGIN_NETWORK_UNAVAILABLE',503);
+    }
+    if(!response.ok){
+      // Official BridgeV2 says a rejected login step must start a new process.
+      // Return safe failure classes, never upstream text (which can include secrets).
+      const code=response.status===401?'MATRIX_TECH_SESSION_EXPIRED':
+        response.status===404?'LOGIN_PROCESS_EXPIRED_OR_MISSING':
+        response.status===429?'LOGIN_RATE_LIMITED':
+        response.status===400||response.status===422?
+          'LOGIN_STEP_REJECTED_RESTART_REQUIRED':'UPSTREAM_LOGIN_STEP_FAILED';
+      deny(code,response.status===401?401:
+        response.status===429?429:
+        response.status===404||response.status===400||response.status===422?409:503);
+    }
     const content=await response.text();
     if(content.length>40000)deny('OFFICIAL_LOGIN_REPLY_OVERSIZED',503);
     try{return JSON.parse(content)}catch{deny('INVALID_OFFICIAL_LOGIN_REPLY',503)}
@@ -117,7 +133,10 @@ export function createOfficialMessengerLogin({getSession,fetchImpl=fetch,clock=D
       encodeURIComponent(current.stepId)+'/'+mode;
     const url=route+(current.txnId?'?txn_id='+encodeURIComponent(current.txnId):'');
     active.delete(handle); // one-shot: no replay even if upstream fails
-    const step=await call(s,url,'POST',mode==='user_input'?fields:undefined);
+    // Facebook authentication and 2FA can take longer than a status fetch.
+    // Do not auto-retry a possibly submitted one-time code on network timeout.
+    const step=await call(s,url,'POST',mode==='user_input'?fields:undefined,
+      {timeout:mode==='user_input'?60000:90000});
     if(step.type!=='complete'){
       if(!idValid(step.step_id))deny('INVALID_OFFICIAL_NEXT_STEP',503);
       active.set(handle,{...current,stepId:step.step_id,txnId:step.txn_id,

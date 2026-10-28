@@ -30,12 +30,22 @@ const withBusy=async f=>{
   const code=String(e?.message||'');
   let message='Messenger 验证尚未完成。请检查输入内容；如果无法继续，可重新开始登录。';
   if(code==='LOGIN_PROCESS_EXPIRED_OR_MISSING'||code==='LOGIN_PROCESS_HANDLE_INVALID')
-   message='这次登录步骤已经失效，需要重新开始登录。';
+   message='本次验证会话已失效，请重新开始登录。';
+  else if(code==='LOGIN_STEP_REJECTED_RESTART_REQUIRED')
+   message='Messenger 拒绝了本次验证步骤，此次流程已结束。可能是验证码不匹配或登录状态变化；请先检查账号设置，不要连续重试。';
+  else if(code==='LOGIN_RATE_LIMITED')
+   message='Messenger 暂时限制了登录验证。请停止重复提交，稍后通过 Facebook 本身的安全设置确认验证方式。';
+  else if(code==='UPSTREAM_LOGIN_TIMEOUT_STATUS_UNKNOWN')
+   message='Messenger 验证响应超时，暂时无法判断验证码是否已被接受。请先确认账户登录状态，不要连续重试。';
+  else if(code==='UPSTREAM_LOGIN_STEP_FAILED'||code==='UPSTREAM_LOGIN_NETWORK_UNAVAILABLE')
+   message='Messenger 上游暂时未完成验证，本次状态无法确认，请不要重复提交相同验证码。';
   else if(isAuthenticatorStep(step))
-   message='身份验证器验证尚未完成。请使用 App 当前显示的最新 6 位动态验证码；如果仍失败，可重新开始登录。';
+   message='6 位动态验证码未完成验证。请核对账号、验证器及设备时间，避免重复尝试。';
   else if((step?.fields||[]).some(f=>f.optional===true&&/pin|recovery/i.test(f.id)))
    message='安全存储 PIN 只用于恢复加密聊天记录；如果不恢复历史，可留空继续。如仍失败，请重新开始登录。';
   error(message);
+  if(code==='LOGIN_STEP_REJECTED_RESTART_REQUIRED'||code==='LOGIN_PROCESS_EXPIRED_OR_MISSING'||
+     code==='LOGIN_RATE_LIMITED'||code==='LOGIN_PROCESS_HANDLE_INVALID')handle=null;
   byId('retry').textContent='重新开始登录';
   byId('retry').classList.remove('hidden');
  }
@@ -96,10 +106,12 @@ function showStep(s){
   const submit=element('button',hasOptionalRecoveryPin?'继续（可跳过历史恢复）':'继续验证');submit.type='submit';form.append(submit);
   form.onsubmit=ev=>{
    ev.preventDefault();
+   if(busy)return;
    const fields=Object.fromEntries(new FormData(form).entries());
-   form.reset();
-   withBusy(async()=>{const result=await api('/native-login/step',{handle,fields});
-     handle=result.handle;showStep(result.step)});
+   withBusy(async()=>{
+     const result=await api('/native-login/step',{handle,fields});
+     form.reset();handle=result.handle;showStep(result.step);
+   });
   };
   target.append(form);return;
  }

@@ -98,3 +98,29 @@ test('local native click flow has same-origin and one-time ticket boundary',asyn
   assert.match(await script.text(),/native-login\/start/);
  }finally{await new Promise(resolve=>s.close(resolve))}
 });
+
+test('real upstream rejected 2FA is classified without disclosing code or allowing replay',async()=>{
+ const mockFetch=async(url,opts={})=>{
+  const path=new URL(url).pathname;
+  if(path.endsWith('/account/whoami'))return Response.json({user_id:principal});
+  if(path.endsWith('/login/flows'))return Response.json({flows:[{id:'messenger-lite'}]});
+  if(path.endsWith('/login/start/messenger-lite'))
+   return Response.json({login_id:'step-2fa',step_id:'authenticator',txn_id:'attempt-1',
+     type:'user_input',instructions:'Enter a six-digit code from your authenticator app',
+     user_input:{fields:[{id:'code',type:'2fa_code',name:'Six-digit code'}]}});
+  if(path.endsWith('/login/step/step-2fa/authenticator/user_input')){
+   assert.equal(JSON.parse(opts.body).code,'000001');
+   return Response.json({errcode:'M_BAD_STATE',error:'rejected code 000001'}, {status:400});
+  }
+  return Response.json({errcode:'M_NOT_FOUND'},{status:404});
+ };
+ const login=createOfficialMessengerLogin({
+   getSession:async()=>({principal,token:'safe-fixture'}),fetchImpl:mockFetch});
+ const start=await login.start();
+ assert.equal(start.step.fields[0].type,'2fa_code');
+ await assert.rejects(()=>login.advance(start.handle,{code:'000001'}),e=>
+   e.code==='LOGIN_STEP_REJECTED_RESTART_REQUIRED'&&
+   e.status===409&&!String(e.message).includes('000001'));
+ await assert.rejects(()=>login.advance(start.handle,{code:'000001'}),e=>
+   e.code==='LOGIN_PROCESS_EXPIRED_OR_MISSING');
+});
