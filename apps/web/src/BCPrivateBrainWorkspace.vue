@@ -473,12 +473,12 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
     <p>{{loadState==='checking'?'正在载入会话…':loadState==='ready'?'随时向我提问，或从下面输入你想做的事情。':'选择一个 AI 模型，随后就可以开始对话。'}}</p>
     <button v-if="loadState!=='ready'&&loadState!=='checking'" type="button" @click="toggleBrainModel">选择 AI 模型</button>
    </div>
-   <article v-for="(m,i) in messages" :key="i" :data-role="m.role">
-    <strong>{{m.role==='user'?'你':m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
+   <article v-for="(m,i) in messages" :key="i" :data-role="m.role" :aria-label="m.role==='user'?'我发送的消息':m.role==='assistant'?'闺蜜大脑的回复':'工具回执'">
+    <strong v-if="m.role!=='user'">{{m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
     <p>{{m.content}}</p>
    </article>
-   <article v-if="pendingPrompt" data-role="user" data-test="brain-pending-user">
-    <strong>你 <small>待原生 Agno 历史确认</small></strong>
+   <article v-if="pendingPrompt" data-role="user" data-test="brain-pending-user" aria-label="正在等待历史确认的已提交消息">
+    <small class="bc-brain-user-pending-status">待原生 Agno 历史确认</small>
     <p>{{pendingPrompt}}</p>
    </article>
    <article v-if="streamingPreview&&requestInFlight" data-role="assistant" data-test="brain-live-model-preview">
@@ -562,7 +562,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
 .bc-private-history{flex:1 1 0;min-height:140px;max-height:none!important;display:block;overflow-y:auto;background:var(--bg);border:0!important;padding:13px 4px!important;overscroll-behavior:contain}
 .bc-private-history article{width:fit-content;max-width:min(84%,760px);margin:8px auto 14px 0;border:1px solid var(--border);border-radius:15px 15px 15px 4px;padding:12px 16px;background:var(--surface);box-shadow:0 4px 18px rgba(0,0,0,.055)}
 .bc-private-history article[data-role=user]{margin-left:auto;margin-right:0;border-radius:15px 15px 4px 15px;border-color:rgba(var(--accent-rgb),.28);background:linear-gradient(135deg,rgba(var(--accent-rgb),.14),rgba(var(--accent-rgb),.055))}
-.bc-private-history article strong{font-size:11px;color:var(--accent)}.bc-private-history article p{margin:7px 0 0;line-height:1.65}
+.bc-private-history article strong{font-size:11px;color:var(--accent)}.bc-private-history article p{margin:7px 0 0;line-height:1.65}.bc-private-history article[data-role=user]>p{margin-top:0}.bc-brain-user-pending-status{display:block;margin-bottom:7px;font-size:11px;line-height:1.4;color:var(--muted)}
 .bc-private-compose{flex:0 0 auto;display:grid;gap:7px;border:1px solid var(--border);padding:11px 12px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px rgba(var(--accent-rgb),.055),0 12px 24px rgba(0,0,0,.065)}.bc-private-compose label{font-size:11px;color:var(--muted)}
 .bc-private-compose textarea{border-radius:12px;resize:vertical;min-height:66px;background:var(--bg2)!important;border-color:var(--border)!important}.bc-private-compose textarea:focus{outline:2px solid rgba(var(--accent-rgb),.38);border-color:var(--accent)!important}.bc-private-compose button{background:var(--accent);color:var(--accent-ink);border-radius:11px}
 @media(max-width:719px){.bc-private-brain{padding:9px!important}.bc-private-brain-head{gap:4px}.bc-private-brain-head strong{font-size:15px}.bc-private-brain-head button{font-size:11px}.bc-private-history article{max-width:92%}}
