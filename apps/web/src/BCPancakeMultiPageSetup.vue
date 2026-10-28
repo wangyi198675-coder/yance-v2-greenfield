@@ -24,6 +24,15 @@ function humanError(e,action){
   return 'Pancake 官方账户验证未通过（错误码 102），令牌未保存。你已找到正确的账户令牌入口，请核对复制是否完整，以及当前登录的 Pancake 账户是否拥有这些主页。';
  if(code.includes('PANCAKE_OFFICIAL_ERROR_'))return 'Pancake 官方返回业务错误码 '+(code.match(/PANCAKE_OFFICIAL_ERROR_([0-9]{1,5})/)?.[1]||'未知')+'，并非已确认 Token 错误；令牌未保存。';
  if(code.includes('PANCAKE_OFFICIAL_FAILURE_UNCLASSIFIED'))return 'Pancake 官方没有返回可识别的错误码，令牌未保存。';
+ if(code.includes('PANCAKE_ACCOUNT_PAGES_INVALID'))
+  return 'Pancake 已返回主页列表，但其分类结构与言策预期不一致（PAGES_INVALID）；账户未保存。';
+ if(code.includes('PANCAKE_CREDENTIAL_SIZE_LIMIT'))
+  return 'W55 本地加密凭据容量限制未通过（CREDENTIAL_SIZE_LIMIT），不是官方令牌拒绝。';
+ if(code.includes('W55_PANCAKE_'))
+  return 'W55 原生凭据保存或回读失败：'+(code.match(/W55_PANCAKE_[A-Z0-9_]{3,60}/)?.[0]||'W55_UNVERIFIED');
+ if(code.includes('PANCAKE_ACCOUNT_HTTP_'))
+  return 'Pancake 账户接口验证未完成：HTTP '+(code.match(/PANCAKE_ACCOUNT_HTTP_([0-9]{3})/)?.[1]||'?')+
+   '，错误码 '+(code.match(/_CODE_([A-Z0-9_]{3,80})/)?.[1]||'UNKNOWN')+'。';
  if(code.includes('PANCAKE_TOKEN_REJECTED')||code.includes('PANCAKE_TOKEN_OR_PAGE_REJECTED'))
   return 'Pancake 官方拒绝此 Token。请确认复制的是账户个人设置里的 User Access Token，而不是主页 Page Token。';
  if(code.includes('PANCAKE_ACCOUNT_ALREADY_CONFIGURED'))
