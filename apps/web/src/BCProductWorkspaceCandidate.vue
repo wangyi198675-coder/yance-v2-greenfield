@@ -252,6 +252,7 @@ defineExpose({refresh});
      <div class="w46-r4-channel-title"><strong>我的聊天账号</strong><small>连接多个账号，所有消息仍在「聊天」中查看</small></div>
      <div class="w46-r4-channel-actions">
       <span v-if="snapshot?.trustedSession" class="w46-r4-channel-count" data-test="w46-authoritative-account-count">已验证 {{readonlyAccount}} 个</span>
+      <button type="button" class="w46-add-account-global" data-test="chatgpt-auth-open-model-settings" @click="openChatGPTSettings">连接 ChatGPT</button>
       <button type="button" class="w46-add-account-global" data-test="w46-add-account-global" :aria-expanded="addAccountOpen"
        @click="addAccountOpen=!addAccountOpen">＋ 添加账号</button>
       <button type="button" class="w46-r4-channel-details-toggle" data-test="w46-channel-details-toggle"
