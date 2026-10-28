@@ -71,7 +71,10 @@ export function createNativeProviderGateway({
    // diagnostics; no Facebook account is authenticated or in W24 current K.
    if(!accountSession){
     send(res,200,{ok:true,channel:info.channel,source:info.source,
-     status:'WAITING_USER_AUTH',authorizedByNativeOwner:false,canSend:false,
+     status:sdk.nativeProviderSessionConnected===true?
+       'UPSTREAM_CONNECTED_BINDING_PENDING':'WAITING_USER_AUTH',
+     nativeProviderSessionConnected:sdk.nativeProviderSessionConnected===true,
+     authorizedByNativeOwner:false,canSend:false,
      bridgeState:sdk.bridgeState,upstreamVersion:sdk.upstream.version,
      sdkReportedOnly:true,accountIdentityVerified:false});
     return true
@@ -89,7 +92,10 @@ export function createNativeProviderGateway({
    }
    if(sdk){
     send(res,200,{ok:true,channel:info.channel,source:info.source,
-     status:'WAITING_USER_AUTH',authorizedByNativeOwner:false,canSend:false,
+     status:sdk.nativeProviderSessionConnected===true?
+       'UPSTREAM_CONNECTED_BINDING_PENDING':'WAITING_USER_AUTH',
+     nativeProviderSessionConnected:sdk.nativeProviderSessionConnected===true,
+     authorizedByNativeOwner:false,canSend:false,
      sdkReportedOnly:true,accountIdentityVerified:false,
      bridgeState:sdk.bridgeState});return true
    }

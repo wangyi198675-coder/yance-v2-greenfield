@@ -120,3 +120,17 @@ test('unknown W26 diagnostic local port rejected, no arbitrary host/protocol',()
  }
  assert.equal(makeW26DiagnosticPort(null),null);
 });
+
+test('true official bridge login is shown as connected but unbound, never W24 authorized',async()=>{
+ const f=await fixture({readW26Status:async()=>({...W26(),nativeProviderSessionConnected:true})});
+ try{
+  const a=await f.read('/api/v2/providers/fb-personal/status');
+  assert.equal(a.status,200);
+  assert.equal(a.body.status,'UPSTREAM_CONNECTED_BINDING_PENDING');
+  assert.equal(a.body.nativeProviderSessionConnected,true);
+  assert.equal(a.body.authorizedByNativeOwner,false);
+  assert.equal(a.body.accountIdentityVerified,false);
+  assert.equal(a.body.canSend,false);
+  assert.equal((await f.read('/api/v2/providers/fb-personal/setup')).status,200);
+ }finally{await f.close()}
+});
