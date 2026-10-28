@@ -36,7 +36,13 @@ export function parseChannelState(channel,payload){
  // Only accept account identities from a positively attested native owner.
  // Never infer a verified account from channel status, login button or mock data.
  let accounts=null;
- if(payload.status==='ONLINE_VERIFIED'&&payload.authorizedByNativeOwner===true&&
+ const officialUpstreamAccount=channel==='FB_PERSONAL'&&
+  payload.status==='UPSTREAM_CONNECTED_BINDING_PENDING'&&
+  payload.nativeProviderSessionConnected===true&&
+  payload.platformAccountIdentityVerified===true&&
+  payload.upstreamSource==='REAL_BRIDGE_V3_PROVISIONING_AUTHENTICATED';
+ if(((payload.status==='ONLINE_VERIFIED'&&payload.authorizedByNativeOwner===true)||
+     officialUpstreamAccount)&&
     Array.isArray(payload.accounts)&&payload.accounts.length<=100){
   const seen=new Set();
   const accepted=[];
@@ -44,7 +50,8 @@ export function parseChannelState(channel,payload){
    const accountId=typeof item?.accountId==='string'?item.accountId.trim():'';
    const displayName=typeof item?.displayName==='string'?item.displayName.trim():'';
    if(!accountId||accountId.length>160||!displayName||displayName.length>130||
-      seen.has(accountId)||item?.identityVerified!==true){
+      seen.has(accountId)||(officialUpstreamAccount?
+       item?.platformIdentityVerified!==true:item?.identityVerified!==true)){
     accounts=null;break;
    }
    seen.add(accountId);
