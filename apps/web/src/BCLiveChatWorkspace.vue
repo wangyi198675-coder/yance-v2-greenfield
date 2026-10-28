@@ -110,6 +110,10 @@ const filtered=computed(()=>{
 const accountIds=computed(()=>['ALL',...new Set(contacts.value.filter(c=>channel.value==='ALL'||c.channel===channel.value).map(c=>c.accountRef))]);
 const filterActive=computed(()=>channel.value!=='ALL'||account.value!=='ALL'||search.value.trim()!=='');
 const platformName=c=>channels.find(x=>x.id===c)?.label||c;
+// A provider can return a real message ID with no textual body (for example,
+// metadata-only events or unqualified media). Preserve the entry and never
+// misrepresent its unknown type as a verified photo, sticker or attachment.
+const hasDisplayableText=m=>typeof m?.original==='string'&&m.original.trim().length>0;
 function reconcileFilter(){
  if(chosen.value&&!filtered.value.some(c=>c.contactRef===chosen.value.contactRef)){
   chosen.value=null;timeline.value=[];timelineState.value='none';timelineError.value='';mobileChat.value=false;
@@ -368,7 +372,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
      <div v-for="m in timeline" :key="m.mid" class="bc-real-message" :data-mid="m.mid">
       <Message :align="m.direction==='OUTBOUND'?'end':'start'">
        <Bubble :align="m.direction==='OUTBOUND'?'end':'start'" variant="default">
-        <BubbleContent><div class="bc-message-text" :class="{'is-outgoing':m.direction==='OUTBOUND'}"><p>{{m.original}}</p><p v-if="m.zh" class="bc-translation">{{m.zh}}</p></div></BubbleContent>
+        <BubbleContent><div class="bc-message-text" :class="{'is-outgoing':m.direction==='OUTBOUND','is-nontext':!hasDisplayableText(m)}"><p v-if="hasDisplayableText(m)">{{m.original}}</p><div v-else class="bc-nontext-placeholder" data-test="w09-nontext-placeholder" role="note"><span class="bc-nontext-symbol" aria-hidden="true">◇</span><span class="bc-nontext-copy"><strong>这条消息暂无可显示的文字</strong><small>原始消息已保留，内容类型尚未核实</small></span></div><p v-if="m.zh" class="bc-translation">{{m.zh}}</p></div></BubbleContent>
        </Bubble>
       </Message>
       <div v-if="!selected?.readOnly&&selected?.identityKey" class="bc-message-meta">

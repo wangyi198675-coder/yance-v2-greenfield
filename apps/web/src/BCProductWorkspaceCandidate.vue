@@ -7,6 +7,7 @@ import BorderBeam from './oss/inspira/border-beam/BorderBeam.vue';
 import BCVisualAurora from './BCVisualAurora.vue';
 import './BCVisualThemeSystem.css';
 import './BCImmersiveOSS.css';
+import './BCGlobalVisualQA.css';
 import BCBrandIcon from './BCBrandIcon.vue';
 import BCPrivateBrainWorkspace from './BCPrivateBrainWorkspace.vue';
 import BCLiveChatWorkspace from './BCLiveChatWorkspace.vue';
