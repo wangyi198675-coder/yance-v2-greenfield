@@ -14,6 +14,7 @@ import {fileURLToPath} from 'node:url';
 import {inspectRealBridge} from './bridge-runtime.mjs';
 import {createOfficialMessengerLogin} from './official-messenger-login.mjs';
 import {joinOfficialFacebookInvites} from './official-room-autojoin.mjs';
+import {readOfficialFacebookInbox,readOfficialFacebookMessages} from './official-matrix-inbox.mjs';
 import {getProtectedNativeMatrixSession} from './native-matrix-session.mjs';
 import {launchInstalledOfficialManager} from './native-manager-launch.mjs';
 import {readNativeAccountStatus,readNativeLoginFlows,readNativePeerHints,revokeNativeLogin,
@@ -111,6 +112,18 @@ export function createBridgeStatusServer({probe=inspectRealBridge,port=PORT,
       return send(res,403,{ok:false,error:'CROSS_ORIGIN_ACTION_FORBIDDEN'});
     try{
       const url=new URL(req.url||'/', 'http://127.0.0.1:'+port);
+      // W47's existing authenticated same-origin app API is the public UI
+      // boundary. This 29321 private bridge read is only for local Node fetch.
+      if(req.method==='GET'&&[BASE+'/inbox',BASE+'/inbox/messages'].includes(url.pathname)){
+        if(req.headers.origin||req.headers['sec-fetch-site'])
+          return send(res,403,{ok:false,error:'NATIVE_SERVER_READ_ONLY'});
+        if(url.pathname===BASE+'/inbox'&&!url.search)
+          return send(res,200,await readOfficialFacebookInbox());
+        if(url.pathname===BASE+'/inbox/messages'&&url.searchParams.size===1&&
+           url.searchParams.getAll('room').length===1)
+          return send(res,200,await readOfficialFacebookMessages(url.searchParams.get('room')));
+        return send(res,422,{ok:false,error:'INVALID_INBOX_SELECTOR'});
+      }
       if(url.search){
         // ChatGPT can append ordinary UTM attribution to user-clicked local
         // links. Strip ONLY harmless tracking parameters on public GET pages.
