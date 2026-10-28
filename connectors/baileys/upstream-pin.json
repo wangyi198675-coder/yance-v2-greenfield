@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/WhiskeySockets/Baileys",
+  "candidateTag": "v7.0.0-rc14",
+  "candidateTagObjectSHA": "dbede1fb64c774e4f9a2e93a44221c4139973f52",
+  "candidateDereferencedCommit": "7e7b0757e3f9f3c7789fb1cfd2f241d5002a199a",
+  "evidence": "W20 LEGAL-01 upstream Git tag verification 2026-10-24",
+  "licenseCandidate": "MIT; transitive license review pending",
+  "runtimeInstalled": false,
+  "sourceVendored": false,
+  "npmIntegrity": "NOT_PINNED",
+  "applicationFullSHA": "DYNAMIC_GIT_HEAD_NOT_THIS_UPSTREAM_COMMIT",
+  "actualPlatformAuthorization": "HOLD",
+  "allowedUse": "NONPRODUCTION_SYNTHETIC_EVENTS_ONLY",
+  "officialTerms": "https://www.whatsapp.com/legal/terms-of-service"
+}

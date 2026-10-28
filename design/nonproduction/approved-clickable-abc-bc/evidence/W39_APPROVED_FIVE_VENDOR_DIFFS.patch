@@ -1,0 +1,491 @@
+diff --git a/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuCheckboxItem.vue b/src/components/oss/context-menu/ContextMenuCheckboxItem.vue
+--- a/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuCheckboxItem.vue
++++ b/src/components/oss/context-menu/ContextMenuCheckboxItem.vue
+@@ -1,45 +1,39 @@
+-<script setup lang="ts">
+-import type { ContextMenuCheckboxItemEmits, ContextMenuCheckboxItemProps } from "reka-ui"
+-import type { HTMLAttributes } from "vue"
+-import { reactiveOmit } from "@vueuse/core"
+-import {
+-  ContextMenuCheckboxItem,
+-  ContextMenuItemIndicator,
+-  useForwardPropsEmits,
+-} from "reka-ui"
+-import { cn } from "@/lib/utils"
+-import IconPlaceholder from "@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue"
+-
+-const props = defineProps<ContextMenuCheckboxItemProps & { class?: HTMLAttributes["class"] }>()
+-const emits = defineEmits<ContextMenuCheckboxItemEmits>()
+-
+-const delegatedProps = reactiveOmit(props, "class")
+-
+-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+-</script>
+-
+-<template>
+-  <ContextMenuCheckboxItem
+-    data-slot="context-menu-checkbox-item"
+-    v-bind="forwarded"
+-    :class="cn(
+-      'cn-context-menu-checkbox-item relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+-      props.class,
+-    )"
+-  >
+-    <span class="cn-context-menu-item-indicator pointer-events-none">
+-      <ContextMenuItemIndicator>
+-        <slot name="indicator-icon">
+-          <IconPlaceholder
+-            lucide="CheckIcon"
+-            tabler="IconCheck"
+-            hugeicons="Tick02Icon"
+-            phosphor="CheckIcon"
+-            remixicon="RiCheckLine"
+-          />
+-        </slot>
+-      </ContextMenuItemIndicator>
+-    </span>
+-    <slot />
+-  </ContextMenuCheckboxItem>
+-</template>
++<script setup lang="ts">
++import type { ContextMenuCheckboxItemEmits, ContextMenuCheckboxItemProps } from "reka-ui"
++import type { HTMLAttributes } from "vue"
++import { reactiveOmit } from "@vueuse/core"
++import {
++  ContextMenuCheckboxItem,
++  ContextMenuItemIndicator,
++  useForwardPropsEmits,
++} from "reka-ui"
++import { cn } from "@/lib/utils"
++import { CheckIcon } from "@lucide/vue"
++
++const props = defineProps<ContextMenuCheckboxItemProps & { class?: HTMLAttributes["class"] }>()
++const emits = defineEmits<ContextMenuCheckboxItemEmits>()
++
++const delegatedProps = reactiveOmit(props, "class")
++
++const forwarded = useForwardPropsEmits(delegatedProps, emits)
++</script>
++
++<template>
++  <ContextMenuCheckboxItem
++    data-slot="context-menu-checkbox-item"
++    v-bind="forwarded"
++    :class="cn(
++      'cn-context-menu-checkbox-item relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
++      props.class,
++    )"
++  >
++    <span class="cn-context-menu-item-indicator pointer-events-none">
++      <ContextMenuItemIndicator>
++        <slot name="indicator-icon">
++          <CheckIcon class="size-4" aria-hidden="true" />
++        </slot>
++      </ContextMenuItemIndicator>
++    </span>
++    <slot />
++  </ContextMenuCheckboxItem>
++</template>
+
+diff --git a/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuRadioItem.vue b/src/components/oss/context-menu/ContextMenuRadioItem.vue
+--- a/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuRadioItem.vue
++++ b/src/components/oss/context-menu/ContextMenuRadioItem.vue
+@@ -1,45 +1,39 @@
+-<script setup lang="ts">
+-import type { ContextMenuRadioItemEmits, ContextMenuRadioItemProps } from "reka-ui"
+-import type { HTMLAttributes } from "vue"
+-import { reactiveOmit } from "@vueuse/core"
+-import {
+-  ContextMenuItemIndicator,
+-  ContextMenuRadioItem,
+-  useForwardPropsEmits,
+-} from "reka-ui"
+-import { cn } from "@/lib/utils"
+-import IconPlaceholder from "@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue"
+-
+-const props = defineProps<ContextMenuRadioItemProps & { class?: HTMLAttributes["class"] }>()
+-const emits = defineEmits<ContextMenuRadioItemEmits>()
+-
+-const delegatedProps = reactiveOmit(props, "class")
+-
+-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+-</script>
+-
+-<template>
+-  <ContextMenuRadioItem
+-    data-slot="context-menu-radio-item"
+-    v-bind="forwarded"
+-    :class="cn(
+-      'cn-context-menu-radio-item relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
+-      props.class,
+-    )"
+-  >
+-    <span class="cn-context-menu-item-indicator pointer-events-none">
+-      <ContextMenuItemIndicator>
+-        <slot name="indicator-icon">
+-          <IconPlaceholder
+-            lucide="CheckIcon"
+-            tabler="IconCheck"
+-            hugeicons="Tick02Icon"
+-            phosphor="CheckIcon"
+-            remixicon="RiCheckLine"
+-          />
+-        </slot>
+-      </ContextMenuItemIndicator>
+-    </span>
+-    <slot />
+-  </ContextMenuRadioItem>
+-</template>
++<script setup lang="ts">
++import type { ContextMenuRadioItemEmits, ContextMenuRadioItemProps } from "reka-ui"
++import type { HTMLAttributes } from "vue"
++import { reactiveOmit } from "@vueuse/core"
++import {
++  ContextMenuItemIndicator,
++  ContextMenuRadioItem,
++  useForwardPropsEmits,
++} from "reka-ui"
++import { cn } from "@/lib/utils"
++import { CheckIcon } from "@lucide/vue"
++
++const props = defineProps<ContextMenuRadioItemProps & { class?: HTMLAttributes["class"] }>()
++const emits = defineEmits<ContextMenuRadioItemEmits>()
++
++const delegatedProps = reactiveOmit(props, "class")
++
++const forwarded = useForwardPropsEmits(delegatedProps, emits)
++</script>
++
++<template>
++  <ContextMenuRadioItem
++    data-slot="context-menu-radio-item"
++    v-bind="forwarded"
++    :class="cn(
++      'cn-context-menu-radio-item relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0',
++      props.class,
++    )"
++  >
++    <span class="cn-context-menu-item-indicator pointer-events-none">
++      <ContextMenuItemIndicator>
++        <slot name="indicator-icon">
++          <CheckIcon class="size-4" aria-hidden="true" />
++        </slot>
++      </ContextMenuItemIndicator>
++    </span>
++    <slot />
++  </ContextMenuRadioItem>
++</template>
+
+diff --git a/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSubTrigger.vue b/src/components/oss/context-menu/ContextMenuSubTrigger.vue
+--- a/apps/v4/registry/bases/reka/ui/context-menu/ContextMenuSubTrigger.vue
++++ b/src/components/oss/context-menu/ContextMenuSubTrigger.vue
+@@ -1,39 +1,32 @@
+-<script setup lang="ts">
+-import type { ContextMenuSubTriggerProps } from "reka-ui"
+-import type { HTMLAttributes } from "vue"
+-import { reactiveOmit } from "@vueuse/core"
+-import {
+-  ContextMenuSubTrigger,
+-  useForwardProps,
+-} from "reka-ui"
+-import { cn } from "@/lib/utils"
+-import IconPlaceholder from "@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue"
+-
+-const props = defineProps<ContextMenuSubTriggerProps & { class?: HTMLAttributes["class"], inset?: boolean }>()
+-
+-const delegatedProps = reactiveOmit(props, "class")
+-
+-const forwardedProps = useForwardProps(delegatedProps)
+-</script>
+-
+-<template>
+-  <ContextMenuSubTrigger
+-    data-slot="context-menu-sub-trigger"
+-    :data-inset="inset ? '' : undefined"
+-    v-bind="forwardedProps"
+-    :class="cn(
+-      'cn-context-menu-sub-trigger flex cursor-default items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0',
+-      props.class,
+-    )"
+-  >
+-    <slot />
+-    <IconPlaceholder
+-      lucide="ChevronRightIcon"
+-      tabler="IconChevronRight"
+-      hugeicons="ArrowRight01Icon"
+-      phosphor="CaretRightIcon"
+-      remixicon="RiArrowRightSLine"
+-      class="cn-rtl-flip ml-auto"
+-    />
+-  </ContextMenuSubTrigger>
+-</template>
++<script setup lang="ts">
++import type { ContextMenuSubTriggerProps } from "reka-ui"
++import type { HTMLAttributes } from "vue"
++import { reactiveOmit } from "@vueuse/core"
++import {
++  ContextMenuSubTrigger,
++  useForwardProps,
++} from "reka-ui"
++import { cn } from "@/lib/utils"
++import { ChevronRightIcon } from "@lucide/vue"
++
++const props = defineProps<ContextMenuSubTriggerProps & { class?: HTMLAttributes["class"], inset?: boolean }>()
++
++const delegatedProps = reactiveOmit(props, "class")
++
++const forwardedProps = useForwardProps(delegatedProps)
++</script>
++
++<template>
++  <ContextMenuSubTrigger
++    data-slot="context-menu-sub-trigger"
++    :data-inset="inset ? '' : undefined"
++    v-bind="forwardedProps"
++    :class="cn(
++      'cn-context-menu-sub-trigger flex cursor-default items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0',
++      props.class,
++    )"
++  >
++    <slot />
++    <ChevronRightIcon class="size-4" aria-hidden="true" />
++  </ContextMenuSubTrigger>
++</template>
+
+diff --git a/apps/v4/registry/bases/reka/ui/dialog/DialogContent.vue b/src/components/oss/dialog/DialogContent.vue
+--- a/apps/v4/registry/bases/reka/ui/dialog/DialogContent.vue
++++ b/src/components/oss/dialog/DialogContent.vue
+@@ -1,58 +1,52 @@
+-<script setup lang="ts">
+-import type { DialogContentEmits, DialogContentProps } from "reka-ui"
+-import type { HTMLAttributes } from "vue"
+-import { reactiveOmit } from "@vueuse/core"
+-import {
+-  DialogClose,
+-  DialogContent,
+-  DialogPortal,
+-  useForwardPropsEmits,
+-} from "reka-ui"
+-import { cn } from "@/lib/utils"
+-import IconPlaceholder from "@/registry/bases/reka/components/icon-placeholder/IconPlaceholder.vue"
+-import { Button } from "@/registry/bases/reka/ui/button"
+-import DialogOverlay from "./DialogOverlay.vue"
+-
+-defineOptions({
+-  inheritAttrs: false,
+-})
+-
+-const props = withDefaults(defineProps<DialogContentProps & { class?: HTMLAttributes["class"], showCloseButton?: boolean }>(), {
+-  showCloseButton: true,
+-})
+-const emits = defineEmits<DialogContentEmits>()
+-
+-const delegatedProps = reactiveOmit(props, "class")
+-
+-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+-</script>
+-
+-<template>
+-  <DialogPortal>
+-    <DialogOverlay />
+-    <DialogContent
+-      data-slot="dialog-content"
+-      v-bind="{ ...$attrs, ...forwarded }"
+-      :class="cn('cn-dialog-content fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none', props.class)"
+-    >
+-      <slot />
+-
+-      <DialogClose
+-        v-if="showCloseButton"
+-        data-slot="dialog-close"
+-        as-child
+-      >
+-        <Button variant="ghost" class="cn-dialog-close" size="icon-sm">
+-          <IconPlaceholder
+-            lucide="XIcon"
+-            tabler="IconX"
+-            hugeicons="Cancel01Icon"
+-            phosphor="XIcon"
+-            remixicon="RiCloseLine"
+-          />
+-          <span class="sr-only">Close</span>
+-        </Button>
+-      </DialogClose>
+-    </DialogContent>
+-  </DialogPortal>
+-</template>
++<script setup lang="ts">
++import type { DialogContentEmits, DialogContentProps } from "reka-ui"
++import type { HTMLAttributes } from "vue"
++import { reactiveOmit } from "@vueuse/core"
++import {
++  DialogClose,
++  DialogContent,
++  DialogPortal,
++  useForwardPropsEmits,
++} from "reka-ui"
++import { cn } from "@/lib/utils"
++import { XIcon } from "@lucide/vue"
++import { Button } from "@/registry/bases/reka/ui/button"
++import DialogOverlay from "./DialogOverlay.vue"
++
++defineOptions({
++  inheritAttrs: false,
++})
++
++const props = withDefaults(defineProps<DialogContentProps & { class?: HTMLAttributes["class"], showCloseButton?: boolean }>(), {
++  showCloseButton: true,
++})
++const emits = defineEmits<DialogContentEmits>()
++
++const delegatedProps = reactiveOmit(props, "class")
++
++const forwarded = useForwardPropsEmits(delegatedProps, emits)
++</script>
++
++<template>
++  <DialogPortal>
++    <DialogOverlay />
++    <DialogContent
++      data-slot="dialog-content"
++      v-bind="{ ...$attrs, ...forwarded }"
++      :class="cn('cn-dialog-content fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none', props.class)"
++    >
++      <slot />
++
++      <DialogClose
++        v-if="showCloseButton"
++        data-slot="dialog-close"
++        as-child
++      >
++        <Button variant="ghost" class="cn-dialog-close" size="icon-sm">
++          <XIcon class="size-4" aria-hidden="true" />
++          <span class="sr-only">Close</span>
++        </Button>
++      </DialogClose>
++    </DialogContent>
++  </DialogPortal>
++</template>
+
+diff --git a/apps/v4/registry/bases/reka/ui/dialog/DialogScrollContent.vue b/src/components/oss/dialog/DialogScrollContent.vue
+--- a/apps/v4/registry/bases/reka/ui/dialog/DialogScrollContent.vue
++++ b/src/components/oss/dialog/DialogScrollContent.vue
+@@ -1,59 +1,59 @@
+-<script setup lang="ts">
+-import type { DialogContentEmits, DialogContentProps } from "reka-ui"
+-import type { HTMLAttributes } from "vue"
+-import { reactiveOmit } from "@vueuse/core"
+-import {
+-  DialogClose,
+-  DialogContent,
+-  DialogOverlay,
+-  DialogPortal,
+-  useForwardPropsEmits,
+-} from "reka-ui"
+-import { cn } from "@/lib/utils"
+-import { IconPlaceholder } from "@/registry/bases/reka/components/icon-placeholder"
+-
+-defineOptions({
+-  inheritAttrs: false,
+-})
+-
+-const props = defineProps<DialogContentProps & { class?: HTMLAttributes["class"] }>()
+-const emits = defineEmits<DialogContentEmits>()
+-
+-const delegatedProps = reactiveOmit(props, "class")
+-
+-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+-</script>
+-
+-<template>
+-  <DialogPortal>
+-    <DialogOverlay
+-      class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+-    >
+-      <DialogContent
+-        :class="
+-          cn(
+-            'relative z-50 grid w-full max-w-lg my-8 gap-4 border border-border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full',
+-            props.class,
+-          )
+-        "
+-        v-bind="{ ...$attrs, ...forwarded }"
+-        @pointer-down-outside="(event) => {
+-          const originalEvent = event.detail.originalEvent;
+-          const target = originalEvent.target as HTMLElement;
+-          if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
+-            event.preventDefault();
+-          }
+-        }"
+-      >
+-        <slot />
+-
+-        <DialogClose
+-          class="absolute top-4 right-4 p-0.5 transition-colors rounded-md hover:bg-secondary"
+-        >
+-          <IconPlaceholder lucide="XIcon" tabler="IconX" hugeicons="Cancel01Icon" phosphor="XIcon" remixicon="RiCloseLine" class="w-4 h-4" />
+-          <span class="sr-only">Close</span>
+-        </DialogClose>
+-      </DialogContent>
+-    </DialogOverlay>
+-  </DialogPortal>
+-</template>
++<script setup lang="ts">
++import type { DialogContentEmits, DialogContentProps } from "reka-ui"
++import type { HTMLAttributes } from "vue"
++import { reactiveOmit } from "@vueuse/core"
++import {
++  DialogClose,
++  DialogContent,
++  DialogOverlay,
++  DialogPortal,
++  useForwardPropsEmits,
++} from "reka-ui"
++import { cn } from "@/lib/utils"
++import { XIcon } from "@lucide/vue"
++
++defineOptions({
++  inheritAttrs: false,
++})
++
++const props = defineProps<DialogContentProps & { class?: HTMLAttributes["class"] }>()
++const emits = defineEmits<DialogContentEmits>()
++
++const delegatedProps = reactiveOmit(props, "class")
++
++const forwarded = useForwardPropsEmits(delegatedProps, emits)
++</script>
++
++<template>
++  <DialogPortal>
++    <DialogOverlay
++      class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
++    >
++      <DialogContent
++        :class="
++          cn(
++            'relative z-50 grid w-full max-w-lg my-8 gap-4 border border-border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full',
++            props.class,
++          )
++        "
++        v-bind="{ ...$attrs, ...forwarded }"
++        @pointer-down-outside="(event) => {
++          const originalEvent = event.detail.originalEvent;
++          const target = originalEvent.target as HTMLElement;
++          if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
++            event.preventDefault();
++          }
++        }"
++      >
++        <slot />
++
++        <DialogClose
++          class="absolute top-4 right-4 p-0.5 transition-colors rounded-md hover:bg-secondary"
++        >
++          <XIcon class="size-4" aria-hidden="true" />
++          <span class="sr-only">Close</span>
++        </DialogClose>
++      </DialogContent>
++    </DialogOverlay>
++  </DialogPortal>
++</template>

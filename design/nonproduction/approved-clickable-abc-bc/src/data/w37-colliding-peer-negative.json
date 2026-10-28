@@ -1,0 +1,255 @@
+{
+  "schema": "YANCE_V2_P3_1_W37_COLLIDING_PEER_FULL_K_NEGATIVE_V1",
+  "data_classification": "SIMULATED_TEST_ONLY",
+  "test_result": "NOT_RUN",
+  "participation": "NEGATIVE_ISOLATED_ONLY_NOT_PART_OF_DEFAULT_120_OR_44_UX_SCORES",
+  "identical_peer_id": "synthetic-peer-collision-K001",
+  "source_fixture_sha256": "5b9a05df788fe5fab41b6b2033fb895cd3650fb573345856650cfeb24ef9c99c",
+  "effective_ux01_fixture_sha256": "6198539f936ac636cd24ec812456557e5d9c6509cdf9c6c63856f4f061699af9",
+  "seed": "W37-P3-1-UX01-20261024-V1",
+  "isolation_fixture_count": 5,
+  "rows": [
+    {
+      "case": "K_BASE",
+      "contact": {
+        "tenant": "SYNTHETIC_TEST_ONLY",
+        "account": "fixture-account-1",
+        "channel": "FB_PERSONAL",
+        "peer_id": "synthetic-peer-collision-K001",
+        "binding_revision": 1,
+        "display_name": "离线身份碰撞测试（非默认联系人）",
+        "unread": 0,
+        "read_verification": "UNVERIFIED",
+        "presence": "UNKNOWN",
+        "mode": "HUMAN",
+        "draft": "",
+        "last_message": {
+          "provider_mid": "synthetic-collision-mid-base",
+          "original": "COLLISION TEST K_BASE",
+          "zh": "碰撞测试 K_BASE",
+          "translation_state": "SYNTHETIC"
+        }
+      },
+      "identity_K": "SYNTHETIC_TEST_ONLY|fixture-account-1|FB_PERSONAL|synthetic-peer-collision-K001|1",
+      "source_provider_mid": "synthetic-collision-mid-base",
+      "synthetic_draft": "DRAFT-ONLY-K_BASE",
+      "synthetic_quote": {
+        "source_K": "SYNTHETIC_TEST_ONLY|fixture-account-1|FB_PERSONAL|synthetic-peer-collision-K001|1",
+        "provider_mid": "synthetic-collision-mid-base",
+        "text_snapshot": "COLLISION TEST K_BASE"
+      }
+    },
+    {
+      "case": "K_ACCOUNT",
+      "contact": {
+        "tenant": "SYNTHETIC_TEST_ONLY",
+        "account": "fixture-account-2",
+        "channel": "FB_PERSONAL",
+        "peer_id": "synthetic-peer-collision-K001",
+        "binding_revision": 1,
+        "display_name": "离线身份碰撞测试（非默认联系人）",
+        "unread": 0,
+        "read_verification": "UNVERIFIED",
+        "presence": "UNKNOWN",
+        "mode": "HUMAN",
+        "draft": "",
+        "last_message": {
+          "provider_mid": "synthetic-collision-mid-account",
+          "original": "COLLISION TEST K_ACCOUNT",
+          "zh": "碰撞测试 K_ACCOUNT",
+          "translation_state": "SYNTHETIC"
+        }
+      },
+      "identity_K": "SYNTHETIC_TEST_ONLY|fixture-account-2|FB_PERSONAL|synthetic-peer-collision-K001|1",
+      "source_provider_mid": "synthetic-collision-mid-account",
+      "synthetic_draft": "DRAFT-ONLY-K_ACCOUNT",
+      "synthetic_quote": {
+        "source_K": "SYNTHETIC_TEST_ONLY|fixture-account-2|FB_PERSONAL|synthetic-peer-collision-K001|1",
+        "provider_mid": "synthetic-collision-mid-account",
+        "text_snapshot": "COLLISION TEST K_ACCOUNT"
+      }
+    },
+    {
+      "case": "K_CHANNEL",
+      "contact": {
+        "tenant": "SYNTHETIC_TEST_ONLY",
+        "account": "fixture-account-1",
+        "channel": "WHATSAPP_PERSONAL",
+        "peer_id": "synthetic-peer-collision-K001",
+        "binding_revision": 1,
+        "display_name": "离线身份碰撞测试（非默认联系人）",
+        "unread": 0,
+        "read_verification": "UNVERIFIED",
+        "presence": "UNKNOWN",
+        "mode": "HUMAN",
+        "draft": "",
+        "last_message": {
+          "provider_mid": "synthetic-collision-mid-channel",
+          "original": "COLLISION TEST K_CHANNEL",
+          "zh": "碰撞测试 K_CHANNEL",
+          "translation_state": "SYNTHETIC"
+        }
+      },
+      "identity_K": "SYNTHETIC_TEST_ONLY|fixture-account-1|WHATSAPP_PERSONAL|synthetic-peer-collision-K001|1",
+      "source_provider_mid": "synthetic-collision-mid-channel",
+      "synthetic_draft": "DRAFT-ONLY-K_CHANNEL",
+      "synthetic_quote": {
+        "source_K": "SYNTHETIC_TEST_ONLY|fixture-account-1|WHATSAPP_PERSONAL|synthetic-peer-collision-K001|1",
+        "provider_mid": "synthetic-collision-mid-channel",
+        "text_snapshot": "COLLISION TEST K_CHANNEL"
+      }
+    },
+    {
+      "case": "K_REVISION",
+      "contact": {
+        "tenant": "SYNTHETIC_TEST_ONLY",
+        "account": "fixture-account-1",
+        "channel": "FB_PERSONAL",
+        "peer_id": "synthetic-peer-collision-K001",
+        "binding_revision": 2,
+        "display_name": "离线身份碰撞测试（非默认联系人）",
+        "unread": 0,
+        "read_verification": "UNVERIFIED",
+        "presence": "UNKNOWN",
+        "mode": "HUMAN",
+        "draft": "",
+        "last_message": {
+          "provider_mid": "synthetic-collision-mid-revision",
+          "original": "COLLISION TEST K_REVISION",
+          "zh": "碰撞测试 K_REVISION",
+          "translation_state": "SYNTHETIC"
+        }
+      },
+      "identity_K": "SYNTHETIC_TEST_ONLY|fixture-account-1|FB_PERSONAL|synthetic-peer-collision-K001|2",
+      "source_provider_mid": "synthetic-collision-mid-revision",
+      "synthetic_draft": "DRAFT-ONLY-K_REVISION",
+      "synthetic_quote": {
+        "source_K": "SYNTHETIC_TEST_ONLY|fixture-account-1|FB_PERSONAL|synthetic-peer-collision-K001|2",
+        "provider_mid": "synthetic-collision-mid-revision",
+        "text_snapshot": "COLLISION TEST K_REVISION"
+      }
+    },
+    {
+      "case": "K_TENANT",
+      "contact": {
+        "tenant": "SYNTHETIC_SECOND_TENANT_TEST_ONLY",
+        "account": "fixture-account-1",
+        "channel": "FB_PERSONAL",
+        "peer_id": "synthetic-peer-collision-K001",
+        "binding_revision": 1,
+        "display_name": "离线身份碰撞测试（非默认联系人）",
+        "unread": 0,
+        "read_verification": "UNVERIFIED",
+        "presence": "UNKNOWN",
+        "mode": "HUMAN",
+        "draft": "",
+        "last_message": {
+          "provider_mid": "synthetic-collision-mid-tenant",
+          "original": "COLLISION TEST K_TENANT",
+          "zh": "碰撞测试 K_TENANT",
+          "translation_state": "SYNTHETIC"
+        }
+      },
+      "identity_K": "SYNTHETIC_SECOND_TENANT_TEST_ONLY|fixture-account-1|FB_PERSONAL|synthetic-peer-collision-K001|1",
+      "source_provider_mid": "synthetic-collision-mid-tenant",
+      "synthetic_draft": "DRAFT-ONLY-K_TENANT",
+      "synthetic_quote": {
+        "source_K": "SYNTHETIC_SECOND_TENANT_TEST_ONLY|fixture-account-1|FB_PERSONAL|synthetic-peer-collision-K001|1",
+        "provider_mid": "synthetic-collision-mid-tenant",
+        "text_snapshot": "COLLISION TEST K_TENANT"
+      }
+    }
+  ],
+  "independent_cases": [
+    {
+      "id": "NEG_FULL_K_ACCOUNT",
+      "compare": [
+        "K_BASE",
+        "K_ACCOUNT"
+      ],
+      "diff_only": "account",
+      "expected": "K_UNIQUE_DIFFERENT_ACCOUNTS; NO_CROSS_ACCOUNT_SELECTED_DRAFT_QUOTE_OR_SEND"
+    },
+    {
+      "id": "NEG_FULL_K_CHANNEL",
+      "compare": [
+        "K_BASE",
+        "K_CHANNEL"
+      ],
+      "diff_only": "channel",
+      "expected": "K_UNIQUE_DIFFERENT_CHANNELS; NO_CROSS_CHANNEL_DRAFT_OR_ACK"
+    },
+    {
+      "id": "NEG_FULL_K_REVISION",
+      "compare": [
+        "K_BASE",
+        "K_REVISION"
+      ],
+      "diff_only": "binding_revision",
+      "expected": "REBOUND_REVISION_BLOCK_STALE_K; NO_AUTOMIGRATE_DRAFT_OR_QUOTE"
+    },
+    {
+      "id": "NEG_FULL_K_TENANT",
+      "compare": [
+        "K_BASE",
+        "K_TENANT"
+      ],
+      "diff_only": "tenant",
+      "expected": "K_UNIQUE_DIFFERENT_TENANTS; NO_CROSS_TENANT_LOOKUP_OR_PRIVATE_LEAK"
+    },
+    {
+      "id": "NEG_BY_PEER_AMBIGUOUS",
+      "compare": [
+        "K_BASE",
+        "K_ACCOUNT",
+        "K_CHANNEL",
+        "K_REVISION",
+        "K_TENANT"
+      ],
+      "expected": "LOOKUP_BY_PEER_ONLY_REJECT_AMBIGUOUS; REQUIRE_EXACT_FULL_K"
+    },
+    {
+      "id": "NEG_SWITCH_AND_RESTORE",
+      "compare": [
+        "K_BASE",
+        "K_ACCOUNT",
+        "K_CHANNEL",
+        "K_REVISION",
+        "K_TENANT"
+      ],
+      "expected": "EACH_DRAFT_AND_QUOTE_RESTORES_ONLY_TO_ORIGINAL_K; NO_FAKE_SEND"
+    },
+    {
+      "id": "NEG_SOURCE_MID_SCOPED",
+      "compare": [
+        "K_BASE",
+        "K_ACCOUNT",
+        "K_CHANNEL",
+        "K_REVISION",
+        "K_TENANT"
+      ],
+      "expected": "SOURCE_MID_MUST_RESOLVE_UNDER_EXACT_K; NEVER_MAP_STALE_ACK_TO_OTHER_K"
+    }
+  ],
+  "reset_contract": {
+    "reset_before_each_case": true,
+    "seed": "W37-P3-1-UX01-20261024-V1",
+    "fixture_source": "THIS_NEGATIVE_JSON_ONLY",
+    "forbid_merge_into_effective_120": true,
+    "no_provider_send": true,
+    "allow_network": false,
+    "actual_executable_runtime": "NOT_IMPLEMENTED"
+  },
+  "security_hard_failures": [
+    "peer_id_only_first_match",
+    "cross_account_selected_chat",
+    "cross_K_draft_leak",
+    "cross_K_quote_leak",
+    "cross_K_translation_cache",
+    "old_binding_revision_automatically_accepted",
+    "cross_K_ack_or_unread_leak",
+    "fake_send_or_agent_call",
+    "negative_rows_visible_in_default_UX01"
+  ],
+  "expected_outcome_status": "NOT_RUN"
+}

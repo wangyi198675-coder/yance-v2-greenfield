@@ -1,0 +1,2 @@
+# W09 integration: preserve original B+C hash-frozen fixture bytes (including historical trailing spaces).
+approved-clickable-abc-bc/** whitespace=-trailing-space

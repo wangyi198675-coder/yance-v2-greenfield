@@ -1,0 +1,94 @@
+{
+  "source": "ACTUAL_WINDOWS_CHROME_156_NATIVE_PARTITION_ZOOM_NOT_CSS",
+  "originalW09Pr53Sha": "860e99c8e3a69d11e34e721c9b6f746732d42abc",
+  "exactW40ZoomValues": {
+    "110": 0.5227586988632231,
+    "125": 1.2239010857415449
+  },
+  "passCount": 6,
+  "expectedOriginalW40Failures": 6,
+  "nativeVerticalAllReachable": true,
+  "noAuthorizedContacts": true,
+  "noMutations": true,
+  "noRealSends": true,
+  "result": [
+    {
+      "nativeZoom": 110,
+      "physicalOuterRequested": 1360,
+      "actualDpr": 1.100000023841858,
+      "viewW": 1222,
+      "viewH": 579,
+      "buttonBefore": 633.8068161010742,
+      "buttonAfter": 533.8067855834961,
+      "wheelScrollTop": 100,
+      "keyboardScrollTop": 100,
+      "canReach": true,
+      "hadNetworkWrites": 0
+    },
+    {
+      "nativeZoom": 110,
+      "physicalOuterRequested": 950,
+      "actualDpr": 1.100000023841858,
+      "viewW": 849,
+      "viewH": 579,
+      "buttonBefore": 623.2812423706055,
+      "buttonAfter": 506.91759490966797,
+      "wheelScrollTop": 116.36363220214844,
+      "keyboardScrollTop": 116.36363220214844,
+      "canReach": true,
+      "hadNetworkWrites": 0
+    },
+    {
+      "nativeZoom": 110,
+      "physicalOuterRequested": 430,
+      "actualDpr": 1.100000023841858,
+      "viewW": 455,
+      "viewH": 579,
+      "buttonBefore": 816.0369186401367,
+      "buttonAfter": 506.94600677490234,
+      "wheelScrollTop": 309.0909118652344,
+      "keyboardScrollTop": 310,
+      "canReach": true,
+      "hadNetworkWrites": 0
+    },
+    {
+      "nativeZoom": 125,
+      "physicalOuterRequested": 1360,
+      "actualDpr": 1.25,
+      "viewW": 1075,
+      "viewH": 510,
+      "buttonBefore": 633.5,
+      "buttonAfter": 437.5,
+      "wheelScrollTop": 196,
+      "keyboardScrollTop": 196,
+      "canReach": true,
+      "hadNetworkWrites": 0
+    },
+    {
+      "nativeZoom": 125,
+      "physicalOuterRequested": 950,
+      "actualDpr": 1.25,
+      "viewW": 747,
+      "viewH": 510,
+      "buttonBefore": 619.9125366210938,
+      "buttonAfter": 437.51251220703125,
+      "wheelScrollTop": 182.39999389648438,
+      "keyboardScrollTop": 182.39999389648438,
+      "canReach": true,
+      "hadNetworkWrites": 0
+    },
+    {
+      "nativeZoom": 125,
+      "physicalOuterRequested": 430,
+      "actualDpr": 1.25,
+      "viewW": 400,
+      "viewH": 510,
+      "buttonBefore": 898.2000122070312,
+      "buttonAfter": 421.3999938964844,
+      "wheelScrollTop": 476.79998779296875,
+      "keyboardScrollTop": 476.79998779296875,
+      "canReach": true,
+      "hadNetworkWrites": 0
+    }
+  ]
+}

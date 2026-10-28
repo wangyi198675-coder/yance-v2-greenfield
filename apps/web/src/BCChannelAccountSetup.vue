@@ -1,0 +1,169 @@
+<script setup>
+import {ref,onMounted,onBeforeUnmount,computed} from 'vue';
+import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
+import BCBrandIcon from './BCBrandIcon.vue';
+import {checkChannel,setupChannel,channelError} from './channel-setup-contract.mjs';
+import {readWhatsAppNative,connectWhatsAppNative,readWhatsAppNativeQr,
+  changeWhatsAppNativeConnection,whatsappNativeError} from './whatsapp-native-user-flow.mjs';
+const props=defineProps({channel:{type:Object,required:true},fetchImpl:{type:Function,default:null}});
+const state=ref('checking'),notice=ref(''),busy=ref(false),receipt=ref(null);
+let alive=true,revision=0,expiryTimer=null,nativeTimer=null;
+const isWhatsApp=computed(()=>props.channel.id==='WHATSAPP_PERSONAL');
+function clearNativePoll(){if(nativeTimer){clearTimeout(nativeTimer);nativeTimer=null}}
+function nativePoll(id){
+ clearNativePoll();
+ if(!alive||id!==revision||['ONLINE_VERIFIED','REVOKED','unavailable'].includes(state.value))return;
+ nativeTimer=setTimeout(async()=>{
+  if(!alive||id!==revision)return;
+  try{await updateWhatsApp(id)}catch(e){
+   if(alive&&id===revision){state.value='unavailable';notice.value=whatsappNativeError(e);}
+  }
+  if(alive&&id===revision&&!['ONLINE_VERIFIED','REVOKED','unavailable'].includes(state.value))nativePoll(id);
+ },1800);
+}
+async function updateWhatsApp(id){
+ const status=await readWhatsAppNative({fetchImpl:fetcher()});
+ if(!alive||id!==revision)return;
+ state.value=status.online?'ONLINE_VERIFIED':status.state;
+ if(status.online){clearReceipt();clearNativePoll();notice.value='WhatsApp已连接，正在同步已获授权的联系人和消息';return}
+ if(status.qrAvailable){
+  try{const qr=await readWhatsAppNativeQr({fetchImpl:fetcher()});
+   if(!alive||id!==revision)return;
+   receipt.value={qr};notice.value='请在自己的WhatsApp已关联设备中扫描当前二维码';
+  }catch(e){if(!String(e?.message??'').includes('409'))throw e;}
+ }else if(status.state==='WAITING_USER_AUTH'){
+  notice.value='尚未连接WhatsApp，请点击连接账号';
+ }else if(status.state==='STARTING_NATIVE_SDK'){
+  notice.value='正在连接WhatsApp，请使用手机准备扫码';
+ }else if(status.lastError){notice.value='WhatsApp尚未成功连接，请检查连接状态';}
+}
+
+const fetcher=()=>props.fetchImpl||globalThis.fetch;
+const providerCopy=Object.freeze({
+ FB_PERSONAL:{title:'Facebook Messenger',description:'连接你的个人 Messenger'},
+ FB_PAGE:{title:'Facebook Page',description:'连接你管理的 Facebook 主页'},
+ WHATSAPP_PERSONAL:{title:'WhatsApp',description:'使用本人手机完成连接'},
+ TELEGRAM_PERSONAL:{title:'Telegram',description:'通过官方 Telegram 流程登录'}
+});
+const display=computed(()=>providerCopy[props.channel.id]||{title:props.channel.label,description:'连接你的社交账号'});
+const statusLabel=computed(()=>state.value==='ONLINE_VERIFIED'?'已连接':
+ state.value==='checking'?'检查中':
+ state.value==='EXPIRED'?'二维码已过期':
+ state.value==='WAITING_USER_AUTH'?(receipt.value?.qr?'等待扫码':'等待授权'):
+ state.value==='unavailable'?'暂不可用':'未连接');
+function clearReceipt(){receipt.value=null;if(expiryTimer){clearTimeout(expiryTimer);expiryTimer=null}}
+async function refresh(){
+ const id=++revision;clearReceipt();clearNativePoll();busy.value=true;state.value='checking';notice.value='';
+ try{
+  if(isWhatsApp.value){await updateWhatsApp(id);if(alive&&id===revision&&['STARTING_NATIVE_SDK','WAITING_QR_SCAN'].includes(state.value))nativePoll(id);return}
+  const v=await checkChannel({channel:props.channel.id,fetchImpl:fetcher()});
+  if(!alive||id!==revision)return;
+  state.value=v.state;
+  notice.value=v.online?'原生服务确认已连接':'尚未完成本人授权';
+ }catch(e){
+  if(alive&&id===revision){state.value='unavailable';notice.value=isWhatsApp.value?whatsappNativeError(e):channelError(e)}
+ }finally{if(alive&&id===revision)busy.value=false}
+}
+async function setup(){
+ const id=++revision;clearReceipt();clearNativePoll();busy.value=true;notice.value='';
+ try{
+  if(isWhatsApp.value){
+   const started=await connectWhatsAppNative({fetchImpl:fetcher()});
+   if(!alive||id!==revision)return;
+   state.value=started.state;notice.value='已开始WhatsApp原生连接，正在等待手机扫码';
+   await updateWhatsApp(id);
+   if(alive&&id===revision&&state.value!=='ONLINE_VERIFIED')nativePoll(id);
+   return;
+  }
+  const v=await setupChannel({channel:props.channel.id,fetchImpl:fetcher()});
+  if(!alive||id!==revision)return;
+  receipt.value=v;state.value='WAITING_USER_AUTH';
+  notice.value=v.qr?'请使用本人手机扫描当前二维码':'请在下方进入原生官方授权步骤';
+  if(v.qr){
+   expiryTimer=setTimeout(()=>{
+    if(alive&&id===revision){clearReceipt();state.value='EXPIRED';notice.value='二维码已过期，请重新连接'}
+   },Math.max(0,v.qr.expiresAt-Date.now()));
+  }
+ }catch(e){
+  if(alive&&id===revision){state.value='unavailable';notice.value=isWhatsApp.value?whatsappNativeError(e):channelError(e)}
+ }finally{if(alive&&id===revision)busy.value=false}
+}
+onMounted(refresh);
+async function whatsappDisconnect(action){
+ const id=++revision;clearNativePoll();clearReceipt();busy.value=true;
+ try{
+  const result=await changeWhatsAppNativeConnection(action,{fetchImpl:fetcher()});
+  if(!alive||id!==revision)return;
+  state.value=result.state;
+  notice.value=action==='revoke'?'此WhatsApp账号授权已撤销':'WhatsApp已断开连接';
+ }catch(e){if(alive&&id===revision){notice.value=whatsappNativeError(e);state.value='unavailable'}}
+ finally{if(alive&&id===revision)busy.value=false}
+}
+onBeforeUnmount(()=>{alive=false;revision++;clearReceipt();clearNativePoll()});
+</script>
+<template>
+ <article class="w46-channel" data-test="w46-native-provider" :data-provider="channel.id">
+  <header class="w46-channel-top">
+   <span class="w46-channel-icon"><BCBrandIcon :name="channel.id" :size="29"/></span>
+   <span class="w46-channel-state" role="status" data-test="native-provider-state">{{statusLabel}}</span>
+  </header>
+  <div class="w46-channel-copy">
+   <strong>{{display.title}}</strong>
+   <p>{{display.description}}</p>
+  </div>
+  <div class="w46-channel-bottom">
+   <Button class="w46-channel-connect" size="sm"
+    data-test="native-provider-setup" :disabled="busy||state==='ONLINE_VERIFIED'||(isWhatsApp&&['STARTING_NATIVE_SDK','WAITING_QR_SCAN'].includes(state))"
+    @click="setup">{{busy?'正在处理…':state==='ONLINE_VERIFIED'?'已连接':state==='WAITING_USER_AUTH'?(receipt?.qr?'重新获取二维码':'重新获取授权'):'连接账号'}} <span v-if="!busy&&state!=='ONLINE_VERIFIED'" aria-hidden="true">›</span></Button>
+   <p v-if="(receipt||isWhatsApp||state==='unavailable'||state==='EXPIRED')&&notice"
+    class="w46-channel-feedback" role="status" data-test="native-provider-feedback">{{notice}}</p>
+   <div v-if="receipt" class="w46-channel-auth-result" data-test="native-provider-auth-result">
+    <a v-if="receipt.officialConnectUrl" :href="receipt.officialConnectUrl"
+     target="_blank" rel="noopener noreferrer" data-test="native-provider-connect-real">继续本人官方授权</a>
+    <a v-if="receipt.officialDocs" :href="receipt.officialDocs"
+     target="_blank" rel="noopener noreferrer" data-test="native-provider-docs">查看官方连接步骤</a>
+    <div v-if="receipt.qr" data-test="native-provider-qr">
+     <img :src="receipt.qr.src" alt="当前由Baileys原生服务提供的WhatsApp登录二维码"/>
+     <small>本人扫码后请检查实际连接状态。二维码过期后须重新获取。</small>
+    </div>
+    <p v-if="!receipt.officialConnectUrl&&!receipt.officialDocs&&!receipt.qr">当前平台尚未返回可操作的本人授权步骤。</p>
+   </div>
+   <div v-if="isWhatsApp&&['ONLINE_VERIFIED','WAITING_QR_SCAN','STARTING_NATIVE_SDK'].includes(state)" class="w46-channel-native-actions">
+    <Button variant="outline" size="sm" :disabled="busy" @click="whatsappDisconnect('disconnect')">断开</Button>
+    <Button v-if="state==='ONLINE_VERIFIED'" variant="outline" size="sm" :disabled="busy" @click="whatsappDisconnect('revoke')">移除账号</Button>
+   </div>
+   <details class="w46-channel-extra" data-test="native-provider-details">
+    <summary>连接详情与检查</summary>
+    <p>连接状态由原生平台回读，不根据界面点击判定成功。</p>
+    <p v-if="!receipt&&notice">{{notice}}</p>
+    <Button variant="outline" size="sm" data-test="native-provider-check" :disabled="busy" @click="refresh">检查连接状态</Button>
+   </details>
+  </div>
+ </article>
+</template>
+<style scoped>
+.w46-channel{display:flex;flex-direction:column;gap:12px;min-width:0;min-height:218px;height:auto;overflow:visible;padding:19px 18px 16px;border:1px solid var(--border);border-radius:16px;background:var(--bg2);box-shadow:0 12px 25px #00000012;transition:border-color .16s,transform .16s,box-shadow .16s}
+.w46-channel:hover{border-color:rgba(var(--accent-rgb),.47);box-shadow:0 12px 32px rgba(var(--accent-rgb),.07),0 6px 22px #00000022;transform:translateY(-1px)}
+.w46-channel-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.w46-channel-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:13px;background:var(--surface-soft);border:1px solid var(--border)}
+.w46-channel-state{font-size:11px;white-space:nowrap;color:var(--muted);background:var(--surface-soft);padding:5px 9px;border-radius:999px;border:1px solid var(--border)}
+.w46-channel[data-provider] .w46-channel-copy{display:grid;gap:7px}
+.w46-channel-copy strong{font-size:15px;color:var(--ink);letter-spacing:-.015em}
+.w46-channel-copy p{font-size:12px;color:var(--muted);line-height:1.5;margin:0;overflow-wrap:anywhere}
+.w46-channel-bottom{display:grid;gap:10px;margin-top:auto;min-width:0}
+.w46-channel-connect{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px;min-height:41px;width:100%;border-radius:10px!important;background:var(--accent)!important;color:var(--accent-ink)!important;font-weight:750;box-shadow:0 4px 18px rgba(var(--accent-rgb),.11)}
+.w46-channel-connect:disabled{filter:grayscale(.65);opacity:.55}
+.w46-channel-connect:not(:disabled):hover{filter:brightness(1.08);box-shadow:0 5px 24px rgba(var(--accent-rgb),.23)}
+.w46-channel-feedback{color:var(--muted);font-size:11px;line-height:1.5;margin:0;overflow-wrap:anywhere}
+.w46-channel-auth-result{display:grid;gap:9px;background:var(--surface-soft);border:1px solid var(--border);border-radius:10px;padding:11px}
+.w46-channel-auth-result a{color:var(--accent);font-size:12px;text-decoration:underline;overflow-wrap:anywhere}
+.w46-channel-auth-result p,.w46-channel-auth-result small{color:var(--muted);font-size:11px;line-height:1.5}
+.w46-channel-auth-result img{width:min(240px,100%);height:auto}
+.w46-channel-native-actions{display:flex;gap:8px;flex-wrap:wrap}
+.w46-channel-extra{border-top:1px solid var(--border);padding-top:9px;color:var(--muted);font-size:11px}
+.w46-channel-extra summary{cursor:pointer;font-size:11px;line-height:1.8;list-style:revert}
+.w46-channel-extra p{font-size:11px;line-height:1.5;margin:8px 0;overflow-wrap:anywhere}
+.w46-channel-extra button{max-width:100%}
+@media(max-width:600px){.w46-channel{min-height:182px;padding:15px;gap:10px}}
+@media(prefers-reduced-motion:reduce){.w46-channel,.w46-channel-connect{transition:none!important;transform:none!important}}
+</style>

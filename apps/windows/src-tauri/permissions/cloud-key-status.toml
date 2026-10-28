@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-cloud-key-status"
+description = "Installed main WebView only: W55 native current-user key status, not ordinary HTTP"
+commands.allow = ["cloud_key_status"]

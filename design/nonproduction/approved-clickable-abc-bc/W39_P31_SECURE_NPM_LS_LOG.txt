@@ -1,0 +1,7 @@
+yance-v2-p3-1-clickable-offline@0.0.1 C:\Users\1\Documents\YanceV2\YANCE_V2_GREENFIELD_P3_0_20261024\design\nonproduction\approved-clickable-abc-bc
+鈹溾攢鈹?@tailwindcss/vite@4.3.3
+鈹?鈹斺攢鈹€ vite@7.3.7 deduped
+鈹溾攢鈹?@vitejs/plugin-vue@6.0.10
+鈹?鈹斺攢鈹€ vite@7.3.7 deduped
+鈹斺攢鈹?vite@7.3.7
+  鈹斺攢鈹€ esbuild@0.28.1 overridden

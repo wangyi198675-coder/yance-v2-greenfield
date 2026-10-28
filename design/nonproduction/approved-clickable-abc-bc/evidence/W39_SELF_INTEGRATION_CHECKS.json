@@ -1,0 +1,80 @@
+{
+  "status": "SELF_INTEGRATION_PASS",
+  "scope": "NONPRODUCTION_W39_OWNER_ONLY_NOT_INDEPENDENT_QA",
+  "checks": [
+    {
+      "name": "W37_fixture_exact_SHA",
+      "status": "PASS"
+    },
+    {
+      "name": "W37_overlay_exact_SHA",
+      "status": "PASS"
+    },
+    {
+      "name": "W37_sidecar_exact_SHA",
+      "status": "PASS"
+    },
+    {
+      "name": "W37_tasks_exact_SHA",
+      "status": "PASS"
+    },
+    {
+      "name": "120 full identity K unique and 120 unique MID",
+      "status": "PASS"
+    },
+    {
+      "name": "source bilingual text and unknown presence for all rows",
+      "status": "PASS"
+    },
+    {
+      "name": "0/1/2/3 exact source candidate count and IDs",
+      "status": "PASS"
+    },
+    {
+      "name": "W37 sidecar 8 events, 10 states, 4 arms",
+      "status": "PASS"
+    },
+    {
+      "name": "real Chrome 44 cases unique all passed",
+      "status": "PASS"
+    },
+    {
+      "name": "4x11 arm input coverage",
+      "status": "PASS"
+    },
+    {
+      "name": "real PNG screenshots: 4 arms, 10 theme states, 9 widths",
+      "status": "PASS"
+    },
+    {
+      "name": "vendor exactly W42 72; five approved patch diffs",
+      "status": "PASS"
+    },
+    {
+      "name": "npm direct deps exact W42 14 and tarball SHA512 74",
+      "status": "PASS"
+    },
+    {
+      "name": "generated SBOM and license notice",
+      "status": "PASS"
+    },
+    {
+      "name": "W37 effective 120 cross-account hash exact, raw immutable",
+      "status": "PASS"
+    },
+    {
+      "name": "W37 isolated collision 7 browser negatives",
+      "status": "PASS"
+    },
+    {
+      "name": "W40 P1/P2 all 76 Chrome CSS viewport/theme checks pass",
+      "status": "PASS"
+    },
+    {
+      "name": "W41 CSP Chrome injection 4/4, zero external requests",
+      "status": "PASS"
+    }
+  ],
+  "results": 18,
+  "pass": 18
+}
