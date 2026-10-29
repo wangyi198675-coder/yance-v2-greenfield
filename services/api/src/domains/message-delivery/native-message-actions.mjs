@@ -117,8 +117,21 @@ export function createW25MessageActionFence({delivery,checkW24,checkW44,checkNat
    return dto(byId.get(id));
   });
  }
+ async function getStatus({k:rawK,id,actorId,sessionId}={}){
+  const k=parseK(rawK);
+  if(![id,actorId,sessionId].every(ok))denied('OPERATION_STATUS_ACTOR_REQUIRED');
+  const row=byId.get(id);
+  if(!row)return null;
+  if([row.tenant_id,row.account_id,row.channel,row.peer_id,row.binding_revision].join('|')!==kstr(k))
+    denied('OPERATION_STATUS_CROSS_ACCOUNT_DENIED');
+  const target=row.target_key?parseK(JSON.parse(row.target_key)):null;
+  await auth(k,actorId,sessionId,row.action,row.mode,row.provider_mid,target);
+  if(row.actor_id!==actorId||row.session_id!==sessionId)
+    denied('OPERATION_STATUS_ACTOR_DENIED');
+  return dto(row);
+ }
  return Object.freeze({
-  prepare,
+  prepare,getStatus,
   matrix:()=>Object.freeze({
    REACTION:'NOT_WIRED',QUOTE_REPLY:'COMPOSER_MID_ONLY',FORWARD:'NOT_WIRED',
    EDIT:'NOT_WIRED',REVOKE:'NOT_WIRED',PROVIDER_DELETE:'NOT_WIRED',
