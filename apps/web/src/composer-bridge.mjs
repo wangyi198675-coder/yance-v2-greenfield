@@ -21,7 +21,7 @@ function assertStatus(s,id){
  if(!s||fullK(s.identity)!==fullK(id))error('IDENTITY_MISMATCH');
  if(!Number.isSafeInteger(s.epoch)||s.epoch<0)error('INVALID_EPOCH');
  if(s.accountActive!==true||s.canTakeover!==true)error('TAKEOVER_AUTH_DENIED');
- if(!['HUMAN','AUTO'].includes(s.mode))error('INVALID_MODE');
+ if(!['HUMAN','ASSIST','AUTO'].includes(s.mode))error('INVALID_MODE');
  if(s.status!=='NATIVE_TAKEOVER_STATE'||s.identityKey!==fullK(id)||
     !Number.isSafeInteger(s.accountRevocationEpoch)||s.accountRevocationEpoch<0||
     !Number.isSafeInteger(s.consentEpoch)||s.consentEpoch<1||s.canSend!==false)
@@ -106,7 +106,7 @@ export function createComposerBridge({takeoverPort=null}={}){
        states.set(k,{status:'READ_ONLY_IDENTITY_VERIFIED'});
      }else{
        const s=assertStatus(raw,id);
-       states.set(k,{status:s.mode==='HUMAN'?'READY_HUMAN':'READ_ONLY_AUTO',epoch:s.epoch});
+       states.set(k,{status:s.mode==='HUMAN'?'READY_HUMAN':s.mode==='ASSIST'?'READ_ONLY_ASSIST':'READ_ONLY_AUTO',epoch:s.epoch});
      }
    }catch{states.set(k,{status:'BLOCKED'})}
    return view(); // Safe GET on view, never POST.
@@ -133,7 +133,7 @@ export function createComposerBridge({takeoverPort=null}={}){
      states.set(k,{status:'TAKEOVER_PENDING'});
      try{
        const before=assertStatus(await takeoverPort.get({...id}),id);
-       if(before.mode==='AUTO'){
+       if(before.mode==='AUTO'||before.mode==='ASSIST'){
          const receipt=await takeoverPort.post({...id},{
            expectedIdentityKey:before.identityKey,
            expectedEpoch:before.epoch,
@@ -151,7 +151,7 @@ export function createComposerBridge({takeoverPort=null}={}){
        if(after.mode!=='HUMAN'||
           after.accountRevocationEpoch!==before.accountRevocationEpoch||
           after.consentEpoch!==before.consentEpoch||
-          (before.mode==='AUTO'?after.epoch!==before.epoch+1:after.epoch<before.epoch))
+          (before.mode==='AUTO'||before.mode==='ASSIST'?after.epoch!==before.epoch+1:after.epoch<before.epoch))
           error('TAKEOVER_NOT_VERIFIED');
        states.set(k,{status:'READY_HUMAN',epoch:after.epoch});
        return {key:k,status:'READY_HUMAN',verifiedEpoch:after.epoch,canSend:false};
