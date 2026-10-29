@@ -3,8 +3,13 @@
 .w09-native-context-menu {
  --w09-menu-bg:#112a39;--w09-menu-ink:#e8f5fa;--w09-menu-muted:#aac6d3;
  --w09-menu-line:rgba(131,187,211,.19);--w09-menu-active:rgba(79,177,221,.20);
- z-index:1300!important;width:242px!important;min-width:224px!important;
+ z-index:1300!important;width:252px!important;min-width:236px!important;
  max-width:calc(100vw - 20px)!important;
+ /* The OSS Content defaults to overflow-y:auto. Opera draws a full scrollbar
+    for these four-row context menus even when all rows are visible. Allow Reka's
+    collision positioning and nested submenu to stay visible instead. */
+ max-height:none!important;min-height:max-content!important;
+ overflow:visible!important;scrollbar-gutter:auto!important;scrollbar-width:none!important;
  padding:7px!important;border-radius:13px!important;
  border:1px solid rgba(118,198,224,.3)!important;
  color:var(--w09-menu-ink)!important;
@@ -15,8 +20,8 @@
 .w09-native-context-menu :is([data-slot="context-menu-item"],[data-slot="dropdown-menu-item"],
  [data-slot="context-menu-sub-trigger"],[data-slot="dropdown-menu-sub-trigger"]){
  display:flex!important;align-items:center!important;gap:12px!important;
- min-height:38px!important;max-width:100%;
- padding:8px 11px!important;font-size:12.5px!important;font-weight:550;
+ min-height:42px!important;max-width:100%;
+ padding:9px 12px!important;font-size:14px!important;font-weight:550;
  border-radius:8px!important;color:var(--w09-menu-ink)!important;
  cursor:pointer!important;
 }
@@ -33,7 +38,7 @@
 }
 .w09-native-context-menu [data-slot="context-menu-label"]{font-size:11px;color:var(--w09-menu-muted)}
 body:has(.shell[data-mode="light"]) .w09-native-context-menu{
- --w09-menu-bg:#fcffff;--w09-menu-ink:#173446;--w09-menu-muted:#52758a;
+ --w09-menu-bg:#f9feff;--w09-menu-ink:#10394c;--w09-menu-muted:#456c7d;
  --w09-menu-line:rgba(39,95,121,.18);--w09-menu-active:rgba(38,147,189,.11);
  border-color:rgba(63,138,174,.25)!important;
  box-shadow:0 22px 54px rgba(22,63,93,.16)!important;
@@ -100,4 +105,10 @@ body:has(.shell[data-mode="light"]) .w09-pro-history-input{background:#e9f5fb}
 body:has(.shell[data-mode="light"]) .w09-pro-history-input input{color:#194156}
 body:has(.shell[data-mode="light"]) .w09-pro-history-results button{color:#1b4658}
 @media(hover:none){.w09-bubble-hoverbar:focus-within{opacity:1;pointer-events:auto;transform:none}}
+/* On exceptionally short windows the root menu may scroll, but only if needed.
+   Keep the standard 430/670/800px layouts fully expanded, including submenu. */
+@media(max-height:300px){.w09-native-context-menu[data-slot="context-menu-content"]{
+ max-height:calc(100dvh - 12px)!important;min-height:0!important;
+ overflow-y:auto!important;overflow-x:hidden!important;
+}}
 @media(prefers-reduced-motion:reduce){.w09-bubble-hoverbar{transition:none!important}}
