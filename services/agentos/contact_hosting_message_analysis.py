@@ -24,7 +24,7 @@ class NativeContactHold(ValueError):
         super().__init__(code)
 
 
-_KEYS = ("tenant", "accountId", "channel", "peerId", "bindingRevision")
+_KEYS = ("tenant", "account", "channel", "peer_id", "binding_revision")
 _ALLOWED_CHANNELS = {
     "FB_PERSONAL", "FB_PAGE", "WHATSAPP_PERSONAL", "TELEGRAM_PERSONAL"
 }
@@ -68,11 +68,14 @@ def _eligible(value: Any, k: tuple, operation: str) -> dict:
     if not all(type(value.get(key)) is int and value[key] >= 0 for key in (
             "consentEpoch", "accountEpoch", "custodyEpoch", "grantGeneration")):
         raise NativeContactHold("AUTHORITY_EPOCH_UNATTESTED")
-    if (type(value.get("expiresAtMs")) is not int
-            or value["expiresAtMs"] <= int(time.time() * 1000)):
-        raise NativeContactHold("CONTACT_AUTHORITY_EXPIRED")
-    if value.get("budgetStatus") != "AVAILABLE":
-        raise NativeContactHold("MODEL_BUDGET_NOT_AUTHORIZED")
+    # PAUSE must remain possible even with exhausted budget or an expired
+    # hosting grant. PAUSE does not consume a new model Run.
+    if operation != "PAUSE":
+        if (type(value.get("expiresAtMs")) is not int
+                or value["expiresAtMs"] <= int(time.time() * 1000)):
+            raise NativeContactHold("CONTACT_AUTHORITY_EXPIRED")
+        if value.get("budgetStatus") != "AVAILABLE":
+            raise NativeContactHold("MODEL_BUDGET_NOT_AUTHORIZED")
     return value
 
 
@@ -134,11 +137,18 @@ class OriginalAgnoContactPort:
             "grantStatus": grant.get("status"),
             "grantGeneration": grant.get("grantGeneration"),
             "budgetStatus": grant.get("budgetStatus"),
+            "authorityClass": grant.get("authorityClass"),
+            "realUserAuthorized": grant.get("realUserAuthorized") is True,
+            "realAccountVerified": grant.get("realAccountVerified") is True,
             "custody": task.get("custody"),
             "taskState": state,
             "lastRunId": task.get("lastRunId"),
             "lastSessionId": task.get("lastSessionId"),
-            "isHosting": state == "RUNNING" and grant.get("status") == "COMMITTED",
+            "isHosting": (
+                state == "RUNNING" and grant.get("status") == "COMMITTED"
+                and grant.get("realUserAuthorized") is True
+                and grant.get("realAccountVerified") is True
+            ),
             "canSend": False,  # W25 alone can authorize outbound
         }
 
