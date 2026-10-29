@@ -107,6 +107,7 @@ export function createW25MessageActionFence({delivery,checkW24,checkW44,checkNat
    }
    const existing=byHash.get(...cols,operationHash);
    if(existing){
+    if(existing.authority_hash!==authority)denied('OPERATION_AUTHORITY_VERSION_CONFLICT');
     if(existing.actor_id!==actorId||existing.session_id!==sessionId)
       denied('NATIVE_ACTION_CONCURRENT_ACTOR_CONFLICT');
     return dto(existing,true);
@@ -125,7 +126,8 @@ export function createW25MessageActionFence({delivery,checkW24,checkW44,checkNat
   if([row.tenant_id,row.account_id,row.channel,row.peer_id,row.binding_revision].join('|')!==kstr(k))
     denied('OPERATION_STATUS_CROSS_ACCOUNT_DENIED');
   const target=row.target_key?parseK(JSON.parse(row.target_key)):null;
-  await auth(k,actorId,sessionId,row.action,row.mode,row.provider_mid,target);
+  const currentAuthority=await auth(k,actorId,sessionId,row.action,row.mode,row.provider_mid,target);
+  if(currentAuthority!==row.authority_hash)denied('OPERATION_HOLD_AUTHORITY_STALE');
   if(row.actor_id!==actorId||row.session_id!==sessionId)
     denied('OPERATION_STATUS_ACTOR_DENIED');
   return dto(row);
