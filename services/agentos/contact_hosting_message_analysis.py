@@ -179,7 +179,16 @@ class OriginalAgnoContactPort:
             raise NativeContactHold("W44_GRANT_ACTION_RECEIPT_UNVERIFIED")
         # Re-read actual task status; W44 COMMITTED alone cannot mean resumed.
         current = self.read_hosting(context)
-        return {"status": receipt["status"],
+        # W44 grant committed != Agno task launched or paused. Never claim
+        # a completed RESUME when original task-state owner still says PAUSED.
+        task_confirmed = (
+            (action in {"ISSUE", "RESUME"} and current["isHosting"])
+            or (action == "PAUSE" and current["taskState"] == "PAUSED")
+        )
+        status = receipt["status"]
+        if status == "COMMITTED" and not task_confirmed:
+            status = "GRANT_COMMITTED_AGNO_TASK_NOT_CONFIRMED"
+        return {"status": status, "grantStatus": receipt["status"],
                 "grantReceipt": {x: receipt.get(x) for x in (
                     "status", "code", "generation", "requestId")},
                 "taskState": current["taskState"],
