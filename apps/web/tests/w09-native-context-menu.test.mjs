@@ -4,12 +4,12 @@ import {readFileSync} from 'node:fs';
 const ui=readFileSync(new URL('../src/BCLiveChatWorkspace.vue',import.meta.url),'utf8');
 const style=readFileSync(new URL('../src/BCNativeContextMenu.css',import.meta.url),'utf8');
 test('contacts use real OSS Reka ContextMenu and preserve original click/identity',()=>{
- assert.match(ui,/import \{ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuLabel,ContextMenuSeparator\} from .*\/oss\/context-menu/);
+ assert.match(ui,/import \{ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuLabel,ContextMenuSeparator,ContextMenuSub/);
  assert.match(ui,/<ContextMenu v-for="c in pinned"/);
  assert.match(ui,/<ContextMenu v-for="c in regular"/);
  assert.match(ui,/data-test="w09-contact-context-menu"/);
  assert.match(ui,/@click="chooseContact\(c\)"/);
- for(const op of ["打开会话","复制联系人姓名","搜索该联系人"])assert.ok(ui.includes(op),op);
+ for(const op of ["查看联系人资料","搜索聊天记录","打开闺蜜大脑","复制联系人姓名","筛选该联系人"])assert.ok(ui.includes(op),op);
  assert.match(ui,/copyAuthorizedText\(c.displayName/);
  assert.match(ui,/filterToContact\(c\)/);
 });
@@ -21,7 +21,7 @@ test('messages have real right click menu with text-gated actions and authoritat
  assert.match(ui,/v-if="!selected\?\.readOnly&&selected\?\.identityKey&&selected\?\.identity"/);
  assert.match(ui,/contextQuote\(m\)/);
  assert.match(ui,/sourceQuote\(m\)/);
- assert.match(ui,/@select="chooseContact\(selected\)"/);
+ assert.match(ui,/@select="searchLoadedConversation\(selected\)"/);
  assert.match(ui,/:data-mid="m.mid"/);
 });
 test('clipboard permission failures give truthful results and menus are OSS, not fabricated reply/delete',()=>{

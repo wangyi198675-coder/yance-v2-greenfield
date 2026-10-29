@@ -1,12 +1,16 @@
 <script setup>
-import {ref,watch,computed,onMounted,onBeforeUnmount} from 'vue';
+import {ref,watch,computed,onMounted,onBeforeUnmount,nextTick} from 'vue';
+import {Search,UserRound,Copy,MessageSquareQuote,MoreHorizontal,BrainCircuit,ChevronRight,RefreshCw,Info,Filter,Check,MessageCircle} from '../../../design/nonproduction/approved-clickable-abc-bc/node_modules/@lucide/vue/dist/esm/lucide-vue.mjs';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import {ScrollArea} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/scroll-area';
 import {Bubble,BubbleContent} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/bubble';
 import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/message';
-import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuLabel,ContextMenuSeparator} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/context-menu';
+import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuLabel,ContextMenuSeparator,ContextMenuSub,ContextMenuSubTrigger,ContextMenuSubContent,ContextMenuShortcut} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/context-menu';
+import {Popover,PopoverTrigger,PopoverContent} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/popover';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/dialog';
 import BCNativeComposer from './BCNativeComposer.vue';
 import './BCNativeContextMenu.css';
+import './BCProContextUX.css';
 import metaBrandLogo from './assets/channels/meta.svg';
 import messengerBrandLogo from './assets/channels/messenger.svg';
 import whatsappBrandLogo from './assets/channels/whatsapp.svg';
@@ -19,6 +23,13 @@ const props=defineProps({fetchImpl:{type:Function,default:null},mediaAuthorityPo
 const emit=defineEmits(['navigate']);
 const searchBox=ref(null),composerRef=ref(null);
 const interactionNotice=ref('');
+const detailContact=ref(null),detailOpen=ref(false);
+const historySearchOpen=ref(false),historySearchTerm=ref(''),historySearchContact=ref(''),historySearchInput=ref(null),highlightMid=ref(''),openMoreMid=ref('');
+const historyMatches=computed(()=>{
+ const q=historySearchTerm.value.trim().toLocaleLowerCase();
+ if(!q||selected.value?.contactRef!==historySearchContact.value)return [];
+ return timeline.value.filter(m=>[m.original,m.zh].some(t=>typeof t==='string'&&t.toLocaleLowerCase().includes(q))).slice(0,40);
+});
 const mobileChat=ref(false),plusOpen=ref(false),filterOpen=ref(false),pinnedExpanded=ref(true),unreadOnly=ref(false);
 const unreadAuthoritative=computed(()=>contacts.value.some(c=>c.unreadAuthorized===true));
 const api=computed(()=>props.fetchImpl||globalThis.fetch);
@@ -201,6 +212,32 @@ async function copyAuthorizedText(text,label){
   await globalThis.navigator.clipboard.writeText(text);
   interactionNotice.value=label+'已复制';
  }catch{interactionNotice.value='复制失败，请检查浏览器剪贴板权限';}
+}
+function accountDisplayLabel(c){
+ const raw=typeof c?.accountRef==='string'?c.accountRef.trim():'';
+ if(!raw||/^(OFFICIAL_|FB_BRIDGE_|PANCAKE_READ_ONLY)/i.test(raw))return '当前渠道已连接（未提供可展示的账号名称）';
+ return raw;
+}
+function showContactDetail(c){
+ if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;
+ detailContact.value=c;detailOpen.value=true;
+}
+async function searchLoadedConversation(c){
+ if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;
+ historySearchTerm.value='';
+ historySearchContact.value=c.contactRef;
+ await chooseContact(c);
+ historySearchOpen.value=true;
+ await nextTick();historySearchInput.value?.focus();
+}
+function revealHistoryHit(m){
+ if(!m||!timeline.value.some(x=>x.mid===m.mid))return;
+ highlightMid.value=m.mid;historySearchOpen.value=false;
+ nextTick(()=>Array.from(document.querySelectorAll('.bc-real-message')).find(x=>x.dataset.mid===m.mid)?.scrollIntoView({block:'center',behavior:'smooth'}));
+}
+function openBrainWorkspace(){
+ // Navigate only: no implicit assignment, takeover, or contact-bound grant.
+ navigate('BRAIN');
 }
 function filterToContact(c){
  if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;
@@ -460,6 +497,29 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
 <template>
  <section class="bc-real-chat" :class="{'mobile-conversation':mobileChat}" data-test="w46-real-chat" aria-label="B＋C实际联系人与聊天工作台">
   <p v-if="interactionNotice" class="bc-native-context-notice" role="status" data-test="w09-context-action-status" @click="interactionNotice=''">{{interactionNotice}} <span aria-hidden="true">×</span></p>
+  <Dialog v-model:open="detailOpen">
+   <DialogContent class="w09-pro-detail-dialog" data-test="w09-contact-detail-dialog">
+    <DialogTitle>联系人资料</DialogTitle>
+    <DialogDescription>以下为当前已验证渠道返回的只读信息，不改变联系人状态。</DialogDescription>
+    <div v-if="detailContact" class="w09-pro-details-body">
+     <div class="w09-pro-detail-avatar"><span class="bc-contact-avatar"><img v-if="detailContact.avatarUrl" :src="detailContact.avatarUrl" alt="" /><span>{{detailContact.displayName.slice(0,1)}}</span></span><strong>{{detailContact.displayName}}</strong></div>
+     <dl><dt>聊天渠道</dt><dd>{{platformName(detailContact.channel)}}</dd><dt>连接账号</dt><dd>{{accountDisplayLabel(detailContact)}}</dd><dt>最近消息</dt><dd>{{detailContact.lastMessage||'暂无消息摘要'}}</dd></dl>
+     <button type="button" class="w09-pro-detail-copy" @click="copyAuthorizedText(detailContact.displayName,'联系人姓名')"><Copy :size="15"/>复制联系人姓名</button>
+    </div>
+   </DialogContent>
+  </Dialog>
+  <Dialog v-model:open="historySearchOpen">
+   <DialogContent class="w09-pro-history-dialog" data-test="w09-conversation-search-dialog">
+    <DialogTitle>搜索当前会话</DialogTitle>
+    <DialogDescription>只搜索当前已加载的消息，不代表跨渠道全量历史搜索。</DialogDescription>
+    <label class="w09-pro-history-input"><Search :size="18" aria-hidden="true"/><input ref="historySearchInput" v-model="historySearchTerm" type="search" placeholder="输入消息内容或译文…" autocomplete="off" data-test="w09-history-search-input"/></label>
+    <div class="w09-pro-history-count" role="status">{{historySearchTerm.trim()?'找到 '+historyMatches.length+' 条匹配消息（最多显示40条）':'输入关键词开始搜索'}}</div>
+    <div class="w09-pro-history-results">
+     <button v-for="m in historyMatches" :key="m.mid" type="button" @click="revealHistoryHit(m)" data-test="w09-history-result"><span>{{m.direction==='OUTBOUND'?'我发送的':'收到的'}}</span><strong>{{(m.original||m.zh||'非文本消息').slice(0,170)}}</strong></button>
+     <p v-if="historySearchTerm.trim()&&!historyMatches.length">当前已加载历史没有匹配消息。</p>
+    </div>
+   </DialogContent>
+  </Dialog>
   <aside class="bc-real-list" data-test="w46-real-contacts" aria-label="Smart Inbox">
    <div class="bc-sidebar-tools">
     <div class="bc-tools-row" data-test="w46-inbox-toolbar-row-1">
@@ -504,12 +564,19 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
         <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
        </button></ContextMenuTrigger>
-       <ContextMenuContent class="w09-native-context-menu" data-test="w09-contact-context-menu">
-        <ContextMenuLabel>{{c.displayName}}</ContextMenuLabel>
+       <ContextMenuContent class="w09-native-context-menu w09-pro-contact-menu" data-test="w09-contact-context-menu">
+        <ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16" aria-hidden="true"/>查看联系人资料</ContextMenuItem>
+        <ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16" aria-hidden="true"/>搜索聊天记录</ContextMenuItem>
         <ContextMenuSeparator/>
-        <ContextMenuItem @select="chooseContact(c)">打开会话</ContextMenuItem>
-        <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')">复制联系人姓名</ContextMenuItem>
-        <ContextMenuItem @select="filterToContact(c)">搜索该联系人</ContextMenuItem>
+        <ContextMenuItem data-test="context-contact-brain" @select="openBrainWorkspace"><BrainCircuit :size="16" aria-hidden="true"/>打开闺蜜大脑</ContextMenuItem>
+        <ContextMenuSeparator/>
+        <ContextMenuSub>
+         <ContextMenuSubTrigger><MoreHorizontal :size="16" aria-hidden="true"/>更多操作</ContextMenuSubTrigger>
+         <ContextMenuSubContent class="w09-native-context-menu">
+          <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')"><Copy :size="16" aria-hidden="true"/>复制联系人姓名</ContextMenuItem>
+          <ContextMenuItem @select="filterToContact(c)"><Filter :size="16" aria-hidden="true"/>筛选该联系人</ContextMenuItem>
+         </ContextMenuSubContent>
+        </ContextMenuSub>
        </ContextMenuContent>
       </ContextMenu>
       </template>
@@ -518,12 +585,19 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
       <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
      </button></ContextMenuTrigger>
-     <ContextMenuContent class="w09-native-context-menu" data-test="w09-contact-context-menu">
-      <ContextMenuLabel>{{c.displayName}}</ContextMenuLabel>
+     <ContextMenuContent class="w09-native-context-menu w09-pro-contact-menu" data-test="w09-contact-context-menu">
+      <ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16" aria-hidden="true"/>查看联系人资料</ContextMenuItem>
+      <ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16" aria-hidden="true"/>搜索聊天记录</ContextMenuItem>
       <ContextMenuSeparator/>
-      <ContextMenuItem @select="chooseContact(c)">打开会话</ContextMenuItem>
-      <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')">复制联系人姓名</ContextMenuItem>
-      <ContextMenuItem @select="filterToContact(c)">搜索该联系人</ContextMenuItem>
+      <ContextMenuItem data-test="context-contact-brain" @select="openBrainWorkspace"><BrainCircuit :size="16" aria-hidden="true"/>打开闺蜜大脑</ContextMenuItem>
+      <ContextMenuSeparator/>
+      <ContextMenuSub>
+       <ContextMenuSubTrigger><MoreHorizontal :size="16" aria-hidden="true"/>更多操作</ContextMenuSubTrigger>
+       <ContextMenuSubContent class="w09-native-context-menu">
+        <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')"><Copy :size="16" aria-hidden="true"/>复制联系人姓名</ContextMenuItem>
+        <ContextMenuItem @select="filterToContact(c)"><Filter :size="16" aria-hidden="true"/>筛选该联系人</ContextMenuItem>
+       </ContextMenuSubContent>
+      </ContextMenuSub>
      </ContextMenuContent>
      </ContextMenu>
      <p v-if="!filtered.length" class="bc-inbox-state" data-test="w46-filter-empty">{{channelStatusMessage||'没有匹配的当前授权联系人'}}</p>
@@ -545,7 +619,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     <p v-if="timelineState==='blocked'" role="alert" data-test="w46-messages-error" class="bc-inbox-state">{{timelineError}}</p>
     <div class="bc-real-timeline" data-test="w46-message-scroll">
      <p v-if="timelineState==='ready'&&!timeline.length" class="bc-inbox-state">还没有消息</p>
-     <div v-for="m in timeline" :key="m.mid" class="bc-real-message" :data-mid="m.mid">
+     <div v-for="m in timeline" :key="m.mid" class="bc-real-message" :class="{'bc-real-message-highlight':highlightMid===m.mid}" :data-mid="m.mid" :data-direction="m.direction">
       <ContextMenu><ContextMenuTrigger as-child><div class="bc-native-message-context" tabindex="0" :aria-label="'消息操作：'+(hasDisplayableText(m)?m.original.slice(0,80):'非文本消息')">
       <Message :align="m.direction==='OUTBOUND'?'end':'start'">
        <Bubble :align="m.direction==='OUTBOUND'?'end':'start'" variant="default">
@@ -553,17 +627,31 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
        </Bubble>
       </Message>
       </div></ContextMenuTrigger>
-      <ContextMenuContent class="w09-native-context-menu" data-test="w09-message-context-menu">
-       <ContextMenuLabel>消息操作</ContextMenuLabel>
+      <ContextMenuContent class="w09-native-context-menu w09-pro-message-menu" data-test="w09-message-context-menu">
+       <ContextMenuItem v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" @select="contextQuote(m)"><MessageSquareQuote :size="16" aria-hidden="true"/>引用回复</ContextMenuItem>
+       <ContextMenuSub v-if="hasDisplayableText(m)||m.zh">
+        <ContextMenuSubTrigger><Copy :size="16" aria-hidden="true"/>复制消息</ContextMenuSubTrigger>
+        <ContextMenuSubContent class="w09-native-context-menu">
+         <ContextMenuItem v-if="hasDisplayableText(m)" @select="copyAuthorizedText(m.original,'消息原文')"><Copy :size="16" aria-hidden="true"/>复制原文</ContextMenuItem>
+         <ContextMenuItem v-if="m.zh" @select="copyAuthorizedText(m.zh,'中文译文')"><Copy :size="16" aria-hidden="true"/>复制中文译文</ContextMenuItem>
+        </ContextMenuSubContent>
+       </ContextMenuSub>
        <ContextMenuSeparator/>
-       <ContextMenuItem v-if="hasDisplayableText(m)" @select="copyAuthorizedText(m.original,'消息原文')">复制原文</ContextMenuItem>
-       <ContextMenuItem v-if="m.zh" @select="copyAuthorizedText(m.zh,'中文译文')">复制译文</ContextMenuItem>
-       <ContextMenuItem v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" @select="contextQuote(m)">引用到原编辑器</ContextMenuItem>
-       <ContextMenuItem @select="chooseContact(selected)">刷新当前会话</ContextMenuItem>
+       <ContextMenuItem @select="searchLoadedConversation(selected)"><Search :size="16" aria-hidden="true"/>搜索当前会话</ContextMenuItem>
       </ContextMenuContent>
       </ContextMenu>
-      <div v-if="!selected?.readOnly&&selected?.identityKey" class="bc-message-meta">
-       <button type="button" @click="sourceQuote(m)">引用</button>
+      <div class="w09-bubble-hoverbar" data-test="w09-message-hoverbar">
+       <button v-if="hasDisplayableText(m)" type="button" :aria-label="'复制消息原文'" title="复制" @click="copyAuthorizedText(m.original,'消息原文')"><Copy :size="15"/></button>
+       <button v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" type="button" aria-label="引用回复" title="引用回复" @click="contextQuote(m)"><MessageSquareQuote :size="15"/></button>
+       <Popover :open="openMoreMid===m.mid" @update:open="open=>openMoreMid=open?m.mid:''">
+        <PopoverTrigger as-child><button type="button" aria-label="更多消息操作" title="更多"><MoreHorizontal :size="16"/></button></PopoverTrigger>
+        <PopoverContent class="w09-native-context-menu w09-pro-more" align="start" side="bottom" :side-offset="8" data-test="w09-message-more-menu">
+         <button v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" type="button" @click="contextQuote(m);openMoreMid=''"><MessageSquareQuote :size="16" aria-hidden="true"/>引用回复</button>
+         <button v-if="hasDisplayableText(m)" type="button" @click="copyAuthorizedText(m.original,'消息原文');openMoreMid=''"><Copy :size="16" aria-hidden="true"/>复制原文</button>
+         <button v-if="m.zh" type="button" @click="copyAuthorizedText(m.zh,'中文译文');openMoreMid=''"><Copy :size="16" aria-hidden="true"/>复制中文译文</button>
+         <button type="button" @click="openMoreMid='';searchLoadedConversation(selected)"><Search :size="16" aria-hidden="true"/>搜索当前会话</button>
+        </PopoverContent>
+       </Popover>
       </div>
      </div>
     </div>
