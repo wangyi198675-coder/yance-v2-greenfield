@@ -167,3 +167,15 @@ test('status GET is W24/W44 and full-K scoped, not an untrusted ID read',async t
  await assert.rejects(h.a.fence.getStatus({id:saved.id,k:k(),
    actorId:'actorA',sessionId:'sessionA'}),/W24_CURRENT_ACTOR_ACCOUNT_PEER_EPOCH_DENIED/);
 });
+
+test('Grant/Consent epoch mutation cannot reuse prior held logical operation or read it',async t=>{
+ const h=fixture(t);
+ const first=await h.a.fence.prepare(req());
+ assert.equal(first.state,'HELD_FOR_PROVIDER_OWNER');
+ h.changeEpoch();
+ await assert.rejects(h.a.fence.prepare(req('REACTION','m-in',{
+   requestId:'new-request'})),/OPERATION_AUTHORITY_VERSION_CONFLICT/);
+ await assert.rejects(h.a.fence.getStatus({id:first.id,k:k(),
+   actorId:'actorA',sessionId:'sessionA'}),/OPERATION_HOLD_AUTHORITY_STALE/);
+ assert.equal(h.a.db.prepare('SELECT COUNT(*) AS n FROM message_action_holds').get().n,1);
+});
