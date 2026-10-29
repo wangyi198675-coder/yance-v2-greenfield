@@ -9,9 +9,9 @@ test('contacts use real OSS Reka ContextMenu and preserve original click/identit
  assert.match(ui,/<ContextMenu v-for="c in regular"/);
  assert.match(ui,/data-test="w09-contact-context-menu"/);
  assert.match(ui,/@click="chooseContact\(c\)"/);
- for(const op of ["查看联系人资料","搜索聊天记录","打开闺蜜大脑","复制联系人姓名","筛选该联系人"])assert.ok(ui.includes(op),op);
- assert.match(ui,/copyAuthorizedText\(c.displayName/);
- assert.match(ui,/filterToContact\(c\)/);
+ for(const op of ["查看联系人资料","搜索聊天记录","置顶会话","标记未读","消息免打扰","AI 托管与人工接管","归档会话","删除会话"])assert.ok(ui.includes(op),op);
+ assert.match(ui,/data-test="context-contact-pin"/);
+ assert.match(ui,/data-test="w09-delete-confirm-dialog"/);
 });
 test('messages have real right click menu with text-gated actions and authoritative quote',()=>{
  assert.match(ui,/data-test="w09-message-context-menu"/);

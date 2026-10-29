@@ -112,3 +112,13 @@ body:has(.shell[data-mode="light"]) .w09-pro-history-results button{color:#1b465
  overflow-y:auto!important;overflow-x:hidden!important;
 }}
 @media(prefers-reduced-motion:reduce){.w09-bubble-hoverbar{transition:none!important}}
+
+/* Issue #146: OSS Reka retains keyboard handling and collision logic. */
+.w09-pro-contact-menu [data-disabled],.w09-pro-message-menu [data-disabled],.w09-pro-submenu [data-disabled]{opacity:.55!important;cursor:not-allowed!important}
+.w09-menu-hold{margin-left:auto;color:var(--w09-menu-muted);font-size:10px;font-weight:400}
+.w09-menu-status{padding:8px 12px;color:var(--w09-menu-muted);font-size:11px;line-height:1.45}
+.w09-menu-danger{color:#de7c85!important}
+.w09-reaction-strip{display:flex;justify-content:space-around;padding:5px 2px;gap:2px}
+.w09-reaction-strip button{border:0;border-radius:8px;min-width:32px;height:34px;font-size:18px;background:transparent;opacity:.5;cursor:not-allowed}
+@media(max-height:660px){.w09-pro-contact-menu,.w09-pro-message-menu{max-height:calc(100dvh - 14px)!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important}}
+@media(hover:none){.w09-bubble-hoverbar{opacity:1;pointer-events:auto;transform:none}}

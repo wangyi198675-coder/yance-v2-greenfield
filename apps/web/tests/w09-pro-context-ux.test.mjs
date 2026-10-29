@@ -7,8 +7,8 @@ test('contact context menus use OSS native categorized commands and preserve ide
  assert.match(src,/ContextMenuSub,ContextMenuSubTrigger,ContextMenuSubContent/);
  assert.equal((src.match(/data-test="context-contact-details"/g)||[]).length,2);
  assert.equal((src.match(/data-test="context-contact-search"/g)||[]).length,2);
- assert.equal((src.match(/data-test="context-contact-brain"/g)||[]).length,2);
- assert.equal((src.match(/<ContextMenuSub>/g)||[]).length,2);
+ assert.equal((src.match(/data-test="context-contact-managed"/g)||[]).length,2);
+ assert.ok((src.match(/<ContextMenuSub>/g)||[]).length>=4);
  assert.doesNotMatch(src,/<ContextMenuLabel>\{\{c.displayName\}\}<\/ContextMenuLabel>/);
  assert.doesNotMatch(src,/<ContextMenuItem @select="chooseContact\(c\)">打开会话/);
  assert.match(src,/:data-contact-ref="c.contactRef"/);
@@ -23,7 +23,7 @@ test('contact details and search operate on existing authorized data only',()=>{
  assert.match(src,/historySearchContact\.value/);
  assert.match(src,/timeline\.value\.some\(x=>x.mid===m.mid\)/);
  assert.match(src,/data-test="w09-history-result"/);
- assert.match(src,/navigate\('BRAIN'\)/);
+ assert.match(src,/data-test="context-contact-managed"/);
  assert.match(src,/no implicit assignment, takeover, or contact-bound grant/);
 });
 test('message context and bubble hoverbar reuse OSS with real copy and sanctioned quote',()=>{

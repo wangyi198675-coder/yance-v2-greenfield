@@ -1,6 +1,6 @@
 <script setup>
 import {ref,watch,computed,onMounted,onBeforeUnmount,nextTick} from 'vue';
-import {Search,UserRound,Copy,MessageSquareQuote,MoreHorizontal,BrainCircuit,ChevronRight,RefreshCw,Info,Filter,Check,MessageCircle} from '../../../design/nonproduction/approved-clickable-abc-bc/node_modules/@lucide/vue/dist/esm/lucide-vue.mjs';
+import {Search,UserRound,Copy,MessageSquareQuote,MoreHorizontal,BrainCircuit,ChevronRight,RefreshCw,Info,Filter,Check,MessageCircle,Pin,Mail,BellOff,Bell,Clock3,Archive,Trash2,PauseCircle,PlayCircle,Hand,Settings2,Heart,Forward,Undo2} from '../../../design/nonproduction/approved-clickable-abc-bc/node_modules/@lucide/vue/dist/esm/lucide-vue.mjs';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import {ScrollArea} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/scroll-area';
 import {Bubble,BubbleContent} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/bubble';
@@ -24,6 +24,7 @@ const emit=defineEmits(['navigate']);
 const searchBox=ref(null),composerRef=ref(null);
 const interactionNotice=ref('');
 const detailContact=ref(null),detailOpen=ref(false);
+const deleteContact=ref(null),deleteConfirmOpen=ref(false);
 const historySearchOpen=ref(false),historySearchTerm=ref(''),historySearchContact=ref(''),historySearchInput=ref(null),highlightMid=ref(''),openMoreMid=ref('');
 const historyMatches=computed(()=>{
  const q=historySearchTerm.value.trim().toLocaleLowerCase();
@@ -235,6 +236,7 @@ function revealHistoryHit(m){
  highlightMid.value=m.mid;historySearchOpen.value=false;
  nextTick(()=>Array.from(document.querySelectorAll('.bc-real-message')).find(x=>x.dataset.mid===m.mid)?.scrollIntoView({block:'center',behavior:'smooth'}));
 }
+function showDeleteConfirmation(c){if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;deleteContact.value=c;deleteConfirmOpen.value=true;}
 function openBrainWorkspace(){
  // Navigate only: no implicit assignment, takeover, or contact-bound grant.
  navigate('BRAIN');
@@ -508,7 +510,15 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     </div>
    </DialogContent>
   </Dialog>
-  <Dialog v-model:open="historySearchOpen">
+  <Dialog v-model:open="deleteConfirmOpen">
+   <DialogContent class="w09-pro-detail-dialog" data-test="w09-delete-confirm-dialog">
+    <DialogTitle>确认删除会话</DialogTitle>
+    <DialogDescription>删除本地会话与从服务商撤回消息是不同操作。当前未接入可审计的原生删除接口。</DialogDescription>
+    <p role="status">{{deleteContact?.displayName}} · 删除操作尚不可用，不会改变任何聊天数据。</p>
+    <button type="button" disabled class="w09-pro-detail-copy">确认删除（原生接口尚未接入）</button>
+    <button type="button" class="w09-pro-detail-copy" @click="deleteConfirmOpen=false">取消</button>
+   </DialogContent>
+  </Dialog>  <Dialog v-model:open="historySearchOpen">
    <DialogContent class="w09-pro-history-dialog" data-test="w09-conversation-search-dialog">
     <DialogTitle>搜索当前会话</DialogTitle>
     <DialogDescription>只搜索当前已加载的消息，不代表跨渠道全量历史搜索。</DialogDescription>
@@ -565,19 +575,29 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
        </button></ContextMenuTrigger>
        <ContextMenuContent class="w09-native-context-menu w09-pro-contact-menu" data-test="w09-contact-context-menu">
-        <ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16" aria-hidden="true"/>查看联系人资料</ContextMenuItem>
-        <ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16" aria-hidden="true"/>搜索聊天记录</ContextMenuItem>
-        <ContextMenuSeparator/>
-        <ContextMenuItem data-test="context-contact-brain" @select="openBrainWorkspace"><BrainCircuit :size="16" aria-hidden="true"/>打开闺蜜大脑</ContextMenuItem>
-        <ContextMenuSeparator/>
-        <ContextMenuSub>
-         <ContextMenuSubTrigger><MoreHorizontal :size="16" aria-hidden="true"/>更多操作</ContextMenuSubTrigger>
-         <ContextMenuSubContent class="w09-native-context-menu">
-          <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')"><Copy :size="16" aria-hidden="true"/>复制联系人姓名</ContextMenuItem>
-          <ContextMenuItem @select="filterToContact(c)"><Filter :size="16" aria-hidden="true"/>筛选该联系人</ContextMenuItem>
-         </ContextMenuSubContent>
-        </ContextMenuSub>
-       </ContextMenuContent>
+<ContextMenuItem disabled data-test="context-contact-pin"><Pin :size="16"/>{{c.pinned===true?'取消置顶':'置顶会话'}}<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuItem disabled data-test="context-contact-unread"><Mail :size="16"/>{{c.unread>0?'标记已读':'标记未读'}}<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuSub><ContextMenuSubTrigger data-test="context-contact-mute"><BellOff :size="16"/>消息免打扰</ContextMenuSubTrigger>
+<ContextMenuSubContent class="w09-native-context-menu w09-pro-submenu"><ContextMenuLabel>通知设置 · 尚未授权</ContextMenuLabel>
+<ContextMenuItem disabled><Clock3 :size="16"/>1 小时</ContextMenuItem>
+<ContextMenuItem disabled><Clock3 :size="16"/>8 小时</ContextMenuItem>
+<ContextMenuItem disabled><Clock3 :size="16"/>24 小时</ContextMenuItem>
+<ContextMenuItem disabled><Bell :size="16"/>关闭免打扰</ContextMenuItem></ContextMenuSubContent></ContextMenuSub>
+<ContextMenuSeparator/>
+<ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16"/>查看联系人资料</ContextMenuItem>
+<ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16"/>搜索聊天记录</ContextMenuItem>
+<ContextMenuSeparator/>
+<ContextMenuSub><ContextMenuSubTrigger data-test="context-contact-managed"><BrainCircuit :size="16"/>AI 托管与人工接管</ContextMenuSubTrigger>
+<ContextMenuSubContent class="w09-native-context-menu w09-pro-submenu"><ContextMenuLabel>实际托管状态：尚未验证</ContextMenuLabel>
+<div class="w09-menu-status">有效授权、预算及联系人范围待 W44/W47 可信读回</div>
+<ContextMenuItem disabled><PlayCircle :size="16"/>开启／恢复托管</ContextMenuItem>
+<ContextMenuItem disabled><PauseCircle :size="16"/>暂停托管</ContextMenuItem>
+<ContextMenuItem disabled><Hand :size="16"/>人工接管</ContextMenuItem>
+<ContextMenuItem disabled><Settings2 :size="16"/>托管设置</ContextMenuItem></ContextMenuSubContent></ContextMenuSub>
+<ContextMenuSeparator/>
+<ContextMenuItem disabled data-test="context-contact-archive"><Archive :size="16"/>{{c.archived===true?'恢复会话':'归档会话'}}<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuItem @select="showDeleteConfirmation(c)" data-test="context-contact-delete" class="w09-menu-danger"><Trash2 :size="16"/>删除会话<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+</ContextMenuContent>
       </ContextMenu>
       </template>
      </template>
@@ -586,19 +606,29 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
      </button></ContextMenuTrigger>
      <ContextMenuContent class="w09-native-context-menu w09-pro-contact-menu" data-test="w09-contact-context-menu">
-      <ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16" aria-hidden="true"/>查看联系人资料</ContextMenuItem>
-      <ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16" aria-hidden="true"/>搜索聊天记录</ContextMenuItem>
-      <ContextMenuSeparator/>
-      <ContextMenuItem data-test="context-contact-brain" @select="openBrainWorkspace"><BrainCircuit :size="16" aria-hidden="true"/>打开闺蜜大脑</ContextMenuItem>
-      <ContextMenuSeparator/>
-      <ContextMenuSub>
-       <ContextMenuSubTrigger><MoreHorizontal :size="16" aria-hidden="true"/>更多操作</ContextMenuSubTrigger>
-       <ContextMenuSubContent class="w09-native-context-menu">
-        <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')"><Copy :size="16" aria-hidden="true"/>复制联系人姓名</ContextMenuItem>
-        <ContextMenuItem @select="filterToContact(c)"><Filter :size="16" aria-hidden="true"/>筛选该联系人</ContextMenuItem>
-       </ContextMenuSubContent>
-      </ContextMenuSub>
-     </ContextMenuContent>
+<ContextMenuItem disabled data-test="context-contact-pin"><Pin :size="16"/>{{c.pinned===true?'取消置顶':'置顶会话'}}<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuItem disabled data-test="context-contact-unread"><Mail :size="16"/>{{c.unread>0?'标记已读':'标记未读'}}<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuSub><ContextMenuSubTrigger data-test="context-contact-mute"><BellOff :size="16"/>消息免打扰</ContextMenuSubTrigger>
+<ContextMenuSubContent class="w09-native-context-menu w09-pro-submenu"><ContextMenuLabel>通知设置 · 尚未授权</ContextMenuLabel>
+<ContextMenuItem disabled><Clock3 :size="16"/>1 小时</ContextMenuItem>
+<ContextMenuItem disabled><Clock3 :size="16"/>8 小时</ContextMenuItem>
+<ContextMenuItem disabled><Clock3 :size="16"/>24 小时</ContextMenuItem>
+<ContextMenuItem disabled><Bell :size="16"/>关闭免打扰</ContextMenuItem></ContextMenuSubContent></ContextMenuSub>
+<ContextMenuSeparator/>
+<ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16"/>查看联系人资料</ContextMenuItem>
+<ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16"/>搜索聊天记录</ContextMenuItem>
+<ContextMenuSeparator/>
+<ContextMenuSub><ContextMenuSubTrigger data-test="context-contact-managed"><BrainCircuit :size="16"/>AI 托管与人工接管</ContextMenuSubTrigger>
+<ContextMenuSubContent class="w09-native-context-menu w09-pro-submenu"><ContextMenuLabel>实际托管状态：尚未验证</ContextMenuLabel>
+<div class="w09-menu-status">有效授权、预算及联系人范围待 W44/W47 可信读回</div>
+<ContextMenuItem disabled><PlayCircle :size="16"/>开启／恢复托管</ContextMenuItem>
+<ContextMenuItem disabled><PauseCircle :size="16"/>暂停托管</ContextMenuItem>
+<ContextMenuItem disabled><Hand :size="16"/>人工接管</ContextMenuItem>
+<ContextMenuItem disabled><Settings2 :size="16"/>托管设置</ContextMenuItem></ContextMenuSubContent></ContextMenuSub>
+<ContextMenuSeparator/>
+<ContextMenuItem disabled data-test="context-contact-archive"><Archive :size="16"/>{{c.archived===true?'恢复会话':'归档会话'}}<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuItem @select="showDeleteConfirmation(c)" data-test="context-contact-delete" class="w09-menu-danger"><Trash2 :size="16"/>删除会话<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+</ContextMenuContent>
      </ContextMenu>
      <p v-if="!filtered.length" class="bc-inbox-state" data-test="w46-filter-empty">{{channelStatusMessage||'没有匹配的当前授权联系人'}}</p>
     </template>
@@ -628,17 +658,17 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
       </Message>
       </div></ContextMenuTrigger>
       <ContextMenuContent class="w09-native-context-menu w09-pro-message-menu" data-test="w09-message-context-menu">
-       <ContextMenuItem v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" @select="contextQuote(m)"><MessageSquareQuote :size="16" aria-hidden="true"/>引用回复</ContextMenuItem>
-       <ContextMenuSub v-if="hasDisplayableText(m)||m.zh">
-        <ContextMenuSubTrigger><Copy :size="16" aria-hidden="true"/>复制消息</ContextMenuSubTrigger>
-        <ContextMenuSubContent class="w09-native-context-menu">
-         <ContextMenuItem v-if="hasDisplayableText(m)" @select="copyAuthorizedText(m.original,'消息原文')"><Copy :size="16" aria-hidden="true"/>复制原文</ContextMenuItem>
-         <ContextMenuItem v-if="m.zh" @select="copyAuthorizedText(m.zh,'中文译文')"><Copy :size="16" aria-hidden="true"/>复制中文译文</ContextMenuItem>
-        </ContextMenuSubContent>
-       </ContextMenuSub>
-       <ContextMenuSeparator/>
-       <ContextMenuItem @select="searchLoadedConversation(selected)"><Search :size="16" aria-hidden="true"/>搜索当前会话</ContextMenuItem>
-      </ContextMenuContent>
+<div class="w09-reaction-strip" role="group" aria-label="表情回应暂未接入"><button v-for="emoji in ['👍','❤️','😂','😮','😢','🙏']" :key="emoji" type="button" disabled :title="'回应暂未接入 '+emoji">{{emoji}}</button></div>
+<ContextMenuItem v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" @select="contextQuote(m)"><MessageSquareQuote :size="16"/>引用回复</ContextMenuItem>
+<ContextMenuSub v-if="hasDisplayableText(m)||m.zh"><ContextMenuSubTrigger><Copy :size="16"/>复制消息</ContextMenuSubTrigger>
+<ContextMenuSubContent class="w09-native-context-menu"><ContextMenuItem v-if="hasDisplayableText(m)" @select="copyAuthorizedText(m.original,'消息原文')"><Copy :size="16"/>复制原文</ContextMenuItem><ContextMenuItem v-if="m.zh" @select="copyAuthorizedText(m.zh,'中文译文')"><Copy :size="16"/>复制中文译文</ContextMenuItem></ContextMenuSubContent></ContextMenuSub>
+<ContextMenuItem disabled><Forward :size="16"/>转发消息<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuItem disabled><Heart :size="16"/>收藏消息<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuSeparator/><ContextMenuItem disabled><BrainCircuit :size="16"/>交给闺蜜大脑分析<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuSeparator/><ContextMenuItem v-if="m.direction==='OUTBOUND'" disabled><Undo2 :size="16"/>撤回消息<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuItem disabled class="w09-menu-danger"><Trash2 :size="16"/>删除消息<small class="w09-menu-hold">未接入</small></ContextMenuItem>
+<ContextMenuSeparator/><ContextMenuItem @select="searchLoadedConversation(selected)"><Search :size="16"/>搜索当前会话</ContextMenuItem>
+</ContextMenuContent>
       </ContextMenu>
       <div class="w09-bubble-hoverbar" data-test="w09-message-hoverbar">
        <button v-if="hasDisplayableText(m)" type="button" :aria-label="'复制消息原文'" title="复制" @click="copyAuthorizedText(m.original,'消息原文')"><Copy :size="15"/></button>
