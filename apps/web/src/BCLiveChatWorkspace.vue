@@ -4,7 +4,9 @@ import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/sr
 import {ScrollArea} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/scroll-area';
 import {Bubble,BubbleContent} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/bubble';
 import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/message';
+import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuLabel,ContextMenuSeparator} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/context-menu';
 import BCNativeComposer from './BCNativeComposer.vue';
+import './BCNativeContextMenu.css';
 import metaBrandLogo from './assets/channels/meta.svg';
 import messengerBrandLogo from './assets/channels/messenger.svg';
 import whatsappBrandLogo from './assets/channels/whatsapp.svg';
@@ -16,6 +18,7 @@ import {latestNewOfficialPancakeInbound,showOfficialPancakeInboundNotice} from '
 const props=defineProps({fetchImpl:{type:Function,default:null},mediaAuthorityPort:{type:Object,default:null}});
 const emit=defineEmits(['navigate']);
 const searchBox=ref(null),composerRef=ref(null);
+const interactionNotice=ref('');
 const mobileChat=ref(false),plusOpen=ref(false),filterOpen=ref(false),pinnedExpanded=ref(true),unreadOnly=ref(false);
 const unreadAuthoritative=computed(()=>contacts.value.some(c=>c.unreadAuthorized===true));
 const api=computed(()=>props.fetchImpl||globalThis.fetch);
@@ -191,6 +194,28 @@ function onKeyDown(e){
 }
 function navigate(section){plusOpen.value=false;filterOpen.value=false;emit('navigate',section)}
 function backToContacts(){mobileChat.value=false}
+async function copyAuthorizedText(text,label){
+ if(typeof text!=='string'||!text.length){interactionNotice.value=label+'暂无可复制内容';return}
+ try{
+  if(typeof globalThis.navigator?.clipboard?.writeText!=='function')throw Error('CLIPBOARD_NOT_AVAILABLE');
+  await globalThis.navigator.clipboard.writeText(text);
+  interactionNotice.value=label+'已复制';
+ }catch{interactionNotice.value='复制失败，请检查浏览器剪贴板权限';}
+}
+function filterToContact(c){
+ if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;
+ if(channel.value!=='ALL'&&channel.value!==c.channel)channel.value='ALL';
+ if(account.value!=='ALL'&&account.value!==c.accountRef)account.value='ALL';
+ search.value=c.displayName;reconcileFilter();focusSearch();
+}
+function contextQuote(m){
+ if(!selected.value||!timeline.value.some(x=>x.mid===m?.mid))return;
+ if(selected.value.readOnly||!selected.value.identityKey||!selected.value.identity){
+  interactionNotice.value='此渠道尚未开放可信引用与发送资格';return;
+ }
+ sourceQuote(m);
+ interactionNotice.value='已加入原编辑器引用';
+}
 function sourceQuote(m){
  if(!selected.value?.identityKey||!selected.value.identity||!m?.mid)return;
  composerRef.value?.sourceQuote({
@@ -434,6 +459,7 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
 </script>
 <template>
  <section class="bc-real-chat" :class="{'mobile-conversation':mobileChat}" data-test="w46-real-chat" aria-label="B＋C实际联系人与聊天工作台">
+  <p v-if="interactionNotice" class="bc-native-context-notice" role="status" data-test="w09-context-action-status" @click="interactionNotice=''">{{interactionNotice}} <span aria-hidden="true">×</span></p>
   <aside class="bc-real-list" data-test="w46-real-contacts" aria-label="Smart Inbox">
    <div class="bc-sidebar-tools">
     <div class="bc-tools-row" data-test="w46-inbox-toolbar-row-1">
@@ -474,16 +500,32 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
      <template v-if="pinned.length">
       <button type="button" class="bc-group-title" :aria-expanded="pinnedExpanded" @click="pinnedExpanded=!pinnedExpanded">置顶 <span>{{pinnedExpanded?'⌄':'›'}}</span></button>
       <template v-if="pinnedExpanded">
-       <button v-for="c in pinned" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
+       <ContextMenu v-for="c in pinned" :key="c.contactRef"><ContextMenuTrigger as-child><button type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
         <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
-       </button>
+       </button></ContextMenuTrigger>
+       <ContextMenuContent class="w09-native-context-menu" data-test="w09-contact-context-menu">
+        <ContextMenuLabel>{{c.displayName}}</ContextMenuLabel>
+        <ContextMenuSeparator/>
+        <ContextMenuItem @select="chooseContact(c)">打开会话</ContextMenuItem>
+        <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')">复制联系人姓名</ContextMenuItem>
+        <ContextMenuItem @select="filterToContact(c)">搜索该联系人</ContextMenuItem>
+       </ContextMenuContent>
+      </ContextMenu>
       </template>
      </template>
-     <button v-for="c in regular" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
+     <ContextMenu v-for="c in regular" :key="c.contactRef"><ContextMenuTrigger as-child><button type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
       <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
-     </button>
+     </button></ContextMenuTrigger>
+     <ContextMenuContent class="w09-native-context-menu" data-test="w09-contact-context-menu">
+      <ContextMenuLabel>{{c.displayName}}</ContextMenuLabel>
+      <ContextMenuSeparator/>
+      <ContextMenuItem @select="chooseContact(c)">打开会话</ContextMenuItem>
+      <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')">复制联系人姓名</ContextMenuItem>
+      <ContextMenuItem @select="filterToContact(c)">搜索该联系人</ContextMenuItem>
+     </ContextMenuContent>
+     </ContextMenu>
      <p v-if="!filtered.length" class="bc-inbox-state" data-test="w46-filter-empty">{{channelStatusMessage||'没有匹配的当前授权联系人'}}</p>
     </template>
    </div>
@@ -504,11 +546,22 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
     <div class="bc-real-timeline" data-test="w46-message-scroll">
      <p v-if="timelineState==='ready'&&!timeline.length" class="bc-inbox-state">还没有消息</p>
      <div v-for="m in timeline" :key="m.mid" class="bc-real-message" :data-mid="m.mid">
+      <ContextMenu><ContextMenuTrigger as-child><div class="bc-native-message-context" tabindex="0" :aria-label="'消息操作：'+(hasDisplayableText(m)?m.original.slice(0,80):'非文本消息')">
       <Message :align="m.direction==='OUTBOUND'?'end':'start'">
        <Bubble :align="m.direction==='OUTBOUND'?'end':'start'" variant="default">
         <BubbleContent><div class="bc-message-text" :class="{'is-outgoing':m.direction==='OUTBOUND','is-nontext':!hasDisplayableText(m)}"><p v-if="hasDisplayableText(m)">{{m.original}}</p><div v-else class="bc-nontext-placeholder" data-test="w09-nontext-placeholder" role="note"><span class="bc-nontext-symbol" aria-hidden="true">◇</span><span class="bc-nontext-copy"><strong>这条消息暂无可显示的文字</strong><small>原始消息已保留，内容类型尚未核实</small></span></div><p v-if="m.zh" class="bc-translation">{{m.zh}}</p></div></BubbleContent>
        </Bubble>
       </Message>
+      </div></ContextMenuTrigger>
+      <ContextMenuContent class="w09-native-context-menu" data-test="w09-message-context-menu">
+       <ContextMenuLabel>消息操作</ContextMenuLabel>
+       <ContextMenuSeparator/>
+       <ContextMenuItem v-if="hasDisplayableText(m)" @select="copyAuthorizedText(m.original,'消息原文')">复制原文</ContextMenuItem>
+       <ContextMenuItem v-if="m.zh" @select="copyAuthorizedText(m.zh,'中文译文')">复制译文</ContextMenuItem>
+       <ContextMenuItem v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" @select="contextQuote(m)">引用到原编辑器</ContextMenuItem>
+       <ContextMenuItem @select="chooseContact(selected)">刷新当前会话</ContextMenuItem>
+      </ContextMenuContent>
+      </ContextMenu>
       <div v-if="!selected?.readOnly&&selected?.identityKey" class="bc-message-meta">
        <button type="button" @click="sourceQuote(m)">引用</button>
       </div>
