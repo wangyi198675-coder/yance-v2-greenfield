@@ -22,7 +22,8 @@ const files=['server.mjs','runtime-config.mjs','runtime-provenance.mjs',
  'web-private-cloud-byok.mjs','web-private-cloud-http.mjs','w55-web-native-stdio.mjs',
  'w54-native-child-frame.mjs','w54-native-webview-session.mjs',
  'w47-w43-private-child.py','w47-w23-media-bridge.mjs',
- 'w47-native-settings-capabilities.mjs'];
+ 'w47-native-settings-capabilities.mjs','w47-native-context-menu-capabilities.mjs',
+ 'w47-official-siwc.mjs'];
 let child,base,work;
 before(async()=>{
  work=mkdtempSync(join(tmpdir(),'w47-exact-native-test-'));
