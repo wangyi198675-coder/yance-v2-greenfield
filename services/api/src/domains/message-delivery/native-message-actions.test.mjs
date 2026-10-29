@@ -29,7 +29,7 @@ function fixture(t){
   const fence=createW25MessageActionFence({
    delivery,now:()=>1_000_000,
    checkW24:async ({k:x,actorId,sessionId})=>({
-    valid:w24,strictDurable:true,accountActive:true,identityKey:full(x),
+    valid:w24&&x.peerId!=='peerC',strictDurable:true,accountActive:true,identityKey:full(x),
     channelAccountId:x.accountId,peerId:x.peerId,bindingRevision:x.bindingRevision,
     actorId,sessionId,accountEpoch,consentEpoch,expiresAt:expiry?900_000:2_000_000
    }),
@@ -99,7 +99,7 @@ test('reaction quote/reply binds original provider MID; forwarding checks recipi
  await assert.rejects(h.a.fence.prepare(req('FORWARD','m-in',{
   targetK:k('peerB','acctB'),payload:{text:'blocked'}})),/FORWARD_CROSS_ACCOUNT_HOLD/);
  await assert.rejects(h.a.fence.prepare(req('FORWARD','m-in',{
-  targetK:k('peerC'),payload:{text:'not verified'}})),/ORIGINAL_PROVIDER_MID_NOT_VERIFIED|FORWARD_TARGET_NOT_AUTHORIZED/).catch(()=>{});
+  targetK:k('peerC'),payload:{text:'not verified'},requestId:'peerC'})),/FORWARD_TARGET_NOT_AUTHORIZED/);
 });
 test('edit and revoke require own-originated provider history; local delete stays DB owner',async t=>{
  const h=fixture(t);
@@ -152,4 +152,18 @@ test('enumerated action matrix is not a claim of Provider support',t=>{
  assert.equal(m.PROVIDER_DELETE,'NOT_WIRED');
  assert.equal(m.LOCAL_DELETE,'CONVERSATION_DB_OWNER');
  assert.equal(m.MEDIA_ACTION,'W23_AND_PROVIDER_HOLD');
+});
+
+test('status GET is W24/W44 and full-K scoped, not an untrusted ID read',async t=>{
+ const h=fixture(t);
+ const saved=await h.a.fence.prepare(req());
+ assert.equal((await h.a.fence.getStatus({id:saved.id,k:k(),
+   actorId:'actorA',sessionId:'sessionA'})).state,'HELD_FOR_PROVIDER_OWNER');
+ await assert.rejects(h.a.fence.getStatus({id:saved.id,k:k('peerB'),
+   actorId:'actorA',sessionId:'sessionA'}),/OPERATION_STATUS_CROSS_ACCOUNT_DENIED/);
+ await assert.rejects(h.a.fence.getStatus({id:saved.id,k:k(),
+   actorId:'attacker',sessionId:'another-session'}),/OPERATION_STATUS_ACTOR_DENIED/);
+ h.disableW24();
+ await assert.rejects(h.a.fence.getStatus({id:saved.id,k:k(),
+   actorId:'actorA',sessionId:'sessionA'}),/W24_CURRENT_ACTOR_ACCOUNT_PEER_EPOCH_DENIED/);
 });
