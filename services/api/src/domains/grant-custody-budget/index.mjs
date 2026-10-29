@@ -28,7 +28,7 @@ function intentKey(k,id){
   return JSON.stringify([canonicalK(k),id]);
 }
 
-export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,verifyOwnerMutation,verifyOwnerCancellation,requireDurableIdentity=false,now=Date.now}={}) {
+export function openEligibilityStore({path,verifyIdentity,authorizeMutation,verifySettlement,verifyDeliveryArm,verifyOwnerMutation,verifyOwnerCancellation,readAgentState,requireDurableIdentity=false,now=Date.now}={}) {
   if(typeof path!=='string'||!path||path.length>1024||
     (!requireDurableIdentity&&typeof verifyIdentity!=='function')||typeof authorizeMutation!=='function'||
     typeof now!=='function')throw Error('EXPLICIT_NONPROD_PATH_AND_W24_PORTS_REQUIRED');
@@ -473,6 +473,32 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
       contactPaused:state.contactPaused,
       canSend:false});
   }
+  // Menu GET is pure: no custody writes, no send/Agent invocation, no takeover.
+  // Agent state is exclusively sourced from the W43 native owner port.
+  function readContactManagedMenuState({identity:k,actor}={}){
+    const mode=readModeState({identity:k,actor});
+    const contact=readGrantState({identity:k,actor,scope:'CONTACT'});
+    const global=readGrantState({identity:k,actor,scope:'GLOBAL'});
+    let agent={active:false,revision:null,reason:'W43_AGENT_PORT_NOT_CONNECTED'};
+    if(typeof readAgentState==='function'){
+      try{
+        const state=readAgentState({identity:k,actor,operation:'CONTACT_MANAGED_MENU_READ'});
+        if(state&&typeof state.then==='function')throw Error('ASYNC_AGENT_STATE_NOT_ATOMIC');
+        agent=state?.active===true&&typeof state.revision==='string'&&state.revision.length>0
+          ?{active:true,revision:state.revision,reason:null}
+          :{active:false,revision:null,reason:'AGENT_INACTIVE_OR_UNVERIFIED'};
+      }catch{agent={active:false,revision:null,reason:'W43_AGENT_STATE_UNAVAILABLE'}}
+    }
+    const canAuto=mode.nativeAutoEligible&&agent.active&&mode.realAutoAuthorized;
+    return Object.freeze({ok:true,identityKey:mode.identityKey,
+      selectedMode:mode.selectedMode,effectiveMode:mode.effectiveMode,
+      contact,global,mode,agent,canAuto,
+      status:mode.barriers.pending||mode.barriers.globalPending?'PENDING':
+        !agent.active?'AGENT_HOLD':!mode.nativeAutoEligible?'GRANT_OR_BUDGET_HOLD':
+        !mode.realAutoAuthorized?'REAL_USER_AUTH_HOLD':'ELIGIBLE',
+      reason:!agent.active?agent.reason:mode.reason,
+      canSend:false,authorityClass:mode.authorityClass});
+  }
   function switchMode({identity:k,actor,targetMode,idempotencyKey,
     expectedGeneration,expectedBindingRevision,expectedAccountEpoch,
     expectedConsentEpoch,expectedCustodyEpoch,payload}={}){
@@ -521,7 +547,7 @@ export function openEligibilityStore({path,verifyIdentity,authorizeMutation,veri
     requestMutationFence:requireDurableIdentity?durable.requestMutationFence:requestMutationFence,
     finalizeMutationFence:requireDurableIdentity?durable.finalizeMutationFence:finalizeMutationFence,
     settleBoundary,finish,inspection,readGrantState,grantAction,
-    readModeState,switchMode,
+    readModeState,switchMode,readContactManagedMenuState,
     readIdentityAuthority:durable.readIdentityAuthority,
     readMutationFence:durable.readMutationFence,
     requestNativeMutationFence:durable.requestMutationFence,

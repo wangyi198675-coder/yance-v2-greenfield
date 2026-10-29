@@ -14,7 +14,9 @@ let next=0;const iid=tag=>'fake-'+tag+'-'+(++next);
 function fixture(t){
  const dir=mkdtempSync(join(tmpdir(),'w44-modes-'));
  let tick=Date.now(),stores=[];
+ let agentState={active:false,revision:null};
  const options={path:join(dir,'w44.sqlite'),requireDurableIdentity:true,now:()=>tick,
+  readAgentState:()=>agentState,
   authorizeMutation:({actor:a})=>a===actor,
   verifyDeliveryArm:()=>({verified:true}),
   verifySettlement:({evidence})=>evidence==='fake-ack'
@@ -66,7 +68,8 @@ function fixture(t){
    expectedCustodyEpoch:options.expectedCustodyEpoch??b.identityEpochs.custodyEpoch,
    payload:{targetMode,approvalRef:options.proof??'fake-approved-user-action'}});
  };
- return {s,open,grant,switchTo,mutation,now:()=>tick,advance:ms=>tick+=ms};
+ return {s,open,grant,switchTo,mutation,now:()=>tick,advance:ms=>tick+=ms,
+  setAgentState:x=>{agentState=x}};
 }
 test('three-mode GET is read-only; MANUAL and ASSIST both prohibit automatic send',t=>{
  const f=fixture(t),a=K();
@@ -238,4 +241,37 @@ test('competing SQLite handles use same CONTACT generation: one commits, old con
  assert.equal(stale.status,'CONFLICT');
  assert.equal(stale.reason,'STALE_MUTATION_GENERATION');
  assert.equal(other.readModeState({identity:K(),actor}).selectedMode,'MANUAL');
+});
+
+test('menu GET is read-only and reports W43 inactive, active then disabled without altering grants',t=>{
+ const f=fixture(t);assert.equal(f.grant().status,'COMMITTED');
+ const before=f.s.readModeState({identity:K(),actor});
+ const off=f.s.readContactManagedMenuState({identity:K(),actor});
+ assert.equal(off.agent.active,false);
+ assert.equal(off.status,'AGENT_HOLD');
+ assert.equal(off.canAuto,false);
+ assert.equal(off.contact.effectiveScope,'GLOBAL');
+ assert.equal(off.global.grant.enabled,true);
+ f.setAgentState({active:true,revision:'fake-agent-revision'});
+ const active=f.s.readContactManagedMenuState({identity:K(),actor});
+ assert.equal(active.agent.active,true);
+ assert.equal(active.status,'REAL_USER_AUTH_HOLD'); // fixture cannot grant real social permission
+ assert.equal(active.canAuto,false);
+ f.setAgentState({active:false,revision:'fake-agent-revision'});
+ assert.equal(f.s.readContactManagedMenuState({identity:K(),actor}).status,'AGENT_HOLD');
+ const after=f.s.readModeState({identity:K(),actor});
+ assert.deepEqual(after.identityEpochs,before.identityEpochs);
+ assert.deepEqual(after.barriers,before.barriers);
+});
+test('menu reads A do not mutate A or B/C even when A HUMAN and B independently AUTO',t=>{
+ const f=fixture(t);assert.equal(f.grant().status,'COMMITTED');
+ f.mutation(K(),'CONTACT','HUMAN_TAKEOVER',{action:'USER_EDIT'});
+ f.setAgentState({active:true,revision:'fake-agent'});
+ const b=f.s.readModeState({identity:K('fake-B'),actor});
+ for(let i=0;i<5;i++)f.s.readContactManagedMenuState({identity:K(),actor});
+ assert.equal(f.s.readContactManagedMenuState({identity:K(),actor}).mode.selectedMode,'MANUAL');
+ assert.equal(f.s.qualify(K()).reason,'HUMAN_CUSTODY');
+ assert.equal(f.s.qualify(K('fake-B')).ok,true);
+ assert.equal(f.s.qualify(K('fake-C')).ok,true);
+ assert.deepEqual(f.s.readModeState({identity:K('fake-B'),actor}).identityEpochs,b.identityEpochs);
 });
