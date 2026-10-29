@@ -236,6 +236,7 @@ onMounted(()=>{if(props.active)void refresh()});
    <label>模型来源与型号
     <select v-model="selected" data-test="route-model-select" :disabled="busy||saving||stale||!isAuthoritative||!csrfOk">
      <option value="">请选择原生已授权模型</option>
+     <option v-if="catalogChosen&&!models.some(m=>m.provider===catalogChosen.provider&&m.modelId===catalogChosen.modelId)" :value="catalogChosen.provider+'|'+catalogChosen.modelId">{{providerName(catalogChosen.provider)}} · {{catalogChosen.modelId}}</option>
      <option v-for="m in models" :key="m.provider+'|'+m.modelId" :value="m.provider+'|'+m.modelId">
       {{providerName(m.provider)}} · {{m.modelId}}
      </option>
