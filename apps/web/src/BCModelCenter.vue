@@ -24,6 +24,10 @@ const vclawProof=ref({revision:0,state:'unknown',modelCount:0});
 const message=ref(''),error=ref(''),lastCheck=ref('');
 const modelConfig=ref(null),cloudKeys=ref(null),keysVerified=ref(false);
 const selected=ref(''),costApproved=ref(false),stale=ref(true);
+const directoryProvider=ref('OPENROUTER_USER_API'),catalogQuery=ref('');
+const catalogPage=ref(0),catalogLoading=ref(false),catalogError=ref('');
+const catalog=ref({models:[],total:0,revision:0});
+const catalogChosen=ref(null);let catalogTicket=0;
 let requestId=0;
 const csrfOk=computed(()=>/^[a-f0-9]{64}$/.test(props.webCsrf||''));
 const isAuthoritative=computed(()=>modelConfig.value?.authoritative===true&&modelConfig.value?.ok===true);
@@ -33,6 +37,34 @@ const currentProvider=computed(()=>isAuthoritative.value?modelConfig.value.selec
 const currentModel=computed(()=>isAuthoritative.value?modelConfig.value.selectedModelId||'':'');
 const localModels=computed(()=>models.value.filter(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'));
 const cloudModels=computed(()=>models.value.filter(m=>['OPENROUTER_USER_API','OPENAI_USER_API'].includes(m.provider)));
+const catalogProviderReady=computed(()=>keyProviders.value.some(p=>
+ p.provider===directoryProvider.value&&p.configured===true&&!p.revoked));
+async function loadCatalog(page=0){
+ const ticket=++catalogTicket;catalogLoading.value=true;catalogError.value='';
+ const provider=directoryProvider.value;
+ if(!catalogProviderReady.value){
+  catalog.value={models:[],total:0,revision:0};
+  catalogError.value='该供应商尚未保存有效密钥';
+  catalogLoading.value=false;return;
+ }
+ try{
+  const qs=new URLSearchParams({provider,q:catalogQuery.value.trim(),offset:String(page*40),limit:'40'});
+  const payload=await request('/api/v2/private-brain/provider-models?'+qs.toString());
+  if(ticket!==catalogTicket)return;
+  if(!payload.ok||!payload.authoritative||!Array.isArray(payload.models)||
+     payload.provider!==provider||payload.canSend!==false)throw Error('INVALID_DIRECTORY_RESPONSE');
+  catalog.value=payload;catalogPage.value=page;
+ }catch(e){
+  if(ticket!==catalogTicket)return;
+  catalog.value={models:[],total:0,revision:0};
+  catalogError.value=friendly(e);
+ }finally{if(ticket===catalogTicket)catalogLoading.value=false}
+}
+function selectCatalogModel(m){
+ if(!m?.selectable||m.provider!=='OPENROUTER_USER_API')return;
+ catalogChosen.value=m;selected.value=m.provider+'|'+m.modelId;
+ costApproved.value=false;
+}
 const vclawStatus=computed(()=>{
  if(!keysVerified.value)return '状态未核验';
  const p=keyProviders.value.find(x=>x.provider==='VCLAW_USER_API');
@@ -44,7 +76,8 @@ const vclawStatus=computed(()=>{
  if(vclawProof.value.state==='unavailable')return '密钥已保存 · 暂无法验证';
  return '密钥已保存 · 验证中';
 });
-const selectedModel=computed(()=>models.value.find(m=>m.provider+'|'+m.modelId===selected));
+const selectedModel=computed(()=>models.value.find(m=>m.provider+'|'+m.modelId===selected.value)||
+ (catalogChosen.value?.provider+'|'+catalogChosen.value?.modelId===selected.value?catalogChosen.value:null));
 const keyProviders=computed(()=>keysVerified.value&&Array.isArray(cloudKeys.value?.providers)?cloudKeys.value.providers:[]);
 const keyStatus=p=>{
  if(!keysVerified.value)return cloudKeys.value?'上次状态，未核验':'未取得状态';
@@ -131,6 +164,7 @@ async function saveBrainModel(){
  finally{saving.value=false}
 }
 watch(()=>props.active,v=>{if(v)void refresh()});
+watch(tab,v=>{if(v==='routes')void loadCatalog(0)});
 watch(()=>props.webCsrf,()=>{if(props.active)void refresh()});
 onMounted(()=>{if(props.active)void refresh()});
 </script>
@@ -144,7 +178,7 @@ onMounted(()=>{if(props.active)void refresh()});
    <article><span>闺蜜大脑当前模型</span><strong>{{currentModel||'尚未确认'}}</strong><small>{{providerName(currentProvider)}}</small></article>
    <article><span>云端密钥</span><strong>{{keyStatus('OPENROUTER_USER_API')}}</strong><small>OpenAI：{{keyStatus('OPENAI_USER_API')}}</small></article>
    <article><span>本地 Qwen3</span><strong>{{isAuthoritative&&localModels.length?'已连接':'未连接'}}</strong><small>使用 W47 原生模型资格检测</small></article>
-   <article><span>V-Claw</span><strong data-test="vclaw-summary-state">{{vclawStatus}}</strong><small>待完成原生密钥接入</small></article>
+   <article><span>V-Claw</span><strong data-test="vclaw-summary-state">{{vclawStatus}}</strong><small>{{vclawStatus==='已连接'?('API 已验证 · '+vclawProof.modelCount+' 个模型'):'等待 API 验证'}}</small></article>
   </div>
   <p v-if="busy||error||status==='partial'" class="mc-status" data-test="model-center-status" role="status">
    <b>{{busy?'正在核对':stale?'状态未核验':'原生状态已确认'}}</b> {{message}}
@@ -165,6 +199,38 @@ onMounted(()=>{if(props.active)void refresh()});
    </div>
   </section>
   <section v-show="tab==='routes'" class="mc-selection" data-test="model-routing-editor">
+   <div class="mc-directory" data-test="provider-model-directory">
+    <div class="mc-directory-header">
+     <div><h3>云端模型目录</h3><small>来自供应商实时目录；展示不代表已具备付费推理资格</small></div>
+     <strong data-test="directory-count">{{catalogLoading?'读取中…':catalog.total+' 个模型'}}</strong>
+    </div>
+    <div class="mc-directory-filters">
+     <select v-model="directoryProvider" data-test="directory-provider" @change="loadCatalog(0)" aria-label="模型供应商">
+      <option value="OPENROUTER_USER_API">OpenRouter</option>
+      <option value="VCLAW_USER_API">V-Claw</option>
+     </select>
+     <input v-model="catalogQuery" data-test="directory-search" type="search"
+      placeholder="搜索模型名称或 ID（例如 GPT、Claude、Gemini）"
+      @keydown.enter="loadCatalog(0)" aria-label="搜索模型"/>
+     <button type="button" data-test="directory-search-button" :disabled="catalogLoading" @click="loadCatalog(0)">搜索</button>
+    </div>
+    <p v-if="catalogError" class="mc-directory-error" data-test="directory-error">{{catalogError}}</p>
+    <div class="mc-directory-list" data-test="directory-results">
+     <button v-for="m in catalog.models" :key="m.provider+'|'+m.modelId"
+      type="button" class="mc-directory-model" :class="{chosen:selected===m.provider+'|'+m.modelId}"
+      :disabled="!m.selectable||busy||saving" @click="selectCatalogModel(m)">
+      <span><strong>{{m.name||m.modelId}}</strong><small>{{m.modelId}}</small></span>
+      <small>{{m.selectable?'选择用于闺蜜大脑':'目录已连接 · 尚未开通执行'}}</small>
+     </button>
+     <p v-if="!catalogLoading&&!catalog.models.length&&!catalogError">此条件下没有可显示的模型</p>
+    </div>
+    <div class="mc-directory-pager">
+     <span>第 {{catalogPage+1}} 页，每页最多 40 条</span>
+     <button type="button" :disabled="catalogLoading||catalogPage===0" @click="loadCatalog(catalogPage-1)">上一页</button>
+     <button type="button" :disabled="catalogLoading||(catalogPage+1)*40>=catalog.total" @click="loadCatalog(catalogPage+1)">下一页</button>
+    </div>
+    <p class="mc-directory-hint" v-if="directoryProvider==='VCLAW_USER_API'">V-Claw 的真实模型列表可以浏览；付费推理仍需原生 Agno/W43 执行授权完成后才能选择。不会伪装成已能发送。</p>
+   </div>
    <h3>闺蜜大脑 · 原生模型选择</h3>
 
    <label>模型来源与型号
@@ -211,4 +277,21 @@ onMounted(()=>{if(props.active)void refresh()});
 .model-center :deep(.bc-siwc-test){border-top:1px solid var(--mc-line);padding-top:10px}
 .model-center :deep(.cloud-key-panel>strong){font-size:14px}
 .model-center .mc-providers>article{gap:10px}
+.mc-directory{display:grid;gap:12px;min-width:0}
+.mc-directory-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.mc-directory-header small,.mc-directory-hint{opacity:.74}
+.mc-directory-filters{display:grid;grid-template-columns:minmax(125px,190px) minmax(0,1fr) auto;gap:9px;align-items:center}
+.mc-directory-filters select,.mc-directory-filters input{width:100%;min-width:0;background:#173346;color:#f2f8ff;border:1px solid #446578;border-radius:8px;padding:11px;font:inherit}
+.mc-directory-filters input::placeholder{color:#c3d2dc}
+.mc-directory-filters option,.mc-selection option{background:#fff;color:#132538;font-size:14px}
+.mc-directory-filters button,.mc-directory-pager button{background:#183c54;color:#f2f8ff;border:1px solid #55758c;border-radius:8px;padding:10px 13px;cursor:pointer}
+.mc-directory-list{display:grid;gap:5px;max-height:355px;overflow:auto;scrollbar-gutter:stable;padding-right:3px}
+.mc-directory-model{display:flex;justify-content:space-between;align-items:center;text-align:left;gap:16px;width:100%;border:1px solid #38586c;border-radius:8px;padding:11px 13px;background:#19394d;color:#eef8ff;cursor:pointer;font:inherit}
+.mc-directory-model>span{display:grid;gap:3px;min-width:0}.mc-directory-model small{color:#c4d7e5;overflow-wrap:anywhere}
+.mc-directory-model.chosen{border-color:#6caaff;background:#235074}
+.mc-directory-model:disabled{cursor:default;opacity:.8}
+.mc-directory-pager{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.mc-directory-pager span{margin-right:auto}
+.mc-directory-pager button:disabled{opacity:.42;cursor:not-allowed}
+.mc-directory-error{color:#f4b48b}
+@media(max-width:620px){.mc-directory-filters{grid-template-columns:1fr auto}.mc-directory-filters select{grid-column:1/-1}.mc-directory-model{flex-direction:column;align-items:flex-start}}
 </style>
