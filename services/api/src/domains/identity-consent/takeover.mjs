@@ -71,7 +71,11 @@ export function createNativeTakeoverService({identityConsent,custodyStore,author
       if(e instanceof IdentityDenied)deny(e.code,409);
       throw e;
     }
-    if(!scope||scope.ok!==true||!['AUTO','HUMAN'].includes(scope.mode)||
+    // W44's original MODE_ASSIST stores ASSIST in the same custody row.
+    // MODE_MANUAL is persisted as HUMAN; accept MANUAL only as a legacy
+    // read alias. Do not misreport ASSIST as AUTO to make the Composer PASS.
+    const custodyMode=scope?.mode==='MANUAL'?'HUMAN':scope?.mode;
+    if(!scope||scope.ok!==true||!['AUTO','ASSIST','HUMAN'].includes(custodyMode)||
        !nonnegative(scope.custodyEpoch))deny('CUSTODY_STATE_UNAVAILABLE',503);
     // W44 inspection may synchronously call W24. Refuse if binding changes mid-read.
     const after=current(identityConsent,trustedContext,identity);
@@ -85,7 +89,7 @@ export function createNativeTakeoverService({identityConsent,custodyStore,author
       binding_revision:after.binding_revision,
       accountRevocationEpoch:after.account_revocation_epoch,
       consentEpoch:consent_epoch,
-      mode:scope.mode,epoch:scope.custodyEpoch,
+      mode:custodyMode,epoch:scope.custodyEpoch,
       accountActive:true,canTakeover:true,canSend:false
     });
   }
