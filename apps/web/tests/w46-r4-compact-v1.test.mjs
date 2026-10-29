@@ -50,8 +50,11 @@ test('natural PRIVATE chat preserves authoritative model/turn/history with contr
 test('R4 native Persona and Expert entry points never claim installed mock capabilities',()=>{
  assert.match(shell,/data-test="w46-persona-studio"/);
  assert.match(shell,/data-test="w46-tools-experts"/);
- assert.match(shell,/十类设计候选/);
- assert.match(shell,/待W43核实安装与授权/);
+ assert.match(shell,/\/api\/v2\/private-brain\/experts/);
+ assert.match(shell,/\/api\/v2\/private-brain\/runs\?threadId=personal&limit=10/);
+ assert.match(shell,/\/api\/v2\/private-brain\/tools/);
+ assert.doesNotMatch(shell,/designExpertCatalog|十类设计候选|待W43核实安装与授权/);
+ assert.match(shell,/expertPhase\.value='unavailable'/);
  assert.match(shell,/@media\(prefers-reduced-motion:reduce\)/);
  assert.match(inbox,/@media\(prefers-reduced-motion:reduce\)/);
 });

@@ -37,8 +37,11 @@ test('UI never displays raw SDK / WAITING_USER_AUTH as ordinary user-facing stat
  assert.match(card,/data-test="native-provider-details"/);
 });
 test('unverified account count is not invented and technical details are not permanently visible',()=>{
- assert.match(parent,/snapshot\?\.trustedSession\?'已验证账号 '/);
- assert.match(parent,/账号状态待验证/);
+ assert.match(parent,/v-if="snapshot\?\.trustedSession"/);
+ assert.match(parent,/已验证 \{\{readonlyAccount\}\} 个/);
+ assert.match(parent,/w46-add-account-global/);
+ assert.match(parent,/w46-account-add-dialog/);
+ assert.match(parent,/w46-add-platform-/);
  assert.match(parent,/v-if="channelDetailsOpen"/);
  assert.match(parent,/data-test="w46-channel-details-toggle"/);
 });
@@ -56,7 +59,9 @@ test('W42 P0 mobile QR card grows with verified native QR and never overlaps nex
 });
 test('W42 P1 verified WAITING_USER_AUTH uses actionable waiting labels, not false offline',()=>{
  assert.match(card,/state\.value==='WAITING_USER_AUTH'\?\(receipt\.value\?\.qr\?'等待扫码':'等待授权'\)/);
- assert.match(card,/state==='WAITING_USER_AUTH'\?\(receipt\?\.qr\?'重新获取二维码':'重新获取授权'\)/);
+ assert.match(card,/state==='WAITING_USER_AUTH'\?\(receipt\?\.qr\?'重新获取二维码':/);
+ assert.match(card,/UPSTREAM_CONNECTED_BINDING_PENDING/);
+ assert.match(card,/平台已连接·待同步/);
  assert.match(card,/state\.value='EXPIRED'/);
  assert.match(card,/state\.value=v\.state/);
 });

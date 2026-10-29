@@ -92,3 +92,19 @@ test('later signed full W24 K still checks exact MID, source and translation Run
     zh:'not attested',runId:'run_001',sourceMid:'wrong',identityKey,qualityQualified:false}}]}
  ])assert.throws(()=>validateNativeTimeline(x,selected));
 });
+
+test('actual official Matrix read-only inbox has real rooms, no W24 identity or send',async()=>{
+ const {validateFacebookReadOnlyInbox}=await import('../src/live-chat-source.mjs');
+ const room='!realfbroomabcdefgh12345';
+ const dto={ok:true,source:'OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY',
+  connectedAccountCount:1,providerPeerBindingPending:true,canSend:false,
+  contacts:[{roomId:room,channel:'FB_PERSONAL',displayName:'Actual Matrix display name',
+   nativePeerVerified:false,readOnly:true,canSend:false}]};
+ const result=validateFacebookReadOnlyInbox(dto);
+ assert.equal(result.connectedAccountCount,1);
+ assert.equal(result.contacts[0].roomId,room);
+ assert.equal(result.contacts[0].identityKey,null);
+ assert.equal(result.contacts[0].canSend,false);
+ assert.throws(()=>validateFacebookReadOnlyInbox({...dto,canSend:true}));
+ assert.throws(()=>validateFacebookReadOnlyInbox({...dto,contacts:[...dto.contacts,...dto.contacts]}));
+});

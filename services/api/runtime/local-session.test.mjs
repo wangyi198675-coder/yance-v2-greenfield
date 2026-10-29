@@ -5,8 +5,8 @@ import {randomBytes} from 'node:crypto';
 import {createLocalSessionAuthority,createLocalSessionHttpApi} from './local-session.mjs';
 
 const origin='http://127.0.0.1:49081';
-async function listening(authority){
- const handle=createLocalSessionHttpApi({authority,webOrigin:origin});
+async function listening(authority,{enableWebPrivate=false}={}){
+ const handle=createLocalSessionHttpApi({authority,webOrigin:origin,enableWebPrivate});
  const server=createServer(async(req,res)=>{
   try{await handle(req,res,new URL(req.url,'http://127.0.0.1'))}
   catch{res.writeHead(503);res.end('{}')}
@@ -32,6 +32,7 @@ test('production default has no trusted native issuer; forged code and cookies c
   const code=randomBytes(32).toString('hex');
   const guest=await http(api.base,status);
   assert.equal(guest.status,200);assert.equal(guest.json.paired,false);
+  assert.equal(guest.json.authorized,false);
   assert.equal(guest.json.canSend,false);
   const forged=await http(api.base,status,{cookie:'yance_local_session='+code});
   assert.equal(forged.json.paired,false);
@@ -69,6 +70,7 @@ test('synthetic TEST ONLY server-injected issuer: one-use approval, CSRF, logout
   assert.equal((await http(api.base,redeem,{method:'POST',body:{pairingCode:code}})).status,401);
   const current=await http(api.base,status,{cookie});
   assert.equal(current.json.paired,true);
+  assert.equal(current.json.authorized,false,'legacy PAIRING does not confer native/private model authority');
   assert.equal(current.json.expiresAt,40_000);
   assert.equal(current.json.csrfToken,approved.json.csrfToken);
   assert.equal((await http(api.base,logout,{method:'POST',cookie,body:{}})).status,403);
@@ -123,5 +125,33 @@ test('invalid CSRF, JSON and overly large requests fail closed even with synthet
   const tooBig=await http(api.base,redeem,{method:'POST',body:{pairingCode:'A'.repeat(2500)}});
   assert.equal(tooBig.status,413);
   assert.equal((await http(api.base,status,{cookie})).json.paired,true);
+ }finally{await api.close()}
+});
+
+test('ordinary signed WEB_LOCAL_PRIVATE grants local model settings only, without social provider authority',async()=>{
+ const api=await listening(createLocalSessionAuthority(),{enableWebPrivate:true});
+ try{
+  const start=await fetch(api.base+'/api/v2/local-session/web-private-start',{
+   method:'POST',headers:{Origin:origin,'Sec-Fetch-Site':'same-origin',
+    'Content-Type':'application/json'},body:'{}'});
+  assert.equal(start.status,200);
+  const issued=await start.json();
+  assert.equal(issued.sessionKind,'WEB_LOCAL_PRIVATE');
+  assert.equal(issued.canSend,false);
+  assert.equal(issued.providerAuthorized,false);
+  const cookie=start.headers.get('set-cookie').split(';')[0];
+  assert.match(cookie,/^yance_web_private_session=[a-f0-9]{64}$/);
+  const current=await http(api.base,status,{cookie});
+  assert.equal(current.status,200);
+  assert.equal(current.json.sessionKind,'WEB_LOCAL_PRIVATE');
+  assert.equal(current.json.authorized,true,'real local session authorizes original W46 PRIVATE model settings');
+  assert.equal(current.json.paired,true);
+  assert.equal(current.json.providerAuthorized,false);
+  assert.equal(current.json.canSend,false);
+  assert.equal((await http(api.base,status,{cookie:null})).json.authorized,false);
+  const csrf=current.json.csrfToken;
+  const ended=await http(api.base,logout,{cookie,csrf,method:'POST',body:{}});
+  assert.equal(ended.status,200);
+  assert.equal((await http(api.base,status,{cookie})).json.authorized,false);
  }finally{await api.close()}
 });

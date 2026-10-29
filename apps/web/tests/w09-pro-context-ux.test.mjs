@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const src=readFileSync(new URL('../src/BCLiveChatWorkspace.vue',import.meta.url),'utf8');
+const css=readFileSync(new URL('../src/BCProContextUX.css',import.meta.url),'utf8');
+test('contact context menus use OSS native categorized commands and preserve identity',()=>{
+ assert.match(src,/ContextMenuSub,ContextMenuSubTrigger,ContextMenuSubContent/);
+ assert.equal((src.match(/data-test="context-contact-details"/g)||[]).length,2);
+ assert.equal((src.match(/data-test="context-contact-search"/g)||[]).length,2);
+ assert.equal((src.match(/data-test="context-contact-brain"/g)||[]).length,2);
+ assert.equal((src.match(/<ContextMenuSub>/g)||[]).length,2);
+ assert.doesNotMatch(src,/<ContextMenuLabel>\{\{c.displayName\}\}<\/ContextMenuLabel>/);
+ assert.doesNotMatch(src,/<ContextMenuItem @select="chooseContact\(c\)">打开会话/);
+ assert.match(src,/:data-contact-ref="c.contactRef"/);
+ assert.match(src,/@click="chooseContact\(c\)"/);
+});
+test('contact details and search operate on existing authorized data only',()=>{
+ assert.match(src,/data-test="w09-contact-detail-dialog"/);
+ assert.match(src,/data-test="w09-conversation-search-dialog"/);
+ assert.match(src,/只搜索当前已加载的消息/);
+ assert.match(src,/const historyMatches=computed/);
+ assert.match(src,/timeline\.value\.filter/);
+ assert.match(src,/historySearchContact\.value/);
+ assert.match(src,/timeline\.value\.some\(x=>x.mid===m.mid\)/);
+ assert.match(src,/data-test="w09-history-result"/);
+ assert.match(src,/navigate\('BRAIN'\)/);
+ assert.match(src,/no implicit assignment, takeover, or contact-bound grant/);
+});
+test('message context and bubble hoverbar reuse OSS with real copy and sanctioned quote',()=>{
+ assert.match(src,/data-test="w09-message-context-menu"/);
+ assert.match(src,/<ContextMenuSub v-if="hasDisplayableText\(m\)\|\|m.zh">/);
+ assert.match(src,/data-test="w09-message-hoverbar"/);
+ assert.match(src,/data-test="w09-message-more-menu"/);
+ assert.match(src,/!selected\?\.readOnly&&selected\?\.identityKey&&selected\?\.identity/);
+ assert.match(src,/sourceQuote\(m\)/);
+ assert.match(src,/copyAuthorizedText\(m\.original/);
+ assert.match(src,/copyAuthorizedText\(m\.zh/);
+ assert.doesNotMatch(src,/<ContextMenuItem[^>]*>(?:删除|转发|撤回|表情回应)/);
+ assert.match(css,/prefers-reduced-motion/);
+ assert.match(css,/\.w09-bubble-hoverbar/);
+ assert.match(css,/\.w09-native-context-menu/);
+});

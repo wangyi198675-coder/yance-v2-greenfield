@@ -1,0 +1,16 @@
+/* shadcn-vue / Reka context menu styling; Reka owns focus, portal and placement. */
+.w09-native-context-menu {
+ z-index:1200!important;min-width:204px!important;max-width:min(300px,calc(100vw - 24px));
+ padding:6px!important;border:1px solid rgba(102,194,224,.36)!important;
+ border-radius:14px!important;background:#183140!important;color:#ecf7fb!important;
+ box-shadow:0 22px 54px rgba(0,0,0,.35)!important;backdrop-filter:blur(14px);
+}
+.w09-native-context-menu [data-slot="context-menu-label"] {font-size:11px;font-weight:700;color:#b8d2dc;padding:8px 10px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.w09-native-context-menu [data-slot="context-menu-separator"]{background:rgba(147,194,213,.2)!important;margin:4px 6px}
+.w09-native-context-menu [data-slot="context-menu-item"]{font-size:12px;min-height:36px;padding:8px 11px!important;cursor:pointer;color:#ecf7fb!important;border-radius:9px!important}
+.w09-native-context-menu [data-slot="context-menu-item"][data-highlighted]{background:rgba(93,200,239,.21)!important;outline:1px solid rgba(93,200,239,.3)}
+.bc-native-message-context{width:100%;min-width:0;border-radius:12px;outline-offset:2px}
+.bc-native-message-context:focus-visible{outline:2px solid var(--accent)}
+.bc-native-context-notice{position:absolute;right:14px;top:50px;z-index:80;max-width:calc(100% - 28px);padding:10px 13px;border:1px solid rgba(97,190,222,.4);border-radius:11px;background:var(--bg2);color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:12px;cursor:pointer}
+.bc-native-context-notice span{margin-left:9px}
+@media(prefers-reduced-motion:reduce){.w09-native-context-menu{animation:none!important;transition:none!important}}

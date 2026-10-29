@@ -1,21 +1,24 @@
 <script setup lang="ts">
 import {ref,computed,onMounted,watch} from 'vue';
-type Provider='OPENROUTER_USER_API'|'OPENAI_USER_API';
+type Provider='OPENROUTER_USER_API'|'OPENAI_USER_API'|'VCLAW_USER_API';
 type Status={provider:Provider,configured:boolean,revoked:boolean,revision:number};
 type NativeStatus={provider:string,configured:boolean,revoked:boolean,revision:number};
-const props=defineProps<{webCsrf?:string|null}>();
+const props=defineProps<{webCsrf?:string|null,fixedProvider?:Provider,externalStatus?:string}>();
 const emit=defineEmits<{changed:[]}>();
 const native=typeof window!=='undefined'&&(window as any).__TAURI__?.core?.invoke;
 const path='/api/v2/private-brain/cloud-keys';
 const vendors=[{id:'OPENROUTER_USER_API',label:'OpenRouter'},
- {id:'OPENAI_USER_API',label:'OpenAI API'}] as const;
-const provider=ref<Provider>('OPENROUTER_USER_API');
-const key=ref(''),current=ref<Status|null>(null);
-const ready=ref(!!native),busy=ref(false),message=ref('');
+ {id:'OPENAI_USER_API',label:'OpenAI API'},
+ {id:'VCLAW_USER_API',label:'V-Claw'}] as const;
+const visibleVendors=computed(()=>props.fixedProvider?vendors.filter(v=>v.id===props.fixedProvider):vendors.filter(v=>v.id!=='VCLAW_USER_API'));
+const provider=ref<Provider>(props.fixedProvider||'OPENROUTER_USER_API');
+const key=ref(''),current=ref<Status|null>(null),manageOpen=ref(false);
+const ready=ref(!!native),busy=ref(false),message=ref(''),stale=ref(false);
 const webCsrfOk=computed(()=>typeof props.webCsrf==='string'&&/^[a-f0-9]{64}$/.test(props.webCsrf));
-const webActive=computed(()=>typeof native!=='function'&&ready.value&&webCsrfOk.value);
-const canConfigure=computed(()=>typeof native==='function'||webActive.value);
-const nativeId=(p:Provider)=>p==='OPENROUTER_USER_API'?'OPENROUTER':'OPENAI_API';
+const nativeSupported=(p:Provider)=>typeof native==='function'&&p!=='VCLAW_USER_API';
+const webActive=computed(()=>!nativeSupported(provider.value)&&ready.value&&webCsrfOk.value);
+const canConfigure=computed(()=>(nativeSupported(provider.value)||webActive.value)&&!stale.value);
+const nativeId=(p:Provider)=>p==='OPENROUTER_USER_API'?'OPENROUTER':p==='OPENAI_USER_API'?'OPENAI_API':'VCLAW_API';
 function verifiedStatus(v:unknown,p:Provider):Status{
  if(!v||typeof v!=='object'||Array.isArray(v))throw Error('INVALID_STATUS');
  const x=v as Record<string,unknown>;
@@ -44,14 +47,14 @@ async function webRequest(method:'GET'|'POST'|'DELETE',body?:Record<string,unkno
 }
 async function webStatus(p:Provider):Promise<Status>{
  const d=await webRequest('GET');
- if(!Array.isArray(d.providers)||d.providers.length!==2)throw Error('INVALID_STATUS_LIST');
+ if(!Array.isArray(d.providers)||d.providers.length!==3)throw Error('INVALID_STATUS_LIST');
  const ids=new Set<string>(),statuses=new Map<Provider,Status>();
  for(const x of d.providers){
   const id=(x as Status)?.provider;
   if(!vendors.some(v=>v.id===id)||ids.has(id))throw Error('INVALID_STATUS_LIST');
   ids.add(id);statuses.set(id,verifiedStatus(x,id));
  }
- if(ids.size!==2||!statuses.has(p))throw Error('INVALID_STATUS_LIST');
+ if(ids.size!==3||!statuses.has(p))throw Error('INVALID_STATUS_LIST');
  return statuses.get(p)!;
 }
 function userError(e:unknown){
@@ -64,19 +67,19 @@ function userError(e:unknown){
  return '本机密钥操作未取得可核验的服务端确认';
 }
 async function readStatus(p:Provider){
- if(typeof native==='function'){
+ if(nativeSupported(p)){
   return verifiedStatus(await native('cloud_key_status',{provider:nativeId(p)}),p);
  }
  return webStatus(p);
 }
 async function refresh(){
  if(busy.value)return;
- busy.value=true;message.value='';key.value='';current.value=null;
+ busy.value=true;message.value='正在读取服务端密钥状态…';key.value='';
  const p=provider.value;
  try{
   const status=await readStatus(p);
-  if(provider.value===p){current.value=status;ready.value=true}
- }catch(e){ready.value=typeof native==='function';message.value=userError(e)}
+  if(provider.value===p){current.value=status;ready.value=true;stale.value=false;message.value=''}
+ }catch(e){stale.value=true;ready.value=typeof native==='function';message.value='刷新失败；以下仅为上次确认的状态，不能表示当前仍有效。'+userError(e)}
  finally{busy.value=false}
 }
 async function save(){
@@ -85,7 +88,7 @@ async function save(){
  let pending=key.value;key.value='';
  busy.value=true;message.value='';
  try{
-  if(typeof native==='function'){
+  if(nativeSupported(p)){
    const r=await native('cloud_key_store',{provider:nativeId(p),secret:pending,
     ...(previous?.revision?{expectedRevision:previous.revision}:{})});
    verifiedStatus(r,p);
@@ -98,11 +101,11 @@ async function save(){
   const verified=await readStatus(p);
   if(!verified.configured||verified.revoked||
     verified.revision<=(previous?.revision||0))throw Error('STATUS_NOT_CONFIRMED');
-  if(provider.value===p){current.value=verified;message.value='服务端已确认密钥保存状态'}
+  if(provider.value===p){current.value=verified;message.value='已连接';manageOpen.value=false}
   emit('changed');
  }catch(e){
-  current.value=null;ready.value=typeof native==='function';
-  message.value=userError(e);
+  current.value=previous;stale.value=true;ready.value=typeof native==='function';
+  message.value='保存结果尚未取得可靠回读；原状态不能视为已删除。'+userError(e);
  }finally{pending='';busy.value=false}
 }
 async function revoke(){
@@ -110,7 +113,7 @@ async function revoke(){
  const p=provider.value,previous=current.value;
  busy.value=true;message.value='';key.value='';
  try{
-  if(typeof native==='function'){
+  if(nativeSupported(p)){
    verifiedStatus(await native('cloud_key_revoke',{
     provider:nativeId(p),expectedRevision:previous.revision}),p);
   }else{
@@ -123,31 +126,32 @@ async function revoke(){
    throw Error('STATUS_NOT_CONFIRMED');
   if(provider.value===p){current.value=verified;message.value='服务端已确认密钥撤销'}
   emit('changed');
- }catch(e){current.value=null;ready.value=typeof native==='function';message.value=userError(e)}
+ }catch(e){current.value=previous;stale.value=true;ready.value=typeof native==='function';message.value='撤销状态未取得可靠回读；请重新验证。'+userError(e)}
  finally{busy.value=false}
 }
-function onProviderChange(){key.value='';void refresh()}
+function onProviderChange(){key.value='';current.value=null;stale.value=false;manageOpen.value=false;void refresh()}
 onMounted(refresh);
-watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
+watch(()=>props.webCsrf,()=>{if(!nativeSupported(provider.value))void refresh()});
 </script>
 <template>
  <section class="cloud-key-panel" data-test="cloud-key-native" aria-label="云端 AI Key 设置">
-  <strong>云端 AI 密钥</strong>
-  <p>可以使用自己的 OpenRouter 或 OpenAI API Key。本地 Qwen3 不受云端设置影响。</p>
+  <strong>云端 API 密钥</strong>
   <label>来源
    <select v-model="provider" data-test="cloud-provider" :disabled="busy" @change="onProviderChange">
-    <option v-for="p in vendors" :key="p.id" :value="p.id">{{p.label}}</option>
+    <option v-for="p in visibleVendors" :key="p.id" :value="p.id">{{p.label}}</option>
    </select>
   </label>
-  <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">
-   网页版云端密钥暂未接通，当前不会接收或保存 API Key。可继续使用已配置的本地 Qwen3。
-  </p>
-  <template v-else>
-   <p role="status" data-test="cloud-redacted-status">
-    {{current?.configured?'已保存':current?.revoked?'已撤销':'未配置'}}
+  <p role="status" data-test="cloud-redacted-status">
+    {{stale?'上次已确认（当前状态未核验）':current?.configured?(props.fixedProvider==='VCLAW_USER_API'?(props.externalStatus||'密钥已保存 · 验证中'):'已连接'):current?.revoked?'已撤销':current?'未配置':'待读取'}}
     <span v-if="current"> · 版本 {{current.revision}}</span>
    </p>
-   <form @submit.prevent="save">
+   <p v-if="!canConfigure" role="status" data-test="cloud-web-provider-pending">
+   当前会话或服务端密钥状态未确认，暂不能提交新 Key。刷新失败不会删除已保存的密钥。
+  </p>
+  <button v-if="current?.configured&&!stale" type="button" data-test="cloud-key-manage-toggle" @click="manageOpen=!manageOpen">{{manageOpen?'收起':'管理'}}</button>
+   <button v-if="!canConfigure" type="button" data-test="cloud-refresh-pending" :disabled="busy" @click="refresh">重新检查状态</button>
+   <template v-else>
+   <form v-if="!current?.configured||manageOpen" @submit.prevent="save">
     <label>API Key
      <input v-model="key" type="password" autocomplete="off" autocapitalize="off"
       spellcheck="false" data-lpignore="true" placeholder="输入自己的 API Key"
@@ -162,12 +166,12 @@ watch(()=>props.webCsrf,()=>{if(typeof native!=='function')void refresh()});
     <button type="button" data-test="cloud-refresh" :disabled="busy" @click="refresh">刷新状态</button>
    </form>
   </template>
-  <p>Key 不会回填到输入框。密钥设置不自动启动收费推理；首次选择收费模型或主动切换收费来源时确认一次，之后同一已授权模型正常连续聊天。</p>
+
   <p v-if="message" role="status" data-test="cloud-action-result">{{message}}</p>
  </section>
 </template>
 <style scoped>
-.cloud-key-panel{display:grid;gap:10px;border:1px solid var(--w46-edge,#777);padding:14px;border-radius:10px;min-width:0}
+.cloud-key-panel{display:grid;gap:8px;border:1px solid var(--w46-edge,#777);padding:12px;border-radius:10px;min-width:0}
 .cloud-key-panel form{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
 .cloud-key-panel label{display:grid;gap:5px;min-width:0}
 .cloud-key-panel input,.cloud-key-panel select{border:1px solid var(--w46-edge,#777);border-radius:6px;padding:8px;background:transparent;color:inherit;max-width:330px;min-width:0;width:100%;box-sizing:border-box}

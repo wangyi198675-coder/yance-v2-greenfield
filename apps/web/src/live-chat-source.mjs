@@ -2,6 +2,7 @@
 // Native K is a locator and version selector, NOT a user grant or send right.
 // Original W24/W25 must recheck current principal, consent and binding for use.
 import {fullK} from './composer-bridge.mjs';
+import {currentFirstPartyWebSession} from './local-first-party-session.mjs';
 const channels=new Set(['FB_PERSONAL','FB_PAGE','WHATSAPP_PERSONAL','TELEGRAM_PERSONAL']);
 const account=/^[A-Za-z0-9_-]{8,150}$/;
 const peer=/^[A-Za-z0-9_.:@+-]{4,200}$/;
@@ -81,12 +82,68 @@ export function validateNativeTimeline(response,contact){
    canSend:false,delivery:m.delivery||'NOT_REQUESTED'});
  }))});
 }
+const matrixRoom=x=>typeof x==='string'&&
+ (/^![A-Za-z0-9._=-]{12,200}$/.test(x)||/^![^\s:]{1,220}:[A-Za-z0-9.-]+$/.test(x));
+export function validateFacebookReadOnlyInbox(dto){
+ if(dto?.ok!==true||dto.source!=='OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY'||
+    dto.canSend!==false||dto.providerPeerBindingPending!==true||
+    dto.connectedAccountCount!==1||!Array.isArray(dto.contacts)||dto.contacts.length>250)
+  deny('FB_MATRIX_INBOX_PROOF_INVALID');
+ const seen=new Set();
+ const contacts=dto.contacts.map(c=>{
+  if(!matrixRoom(c.roomId)||seen.has(c.roomId)||c.channel!=='FB_PERSONAL'||
+     c.readOnly!==true||c.canSend!==false||c.nativePeerVerified!==false||
+     typeof c.displayName!=='string'||!c.displayName.trim()||c.displayName.length>180)
+   deny('FB_MATRIX_ROOM_INVALID');
+  seen.add(c.roomId);
+  return Object.freeze({contactRef:'FB_ROOM|'+c.roomId,roomId:c.roomId,
+    accountRef:'OFFICIAL_FB_MATRIX_READ_ONLY',channel:'FB_PERSONAL',
+    peerRef:c.roomId,displayName:c.displayName,bindingRevision:0,
+    avatarUrl:'/api/v2/facebook-inbox/avatar?room='+encodeURIComponent(c.roomId),
+    lastMessage:c.lastMessage||null,lastMessageTimestamp:c.lastMessageTimestamp||null,
+    readOnly:true,identity:null,identityKey:null,unread:null,canSend:false});
+ });
+ return Object.freeze({trustedSession:true,source:dto.source,connectedAccountCount:1,
+  realContacts:contacts.length,contacts:Object.freeze(contacts),canSend:false});
+}
+export async function readFacebookReadOnlyContacts(fetchImpl=globalThis.fetch){
+ await currentFirstPartyWebSession(fetchImpl);
+ const dto=await read(fetchImpl,'/api/v2/facebook-inbox');
+ return validateFacebookReadOnlyInbox(dto);
+}
 export async function readLiveContacts({fetchImpl=globalThis.fetch}={}){
  if(typeof fetchImpl!=='function')deny('W47_FETCH_REQUIRED');
  const health=await read(fetchImpl,'/api/v2/runtime/health');
- return validateLiveContacts(health,await read(fetchImpl,'/api/v2/contacts'));
+ try{return validateLiveContacts(health,await read(fetchImpl,'/api/v2/contacts'))}
+ catch(error){
+  // The original W24/W25 path is still the ONLY way to send a message.
+  // When its REAL identity binding is pending, display verified Matrix
+  // incoming conversations read-only rather than inventing fake W24 K.
+  if(!/NATIVE_HTTP_(401|503)|LIVE_SESSION_OR_NATIVE_OWNER_NOT_QUALIFIED/.test(String(error?.message||error)))throw error;
+  try{return await readFacebookReadOnlyContacts(fetchImpl)}
+  catch(fallbackError){
+   if(String(fallbackError?.message||fallbackError).includes('LOCAL_FIRST_PARTY_BOOTSTRAP'))throw error;
+   throw fallbackError;
+  }
+ }
 }
 export async function readLiveTimeline({fetchImpl=globalThis.fetch,contact}={}){
+ if(contact?.readOnly===true&&matrixRoom(contact.roomId)){
+  await currentFirstPartyWebSession(fetchImpl);
+  const result=await read(fetchImpl,'/api/v2/facebook-inbox/messages?room='+encodeURIComponent(contact.roomId));
+  if(result?.ok!==true||result.source!=='OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY'||
+     result.roomId!==contact.roomId||result.canSend!==false||
+     result.providerPeerBindingPending!==true||!Array.isArray(result.messages)||
+     result.messages.length>100)deny('FB_MATRIX_MESSAGES_INVALID');
+  return Object.freeze({canSend:false,messages:Object.freeze(result.messages.map(m=>{
+   if(typeof m.mid!=='string'||!m.mid.startsWith('$')||
+      typeof m.original!=='string'||m.original.length>64000||
+      !['INBOUND','OUTBOUND'].includes(m.direction))deny('FB_MATRIX_MESSAGE_INVALID');
+   return Object.freeze({mid:m.mid,original:m.original,direction:m.direction,
+    providerSource:'OFFICIAL_MAUTRIX_META_MATRIX_EVENT',
+    zh:'',translationRunId:null,delivery:'READ_ONLY',canSend:false});
+  }))});
+ }
  if(!contact?.identity||!contact.identityKey||
     fullK(contact.identity)!==contact.identityKey)
   deny('W24_FULL_K_NOT_SIGNED');

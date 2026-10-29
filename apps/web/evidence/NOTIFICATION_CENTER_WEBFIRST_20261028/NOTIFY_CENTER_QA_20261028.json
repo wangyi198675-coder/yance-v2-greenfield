@@ -1,0 +1,88 @@
+{
+  "status": "PASS",
+  "src": "Web-first isolated local genuine browser",
+  "port": 44965,
+  "cases": [
+    {
+      "width": 1360,
+      "rootWidth": 1069,
+      "bodyScroll": 1360,
+      "perm": "等待授权",
+      "requestButton": "授权浏览器通知",
+      "requestDisabled": false,
+      "testDisabled": true,
+      "volumeDisabled": true,
+      "groups": [
+        "消息提醒偏好",
+        "声音与提示音",
+        "专注与勿扰",
+        "智能体运行提醒"
+      ],
+      "agnoUnverified": true,
+      "realApiHook": true,
+      "height": 1146.046875,
+      "nativeMenu": true
+    },
+    {
+      "width": 950,
+      "rootWidth": 700,
+      "bodyScroll": 950,
+      "perm": "等待授权",
+      "requestButton": "授权浏览器通知",
+      "requestDisabled": false,
+      "testDisabled": true,
+      "volumeDisabled": true,
+      "groups": [
+        "消息提醒偏好",
+        "声音与提示音",
+        "专注与勿扰",
+        "智能体运行提醒"
+      ],
+      "agnoUnverified": true,
+      "realApiHook": true,
+      "height": 1158.046875,
+      "nativeMenu": true
+    },
+    {
+      "width": 430,
+      "rootWidth": 369,
+      "bodyScroll": 430,
+      "perm": "等待授权",
+      "requestButton": "授权浏览器通知",
+      "requestDisabled": false,
+      "testDisabled": true,
+      "volumeDisabled": true,
+      "groups": [
+        "消息提醒偏好",
+        "声音与提示音",
+        "专注与勿扰",
+        "智能体运行提醒"
+      ],
+      "agnoUnverified": true,
+      "realApiHook": true,
+      "height": 1891.375,
+      "nativeMenu": true
+    },
+    {
+      "width": 360,
+      "rootWidth": 299,
+      "bodyScroll": 360,
+      "perm": "等待授权",
+      "requestButton": "授权浏览器通知",
+      "requestDisabled": false,
+      "testDisabled": true,
+      "volumeDisabled": true,
+      "groups": [
+        "消息提醒偏好",
+        "声音与提示音",
+        "专注与勿扰",
+        "智能体运行提醒"
+      ],
+      "agnoUnverified": true,
+      "realApiHook": true,
+      "height": 1971.953125,
+      "nativeMenu": true
+    }
+  ],
+  "limitations": "No authenticated W05 native settings port; client-only notification permission read"
+}

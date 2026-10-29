@@ -1,0 +1,185 @@
+{
+  "status": "PASS",
+  "cases": [
+    {
+      "width": 1360,
+      "theme": "Obsidian Lime",
+      "selected": 1,
+      "accent": "202,255,99",
+      "secondary": "76,212,180",
+      "overflow": false,
+      "displayed": "Obsidian Lime"
+    },
+    {
+      "width": 1360,
+      "theme": "Cosmic Sunset",
+      "selected": 1,
+      "accent": "255,160,113",
+      "secondary": "250,72,174",
+      "overflow": false,
+      "displayed": "Cosmic Sunset"
+    },
+    {
+      "width": 1360,
+      "theme": "Ocean Electric",
+      "selected": 1,
+      "accent": "98,216,242",
+      "secondary": "24,119,255",
+      "overflow": false,
+      "displayed": "Ocean Electric"
+    },
+    {
+      "width": 1360,
+      "theme": "Amber Ember",
+      "selected": 1,
+      "accent": "255,192,101",
+      "secondary": "245,117,56",
+      "overflow": false,
+      "displayed": "Amber Ember"
+    },
+    {
+      "width": 1360,
+      "theme": "Opal Prism",
+      "selected": 1,
+      "accent": "206,185,255",
+      "secondary": "247,125,205",
+      "overflow": false,
+      "displayed": "Opal Prism"
+    },
+    {
+      "width": 950,
+      "theme": "Obsidian Lime",
+      "selected": 1,
+      "accent": "202,255,99",
+      "secondary": "76,212,180",
+      "overflow": false,
+      "displayed": "Obsidian Lime"
+    },
+    {
+      "width": 950,
+      "theme": "Cosmic Sunset",
+      "selected": 1,
+      "accent": "255,160,113",
+      "secondary": "250,72,174",
+      "overflow": false,
+      "displayed": "Cosmic Sunset"
+    },
+    {
+      "width": 950,
+      "theme": "Ocean Electric",
+      "selected": 1,
+      "accent": "98,216,242",
+      "secondary": "24,119,255",
+      "overflow": false,
+      "displayed": "Ocean Electric"
+    },
+    {
+      "width": 950,
+      "theme": "Amber Ember",
+      "selected": 1,
+      "accent": "255,192,101",
+      "secondary": "245,117,56",
+      "overflow": false,
+      "displayed": "Amber Ember"
+    },
+    {
+      "width": 950,
+      "theme": "Opal Prism",
+      "selected": 1,
+      "accent": "206,185,255",
+      "secondary": "247,125,205",
+      "overflow": false,
+      "displayed": "Opal Prism"
+    },
+    {
+      "width": 430,
+      "theme": "Obsidian Lime",
+      "selected": 1,
+      "accent": "202,255,99",
+      "secondary": "76,212,180",
+      "overflow": false,
+      "displayed": "Obsidian Lime"
+    },
+    {
+      "width": 430,
+      "theme": "Cosmic Sunset",
+      "selected": 1,
+      "accent": "255,160,113",
+      "secondary": "250,72,174",
+      "overflow": false,
+      "displayed": "Cosmic Sunset"
+    },
+    {
+      "width": 430,
+      "theme": "Ocean Electric",
+      "selected": 1,
+      "accent": "98,216,242",
+      "secondary": "24,119,255",
+      "overflow": false,
+      "displayed": "Ocean Electric"
+    },
+    {
+      "width": 430,
+      "theme": "Amber Ember",
+      "selected": 1,
+      "accent": "255,192,101",
+      "secondary": "245,117,56",
+      "overflow": false,
+      "displayed": "Amber Ember"
+    },
+    {
+      "width": 430,
+      "theme": "Opal Prism",
+      "selected": 1,
+      "accent": "206,185,255",
+      "secondary": "247,125,205",
+      "overflow": false,
+      "displayed": "Opal Prism"
+    },
+    {
+      "width": 360,
+      "theme": "Obsidian Lime",
+      "selected": 1,
+      "accent": "202,255,99",
+      "secondary": "76,212,180",
+      "overflow": false,
+      "displayed": "Obsidian Lime"
+    },
+    {
+      "width": 360,
+      "theme": "Cosmic Sunset",
+      "selected": 1,
+      "accent": "255,160,113",
+      "secondary": "250,72,174",
+      "overflow": false,
+      "displayed": "Cosmic Sunset"
+    },
+    {
+      "width": 360,
+      "theme": "Ocean Electric",
+      "selected": 1,
+      "accent": "98,216,242",
+      "secondary": "24,119,255",
+      "overflow": false,
+      "displayed": "Ocean Electric"
+    },
+    {
+      "width": 360,
+      "theme": "Amber Ember",
+      "selected": 1,
+      "accent": "255,192,101",
+      "secondary": "245,117,56",
+      "overflow": false,
+      "displayed": "Amber Ember"
+    },
+    {
+      "width": 360,
+      "theme": "Opal Prism",
+      "selected": 1,
+      "accent": "206,185,255",
+      "secondary": "247,125,205",
+      "overflow": false,
+      "displayed": "Opal Prism"
+    }
+  ]
+}

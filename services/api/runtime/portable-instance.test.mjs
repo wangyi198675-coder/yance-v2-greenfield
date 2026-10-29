@@ -19,7 +19,8 @@ function pkg(name,{manifest=true}={}){
  const nativeMediaDir=join(path,'src','domains','file-attachment');
  mkdirSync(runtimeDir,{recursive:true});mkdirSync(nativeMediaDir,{recursive:true});
  for(const file of ['server.mjs','runtime-config.mjs','runtime-provenance.mjs','local-session.mjs','local-operator-console.mjs','private-brain-http.mjs','private-python-port.mjs','private-native-ledger-port.mjs','private-model-http.mjs','native-authoritative-reads.mjs','native-provider-gateway.mjs','native-message-reads.mjs','native-pinned-web-assets.mjs','native-private-startup.mjs','web-private-local-qwen.mjs','web-private-cloud-byok.mjs','web-private-cloud-http.mjs','w55-web-native-stdio.mjs','w54-native-child-frame.mjs','w54-native-webview-session.mjs','w47-w43-private-child.py',
- 'w47-w23-media-bridge.mjs','w47-native-settings-capabilities.mjs']){
+ 'w47-w23-media-bridge.mjs','w47-native-settings-capabilities.mjs',
+ 'w47-native-context-menu-capabilities.mjs','w47-official-siwc.mjs']){
   copyFileSync(join(here,file),join(runtimeDir,file));
  }
  // Original W23 native relative modules are packaged unchanged, not mocked.

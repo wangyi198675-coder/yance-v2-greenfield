@@ -2,13 +2,56 @@
 import {ref,onMounted,onBeforeUnmount,computed,nextTick} from 'vue';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import BCNativeCloudKeySettings from './BCNativeCloudKeySettings.vue';
+import {notifyVerifiedAgnoInBackground} from './w05-native-notification-port.mjs';
 import {PRIVATE_ROUTES,authStatus,publicModelCatalog,modelCatalog,confirmedModelSelection,
   verifiedTurn,verifiedHistory,privateError,jsonApi,endpointBody} from './private-brain-ui-contract.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const api=(u,options)=>jsonApi(props.fetchImpl||globalThis.fetch,u,options);
-const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false);
+// Native W43 remains the only authority: deltas are ephemeral display only.
+// The final persisted Run is still validated by verifiedTurn + history re-read.
+async function nativeStreamingTurn(url,init,onDelta){
+ const response=await (props.fetchImpl||globalThis.fetch)(url,{
+  credentials:'same-origin',cache:'no-store',redirect:'error',
+  referrerPolicy:'no-referrer',...init,
+  headers:{...init.headers,accept:'application/x-ndjson'}
+ });
+ if(!response?.ok)throw Error('PRIVATE_HTTP_'+(response?.status||'UNAVAILABLE'));
+ if(!String(response.headers?.get('content-type')||'').startsWith('application/x-ndjson'))
+  return response.json();
+ if(!response.body?.getReader)throw Error('PRIVATE_STREAM_UNAVAILABLE');
+ const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
+ let buffer='',final=null;
+ const receive=line=>{
+  if(!line)return;
+  const message=JSON.parse(line);
+  if(message.type==='delta'&&typeof message.text==='string'){
+   onDelta(message.text);return;
+  }
+  if(message.type==='error')throw Error('PRIVATE_STREAM_'+String(message.error||'DENIED').slice(0,90));
+  if(message.type==='completed'&&message.payload?.status==='COMPLETED'&&!final){
+   final=message.payload;return;
+  }
+  throw Error('PRIVATE_STREAM_PROTOCOL_INVALID');
+ };
+ try{
+  for(;;){
+   const {value,done}=await reader.read();
+   if(done)break;
+   buffer+=decoder.decode(value,{stream:true});
+   if(buffer.length>100000)throw Error('PRIVATE_STREAM_TOO_LARGE');
+   let at;while((at=buffer.indexOf('\n'))>=0){
+    const line=buffer.slice(0,at);buffer=buffer.slice(at+1);receive(line);
+   }
+  }
+  buffer+=decoder.decode();
+  if(buffer.trim())receive(buffer.trim());
+  if(!final)throw Error('PRIVATE_STREAM_COMPLETION_UNVERIFIED');
+  return final;
+ }finally{reader.releaseLock()}
+}
+const session=ref(null),catalog=ref(null),publicProviders=ref([]),messages=ref([]),busy=ref(false),historyBox=ref(null);
 const loadState=ref('checking'),notice=ref(''),setupOpen=ref(false),toolsOpen=ref(false),text=ref('');
-const chosen=ref(''),requestInFlight=ref(false);
+const chosen=ref(''),requestInFlight=ref(false),pendingPrompt=ref(''),streamingPreview=ref('');
 const modelCostApproved=ref(false),brainExpertOpen=ref(false),brainRoot=ref(null);
 const nativeTools=ref([]),nativeRuns=ref([]),nativeReadState=ref('idle'),nativeTrace=ref(null),traceReadState=ref('idle');
 const experts=ref([]),expertsState=ref('idle'),expertError=ref(''),expertBusy=ref(false),expertStableId=ref(''),chosenExpertId=ref(''),expertConsent=ref(false),expertVerified=ref(null);
@@ -200,9 +243,10 @@ function checkedModelCatalog(dto){
  return modelCatalog(dto,publicProviders.value);
 }
 const providers=computed(()=>publicProviders.value.map(p=>({
- id:p.id,name:p.name,desc:p.id==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?'选装。不安装也不阻止云端模型':
- p.id==='OPENAI_USER_API'?'API Key 须由本机安全存储，ChatGPT 订阅不等于 API 额度':
- '用户本人批准费用后，原生服务端才可使用已保护的 OpenRouter Key'
+ id:p.id,name:p.name,desc:p.id==='LLAMACPP_LOCAL_QWEN3_8B_FREE'?'在电脑上运行的本地模型（可选）':
+ p.id==='OPENAI_USER_API'?'使用你自己的 OpenAI API Key':
+ p.id==='CHATGPT_PLAN_SIWC'?'使用已授权的 ChatGPT 计划（无需 API Key）':
+ '使用你自己的 OpenRouter API Key'
 })));
 function clearSession(){
  session.value=null;catalog.value=null;chosen.value='';
@@ -244,7 +288,7 @@ async function refresh(){
   if(!s.authorized){
    // Ordinary PRIVATE use never asks the person for a terminal pair code.
    // The original W47 process/session owner must establish local access on app startup.
-   loadState.value='setup-required';setupOpen.value=true;return
+   loadState.value='setup-required';return
   }
   session.value=s;armExpiry(s.expiresAt);
   let models;
@@ -256,12 +300,17 @@ async function refresh(){
    (models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.provider+
     '|'+models.models.find(m=>m.provider==='LLAMACPP_LOCAL_QWEN3_8B_FREE'&&m.available)?.modelId
     ||'');
-  // Existing Agno History must load with NO model configured.
-  await loadHistory(id);
-  if(!safeCurrent(id))return;
-  if(!models.configured){loadState.value='no-model';setupOpen.value=true;return}
+  // Agno remains the only history authority. Do not freeze the entire
+  // composer while the Windows Python child opens native SQLite.
+  if(!models.configured){
+   await loadHistory(id);
+   if(safeCurrent(id))loadState.value='no-model';
+   return;
+  }
+  loadState.value='history-loading';
+  void loadHistory(id);
  }catch(e){if(safeCurrent(id)){
-   loadState.value='service-unavailable';setupOpen.value=true;notice.value=reason(e)
+   loadState.value='service-unavailable';notice.value=reason(e)
   }}
  finally{if(safeCurrent(id))busy.value=false}
 }
@@ -304,6 +353,13 @@ async function selectModel(){
  }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='model-selection-unavailable'}}
  finally{if(safeCurrent(id))busy.value=false}
 }
+function brainComposerKeydown(e){
+ // Native chat behavior: Enter sends, Shift+Enter inserts a newline.
+ // IME confirmation must NEVER submit the Chinese/Japanese composition.
+ if(e.key!=='Enter'||e.shiftKey||e.altKey||e.isComposing||e.keyCode===229)return;
+ e.preventDefault();
+ if(!requestInFlight.value)void send();
+}
 async function send(){
  const prompt=text.value.trim();if(!prompt||prompt.length>4000||requestInFlight.value||busy.value||
     loadState.value!=='ready'||!catalog.value?.configured)return;
@@ -311,49 +367,73 @@ async function send(){
    m.provider===catalog.value.selectedProvider&&m.available&&m.configured);
  if(!model)return; // Cloud fee consent was verified once at model selection by W47.
  const id=++revision;requestInFlight.value=true;notice.value='';
+ // The user's draft is removed at submission, not after a slow model response.
+ // This is only a transient UI preview: W43 remains the sole history authority.
+ pendingPrompt.value=prompt;streamingPreview.value='';
+ text.value='';
+ await nextTick();
+ if(historyBox.value)historyBox.value.scrollTop=historyBox.value.scrollHeight;
+ let receiptVerified=false;
  try{
   ensureCurrent();
   const requestId='req_'+Array.from(crypto.getRandomValues(new Uint8Array(18)),b=>b.toString(16).padStart(2,'0')).join('');
-  // Keep user text local until successful W43 completed receipt; never fake assistant.
+  // Preview user input while the original W43 Run owns actual persistence.
   const body={threadId,text:prompt,requestId};
-  const reply=await api(PRIVATE_ROUTES.turn,endpointBody(PRIVATE_ROUTES.turn,body,session.value.csrf));
+  const reply=await nativeStreamingTurn(PRIVATE_ROUTES.turn,
+   endpointBody(PRIVATE_ROUTES.turn,body,session.value.csrf),delta=>{
+    if(safeCurrent(id))streamingPreview.value=(streamingPreview.value+delta).slice(0,18000);
+   });
   verifiedTurn(reply,{threadId,requestId,provider:model.provider,modelId:model.modelId});
+  receiptVerified=true;
   if(!safeCurrent(id))return;
-  text.value=''; // history is sole persisted authority
   await loadHistory(id); // if history unavailable, don't fabricate turn in timeline
- }catch(e){if(safeCurrent(id)){notice.value=reason(e);loadState.value='history-unavailable'}}
+  if(safeCurrent(id)&&loadState.value==='ready'){
+   pendingPrompt.value='';streamingPreview.value='';
+  }
+  // W43 verified COMPLETED receipt + re-read original durable Agno History.
+  // Only if the app is backgrounded and OS permission is ALREADY granted.
+  // No new Agent framework, no synthetic message, and replayed Runs stay silent.
+  if(safeCurrent(id)&&loadState.value==='ready'&&
+     messages.value.some(m=>m.role==='assistant'&&m.content===reply.assistantText)){
+   void notifyVerifiedAgnoInBackground({receipt:reply,historyVerified:true});
+  }
+ }catch(e){if(safeCurrent(id)){
+   if(!receiptVerified){text.value=prompt;pendingPrompt.value='';streamingPreview.value=''}
+   notice.value=reason(e);loadState.value='history-unavailable'
+ }}
  finally{if(safeCurrent(id))requestInFlight.value=false}
 }
 onMounted(()=>{document.addEventListener('keydown',brainMenuKeyboard);document.addEventListener('pointerdown',brainOutsideClick);void refresh()});
 onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);document.removeEventListener('pointerdown',brainOutsideClick);
- mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value=''});
+ mounted=false;revision++;nativeReadRevision++;expertEpoch++;clearSession();text.value='';pendingPrompt.value='';streamingPreview.value=''});
 </script>
 <template>
- <section ref="brainRoot" class="bc-private-brain" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
+ <section ref="brainRoot" class="bc-private-brain" :class="{'bc-brain-tools-visible':toolsOpen}" data-test="bc-private-brain" aria-label="唯一闺蜜大脑">
   <header class="bc-private-brain-head">
-   <div class="bc-private-brain-heading"><strong>闺蜜大脑</strong><span>私人 Agno · 独立会话</span>
-    <p class="bc-private-brain-state" role="status" data-test="brain-state">
-   {{loadState==='checking'?'正在核实服务端':loadState==='ready'?'历史已由服务端恢复':
+   <div class="bc-private-brain-heading"><strong>闺蜜大脑</strong><span>你的私人 AI 助手</span>
+    <p v-if="loadState==='checking'||loadState==='history-loading'||loadState==='service-unavailable'||loadState==='history-unavailable'" class="bc-private-brain-state" role="status" data-test="brain-state">
+   {{loadState==='checking'?'正在连接':loadState==='ready'?'':
     loadState==='no-model'?'尚未配置 AI 模型':
     loadState==='setup-required'?'先设置 AI 模型；本机服务连接后即可聊天':
     loadState==='service-unavailable'?'AI 服务暂时不可用，仍可查看模型设置':
     loadState==='models-unavailable'?'模型服务接口尚未接通':
+    loadState==='history-loading'?'正在读取 Agno 历史，你可以先输入…':
     loadState==='history-unavailable'?'真实对话或历史暂不可用':'模型选择尚未确认'}}
     </p>
    </div>
    <div class="bc-private-brain-actions">
-    <Button size="sm" variant="ghost" data-test="brain-open-settings" aria-haspopup="menu" :aria-expanded="setupOpen" :disabled="busy||requestInFlight" @click="toggleBrainModel">模型 ▾</Button>
-    <Button size="sm" variant="ghost" data-test="brain-check" :disabled="busy||requestInFlight" @click="refresh">历史</Button>
-    <Button size="sm" variant="ghost" data-test="brain-toggle-tools" aria-haspopup="menu" :aria-expanded="toolsOpen" @click="toggleBrainTools">工具详情 ▣</Button>
+    <Button size="sm" variant="ghost" data-test="brain-open-settings" aria-haspopup="dialog" :aria-expanded="setupOpen" :disabled="requestInFlight" @click="toggleBrainModel">模型 ▾</Button>
+    <Button size="sm" variant="ghost" data-test="brain-check" aria-label="重新同步原生 Agno 历史" title="重新同步原生 Agno 历史" :disabled="busy||requestInFlight||!session" @click="loadHistory()">同步历史</Button>
+    <Button size="sm" variant="ghost" data-test="brain-toggle-tools" aria-haspopup="dialog" :aria-expanded="toolsOpen" aria-controls="w46-brain-tools-menu" @click="toggleBrainTools">工具与运行 ▣</Button>
    </div>
   </header>
   <p v-if="notice" class="bc-private-notice" role="alert" data-test="brain-error">{{notice}}</p>
-  <details v-if="toolsOpen" open class="bc-brain-trace" data-test="w46-brain-tools" id="w46-brain-tools-menu"><summary tabindex="0">真实执行详情 · 工具 / Run / Trace</summary><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史内暂无经过服务端确认的工具回执。</p>
+  <details v-if="toolsOpen" open class="bc-brain-trace" data-test="w46-brain-tools" id="w46-brain-tools-menu" role="dialog" aria-label="Agno 原生工具和执行记录"><summary tabindex="0">原生工具 · Run / Trace</summary><button type="button" class="bc-brain-tools-close" data-test="brain-close-tools" @click="closeBrainMenu(true)">关闭详情</button><div v-if="messages.some(m=>m.role==='tool')" class="bc-brain-tool-list"><article v-for="(m,i) in messages.filter(m=>m.role==='tool')" :key="i"><strong>工具回执</strong><p>{{m.content}}</p></article></div><p v-else>当前历史内暂无经过服务端确认的工具回执。</p>
    <p v-if="nativeReadState==='loading'">正在读取W43原生工具与Run…</p>
    <p v-else-if="nativeReadState==='unavailable'">本机原生工具／Run接口不可用或未授权；不显示模拟记录。</p>
    <template v-else-if="nativeReadState==='ready'">
     <p>已注册工具 {{nativeTools.length}} 项，实际执行资格由W43授权决定。</p>
-    <div v-for="(tool,i) in nativeTools" :key="i">{{tool.label}} · {{tool.businessExecutable?'服务端限制执行':'只读／未开放执行'}}</div>
+    <div v-for="(tool,i) in nativeTools" :key="i" class="bc-native-tool-row"><strong>{{tool.label}}</strong><small>{{tool.businessExecutable?'具备服务端执行资格':'只读或当前未授权执行'}}</small></div>
     <p>当前有来源Run {{nativeRuns.length}} 条</p>
     <div v-for="(run,i) in nativeRuns" :key="i" class="bc-native-run-row">
      <span>{{run.id}} · {{run.status}}</span>
@@ -363,10 +443,12 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
     <p v-else-if="traceReadState==='unavailable'">此Run的原生Trace未授权或不可用。</p>
     <p v-else-if="traceReadState==='ready'&&nativeTrace">Run {{nativeTrace.runId}}：{{nativeTrace.count}} 条有来源Trace（{{nativeTrace.status}}）</p>
    </template></details>
-  <div v-if="setupOpen" class="bc-private-settings" data-test="brain-model-settings" id="w46-brain-model-menu" role="menu" aria-label="当前私人模型选择">
-   <h3>选择 AI 模型</h3>
+  <div v-if="setupOpen" class="bc-brain-model-backdrop" @click.self="closeBrainMenu()">
+  <section class="bc-private-settings" data-test="brain-model-settings" id="w46-brain-model-menu" role="dialog" aria-modal="true" aria-labelledby="brain-model-dialog-title">
+   <div class="bc-brain-model-header"><div><h3 id="brain-model-dialog-title">选择 AI 模型</h3><p>选择已配置的模型，开始与闺蜜大脑聊天</p></div><button type="button" class="bc-brain-model-close" aria-label="关闭模型设置" @click="closeBrainMenu(true)">✕</button></div>
    <BCNativeCloudKeySettings :web-csrf="session?.csrf" @changed="refresh"/>
-   <p>可选择 OpenRouter、OpenAI API 或已安装的本地模型。本地 Qwen3 完全可选，不影响云端模型。</p>
+   <p v-if="catalog?.selectedProvider==='CHATGPT_PLAN_SIWC'" class="bc-brain-model-section-label" data-test="brain-reasoning-effective">推理档位：模型服务端默认。当前官方 ChatGPT SDK 不支持传入低／中／高，未设置任何固定档位。</p>
+   <p class="bc-brain-model-section-label">可用模型</p>
    <div v-for="provider in providers" :key="provider.id" class="bc-provider">
     <strong>{{provider.name}}</strong><small>{{provider.desc}}</small>
     <template v-for="m in catalog?.models.filter(x=>x.provider===provider.id)||[]" :key="m.modelId">
@@ -381,16 +463,31 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
     <span>{{selected?.billingNotice||'该云端模型可能按调用收费。'}}我确认选择此云端模型并了解可能产生的费用。</span>
    </label>
    <Button size="sm" data-test="brain-select-model" :disabled="!session||!selected||!selected.available||!selected.configured||busy||!modelChangeRequired||(paidChangeRequiresConsent&&!modelCostApproved)" @click="selectModel">{{modelChangeRequired?'确认使用此模型':'当前正在使用'}}</Button>
-   <p class="bc-private-notice" data-test="brain-native-key-hold">
-    云端 API Key 仅在服务端确认安全保存接口可用时才能提交。暂未接通时不会在浏览器内保存密钥，也不会要求安装桌面版。
-   </p>
-  </div>
-  <div class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
-   <p v-if="!messages.length">暂无经过服务端确认的历史消息</p>
-   <article v-for="(m,i) in messages" :key="i" :data-role="m.role">
-    <strong>{{m.role==='user'?'你':m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
+   <p class="bc-brain-model-footer-note" data-test="brain-native-key-hold">密钥仅在本机受保护的服务端保存。模型未配置时不会调用付费 API。</p>
+  </section>
+ </div>
+  <div ref="historyBox" class="bc-private-history" data-test="brain-history" role="log" aria-label="私人聊天历史">
+   <div v-if="!messages.length" class="bc-brain-empty-state" data-test="brain-empty-state">
+    <div class="bc-brain-empty-symbol" aria-hidden="true">✦</div>
+    <h2>{{loadState==='ready'?'有什么想聊的？':'开始和闺蜜大脑聊天'}}</h2>
+    <p>{{loadState==='checking'?'正在载入会话…':loadState==='ready'?'随时向我提问，或从下面输入你想做的事情。':'选择一个 AI 模型，随后就可以开始对话。'}}</p>
+    <button v-if="loadState!=='ready'&&loadState!=='checking'" type="button" @click="toggleBrainModel">选择 AI 模型</button>
+   </div>
+   <article v-for="(m,i) in messages" :key="i" :data-role="m.role" :aria-label="m.role==='user'?'我发送的消息':m.role==='assistant'?'闺蜜大脑的回复':'工具回执'">
+    <strong v-if="m.role!=='user'">{{m.role==='assistant'?'闺蜜大脑':'工具回执'}}</strong>
     <p>{{m.content}}</p>
    </article>
+   <article v-if="pendingPrompt" data-role="user" data-test="brain-pending-user" aria-label="正在等待历史确认的已提交消息">
+    <small class="bc-brain-user-pending-status">待原生 Agno 历史确认</small>
+    <p>{{pendingPrompt}}</p>
+   </article>
+   <article v-if="streamingPreview&&requestInFlight" data-role="assistant" data-test="brain-live-model-preview">
+    <strong>闺蜜大脑 <small>实时生成 · 等待 Agno Run 确认</small></strong><p>{{streamingPreview}}</p>
+   </article>
+   <div v-if="requestInFlight" class="bc-brain-pending" role="status" aria-live="polite" data-test="brain-generating">
+    <span class="bc-brain-pending-dot" aria-hidden="true"></span>
+    <span>ChatGPT 正在生成回复。完成后会保存到原 Agno 对话历史，不会发送给联系人。</span>
+   </div>
   </div>  <div v-if="brainExpertOpen" class="bc-brain-context-menu" data-test="brain-expert-popup" id="w46-brain-expert-menu" role="menu" aria-label="闺蜜大脑专家选择">
     <div class="bc-brain-popup-head"><strong>选择专家</strong><button type="button" data-test="brain-expert-close" @click="toggleBrainExpert">关闭</button></div>
     <p v-if="expertsState==='loading'">正在读取W47原生专家目录…</p>
@@ -420,18 +517,18 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
   </div>
   <form class="bc-private-compose" @submit.prevent="send">
    <label for="bc-private-question" class="bc-brain-sr-label">给闺蜜大脑发消息</label>
-   <small v-if="catalog?.configured&&catalog.selectedProvider!=='LLAMACPP_LOCAL_QWEN3_8B_FREE'" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
+   <small v-if="catalog?.configured&&['OPENROUTER_USER_API','OPENAI_USER_API'].includes(catalog.selectedProvider)" data-test="cloud-model-consent-status">当前云端模型由你主动选择并确认费用；后续对话按该供应商实际计费，无需每条重复勾选。切换收费模型时将再次确认。</small>
    <textarea id="bc-private-question" v-model="text" rows="2" maxlength="4000"
-     data-test="brain-question" placeholder="向闺蜜大脑提问；可召唤专家或执行已授权任务" :disabled="loadState!=='ready'||busy||requestInFlight"></textarea>
+     data-test="brain-question" :placeholder="loadState==='ready'?'给闺蜜大脑发消息…（Enter 发送，Shift+Enter 换行）':loadState==='history-loading'?'正在同步历史，可先输入消息…':'选择 AI 模型后开始聊天'" :disabled="!['ready','history-loading'].includes(loadState)||busy||requestInFlight" @keydown="brainComposerKeydown"></textarea>
    <div class="bc-brain-compose-toolbar">
     <div class="bc-brain-compose-tools">
      <Button type="button" size="sm" variant="ghost" :aria-expanded="brainExpertOpen" @click="toggleBrainExpert" data-test="brain-expert" aria-haspopup="menu" aria-controls="w46-brain-expert-menu">＋ 专家</Button>
-     <Button type="button" size="sm" variant="ghost" :disabled="busy||requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model" aria-haspopup="menu" aria-controls="w46-brain-model-menu">模型</Button>
+     <Button type="button" size="sm" variant="ghost" :disabled="requestInFlight" :aria-expanded="setupOpen" @click="toggleBrainModel" data-test="brain-compose-model" aria-haspopup="dialog" aria-controls="w46-brain-model-menu">模型</Button>
      <Button type="button" size="sm" variant="ghost" :aria-expanded="toolsOpen" @click="toggleBrainTools" data-test="brain-compose-tools" aria-haspopup="menu" aria-controls="w46-brain-tools-menu">工具</Button>
-     <Button type="button" size="sm" variant="ghost" disabled title="附件尚待W23原生媒体资格接线" data-test="brain-attachment">附件</Button>
+
     </div>
     <Button type="submit" data-test="brain-send"
-     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'正在等待真实模型回执':'发送 ↗'}}</Button>
+     :disabled="loadState!=='ready'||busy||requestInFlight||!text.trim()">{{requestInFlight?'生成中…':'发送 ↗'}}</Button>
    </div>
   </form>
 
@@ -465,7 +562,7 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
 .bc-private-history{flex:1 1 0;min-height:140px;max-height:none!important;display:block;overflow-y:auto;background:var(--bg);border:0!important;padding:13px 4px!important;overscroll-behavior:contain}
 .bc-private-history article{width:fit-content;max-width:min(84%,760px);margin:8px auto 14px 0;border:1px solid var(--border);border-radius:15px 15px 15px 4px;padding:12px 16px;background:var(--surface);box-shadow:0 4px 18px rgba(0,0,0,.055)}
 .bc-private-history article[data-role=user]{margin-left:auto;margin-right:0;border-radius:15px 15px 4px 15px;border-color:rgba(var(--accent-rgb),.28);background:linear-gradient(135deg,rgba(var(--accent-rgb),.14),rgba(var(--accent-rgb),.055))}
-.bc-private-history article strong{font-size:11px;color:var(--accent)}.bc-private-history article p{margin:7px 0 0;line-height:1.65}
+.bc-private-history article strong{font-size:11px;color:var(--accent)}.bc-private-history article p{margin:7px 0 0;line-height:1.65}.bc-private-history article[data-role=user]>p{margin-top:0}.bc-brain-user-pending-status{display:block;margin-bottom:7px;font-size:11px;line-height:1.4;color:var(--muted)}
 .bc-private-compose{flex:0 0 auto;display:grid;gap:7px;border:1px solid var(--border);padding:11px 12px;border-radius:18px;background:var(--surface);box-shadow:0 0 0 1px rgba(var(--accent-rgb),.055),0 12px 24px rgba(0,0,0,.065)}.bc-private-compose label{font-size:11px;color:var(--muted)}
 .bc-private-compose textarea{border-radius:12px;resize:vertical;min-height:66px;background:var(--bg2)!important;border-color:var(--border)!important}.bc-private-compose textarea:focus{outline:2px solid rgba(var(--accent-rgb),.38);border-color:var(--accent)!important}.bc-private-compose button{background:var(--accent);color:var(--accent-ink);border-radius:11px}
 @media(max-width:719px){.bc-private-brain{padding:9px!important}.bc-private-brain-head{gap:4px}.bc-private-brain-head strong{font-size:15px}.bc-private-brain-head button{font-size:11px}.bc-private-history article{max-width:92%}}
@@ -503,9 +600,100 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
  .bc-brain-compose-tools{gap:1px}.bc-brain-compose-tools button{font-size:10px;padding:5px!important}
  .bc-private-history article{max-width:92%}
 }
-@media(prefers-reduced-motion:reduce){.bc-private-compose,.bc-private-history article{box-shadow:none}}
+/* Single-native Agno workspace: use the available viewport rather than
+   reserving two empty, non-interactive side rails. */
+.bc-private-brain .bc-private-history{
+ max-width:none!important;width:100%;align-self:stretch;
+ padding:clamp(12px,2vw,26px) clamp(14px,3vw,42px)!important;
+}
+.bc-private-history article{max-width:min(82%,1020px)!important}
+.bc-private-brain .bc-private-compose{
+ max-width:none!important;width:calc(100% - clamp(24px,5vw,80px));
+ align-self:center;
+}
+.bc-brain-tools-visible.bc-private-brain{
+ display:grid!important;grid-template-columns:minmax(0,1fr) minmax(265px,340px);
+ grid-template-rows:43px minmax(0,1fr) auto;gap:0!important;
+}
+.bc-brain-tools-visible>.bc-private-brain-head{grid-column:1/-1;grid-row:1;min-width:0}
+.bc-brain-tools-visible>.bc-private-history{grid-column:1;grid-row:2;min-width:0}
+.bc-brain-tools-visible>.bc-private-compose{grid-column:1;grid-row:3;min-width:0}
+.bc-brain-tools-visible>.bc-brain-trace{
+ position:relative!important;top:auto!important;right:auto!important;
+ left:auto!important;bottom:auto!important;grid-column:2;grid-row:2/4;
+ width:100%;max-height:none;height:100%;min-width:0;min-height:0;
+ overflow-y:auto;overflow-x:hidden;z-index:5;
+ box-sizing:border-box;border-left:1px solid var(--border);
+ box-shadow:none;background:var(--bg2);border-radius:0;
+ padding:16px 14px;font-size:12px;color:var(--ink);
+}
+.bc-brain-tools-visible .bc-native-tool-row{
+ display:flex;justify-content:space-between;gap:8px;align-items:baseline;
+ padding:8px 0;border-bottom:1px solid var(--border);
+ overflow-wrap:anywhere;
+}
+.bc-native-tool-row strong{font-size:12px;min-width:0}
+.bc-native-tool-row small{color:var(--muted);font-size:11px;text-align:right}
+.bc-brain-tools-close{display:block;margin:10px 0 14px;padding:7px 12px;
+ border:1px solid var(--border);border-radius:8px;
+ background:var(--surface-soft);color:var(--ink);cursor:pointer}
+.bc-brain-tools-visible .bc-brain-trace summary{font-weight:700;font-size:14px;line-height:1.7}
+@media(max-width:760px){
+ .bc-brain-tools-visible.bc-private-brain{display:flex!important}
+ .bc-brain-tools-visible>.bc-brain-trace{
+  position:absolute!important;top:43px!important;right:0!important;
+  left:auto!important;bottom:0!important;z-index:55;
+  width:min(360px,100%)!important;max-height:none!important;height:calc(100% - 43px);
+  box-shadow:-18px 8px 36px rgba(0,0,0,.16);
+ }
+ .bc-private-history article{max-width:92%!important}
+ .bc-private-brain .bc-private-compose{width:calc(100% - 18px)}
+}
+/* One original W43 Agno workspace fills its viewport. Keep only a modest
+   responsive reading gutter; never reintroduce empty side rails. */
+.bc-private-brain .bc-private-history{
+ max-width:none!important;
+ padding-left:clamp(12px,2.5vw,30px)!important;
+ padding-right:clamp(12px,2.5vw,30px)!important;
+}
+.bc-private-history article{
+ max-width:min(86%,820px)!important;
+ margin-top:4px;margin-bottom:8px;
+ font-size:13px;line-height:1.65;
+ padding:11px 15px;
+}
+.bc-private-history article p{font-size:13px;line-height:1.65;margin-top:4px}
+.bc-private-history article strong{font-size:11px}
+.bc-private-brain .bc-private-compose{
+ max-width:none!important;
+ width:calc(100% - clamp(24px,5vw,60px))!important;
+}
+.bc-brain-pending{
+ display:flex;align-items:center;gap:10px;
+ max-width:min(86%,820px);margin:9px 0 16px;
+ border:1px solid var(--border);background:var(--surface);
+ padding:13px 16px;border-radius:14px;
+ color:var(--muted);font-size:12px;line-height:1.6;
+}
+.bc-brain-pending-dot{
+ display:block;flex:0 0 9px;width:9px;height:9px;
+ border-radius:50%;background:var(--accent);opacity:.85;
+ animation:brain-pending-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes brain-pending-pulse{to{opacity:.28;transform:scale(.72)}}
+@media(max-width:760px){
+ .bc-private-brain .bc-private-history{
+  padding-left:12px!important;padding-right:12px!important
+ }
+ .bc-private-history article{max-width:93%!important;font-size:13px}
+ .bc-brain-pending{max-width:93%}
+}
+@media(prefers-reduced-motion:reduce){
+ .bc-private-compose,.bc-private-history article{box-shadow:none}
+ .bc-brain-pending-dot{animation:none}
+}
 /* Input-adjacent R4 popovers retain original PRIVATE Agno model config and cost safety. */
-.bc-brain-context-menu{box-sizing:border-box;position:absolute;left:max(10px,calc((100% - 844px)/2 + 12px));bottom:103px;z-index:35;width:min(320px,calc(100vw - 24px));max-height:min(350px,65vh);overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised);color:var(--ink)}
+.bc-brain-context-menu{box-sizing:border-box;position:absolute;left:clamp(12px,2.5vw,30px);bottom:103px;z-index:35;width:min(320px,calc(100vw - 24px));max-height:min(350px,65vh);overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 40px rgba(0,0,0,.26);background:var(--surface-raised);color:var(--ink)}
 .bc-brain-popup-head{display:flex;justify-content:space-between;align-items:center}
 .bc-brain-context-menu p{margin:0;font-size:11px;line-height:1.55;color:var(--muted)}
 .bc-brain-context-menu button{border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--surface-soft);color:var(--ink);font-size:11px;text-align:left}
@@ -518,4 +706,35 @@ onBeforeUnmount(()=>{document.removeEventListener('keydown',brainMenuKeyboard);d
 .bc-private-settings{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 64px));bottom:103px;width:min(410px,calc(100vw - 24px));max-height:min(67vh,540px)}
 .bc-brain-trace{top:auto!important;right:auto!important;left:max(10px,calc((100% - 844px)/2 + 115px));bottom:103px;width:min(320px,calc(100vw - 24px));max-height:65vh}
 @media(max-width:719px){.bc-brain-context-menu,.bc-private-settings,.bc-brain-trace{left:10px!important;bottom:96px;width:min(340px,calc(100vw - 20px))}}
+/* W09-3 44751 PRIVATE model setup: visual only, original authority preserved. */
+.bc-brain-model-backdrop{position:absolute;inset:0;z-index:80;display:grid;place-items:center;padding:20px;background:rgba(4,10,13,.64);backdrop-filter:blur(3px)}
+.bc-private-brain .bc-private-settings{position:relative!important;top:auto!important;right:auto!important;bottom:auto!important;left:auto!important;box-sizing:border-box;width:min(620px,100%);max-width:620px;max-height:min(620px,calc(100dvh - 76px));min-height:0;overflow-y:auto;overscroll-behavior:contain;display:grid;gap:14px;align-content:start;padding:20px 22px;background:var(--surface-raised,var(--surface));border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 72px rgba(0,0,0,.38);color:var(--ink);font-size:13px;line-height:1.55}
+.bc-brain-model-header{position:sticky;top:-20px;z-index:2;display:flex;align-items:start;justify-content:space-between;gap:20px;padding:2px 0 13px;background:var(--surface-raised,var(--surface));border-bottom:1px solid var(--border)}
+.bc-brain-model-header h3{font-size:19px;margin:0 0 4px;font-weight:700;letter-spacing:-.02em}
+.bc-brain-model-header p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.bc-brain-model-close{display:grid;place-items:center;width:34px;height:34px;min-width:34px;min-height:34px;flex:0 0 34px;background:var(--surface-soft)!important;color:var(--ink)!important;border:1px solid var(--border);border-radius:9px;cursor:pointer}
+.bc-brain-model-section-label{font-size:13px;font-weight:700;margin:2px 0 0}
+.bc-private-brain .bc-provider{padding:12px 14px;gap:5px;border-radius:11px;background:var(--surface);font-size:13px}
+.bc-private-brain .bc-provider small{font-size:12px;line-height:1.6}
+.bc-private-brain .bc-provider label{font-size:13px}
+.bc-brain-model-footer-note{font-size:12px;color:var(--muted);line-height:1.6;margin:2px 0 0}
+.bc-private-settings :deep(.cloud-key-panel){gap:9px;padding:14px 15px;border-radius:11px;background:var(--surface)}
+.bc-private-settings :deep(.cloud-key-panel p){font-size:12px;line-height:1.55}
+.bc-private-settings :deep(.cloud-key-panel input),.bc-private-settings :deep(.cloud-key-panel select){font-size:13px;min-height:38px}
+.bc-private-history .bc-brain-empty-state{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:28px 18px;box-sizing:border-box}
+.bc-brain-empty-symbol{font-size:42px;color:var(--accent);text-shadow:0 0 26px rgba(var(--accent-rgb),.35)}
+.bc-brain-empty-state h2{margin:0;font-size:22px;letter-spacing:-.03em;color:var(--ink);font-weight:650}
+.bc-brain-empty-state p{margin:0;max-width:440px;font-size:14px;line-height:1.7;color:var(--muted)}
+.bc-brain-empty-state button{border:1px solid var(--accent);border-radius:10px;background:rgba(var(--accent-rgb),.15);color:var(--ink);padding:10px 18px;margin-top:7px;font-size:13px;cursor:pointer}
+.bc-private-brain-heading>span{font-size:12px}
+.bc-private-brain-actions button{font-size:12px}
+@media(max-width:719px){
+ .bc-brain-model-backdrop{padding:10px}
+ .bc-private-brain .bc-private-settings{width:100%;max-height:calc(100dvh - 45px);padding:15px 14px;gap:10px}
+ .bc-brain-model-header{top:-15px}
+ .bc-brain-model-header h3{font-size:17px}
+ .bc-brain-model-header p{font-size:12px}
+ .bc-brain-empty-state h2{font-size:19px}
+ .bc-brain-empty-state p{font-size:13px}
+}
 </style>

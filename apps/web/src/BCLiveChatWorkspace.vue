@@ -1,27 +1,121 @@
 <script setup>
-import {ref,watch,computed,onMounted,onBeforeUnmount} from 'vue';
+import {ref,watch,computed,onMounted,onBeforeUnmount,nextTick} from 'vue';
+import {Search,UserRound,Copy,MessageSquareQuote,MoreHorizontal,BrainCircuit,ChevronRight,RefreshCw,Info,Filter,Check,MessageCircle} from '../../../design/nonproduction/approved-clickable-abc-bc/node_modules/@lucide/vue/dist/esm/lucide-vue.mjs';
 import {Button} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/button';
 import {ScrollArea} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/scroll-area';
 import {Bubble,BubbleContent} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/bubble';
 import {Message} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/message';
+import {ContextMenu,ContextMenuTrigger,ContextMenuContent,ContextMenuItem,ContextMenuLabel,ContextMenuSeparator,ContextMenuSub,ContextMenuSubTrigger,ContextMenuSubContent,ContextMenuShortcut} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/context-menu';
+import {Popover,PopoverTrigger,PopoverContent} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/popover';
+import {Dialog,DialogContent,DialogTitle,DialogDescription} from '../../../design/nonproduction/approved-clickable-abc-bc/src/components/oss/dialog';
 import BCNativeComposer from './BCNativeComposer.vue';
+import './BCNativeContextMenu.css';
+import './BCProContextUX.css';
+import metaBrandLogo from './assets/channels/meta.svg';
+import messengerBrandLogo from './assets/channels/messenger.svg';
+import whatsappBrandLogo from './assets/channels/whatsapp.svg';
+import telegramBrandLogo from './assets/channels/telegram.svg';
 import {createTrustedTakeoverPort} from './native-takeover-port.mjs';
 import {readLiveContacts,readLiveTimeline,explainNativeFailure} from './live-chat-source.mjs';
+import {pancakeMultiApi} from './pancake-multi-browser.mjs';
+import {latestNewOfficialPancakeInbound,showOfficialPancakeInboundNotice} from './w05-pancake-inbox-notice.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null},mediaAuthorityPort:{type:Object,default:null}});
 const emit=defineEmits(['navigate']);
 const searchBox=ref(null),composerRef=ref(null);
+const interactionNotice=ref('');
+const detailContact=ref(null),detailOpen=ref(false);
+const historySearchOpen=ref(false),historySearchTerm=ref(''),historySearchContact=ref(''),historySearchInput=ref(null),highlightMid=ref(''),openMoreMid=ref('');
+const historyMatches=computed(()=>{
+ const q=historySearchTerm.value.trim().toLocaleLowerCase();
+ if(!q||selected.value?.contactRef!==historySearchContact.value)return [];
+ return timeline.value.filter(m=>[m.original,m.zh].some(t=>typeof t==='string'&&t.toLocaleLowerCase().includes(q))).slice(0,40);
+});
 const mobileChat=ref(false),plusOpen=ref(false),filterOpen=ref(false),pinnedExpanded=ref(true),unreadOnly=ref(false);
 const unreadAuthoritative=computed(()=>contacts.value.some(c=>c.unreadAuthorized===true));
 const api=computed(()=>props.fetchImpl||globalThis.fetch);
 const state=ref('checking'),error=ref(''),contacts=ref([]),accounts=ref(0),chosen=ref(null);
 const timeline=ref([]),timelineState=ref('none'),timelineError=ref('');
+const messengerManual=ref({roomId:'',ready:false});
+// A verified Pancake inbox contact may use the original Composer. The
+// actual POST is authorized again by W55/Page/PSID + W24/W44/W25 before send;
+// never confuse a UI hint with network-send authority.
+const pageManualTarget=computed(()=>{
+ const c=selected.value;
+ return c?.readOnlyPreview===true&&
+  /^[0-9]{1,40}$/.test(c.pageId||'')&&
+  /^(?:[0-9]{1,40}|[A-Za-z0-9._:-]{8,160})$/.test(c.conversationId||'')?
+  'PAGE|'+c.pageId+'|'+c.conversationId:'';
+});
+const manualPageSendPort=Object.freeze({
+ async send(target,text,businessMessageId){
+  const match=/^PAGE\|([0-9]{1,40})\|([a-zA-Z0-9._:-]{8,160})$/.exec(target);
+  if(!match)throw Error('当前主页联系人未通过官方身份核验');
+  const fetcher=api.value;
+  const local=await fetcher('/api/v2/local-session/status',{credentials:'same-origin',cache:'no-store'});
+  const session=await local.json();
+  if(!local.ok||session.authorized!==true||typeof session.csrfToken!=='string')throw Error('当前本机会话不可用');
+  const response=await fetcher('/api/v2/providers/fb-page/manual-send',{
+   method:'POST',credentials:'same-origin',cache:'no-store',
+   headers:{'content-type':'application/json','x-yance-csrf-token':session.csrfToken},
+   body:JSON.stringify({pageId:match[1],conversationId:match[2],text,businessMessageId})
+  });
+  const reply=await response.json();
+  if(!response.ok||reply.ok!==true){
+   const code=typeof reply.detailCode==='string'?reply.detailCode:
+    typeof reply.error==='string'?reply.error:'UNVERIFIED';
+   const descriptions={
+    PAGE_ACCOUNT_BINDING_PENDING:'Page 账号授权登记未完成',
+    PAGE_ACCOUNT_BINDING_REVOKED:'Page 账号授权已撤销或版本已变化',
+    PAGE_PEER_BINDING_PENDING:'当前联系人授权绑定未完成',
+    PAGE_SEND_CONSENT_PENDING:'本次人工发送尚未获得有效授权',
+    PAGE_HUMAN_TAKEOVER_PENDING:'当前联系人仍在托管接管状态',
+    PAGE_CURRENT_W24_W44_DENIED:'当前联系人发送授权校验未通过',
+    PAGE_PEER_OR_TOKEN_CHANGED:'Page 或收件人已变更，请刷新会话',
+    PAGE_CREDENTIAL_REVOKED:'Page Token 已被撤销',
+    CURRENT_PAGE_PEER_OR_W24_W44_SEND_NOT_READY:'Page 账号或联系人发送资格未就绪',
+    INVALID_PAGE_CONVERSATION:'页面或会话参数无效',
+    USER_CLICK_CSRF_REQUIRED:'当前本机会话已失效，请刷新',
+    PANCAKE_PAGE_AUTH_REJECTED:'Pancake 拒绝当前 Page Token'
+   };
+   throw Error('发送未成功：'+(descriptions[code]||'官方授权或发送链路未通过')+
+    '（'+code+'，HTTP '+response.status+'）。消息保留在草稿中。');
+  }
+  return reply;
+ }
+});
+const manualMessengerSendPort=Object.freeze({
+ async send(roomId,text,businessMessageId){
+  const fetcher=api.value;
+  const local=await fetcher('/api/v2/local-session/status',{
+   credentials:'same-origin',cache:'no-store'});
+  const identity=await local.json();
+  if(!local.ok||identity.authorized!==true||
+    !['WEB_LOCAL_PRIVATE','NATIVE_FIRST_PARTY'].includes(identity.sessionKind)||
+    typeof identity.csrfToken!=='string')throw Error('当前本机会话不可用');
+  const response=await fetcher('/api/v2/providers/fb-personal/manual-send',{
+   method:'POST',credentials:'same-origin',cache:'no-store',
+   headers:{'content-type':'application/json','x-yance-csrf-token':identity.csrfToken},
+   body:JSON.stringify({roomId,text,businessMessageId})
+  });
+  const data=await response.json();
+  if(!response.ok||data.ok!==true)throw Error('Messenger 暂时未接受发送，请检查连接');
+  return data;
+ }
+});
+async function onManualMessengerSent(){
+ const c=selected.value;if(c&&(c.roomId||c.readOnlyPreview))await chooseContact(c);
+}
+const incomingNotice=ref('');
+let refreshTimer=null,pollBusy=false;
 const search=ref(''),channel=ref('ALL'),account=ref('ALL');
+const channelStatusMessage=ref('');
+let channelStatusRevision=0;
 let currentRevision=0,sourceRevision=0,mounted=true;
-const selected=computed(()=>contacts.value.find(c=>c.contactRef===chosen.value?.contactRef)||null);
+const selected=computed(()=>filtered.value.find(c=>c.contactRef===chosen.value?.contactRef)||null);
 const channels=Object.freeze([
  {id:'ALL',label:'全部渠道'},
- {id:'FB_PERSONAL',label:'Facebook'},
- {id:'FB_PAGE',label:'Page'},
+ {id:'FB_PERSONAL',label:'Facebook 个人'},
+ {id:'FB_PAGE',label:'Facebook Page'},
  {id:'WHATSAPP_PERSONAL',label:'WhatsApp'},
  {id:'TELEGRAM_PERSONAL',label:'Telegram'}
 ]);
@@ -32,7 +126,72 @@ const filtered=computed(()=>{
   (account.value==='ALL'||c.accountRef===account.value)&&
   (!q||[c.displayName,c.accountRef,c.peerRef].some(s=>String(s).toLowerCase().includes(q))));
 });
-const accountIds=computed(()=>['ALL',...new Set(contacts.value.map(c=>c.accountRef))]);
+const accountIds=computed(()=>['ALL',...new Set(contacts.value.filter(c=>channel.value==='ALL'||c.channel===channel.value).map(c=>c.accountRef))]);
+const filterActive=computed(()=>channel.value!=='ALL'||account.value!=='ALL'||search.value.trim()!=='');
+const platformName=c=>channels.find(x=>x.id===c)?.label||c;
+// Use the user-approved logo mapping: Facebook personal/Messenger use the
+// Messenger badge, Facebook Page uses the blue Meta infinity badge.
+// Each avatar gets one badge; do not add a second icon beside the name.
+const channelBrandIcon=channel=>({
+ FB_PERSONAL:messengerBrandLogo,FB_PAGE:metaBrandLogo,
+ WHATSAPP_PERSONAL:whatsappBrandLogo,TELEGRAM_PERSONAL:telegramBrandLogo
+})[channel]||'';
+const channelTooltip=c=>{
+ if(!c)return '当前聊天渠道';
+ if(c.channel==='FB_PAGE')return c.readOnlyPreview?
+  (pageManualTarget.value?'Facebook Page · Pancake 接入 · 当前人工发送由服务端核验':'Facebook Page · Pancake 接入 · 发送资格待核验'):
+  'Facebook Page';
+ if(c.channel==='FB_PERSONAL')return 'Facebook Messenger · 个人聊天';
+ return platformName(c.channel);
+};
+// A provider can return a real message ID with no textual body (for example,
+// metadata-only events or unqualified media). Preserve the entry and never
+// misrepresent its unknown type as a verified photo, sticker or attachment.
+const hasDisplayableText=m=>typeof m?.original==='string'&&m.original.trim().length>0;
+function reconcileFilter(){
+ if(chosen.value&&!filtered.value.some(c=>c.contactRef===chosen.value.contactRef)){
+  chosen.value=null;timeline.value=[];timelineState.value='none';timelineError.value='';mobileChat.value=false;
+ }
+}
+async function readSelectedChannelStatus(){
+ const selectedChannel=channel.value,revision=++channelStatusRevision;
+ channelStatusMessage.value='';
+ if(!['WHATSAPP_PERSONAL','TELEGRAM_PERSONAL'].includes(selectedChannel))return;
+ channelStatusMessage.value=selectedChannel==='WHATSAPP_PERSONAL'?
+  '正在核对 WhatsApp 连接状态…':'正在核对 Telegram 原生授权…';
+ const endpoint=selectedChannel==='WHATSAPP_PERSONAL'?
+  '/api/v2/providers/whatsapp-personal/native/status':
+  '/api/v2/providers/telegram-personal/status';
+ try{
+  const response=await globalThis.fetch(endpoint,{method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
+  const result=await response.json();
+  if(!mounted||revision!==channelStatusRevision||channel.value!==selectedChannel)return;
+  if(selectedChannel==='WHATSAPP_PERSONAL'){
+   channelStatusMessage.value=response.ok&&result.source==='BAILEYS_NATIVE_SDK'&&result.connected===false?
+    'WhatsApp 尚未连接，请在账号管理中由本人扫码授权。':
+    response.ok&&result.source==='BAILEYS_NATIVE_SDK'&&result.connected===true?
+    'WhatsApp 已连接，但尚未从可信联系人源读到会话。':
+    'WhatsApp 联系状态未核实，请在账号管理检查。';
+  }else{
+   channelStatusMessage.value=response.status===401?
+    'Telegram 当前未获得安装版会话授权，请在桌面版完成账号登录。':
+    response.ok&&result.authorized===true?
+    'Telegram 已授权，但尚未从可信联系人源读到会话。':
+    'Telegram 连接状态尚未核实，请在账号管理检查。';
+  }
+ }catch{
+  if(mounted&&revision===channelStatusRevision&&channel.value===selectedChannel)
+   channelStatusMessage.value=selectedChannel==='WHATSAPP_PERSONAL'?
+    'WhatsApp 连接状态暂时无法读取。':'Telegram 连接状态暂时无法读取。';
+ }
+}
+function onChannelFilterChange(){
+ if(account.value!=='ALL'&&!accountIds.value.includes(account.value))account.value='ALL';
+ reconcileFilter();filterOpen.value=false;
+}
+function onAccountFilterChange(){reconcileFilter();filterOpen.value=false}
+function clearContactFilter(){channel.value='ALL';account.value='ALL';filterOpen.value=false;reconcileFilter()}
+watch(channel,()=>{void readSelectedChannelStatus()});
 const pinned=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized===true&&c.pinned===true));
 const regular=computed(()=>filtered.value.filter(c=>c.pinnedAuthorized!==true||c.pinned!==true));
 const availableUnread=computed(()=>unreadAuthoritative.value?
@@ -46,6 +205,54 @@ function onKeyDown(e){
 }
 function navigate(section){plusOpen.value=false;filterOpen.value=false;emit('navigate',section)}
 function backToContacts(){mobileChat.value=false}
+async function copyAuthorizedText(text,label){
+ if(typeof text!=='string'||!text.length){interactionNotice.value=label+'暂无可复制内容';return}
+ try{
+  if(typeof globalThis.navigator?.clipboard?.writeText!=='function')throw Error('CLIPBOARD_NOT_AVAILABLE');
+  await globalThis.navigator.clipboard.writeText(text);
+  interactionNotice.value=label+'已复制';
+ }catch{interactionNotice.value='复制失败，请检查浏览器剪贴板权限';}
+}
+function accountDisplayLabel(c){
+ const raw=typeof c?.accountRef==='string'?c.accountRef.trim():'';
+ if(!raw||/^(OFFICIAL_|FB_BRIDGE_|PANCAKE_READ_ONLY)/i.test(raw))return '当前渠道已连接（未提供可展示的账号名称）';
+ return raw;
+}
+function showContactDetail(c){
+ if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;
+ detailContact.value=c;detailOpen.value=true;
+}
+async function searchLoadedConversation(c){
+ if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;
+ historySearchTerm.value='';
+ historySearchContact.value=c.contactRef;
+ await chooseContact(c);
+ historySearchOpen.value=true;
+ await nextTick();historySearchInput.value?.focus();
+}
+function revealHistoryHit(m){
+ if(!m||!timeline.value.some(x=>x.mid===m.mid))return;
+ highlightMid.value=m.mid;historySearchOpen.value=false;
+ nextTick(()=>Array.from(document.querySelectorAll('.bc-real-message')).find(x=>x.dataset.mid===m.mid)?.scrollIntoView({block:'center',behavior:'smooth'}));
+}
+function openBrainWorkspace(){
+ // Navigate only: no implicit assignment, takeover, or contact-bound grant.
+ navigate('BRAIN');
+}
+function filterToContact(c){
+ if(!c||!contacts.value.some(x=>x.contactRef===c.contactRef))return;
+ if(channel.value!=='ALL'&&channel.value!==c.channel)channel.value='ALL';
+ if(account.value!=='ALL'&&account.value!==c.accountRef)account.value='ALL';
+ search.value=c.displayName;reconcileFilter();focusSearch();
+}
+function contextQuote(m){
+ if(!selected.value||!timeline.value.some(x=>x.mid===m?.mid))return;
+ if(selected.value.readOnly||!selected.value.identityKey||!selected.value.identity){
+  interactionNotice.value='此渠道尚未开放可信引用与发送资格';return;
+ }
+ sourceQuote(m);
+ interactionNotice.value='已加入原编辑器引用';
+}
 function sourceQuote(m){
  if(!selected.value?.identityKey||!selected.value.identity||!m?.mid)return;
  composerRef.value?.sourceQuote({
@@ -53,12 +260,98 @@ function sourceQuote(m){
  });
 }
 const canShowData=computed(()=>state.value==='ready'&&accounts.value>0);
+// W26 already has 41 genuine mautrix-meta Messenger rooms. W24 /contacts
+// may be unavailable while bindings are pending; never erase proven history.
+async function readOfficialMessengerContacts(){
+ const response=await api.value('/api/v2/facebook-inbox',{method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
+ if(!response.ok)throw Error('FB_OFFICIAL_READ_'+response.status);
+ const result=await response.json();
+ if(result?.ok!==true||result.source!=='OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY'||
+   result.providerPeerBindingPending!==true||result.canSend!==false||
+   !Number.isSafeInteger(result.connectedAccountCount)||result.connectedAccountCount<1||
+   !Array.isArray(result.contacts)||result.contacts.length>500)
+   throw Error('FB_OFFICIAL_SOURCE_NOT_VERIFIED');
+ const seen=new Set(),rows=[];
+ for(const c of result.contacts){
+  if(c?.channel!=='FB_PERSONAL'||c.canSend!==false||
+    typeof c.roomId!=='string'||!/^![^\\s]{6,239}$/.test(c.roomId)||
+    typeof c.displayName!=='string'||!c.displayName.trim()||
+    c.displayName.length>180||seen.has(c.roomId))continue;
+  seen.add(c.roomId);
+  rows.push(Object.freeze({
+   contactRef:'FB_BRIDGE_READ_ONLY|'+c.roomId,accountRef:String(c.accountRef||'Messenger'),
+   channel:'FB_PERSONAL',peerRef:c.roomId,roomId:c.roomId,
+   displayName:c.displayName,lastMessage:typeof c.lastMessage==='string'?c.lastMessage:'',
+   lastMessageTimestamp:c.lastMessageTimestamp||0,
+   messengerOfficial:true,readOnly:true,identity:null,identityKey:null,canSend:false,
+   unread:null,unreadAuthorized:false
+  }));
+ }
+ if(!rows.length)throw Error('FB_OFFICIAL_NO_VALID_ROOMS');
+ return {contacts:rows,connectedAccountCount:result.connectedAccountCount,trustedSession:true};
+}
+async function readOfficialMessengerTimeline(contact){
+ const response=await api.value('/api/v2/facebook-inbox/messages?room='+encodeURIComponent(contact.roomId),
+  {method:'GET',credentials:'same-origin',cache:'no-store',redirect:'error'});
+ if(!response.ok)throw Error('FB_HISTORY_'+response.status);
+ const data=await response.json();
+ if(data?.ok!==true||data.source!=='OFFICIAL_MAUTRIX_META_MATRIX_READ_ONLY'||
+   data.roomId!==contact.roomId||data.canSend!==false||
+   data.providerPeerBindingPending!==true||!Array.isArray(data.messages)||
+   data.messages.length>500)throw Error('FB_HISTORY_NOT_VERIFIED');
+ return {messages:data.messages.filter(m=>typeof m?.mid==='string'&&
+  typeof m.original==='string'&&['INBOUND','OUTBOUND'].includes(m.direction))
+  .map(m=>({mid:m.mid,original:m.original,direction:m.direction,
+   providerSource:m.providerSource||data.source,canSend:false}))};
+}
+async function readPancakeContacts(){
+ const inventory=await pancakeMultiApi('pages',{fetchImpl:api.value});
+ const pages=inventory.pages.filter(p=>p.tokenConfigured===true).slice(0,4);
+ if(!pages.length)throw Error('PANCAKE_NO_CONFIGURED_PAGE');
+ const rows=[];let verifiedPages=0;
+ for(const page of pages){
+  let inbox;
+  try{inbox=await pancakeMultiApi('inbox',{fetchImpl:api.value,pageId:page.pageId})}
+  catch{continue}
+  if(inbox?.source!=='PANCAKE_OFFICIAL_INBOX_READ_ONLY'||
+    inbox.pageId!==page.pageId||!Array.isArray(inbox.conversations))continue;
+  verifiedPages++;
+  for(const c of inbox.conversations){
+   if(typeof c.conversationId!=='string'||!/^(?:[0-9]{1,40}|[A-Za-z0-9._:-]{8,160})$/.test(c.conversationId)||
+      typeof c.displayName!=='string')continue;
+   rows.push(Object.freeze({
+    contactRef:'PANCAKE_READ_ONLY|'+page.pageId+'|'+c.conversationId,
+    accountRef:page.name||page.pageId,channel:'FB_PAGE',peerRef:c.conversationId,
+    displayName:c.displayName,lastMessage:c.snippet||'',updatedAt:c.updatedAt||null,pageId:page.pageId,
+    avatarUrl:typeof c.avatarUrl==='string'&&c.avatarUrl.startsWith('/api/v2/providers/fb-page/onboarding/avatar?')?c.avatarUrl:null,
+    conversationId:c.conversationId,readOnly:true,readOnlyPreview:true,
+    identity:null,identityKey:null,canSend:false,unread:null
+   }));
+  }
+ }
+ if(!verifiedPages)throw Error('PANCAKE_INBOX_UPSTREAM_UNAVAILABLE');
+ return {contacts:rows,connectedAccountCount:verifiedPages,trustedSession:true};
+}
 async function refresh(){
  const rev=++currentRevision;sourceRevision++;
  const selectedRef=chosen.value?.contactRef;
  state.value='checking';error.value=''; // Keep scroll, current draft, selection until verified new identity snapshot.
  try{
-  const snap=await readLiveContacts({fetchImpl:api.value});
+  let native=null,pancake=null,messenger=null,readError=null;
+  try{native=await readLiveContacts({fetchImpl:api.value})}catch(e){readError=e}
+  // Always read the official W26 source independently. A partial but valid
+  // W24 snapshot must not suppress 41 existing Messenger conversations.
+  try{messenger=await readOfficialMessengerContacts()}catch(e){if(!readError)readError=e}
+  try{pancake=await readPancakeContacts()}catch(e){if(!native&&!messenger)readError=e}
+  if(!native&&!pancake&&!messenger)throw readError||Error('NO_CURRENT_PROVIDER_SOURCE');
+  const signedRooms=new Set((native?.contacts||[]).map(c=>c.roomId).filter(Boolean));
+  const nativeContacts=[...(native?.contacts||[]),
+   ...(messenger?.contacts||[]).filter(c=>!signedRooms.has(c.roomId))];
+  const other=pancake?.contacts||[];
+  const existing=new Set(nativeContacts.map(c=>c.contactRef));
+  const snap={contacts:[...nativeContacts,...other.filter(c=>!existing.has(c.contactRef))],
+   connectedAccountCount:(native?.connectedAccountCount||messenger?.connectedAccountCount||0)+(pancake?.connectedAccountCount||0),
+   trustedSession:native?.trustedSession===true||messenger?.trustedSession===true||pancake?.trustedSession===true};
   if(!mounted||rev!==currentRevision)return;
   contacts.value=snap.contacts;
   accounts.value=snap.connectedAccountCount;
@@ -76,9 +369,11 @@ async function chooseContact(contact){
  if(state.value!=='ready'||!contacts.value.some(c=>c.contactRef===contact.contactRef))return;
  const ticket=++sourceRevision;
  chosen.value=contact;mobileChat.value=true;timeline.value=[];timelineState.value='checking';timelineError.value='';
- if(!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
+ if(!contact.readOnly&&!contact.identityKey){timelineState.value='blocked';timelineError.value=explainNativeFailure('W24_FULL_K_NOT_SIGNED');return}
  try{
-  const result=await readLiveTimeline({fetchImpl:api.value,contact});
+  const result=contact.messengerOfficial?await readOfficialMessengerTimeline(contact):
+   contact.readOnlyPreview?await pancakeMultiApi('history',{fetchImpl:api.value,pageId:contact.pageId,conversationId:contact.conversationId}):
+    await readLiveTimeline({fetchImpl:api.value,contact});
   if(!mounted||ticket!==sourceRevision||chosen.value?.contactRef!==contact.contactRef)return;
   timeline.value=result.messages;timelineState.value='ready';
  }catch(e){
@@ -100,11 +395,131 @@ const lastNativeMessage=computed(()=>{
   delivery:'NOT_REQUESTED',canSend:false,suggestions:[]
  }:null;
 });
-onMounted(()=>{window.addEventListener('keydown',onKeyDown);void refresh()});
-onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=false;currentRevision++;sourceRevision++;contacts.value=[];timeline.value=[]});
+async function pollVerifiedMessages(){
+ // Reuse this EXISTING eight-second read. No second poller/queue/message DB.
+ if(pollBusy||state.value!=='ready'||!contacts.value.some(c=>c.readOnly))return;
+ pollBusy=true;
+ try{
+  let native=null,pages=null;
+  try{native=await readLiveContacts({fetchImpl:api.value})}catch{}
+  try{pages=await readPancakeContacts()}catch{}
+  if(!mounted||(!native&&!pages))return;
+  const before=new Map(contacts.value.map(c=>[c.contactRef,c]));
+  const newNative=native?.contacts||contacts.value.filter(c=>!c.readOnlyPreview&&!c.messengerOfficial);
+  const currentPages=pages?.contacts||contacts.value.filter(c=>c.readOnlyPreview);
+  const messenger=contacts.value.filter(c=>c.messengerOfficial);
+  const merged=[...newNative,...messenger,...currentPages];
+  contacts.value=[...new Map(merged.map(c=>[c.contactRef,c])).values()];
+  const oldNative=new Map([...before].map(([k,c])=>[k,c.lastMessageTimestamp||0]));
+  const nativeUpdates=(native?.contacts||[]).filter(c=>c.readOnly&&
+   c.lastMessageTimestamp&&oldNative.has(c.contactRef)&&
+   c.lastMessageTimestamp>oldNative.get(c.contactRef));
+  // Changed conversation timestamp is NOT itself a verified inbound MID.
+  // For Pancake, read the original official Page-scoped message history.
+  const pendingPages=pages?currentPages.filter(c=>{
+   const prev=before.get(c.contactRef);
+   return prev?.readOnlyPreview&&Date.parse(c.updatedAt)>Date.parse(prev.updatedAt);
+  }):[];
+  const changed=pendingPages.slice(0,3);
+  // Remaining Page updates stay pending in the SAME existing poll, instead
+  // of losing their timestamp while processing three official REST reads.
+  const deferred=new Set(pendingPages.slice(3).map(c=>c.contactRef));
+  if(deferred.size)contacts.value=contacts.value.map(c=>
+   deferred.has(c.contactRef)?{...c,updatedAt:before.get(c.contactRef).updatedAt}:c);
+  for(const c of changed){
+   try{
+    const history=await pancakeMultiApi('history',{fetchImpl:api.value,
+     pageId:c.pageId,conversationId:c.conversationId});
+    if(!mounted)return;
+    const message=latestNewOfficialPancakeInbound(before.get(c.contactRef),c,history);
+    if(!message)continue;
+    incomingNotice.value=c.displayName+' 发来新消息';
+    // Keep the selected real timeline fresh, without creating a new Composer.
+    if(chosen.value?.contactRef===c.contactRef){
+     timeline.value=history.messages;timelineState.value='ready';
+    }
+    await showOfficialPancakeInboundNotice({contact:c,message,
+     hidden:document.hidden||chosen.value?.contactRef!==c.contactRef,
+     onClick:async()=>{
+     // Re-check current Page token, contact and MID on click. An old system
+     // notification must not navigate after Page removal or account rebind.
+     const current=await readPancakeContacts();
+     if(!current.contacts.some(x=>x.contactRef===c.contactRef))return;
+     const latest=await pancakeMultiApi('history',{fetchImpl:api.value,
+      pageId:c.pageId,conversationId:c.conversationId});
+     if(!latest.messages.some(m=>m.mid===message.mid&&m.direction==='INBOUND'))return;
+     const target=contacts.value.find(x=>x.contactRef===c.contactRef);
+     if(target)await chooseContact(target);
+    }});
+   }catch{
+    // Do not advance the official inbox high-water mark on a failed Page
+    // history read. The next original interval can retry this same update.
+    const prior=before.get(c.contactRef);
+    if(prior)contacts.value=contacts.value.map(x=>x.contactRef===c.contactRef?
+     {...x,updatedAt:prior.updatedAt}:x);
+   }
+  }
+  // Preserve the newly verified W26 Messenger rooms independently of a
+  // partial W24 refresh, while keeping the original W55 Page read-only rows.
+  // No second poller; this is the same existing eight-second refresh.
+  let official=null;
+  try{official=await readOfficialMessengerContacts()}catch{
+   official={contacts:contacts.value.filter(c=>c.messengerOfficial)};
+  }
+  if(!mounted||state.value!=='ready')return;
+  const signedRooms=new Set(newNative.map(c=>c.roomId).filter(Boolean));
+  const officialRows=(official?.contacts||[]).filter(c=>!signedRooms.has(c.roomId));
+  const pageRows=contacts.value.filter(c=>c.readOnlyPreview);
+  contacts.value=[...new Map([...newNative,...officialRows,...pageRows]
+   .map(c=>[c.contactRef,c])).values()];
+  if(chosen.value){
+   const same=contacts.value.find(c=>c.contactRef===chosen.value.contactRef);
+   if(same){chosen.value=same;
+    if(nativeUpdates.some(c=>c.contactRef===same.contactRef)){
+     try{const latest=await readLiveTimeline({fetchImpl:api.value,contact:same});
+      if(mounted&&chosen.value?.contactRef===same.contactRef){
+       timeline.value=latest.messages;timelineState.value='ready';
+      }
+     }catch{}
+    }
+   }
+  }
+ }catch{/* Preserve the original verified conversation on error. */}
+ finally{pollBusy=false}
+}
+onMounted(()=>{window.addEventListener('keydown',onKeyDown);void refresh();
+ refreshTimer=setInterval(()=>void pollVerifiedMessages(),8000);
+});
+onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);
+ if(refreshTimer!==null)clearInterval(refreshTimer);
+ mounted=false;currentRevision++;sourceRevision++;channelStatusRevision++;contacts.value=[];timeline.value=[]});
 </script>
 <template>
  <section class="bc-real-chat" :class="{'mobile-conversation':mobileChat}" data-test="w46-real-chat" aria-label="B＋C实际联系人与聊天工作台">
+  <p v-if="interactionNotice" class="bc-native-context-notice" role="status" data-test="w09-context-action-status" @click="interactionNotice=''">{{interactionNotice}} <span aria-hidden="true">×</span></p>
+  <Dialog v-model:open="detailOpen">
+   <DialogContent class="w09-pro-detail-dialog" data-test="w09-contact-detail-dialog">
+    <DialogTitle>联系人资料</DialogTitle>
+    <DialogDescription>以下为当前已验证渠道返回的只读信息，不改变联系人状态。</DialogDescription>
+    <div v-if="detailContact" class="w09-pro-details-body">
+     <div class="w09-pro-detail-avatar"><span class="bc-contact-avatar"><img v-if="detailContact.avatarUrl" :src="detailContact.avatarUrl" alt="" /><span>{{detailContact.displayName.slice(0,1)}}</span></span><strong>{{detailContact.displayName}}</strong></div>
+     <dl><dt>聊天渠道</dt><dd>{{platformName(detailContact.channel)}}</dd><dt>连接账号</dt><dd>{{accountDisplayLabel(detailContact)}}</dd><dt>最近消息</dt><dd>{{detailContact.lastMessage||'暂无消息摘要'}}</dd></dl>
+     <button type="button" class="w09-pro-detail-copy" @click="copyAuthorizedText(detailContact.displayName,'联系人姓名')"><Copy :size="15"/>复制联系人姓名</button>
+    </div>
+   </DialogContent>
+  </Dialog>
+  <Dialog v-model:open="historySearchOpen">
+   <DialogContent class="w09-pro-history-dialog" data-test="w09-conversation-search-dialog">
+    <DialogTitle>搜索当前会话</DialogTitle>
+    <DialogDescription>只搜索当前已加载的消息，不代表跨渠道全量历史搜索。</DialogDescription>
+    <label class="w09-pro-history-input"><Search :size="18" aria-hidden="true"/><input ref="historySearchInput" v-model="historySearchTerm" type="search" placeholder="输入消息内容或译文…" autocomplete="off" data-test="w09-history-search-input"/></label>
+    <div class="w09-pro-history-count" role="status">{{historySearchTerm.trim()?'找到 '+historyMatches.length+' 条匹配消息（最多显示40条）':'输入关键词开始搜索'}}</div>
+    <div class="w09-pro-history-results">
+     <button v-for="m in historyMatches" :key="m.mid" type="button" @click="revealHistoryHit(m)" data-test="w09-history-result"><span>{{m.direction==='OUTBOUND'?'我发送的':'收到的'}}</span><strong>{{(m.original||m.zh||'非文本消息').slice(0,170)}}</strong></button>
+     <p v-if="historySearchTerm.trim()&&!historyMatches.length">当前已加载历史没有匹配消息。</p>
+    </div>
+   </DialogContent>
+  </Dialog>
   <aside class="bc-real-list" data-test="w46-real-contacts" aria-label="Smart Inbox">
    <div class="bc-sidebar-tools">
     <div class="bc-tools-row" data-test="w46-inbox-toolbar-row-1">
@@ -119,82 +534,142 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
       <input ref="searchBox" v-model="search" type="search" data-test="w46-search" aria-label="搜索当前授权联系人" placeholder="搜索联系人、消息…" autocomplete="off"/>
       <kbd>Ctrl K</kbd>
      </label>
-     <button type="button" class="bc-unread-toggle" data-test="w46-unread" :aria-pressed="unreadOnly"
+     <button v-if="unreadAuthoritative" type="button" class="bc-unread-toggle" data-test="w46-unread" :aria-pressed="unreadOnly"
       :disabled="!unreadAuthoritative" :title="unreadAuthoritative?'筛选权威未读会话':'未读状态尚未接入原生账号'" @click="unreadOnly=!unreadOnly">未读</button>
     </div>
    </div>
    <div v-if="plusOpen" class="bc-action-popover" data-test="w46-plus-menu">
     <button type="button" @click="navigate('ACCOUNTS')">连接社交账号</button>
-    <button type="button" disabled title="等待原生渠道新会话资格">发起新会话 · 暂不可用</button>
-    <small>不会创建虚构联系人，需本人完成平台授权。</small>
+    <!-- Chat creation remains controlled by each channel's existing account flow. -->
    </div>
    <div v-if="filterOpen" class="bc-action-popover" data-test="w46-filter-menu">
-    <label>平台<select v-model="channel" aria-label="平台筛选"><option v-for="ch in channels" :key="ch.id" :value="ch.id">{{ch.label}}</option></select></label>
-    <label>账号<select v-model="account" aria-label="账号筛选"><option v-for="id in accountIds" :key="id" :value="id">{{id==='ALL'?'全部已授权账号':id}}</option></select></label>
-    <small>归档、托管、标签及消息全文筛选：等待原生有来源的索引与持久状态。</small>
-    <button type="button" @click="channel='ALL';account='ALL';filterOpen=false">清除筛选</button>
+    <label>平台<select v-model="channel" aria-label="平台筛选" @change="onChannelFilterChange"><option v-for="ch in channels" :key="ch.id" :value="ch.id">{{ch.label}}</option></select></label>
+    <label>账号<select v-model="account" aria-label="账号筛选" @change="onAccountFilterChange"><option v-for="id in accountIds" :key="id" :value="id">{{id==='ALL'?'全部已授权账号':id}}</option></select></label>
+
+    <button type="button" @click="clearContactFilter">清除筛选</button>
    </div>
+   <p v-if="incomingNotice" role="status" class="bc-inbox-state" data-test="w56-real-inbound-notice" @click="incomingNotice=''">{{incomingNotice}}</p>
+   <p v-if="state==='ready'&&(channel!=='ALL'||account!=='ALL')" class="bc-filter-applied" data-test="w46-filter-applied" role="status"><span>{{platformName(channel)}}{{account==='ALL'?'':' · '+account}}：{{filtered.length}} / {{contacts.length}}</span><button type="button" @click="clearContactFilter">清除</button></p>
    <div class="bc-inbox-list-scroll" data-test="w46-contacts-scroll">
     <p v-if="state==='checking'&&!contacts.length" class="bc-inbox-state">正在读取本机联系人…</p>
-    <p v-else-if="state!=='ready'" class="bc-inbox-state" data-test="w46-contact-waiting">
-     {{state==='waiting-auth'?'连接社交账号后显示真实联系人':state==='waiting-session'?'本机私人会话暂未建立':error||'原生联系人接口暂不可用'}}
-     <button type="button" @click="navigate('ACCOUNTS')">连接账号</button>
-    </p>
+    <div v-else-if="state!=='ready'" class="bc-inbox-state" data-test="w46-contact-waiting">
+     <p>{{state==='unavailable'?'对话列表暂时无法加载':'暂无会话'}}</p>
+     <button v-if="state==='unavailable'" type="button" @click="refresh">重试</button>
+    </div>
     <template v-else>
      <template v-if="pinned.length">
       <button type="button" class="bc-group-title" :aria-expanded="pinnedExpanded" @click="pinnedExpanded=!pinnedExpanded">置顶 <span>{{pinnedExpanded?'⌄':'›'}}</span></button>
       <template v-if="pinnedExpanded">
-       <button v-for="c in pinned" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-        <span class="bc-contact-avatar" aria-hidden="true">{{c.displayName.slice(0,1)}}</span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
+       <ContextMenu v-for="c in pinned" :key="c.contactRef"><ContextMenuTrigger as-child><button type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
+        <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
         <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
-       </button>
+       </button></ContextMenuTrigger>
+       <ContextMenuContent class="w09-native-context-menu w09-pro-contact-menu" data-test="w09-contact-context-menu">
+        <ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16" aria-hidden="true"/>查看联系人资料</ContextMenuItem>
+        <ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16" aria-hidden="true"/>搜索聊天记录</ContextMenuItem>
+        <ContextMenuSeparator/>
+        <ContextMenuItem data-test="context-contact-brain" @select="openBrainWorkspace"><BrainCircuit :size="16" aria-hidden="true"/>打开闺蜜大脑</ContextMenuItem>
+        <ContextMenuSeparator/>
+        <ContextMenuSub>
+         <ContextMenuSubTrigger><MoreHorizontal :size="16" aria-hidden="true"/>更多操作</ContextMenuSubTrigger>
+         <ContextMenuSubContent class="w09-native-context-menu">
+          <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')"><Copy :size="16" aria-hidden="true"/>复制联系人姓名</ContextMenuItem>
+          <ContextMenuItem @select="filterToContact(c)"><Filter :size="16" aria-hidden="true"/>筛选该联系人</ContextMenuItem>
+         </ContextMenuSubContent>
+        </ContextMenuSub>
+       </ContextMenuContent>
+      </ContextMenu>
       </template>
      </template>
-     <button v-for="c in regular" :key="c.contactRef" type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" @click="chooseContact(c)">
-      <span class="bc-contact-avatar" aria-hidden="true">{{c.displayName.slice(0,1)}}</span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.channel}} · {{c.accountRef}}</small></span>
-      <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
-     </button>
-     <p v-if="!filtered.length" class="bc-inbox-state">没有匹配的当前授权联系人</p>
+     <ContextMenu v-for="c in regular" :key="c.contactRef"><ContextMenuTrigger as-child><button type="button" class="bc-real-contact" :class="{selected:chosen?.contactRef===c.contactRef}" :data-contact-ref="c.contactRef" :aria-label="c.displayName+' · '+channelTooltip(c)" @click="chooseContact(c)">
+      <span class="bc-contact-avatar-wrap" :title="channelTooltip(c)" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="c.avatarUrl" :src="c.avatarUrl" loading="lazy" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{c.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(c.channel)" class="bc-native-channel-badge" data-test="w46-contact-channel" :src="channelBrandIcon(c.channel)" alt=""/></span><span class="bc-contact-body"><strong>{{c.displayName}}</strong><small>{{c.lastMessage || '暂无消息'}}</small></span>
+        <span v-if="c.unreadAuthorized===true&&c.unread>0" class="bc-badge">{{c.unread}}</span>
+     </button></ContextMenuTrigger>
+     <ContextMenuContent class="w09-native-context-menu w09-pro-contact-menu" data-test="w09-contact-context-menu">
+      <ContextMenuItem data-test="context-contact-details" @select="showContactDetail(c)"><UserRound :size="16" aria-hidden="true"/>查看联系人资料</ContextMenuItem>
+      <ContextMenuItem data-test="context-contact-search" @select="searchLoadedConversation(c)"><Search :size="16" aria-hidden="true"/>搜索聊天记录</ContextMenuItem>
+      <ContextMenuSeparator/>
+      <ContextMenuItem data-test="context-contact-brain" @select="openBrainWorkspace"><BrainCircuit :size="16" aria-hidden="true"/>打开闺蜜大脑</ContextMenuItem>
+      <ContextMenuSeparator/>
+      <ContextMenuSub>
+       <ContextMenuSubTrigger><MoreHorizontal :size="16" aria-hidden="true"/>更多操作</ContextMenuSubTrigger>
+       <ContextMenuSubContent class="w09-native-context-menu">
+        <ContextMenuItem @select="copyAuthorizedText(c.displayName,'联系人姓名')"><Copy :size="16" aria-hidden="true"/>复制联系人姓名</ContextMenuItem>
+        <ContextMenuItem @select="filterToContact(c)"><Filter :size="16" aria-hidden="true"/>筛选该联系人</ContextMenuItem>
+       </ContextMenuSubContent>
+      </ContextMenuSub>
+     </ContextMenuContent>
+     </ContextMenu>
+     <p v-if="!filtered.length" class="bc-inbox-state" data-test="w46-filter-empty">{{channelStatusMessage||'没有匹配的当前授权联系人'}}</p>
     </template>
    </div>
-   <footer class="bc-inbox-footer"><span>{{state==='ready'?'已核验账号 '+accounts+' · 联系人 '+contacts.length:'等待真实授权'}}</span>
+   <footer class="bc-inbox-footer"><span>{{state==='ready'?(filterActive?filtered.length+' / '+contacts.length+' 个联系人':contacts.length+' 个联系人'):state==='unavailable'?'连接异常':'尚无对话'}}</span>
     <button type="button" :disabled="state==='checking'" @click="refresh">刷新</button>
    </footer>
   </aside>
-  <div class="bc-real-conversation" data-test="w46-live-timeline">
+  <div class="bc-real-conversation" :class="{'is-empty-chat':!selected}" data-test="w46-live-timeline">
    <template v-if="selected">
     <header class="bc-chat-heading">
      <button type="button" class="bc-mobile-back" data-test="w46-mobile-back" @click="backToContacts">‹ 返回</button>
-     <span class="bc-contact-avatar" aria-hidden="true">{{selected.displayName.slice(0,1)}}</span>
-     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong><small>{{selected.channel}} · 绑定修订 {{selected.bindingRevision}}</small></div>
-     <button type="button" :disabled="timelineState==='checking'" aria-label="从原生服务刷新消息" @click="chooseContact(selected)">刷新消息</button>
+     <span class="bc-contact-avatar-wrap bc-header-avatar" aria-hidden="true"><span class="bc-contact-avatar"><img v-if="selected.avatarUrl" :src="selected.avatarUrl" decoding="async" alt="" @error="e=>e.target.style.display='none'"/><span>{{selected.displayName.slice(0,1)}}</span></span><img v-if="channelBrandIcon(selected.channel)" class="bc-native-channel-badge" :src="channelBrandIcon(selected.channel)" alt=""/></span>
+     <div class="bc-chat-title"><strong>{{selected.displayName}}</strong></div>
+     <button type="button" :disabled="timelineState==='checking'" aria-label="刷新消息" title="刷新消息" @click="chooseContact(selected)">⟳</button>
     </header>
-    <p v-if="timelineState==='checking'" class="bc-inbox-state">正在读取有来源的聊天记录…</p>
+    <p v-if="timelineState==='checking'" class="bc-inbox-state">正在加载消息…</p>
     <p v-if="timelineState==='blocked'" role="alert" data-test="w46-messages-error" class="bc-inbox-state">{{timelineError}}</p>
     <div class="bc-real-timeline" data-test="w46-message-scroll">
-     <p v-if="timelineState==='ready'&&!timeline.length" class="bc-inbox-state">该联系人暂无已核验的消息</p>
-     <div v-for="m in timeline" :key="m.mid" class="bc-real-message" :data-mid="m.mid">
+     <p v-if="timelineState==='ready'&&!timeline.length" class="bc-inbox-state">还没有消息</p>
+     <div v-for="m in timeline" :key="m.mid" class="bc-real-message" :class="{'bc-real-message-highlight':highlightMid===m.mid}" :data-mid="m.mid" :data-direction="m.direction">
+      <ContextMenu><ContextMenuTrigger as-child><div class="bc-native-message-context" tabindex="0" :aria-label="'消息操作：'+(hasDisplayableText(m)?m.original.slice(0,80):'非文本消息')">
       <Message :align="m.direction==='OUTBOUND'?'end':'start'">
        <Bubble :align="m.direction==='OUTBOUND'?'end':'start'" variant="default">
-        <BubbleContent><p>{{m.original}}</p><p v-if="m.zh" class="bc-translation">{{m.zh}}</p></BubbleContent>
+        <BubbleContent><div class="bc-message-text" :class="{'is-outgoing':m.direction==='OUTBOUND','is-nontext':!hasDisplayableText(m)}"><p v-if="hasDisplayableText(m)">{{m.original}}</p><div v-else class="bc-nontext-placeholder" data-test="w09-nontext-placeholder" role="note"><span class="bc-nontext-symbol" aria-hidden="true">◇</span><span class="bc-nontext-copy"><strong>这条消息暂无可显示的文字</strong><small>原始消息已保留，内容类型尚未核实</small></span></div><p v-if="m.zh" class="bc-translation">{{m.zh}}</p></div></BubbleContent>
        </Bubble>
       </Message>
-      <div class="bc-message-meta"><small>MID {{m.mid}} · {{m.translationRunId?'翻译Run '+m.translationRunId:'中文译文待核验'}}</small>
-       <button type="button" :disabled="!selected?.identityKey" @click="sourceQuote(m)">引用</button>
+      </div></ContextMenuTrigger>
+      <ContextMenuContent class="w09-native-context-menu w09-pro-message-menu" data-test="w09-message-context-menu">
+       <ContextMenuItem v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" @select="contextQuote(m)"><MessageSquareQuote :size="16" aria-hidden="true"/>引用回复</ContextMenuItem>
+       <ContextMenuSub v-if="hasDisplayableText(m)||m.zh">
+        <ContextMenuSubTrigger><Copy :size="16" aria-hidden="true"/>复制消息</ContextMenuSubTrigger>
+        <ContextMenuSubContent class="w09-native-context-menu">
+         <ContextMenuItem v-if="hasDisplayableText(m)" @select="copyAuthorizedText(m.original,'消息原文')"><Copy :size="16" aria-hidden="true"/>复制原文</ContextMenuItem>
+         <ContextMenuItem v-if="m.zh" @select="copyAuthorizedText(m.zh,'中文译文')"><Copy :size="16" aria-hidden="true"/>复制中文译文</ContextMenuItem>
+        </ContextMenuSubContent>
+       </ContextMenuSub>
+       <ContextMenuSeparator/>
+       <ContextMenuItem @select="searchLoadedConversation(selected)"><Search :size="16" aria-hidden="true"/>搜索当前会话</ContextMenuItem>
+      </ContextMenuContent>
+      </ContextMenu>
+      <div class="w09-bubble-hoverbar" data-test="w09-message-hoverbar">
+       <button v-if="hasDisplayableText(m)" type="button" :aria-label="'复制消息原文'" title="复制" @click="copyAuthorizedText(m.original,'消息原文')"><Copy :size="15"/></button>
+       <button v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" type="button" aria-label="引用回复" title="引用回复" @click="contextQuote(m)"><MessageSquareQuote :size="15"/></button>
+       <Popover :open="openMoreMid===m.mid" @update:open="open=>openMoreMid=open?m.mid:''">
+        <PopoverTrigger as-child><button type="button" aria-label="更多消息操作" title="更多"><MoreHorizontal :size="16"/></button></PopoverTrigger>
+        <PopoverContent class="w09-native-context-menu w09-pro-more" align="start" side="bottom" :side-offset="8" data-test="w09-message-more-menu">
+         <button v-if="!selected?.readOnly&&selected?.identityKey&&selected?.identity" type="button" @click="contextQuote(m);openMoreMid=''"><MessageSquareQuote :size="16" aria-hidden="true"/>引用回复</button>
+         <button v-if="hasDisplayableText(m)" type="button" @click="copyAuthorizedText(m.original,'消息原文');openMoreMid=''"><Copy :size="16" aria-hidden="true"/>复制原文</button>
+         <button v-if="m.zh" type="button" @click="copyAuthorizedText(m.zh,'中文译文');openMoreMid=''"><Copy :size="16" aria-hidden="true"/>复制中文译文</button>
+         <button type="button" @click="openMoreMid='';searchLoadedConversation(selected)"><Search :size="16" aria-hidden="true"/>搜索当前会话</button>
+        </PopoverContent>
+       </Popover>
       </div>
      </div>
     </div>
-    <p v-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">需要W24提供完整的联系人身份K，才能读取消息并启用原CONTACT Composer。</p>
+    <p v-if="selected.readOnly" class="bc-composer-hold" hidden>只读对话</p>
+    <p v-else-if="!selected.identity||!selected.identityKey" class="bc-inbox-state bc-composer-hold">暂时无法发送消息</p>
    </template>
    <div v-else class="bc-real-no-contact" data-test="w46-empty-chat">
-    <div aria-hidden="true" class="bc-empty-glow">✦</div><h2>选择联系人开始聊天</h2>
-    <p>当前没有已选择的真实联系人，聊天、译文及草稿仅从你授权的账号读取。</p>
-    <button type="button" @click="navigate('ACCOUNTS')">连接聊天账号</button>
+    <div aria-hidden="true" class="bc-empty-glow">✦</div>
+    <h2>{{state==='ready'?'选择对话开始聊天':state==='unavailable'?'暂时无法加载聊天':'开始聊天'}}</h2>
+    <p>{{state==='ready'?'从左侧选择联系人，继续聊天。':state==='unavailable'?'聊天服务暂时无法连接，请重试。':'连接你的聊天账号，联系人和消息会出现在这里。'}}</p>
+    <button v-if="state!=='ready'" type="button" @click="state==='unavailable'?refresh():navigate('ACCOUNTS')">{{state==='unavailable'?'重新连接':'连接聊天账号'}}</button>
    </div>
    <!-- One always-mounted original CONTACT Composer. Null K must leave input
         and expert/media operations disabled, not create a second renderer. -->
    <BCNativeComposer ref="composerRef" :fetch-impl="fetchImpl" :media-authority-port="mediaAuthorityPort" :identity="selected?.identityKey&&selected?.identity?selected.identity:null"
-    :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"/>
+    :native-message="lastNativeMessage" :source-mid="newestInbound?.mid||''" :takeover-port="trustedTakeoverPort"
+    :native-messenger-room="selected?.contactRef?.startsWith('FB_ROOM|')?selected.contactRef.slice(8):pageManualTarget" :native-messenger-send-port="selected?.readOnlyPreview?manualPageSendPort:manualMessengerSendPort"
+    @manual-sent="onManualMessengerSent" @navigate="navigate"/>
   </div>
  </section>
 </template>
@@ -210,22 +685,23 @@ onBeforeUnmount(()=>{window.removeEventListener('keydown',onKeyDown);mounted=fal
 .bc-search-capsule:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(var(--accent-rgb),.17),inset 0 1px 0 rgba(255,255,255,.08)}
 .bc-search-capsule span{font-size:21px;color:var(--accent)}.bc-search-capsule input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:12px}.bc-search-capsule input::placeholder{color:var(--muted)}.bc-search-capsule kbd{white-space:nowrap;font-size:9px;color:var(--muted)}
 .bc-unread-toggle{height:38px;min-width:47px;padding:0 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--ink);cursor:pointer}.bc-unread-toggle[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}.bc-unread-toggle:disabled{opacity:.65;cursor:not-allowed}
+.bc-filter-applied{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 10px;margin:0;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);background:var(--surface-soft);min-width:0}.bc-filter-applied span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bc-filter-applied button{flex:none;border:0;background:transparent;color:var(--accent);font:inherit;cursor:pointer}.bc-channel-mark{flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;min-width:24px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;background:var(--surface-soft);color:var(--muted)}
 .bc-inbox-list-scroll{min-height:0;flex:1 1 auto;overflow:auto;scrollbar-width:thin;overscroll-behavior:contain}
 .bc-real-contact{position:relative;min-height:68px;width:100%;display:flex;align-items:center;gap:10px;text-align:left;border:0;border-left:2px solid transparent;border-bottom:1px solid var(--border);background:transparent;color:var(--ink);padding:10px 11px;cursor:pointer;transition:background .14s,box-shadow .14s}
 .bc-real-contact:hover{background:var(--surface-soft)}.bc-real-contact.selected{border-left-color:var(--accent);background:linear-gradient(96deg,rgba(var(--accent-rgb),.15),rgba(var(--accent-rgb),.025) 80%);box-shadow:inset 2px 0 0 rgba(var(--accent-rgb),.55)}
-.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
+.bc-contact-avatar-wrap{width:40px;height:40px;flex:none;display:block;position:relative;isolation:isolate}.bc-native-channel-badge{position:absolute;right:-4px;bottom:-4px;width:17px;height:17px;border-radius:50%;object-fit:contain;z-index:2;background:var(--bg2);border:2px solid var(--bg2);box-sizing:content-box}.bc-chat-heading .bc-header-avatar{margin-right:1px}.bc-contact-avatar{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;border-radius:14px;background:var(--surface-raised);color:var(--accent);border:1px solid var(--border);font-weight:700;position:relative;overflow:hidden}.bc-contact-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}.bc-contact-body{display:grid;gap:5px;min-width:0;flex:1}.bc-contact-body strong,.bc-contact-body small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.bc-contact-body small{font-size:11px;color:var(--muted)}.bc-badge{padding:2px 6px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700}
 .bc-group-title{width:100%;padding:9px 13px;text-align:left;color:var(--muted);border:0;background:var(--surface-soft);cursor:pointer}.bc-group-title span{float:right}
 .bc-action-popover{position:absolute;right:10px;top:54px;width:min(285px,calc(100% - 20px));z-index:30;display:grid;gap:9px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised);box-shadow:0 14px 40px #0006}
 .bc-action-popover button,.bc-action-popover select{min-height:35px;text-align:left;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:9px;padding:8px}
 .bc-action-popover button:disabled{opacity:.58}.bc-action-popover label{display:grid;gap:5px}.bc-action-popover small{line-height:1.5;color:var(--muted)}
-.bc-inbox-state{padding:14px;color:var(--muted);font-size:12px;line-height:1.6}.bc-inbox-state button,.bc-real-no-contact button{display:block;margin-top:10px;padding:9px 14px;border:1px solid var(--accent);border-radius:10px;background:rgba(var(--accent-rgb),.13);color:var(--ink);cursor:pointer}
+.bc-inbox-state{padding:14px;color:var(--muted);font-size:13px;line-height:1.6}.bc-inbox-state p{margin:0}.bc-inbox-state button,.bc-real-no-contact button{display:block;margin-top:10px;padding:9px 14px;border:1px solid var(--accent);border-radius:10px;background:rgba(var(--accent-rgb),.13);color:var(--ink);cursor:pointer}
 .bc-inbox-footer{min-height:32px;display:flex;justify-content:space-between;align-items:center;padding:6px 12px;gap:6px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}.bc-inbox-footer button{border:0;background:transparent;color:var(--accent);cursor:pointer}
 .bc-real-conversation{min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
 .bc-chat-heading{display:flex;align-items:center;gap:11px;padding:10px 14px;min-height:57px;border-bottom:1px solid var(--border);background:var(--bg2)}.bc-chat-title{display:grid;gap:4px;min-width:0;flex:1}.bc-chat-title strong,.bc-chat-title small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bc-chat-title small{color:var(--muted);font-size:11px}.bc-chat-heading button{border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--ink);padding:8px;cursor:pointer}
-.bc-real-timeline{min-height:0;flex:1 1 auto;overflow-y:auto;padding:18px;overscroll-behavior:contain}.bc-real-message{max-width:100%;margin-bottom:14px}.bc-real-message p{white-space:pre-wrap;overflow-wrap:anywhere}.bc-translation{color:var(--accent)}.bc-message-meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:11px}.bc-message-meta button{padding:2px 7px;border:0;background:none;color:var(--accent);cursor:pointer}.bc-message-meta button:disabled{opacity:.45}
-.bc-real-no-contact{flex:1;min-height:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:20px;text-align:center}.bc-empty-glow{font-size:40px;color:var(--accent);text-shadow:0 0 30px rgba(var(--accent-rgb),.6)}.bc-real-no-contact h2{font-size:20px;margin:0}.bc-real-no-contact p{font-size:12px;color:var(--muted);max-width:390px;margin:0}
+.bc-real-timeline{min-height:0;flex:1 1 auto;display:flex;flex-direction:column;overflow-y:auto;padding:18px;overscroll-behavior:contain}.bc-real-timeline .bc-real-message:first-of-type{margin-top:0}.bc-real-message{max-width:100%;margin-bottom:14px}.bc-real-message p{white-space:pre-wrap;overflow-wrap:anywhere}.bc-message-text{display:inline-block;max-width:min(72ch,100%);padding:9px 13px;border-radius:14px 14px 14px 5px;background:var(--surface-raised,var(--surface));color:var(--ink);font-size:14px;line-height:1.55;box-shadow:0 1px 3px rgba(0,0,0,.07)}.bc-message-text.is-outgoing{border-radius:14px 14px 5px 14px;background:rgba(var(--accent-rgb),.15)}.bc-message-text p{margin:0}.bc-message-text .bc-translation{margin-top:5px;font-size:12px}.bc-translation{color:var(--accent)}.bc-message-meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:11px}.bc-message-meta button{padding:2px 7px;border:0;background:none;color:var(--accent);cursor:pointer}.bc-message-meta button:disabled{opacity:.45}
+.bc-real-no-contact{flex:1;min-height:0;display:grid;align-content:center;justify-items:center;gap:12px;padding:20px;text-align:center}.bc-empty-glow{font-size:40px;color:var(--accent);text-shadow:0 0 30px rgba(var(--accent-rgb),.6)}.bc-real-no-contact h2{font-size:20px;margin:0}.bc-real-no-contact p{font-size:14px;line-height:1.65;color:var(--muted);max-width:390px;margin:0}
 .bc-mobile-back{display:none}
-:deep(.bc-native-composer){flex:0 0 auto}
+:deep(.bc-native-composer){flex:0 0 auto}.bc-real-conversation.is-empty-chat :deep(.bc-native-composer){display:none}
 @media(min-width:720px) and (max-width:1099px){.bc-real-chat{grid-template-columns:260px minmax(0,1fr)}.bc-search-capsule kbd{display:none}}
 @media(max-width:719px){.bc-real-chat{display:block;position:relative}.bc-real-list,.bc-real-conversation{width:100%;height:100%}.bc-real-conversation{display:none}.bc-real-chat.mobile-conversation .bc-real-list{display:none}.bc-real-chat.mobile-conversation .bc-real-conversation{display:flex}.bc-mobile-back{display:block!important;min-height:44px}.bc-tools-row{height:43px}.bc-sidebar-tools{min-height:107px}.bc-round-action{height:44px;min-width:44px}.bc-unread-toggle{height:44px}.bc-search-capsule{height:42px}.bc-real-contact{min-height:70px}}
 @media(prefers-reduced-motion:reduce){.bc-real-contact,.bc-search-capsule{transition:none!important}}

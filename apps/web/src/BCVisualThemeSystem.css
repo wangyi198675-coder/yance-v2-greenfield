@@ -1,0 +1,614 @@
+/*
+ * YANCE WOW THEME / WEB-FIRST 2026-10-28
+ * Original interactive primitives remain the audited MIT shadcn-vue / Reka UI
+ * components. Decorative aurora effect adapted from MIT Inspira UI AuroraBackground.
+ * Attribution and complete MIT notice: apps/web/evidence/INSPIRA_UI_AURORA_LICENSE.md
+ * All rules scoped to the existing .w46-product-candidate; no replacement UI engine.
+ */
+.shell .w46-product-candidate {
+  --wow-one:202,255,99;
+  --wow-two:76,212,180;
+  --wow-three:95,170,255;
+  --wow-glass:rgba(18,26,28,.88);
+  --wow-stroke:rgba(202,255,99,.24);
+  --wow-drop:0 18px 48px rgba(3,13,12,.27);
+  --wow-title-weight:760;
+  --wow-blur:18px;
+  position:relative;
+  isolation:isolate;
+  background:radial-gradient(ellipse 75% 49% at 80% 0%,rgba(var(--wow-two),.09),transparent 65%),var(--bg)!important;
+  color:var(--ink);
+}
+.shell[data-theme="1"] .w46-product-candidate {
+ --wow-one:255,160,113;--wow-two:250,72,174;--wow-three:139,101,255;
+ --wow-glass:rgba(34,22,48,.87);--wow-stroke:rgba(255,160,113,.30);
+ --wow-drop:0 20px 48px rgba(51,10,51,.3);
+}
+.shell[data-theme="2"] .w46-product-candidate {
+ --wow-one:98,216,242;--wow-two:24,119,255;--wow-three:48,247,211;
+ --wow-glass:rgba(11,31,49,.87);--wow-stroke:rgba(98,216,242,.30);
+ --wow-drop:0 20px 48px rgba(0,30,65,.32);
+}
+.shell[data-theme="3"] .w46-product-candidate {
+ --wow-one:255,192,101;--wow-two:245,117,56;--wow-three:255,217,133;
+ --wow-glass:rgba(45,29,23,.87);--wow-stroke:rgba(255,192,101,.30);
+ --wow-drop:0 20px 48px rgba(54,23,8,.31);
+}
+.shell[data-theme="4"] .w46-product-candidate {
+ --wow-one:206,185,255;--wow-two:247,125,205;--wow-three:103,220,255;
+ --wow-glass:rgba(31,31,61,.88);--wow-stroke:rgba(206,185,255,.30);
+ --wow-drop:0 20px 48px rgba(26,17,71,.35);
+}
+.shell[data-mode="light"] .w46-product-candidate {
+ --wow-glass:rgba(255,255,255,.91);
+ --wow-drop:0 16px 42px rgba(20,37,49,.12);
+}
+
+/* MIT Inspira UI AuroraBackground adaptation: animated repeating aurora,
+   dark/white gradient mask, radial wash and blurred oversized layer. */
+.w46-product-candidate>.bc-wow-aurora {
+ position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+ contain:layout paint;opacity:.95;
+}
+.bc-wow-aurora__wash {
+ position:absolute;inset:-18% -12%;
+ background:
+  radial-gradient(ellipse 34% 36% at 92% 8%,rgba(var(--wow-one),.37),transparent 79%),
+  radial-gradient(ellipse 42% 34% at 25% 42%,rgba(var(--wow-two),.2),transparent 70%),
+  radial-gradient(ellipse 36% 46% at 80% 90%,rgba(var(--wow-three),.22),transparent 78%);
+ filter:blur(35px);animation:bc-wow-breathe 18s ease-in-out infinite alternate;
+}
+.bc-wow-aurora__rays {
+ --wow-aurora:repeating-linear-gradient(100deg,
+  rgba(var(--wow-one),.36) 10%,rgba(var(--wow-three),.45) 15%,
+  rgba(var(--wow-two),.32) 20%,rgba(var(--wow-one),.4) 25%,rgba(var(--wow-three),.32) 30%);
+ --wow-stripes:repeating-linear-gradient(100deg,
+  transparent 0%,rgba(0,0,0,.62) 7%,transparent 10%,transparent 12%,rgba(0,0,0,.67) 16%);
+ position:absolute;inset:-25% -40%;transform:translateZ(0);
+ background-image:var(--wow-stripes),var(--wow-aurora);
+ background-size:300% 200%;background-position:50% 50%;
+ opacity:.3;filter:blur(17px);
+ mask-image:radial-gradient(ellipse at 89% 0%,black 7%,transparent 77%);
+ animation:bc-wow-aurora-shift 55s linear infinite alternate;
+}
+.bc-wow-aurora__orbit {
+ position:absolute;aspect-ratio:1/1;border-radius:50%;pointer-events:none;
+ border:1px solid rgba(var(--wow-one),.12);
+ box-shadow:0 0 28px rgba(var(--wow-one),.13),inset 0 0 28px rgba(var(--wow-two),.07);
+}
+.bc-wow-aurora__orbit--one{width:440px;right:-195px;top:-240px;transform:rotate(-21deg)}
+.bc-wow-aurora__orbit--two{width:320px;left:-240px;bottom:-170px;opacity:.5}
+.bc-wow-aurora__grain{
+ position:absolute;inset:0;
+ background-image:linear-gradient(135deg,rgba(var(--wow-one),.06) 1px,transparent 1px);
+ background-size:36px 36px;
+ mask-image:linear-gradient(to bottom,black 0%,transparent 55%);
+ opacity:.35;
+}
+@keyframes bc-wow-breathe{from{transform:translate3d(-2%,0,0) scale(1);opacity:.7}to{transform:translate3d(2%,-3%,0) scale(1.08);opacity:1}}
+@keyframes bc-wow-aurora-shift{from{background-position:4% 40%,55% 0%}to{background-position:95% 65%,10% 20%}}
+@keyframes bc-wow-pulse{0%,100%{box-shadow:0 0 18px rgba(var(--wow-one),.22)}50%{box-shadow:0 0 30px rgba(var(--wow-one),.38)}}
+
+/* Shell/header — keep original compact height, navigation, focus and click zones. */
+.w46-product-candidate>.w46-compact-global,
+.w46-product-candidate>.w46-compact-status,
+.w46-product-candidate>.w46-candidate-content {
+ position:relative;z-index:1;
+}
+.w46-product-candidate .w46-compact-global{
+ background:linear-gradient(108deg,rgba(var(--wow-one),.12),rgba(var(--wow-two),.045) 34%,rgba(var(--wow-three),.105) 85%),var(--wow-glass)!important;
+ border-bottom:1px solid var(--wow-stroke)!important;
+ box-shadow:0 1px 0 rgba(255,255,255,.045),0 9px 25px rgba(0,0,0,.10);
+ backdrop-filter:blur(var(--wow-blur)) saturate(142%);
+ -webkit-backdrop-filter:blur(var(--wow-blur)) saturate(142%);
+}
+.w46-product-candidate .w46-brand-glyph{
+ background:linear-gradient(145deg,rgb(var(--wow-one)),rgba(var(--wow-two),.86))!important;
+ box-shadow:0 0 0 1px rgba(255,255,255,.24),0 3px 19px rgba(var(--wow-one),.35)!important;
+ transform:rotate(-7deg);border-radius:11px!important;
+}
+.w46-product-candidate .w46-compact-brand strong{font-weight:800;letter-spacing:-.05em}
+.w46-product-candidate .w46-main-links{gap:4px}
+.w46-product-candidate .w46-main-links button{
+ border:1px solid transparent!important;position:relative;
+ transition:background .2s ease,box-shadow .2s ease,transform .2s ease,border-color .2s ease;
+}
+.w46-product-candidate .w46-main-links button:hover:not(:disabled) {
+ background:rgba(var(--wow-one),.10)!important;border-color:rgba(var(--wow-one),.24)!important;
+ transform:translateY(-1px);
+}
+.w46-product-candidate .w46-main-links button[data-test^="workspace-"][data-state="active"],
+.w46-product-candidate .w46-main-links button.cn-button-variant-secondary {
+ background:linear-gradient(135deg,rgba(var(--wow-one),.21),rgba(var(--wow-two),.09))!important;
+ border:1px solid rgba(var(--wow-one),.32)!important;
+ color:var(--ink)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 5px 20px rgba(var(--wow-one),.09);
+}
+.w46-product-candidate .w46-global-tools button:hover:not(:disabled){
+ color:var(--accent)!important;background:rgba(var(--wow-one),.13)!important;
+ box-shadow:0 0 17px rgba(var(--wow-one),.10);
+}
+.w46-product-candidate .w46-workspace-menu {
+ border:1px solid var(--wow-stroke)!important;
+ background:var(--wow-glass)!important;
+ backdrop-filter:blur(22px);box-shadow:var(--wow-drop)!important;
+}
+
+/* Full application context: luminous borders, layered cards and controlled depth. */
+.w46-product-candidate .w46-candidate-content{
+ background:radial-gradient(ellipse at 80% 13%,rgba(var(--wow-one),.07),transparent 55%)!important;
+}
+.w46-product-candidate .bc-real-chat{
+ border-color:rgba(var(--wow-one),.16)!important;
+ border-radius:0!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.w46-product-candidate .bc-real-list{
+ background:linear-gradient(169deg,rgba(var(--wow-one),.055),transparent 36%),var(--bg2)!important;
+ border-right:1px solid var(--wow-stroke)!important;
+}
+.w46-product-candidate .bc-sidebar-tools{
+ background:linear-gradient(125deg,rgba(var(--wow-one),.075),rgba(var(--wow-three),.035))!important;
+ border-bottom-color:var(--wow-stroke)!important;
+}
+.w46-product-candidate .bc-inbox-heading strong{
+ font-weight:750;letter-spacing:-.04em;
+ background:linear-gradient(115deg,var(--ink) 8%,rgb(var(--wow-one)) 110%);
+ background-clip:text;-webkit-background-clip:text;color:transparent;
+}
+.w46-product-candidate .bc-search-capsule{
+ border-color:rgba(var(--wow-one),.33)!important;
+ background:linear-gradient(115deg,rgba(var(--wow-one),.11),rgba(var(--wow-three),.055)),var(--surface)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 23px rgba(var(--wow-one),.055);
+}
+.w46-product-candidate .bc-search-capsule:focus-within{
+ box-shadow:0 0 0 3px rgba(var(--wow-one),.19),0 0 24px rgba(var(--wow-one),.14)!important;
+}
+.w46-product-candidate .bc-real-contact {
+ border-bottom-color:rgba(var(--wow-one),.09)!important;
+ transition:background .22s ease,box-shadow .22s ease,transform .18s ease!important;
+}
+.w46-product-candidate .bc-real-contact:hover:not(:disabled){
+ background:linear-gradient(105deg,rgba(var(--wow-one),.12),rgba(var(--wow-three),.045))!important;
+}
+.w46-product-candidate .bc-real-contact.selected{
+ background:linear-gradient(105deg,rgba(var(--wow-one),.21),rgba(var(--wow-two),.12) 53%,transparent)!important;
+ box-shadow:inset 3px 0 0 rgb(var(--wow-one)),0 4px 19px rgba(var(--wow-one),.05)!important;
+}
+.w46-product-candidate .bc-contact-avatar{
+ background:linear-gradient(145deg,rgba(var(--wow-one),.16),rgba(var(--wow-three),.17)),var(--surface)!important;
+ border:1px solid rgba(var(--wow-one),.25)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.1);
+}
+.w46-product-candidate .bc-badge{
+ box-shadow:0 0 15px rgba(var(--wow-one),.23);
+}
+.w46-product-candidate .bc-real-conversation{
+ background:radial-gradient(ellipse at 78% 16%,rgba(var(--wow-three),.075),transparent 48%),
+ radial-gradient(ellipse at 15% 83%,rgba(var(--wow-one),.055),transparent 45%),var(--bg)!important;
+}
+.w46-product-candidate .bc-chat-heading,
+.w46-product-candidate .bc-private-brain-head{
+ background:linear-gradient(105deg,rgba(var(--wow-one),.095),rgba(var(--wow-three),.055)),var(--bg2)!important;
+ border-bottom:1px solid var(--wow-stroke)!important;
+ backdrop-filter:blur(14px);
+}
+.w46-product-candidate .bc-real-timeline{
+ background-image:radial-gradient(circle,rgba(var(--wow-one),.10) .65px,transparent .8px);
+ background-size:29px 29px;
+ background-position:15px 12px;
+ /* Gradient is decorative only; never mask real message content. */
+}
+.w46-product-candidate .bc-real-message{
+ filter:drop-shadow(0 3px 6px rgba(0,0,0,.05));
+}
+.w46-product-candidate .bc-translation{font-weight:600;text-shadow:0 0 12px rgba(var(--wow-one),.075)}
+.w46-product-candidate .bc-real-no-contact .bc-empty-glow{
+ background:radial-gradient(circle,rgba(var(--wow-one),.24),rgba(var(--wow-three),.06) 57%,transparent 73%);
+ height:120px;width:120px;border-radius:36px;display:grid;place-items:center;
+ font-size:47px;animation:bc-wow-pulse 7s ease-in-out infinite;
+ border:1px solid var(--wow-stroke);
+}
+.w46-product-candidate .bc-real-no-contact h2{
+ font-size:clamp(18px,2.2vw,26px)!important;letter-spacing:-.035em;
+}
+.w46-product-candidate .bc-real-no-contact p{font-size:12px;line-height:1.7}
+
+/* Compose area: luminous glass, soft hover surface, retain disabled/consent states. */
+.w46-product-candidate .bc-native-composer {
+ background:linear-gradient(130deg,rgba(var(--wow-one),.085),rgba(var(--wow-three),.03)),var(--bg2)!important;
+ border-top:1px solid var(--wow-stroke)!important;
+}
+.w46-product-candidate .bc-native-composer textarea {
+ border-color:rgba(var(--wow-one),.21)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.055);
+}
+.w46-product-candidate .bc-native-composer textarea:focus {
+ border-color:var(--accent)!important;
+ box-shadow:0 0 0 3px rgba(var(--wow-one),.12),0 0 22px rgba(var(--wow-one),.065)!important;
+}
+.w46-product-candidate .bc-native-composer button:not(:disabled):hover {
+ filter:brightness(1.075);
+}
+
+/* One Agno Brain — shimmering header and grounded native run/history. */
+.w46-product-candidate .bc-private-brain {
+ background:radial-gradient(ellipse at 75% 15%,rgba(var(--wow-three),.085),transparent 55%),var(--bg)!important;
+}
+.w46-product-candidate .bc-private-brain-heading strong{
+ background:linear-gradient(100deg,var(--ink) 10%,rgb(var(--wow-one)) 130%);
+ background-clip:text;-webkit-background-clip:text;color:transparent;
+ font-weight:750;letter-spacing:-.03em;
+}
+.w46-product-candidate .bc-private-settings,
+.w46-product-candidate .bc-provider,
+.w46-product-candidate .bc-brain-trace {
+ border-color:rgba(var(--wow-one),.23)!important;
+ background:linear-gradient(127deg,rgba(var(--wow-one),.065),rgba(var(--wow-three),.045)),var(--surface)!important;
+}
+.w46-product-candidate .bc-private-history article {
+ border-color:rgba(var(--wow-one),.2)!important;
+ background:linear-gradient(140deg,rgba(var(--wow-three),.055),transparent),var(--surface)!important;
+ box-shadow:0 9px 28px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.055)!important;
+}
+.w46-product-candidate .bc-private-history article[data-role="user"]{
+ background:linear-gradient(126deg,rgba(var(--wow-one),.21),rgba(var(--wow-two),.10)),var(--bg2)!important;
+}
+.w46-product-candidate .bc-private-compose{
+ border:1px solid rgba(var(--wow-one),.40)!important;
+ background:linear-gradient(140deg,rgba(var(--wow-one),.085),rgba(var(--wow-three),.055)),var(--surface)!important;
+ box-shadow:0 0 0 1px rgba(var(--wow-one),.075),0 9px 32px rgba(var(--wow-one),.105)!important;
+}
+
+/* Settings, Themes, Media and all eight supporting workspaces. */
+.w46-product-candidate .bc-settings-workspace {
+ background:radial-gradient(ellipse at 90% 10%,rgba(var(--wow-two),.1),transparent 55%);
+}
+.w46-product-candidate .bc-settings-nav{
+ background:linear-gradient(165deg,rgba(var(--wow-one),.065),rgba(var(--wow-three),.03)),var(--bg2)!important;
+ border-color:var(--wow-stroke)!important;
+ box-shadow:var(--wow-drop);
+}
+.w46-product-candidate .bc-settings-nav button[aria-pressed="true"]{
+ border:1px solid rgba(var(--wow-one),.6)!important;
+ background:linear-gradient(105deg,rgba(var(--wow-one),.21),rgba(var(--wow-two),.08)),var(--surface)!important;
+ box-shadow:inset 3px 0 0 var(--accent),0 4px 17px rgba(var(--wow-one),.12)!important;
+}
+.w46-product-candidate .bc-settings-nav button:not(:disabled):hover,
+.w46-product-candidate .bc-settings-detail button:not(:disabled):hover{
+ border-color:rgba(var(--wow-one),.53);
+}
+.w46-product-candidate .bc-settings-detail,
+.w46-product-candidate .bc-media-pane,
+.w46-product-candidate .w46-r4-feature-card,
+.w46-product-candidate .w46-persona-panel,
+.w46-product-candidate .w46-native-panel {
+ border:1px solid var(--wow-stroke)!important;
+ background:linear-gradient(145deg,rgba(var(--wow-one),.055),transparent 33%,rgba(var(--wow-three),.025)),var(--bg2)!important;
+ box-shadow:var(--wow-drop);
+ border-radius:18px!important;
+}
+.w46-product-candidate .bc-settings-detail {
+ min-height:min(550px,calc(100vh - 155px));
+}
+.w46-product-candidate .theme-hero {
+ border-color:rgba(var(--wow-one),.39)!important;
+ background:linear-gradient(116deg,rgba(var(--wow-one),.19),rgba(var(--wow-two),.08) 55%,rgba(var(--wow-three),.075)),var(--surface-soft)!important;
+ box-shadow:0 8px 37px rgba(var(--wow-one),.085),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.w46-product-candidate .theme-card{
+ border-color:rgba(var(--wow-one),.27)!important;
+ box-shadow:0 8px 21px rgba(0,0,0,.10);
+}
+.w46-product-candidate .theme-card:hover{
+ transform:translateY(-4px) scale(1.012)!important;
+ box-shadow:0 14px 30px rgba(var(--wow-one),.13);
+}
+.w46-product-candidate .theme-card.selected{
+ box-shadow:0 0 0 1px var(--accent),0 0 28px rgba(var(--wow-one),.23)!important;
+}
+.w46-product-candidate .bc-media-preview{
+ background:radial-gradient(circle at 20% 15%,rgba(var(--wow-one),.09),transparent 55%),var(--surface)!important;
+ border-color:rgba(var(--wow-one),.26)!important;
+}
+.w46-product-candidate .w46-r4-feature-toolbar,
+.w46-product-candidate .w46-r4-channel-toolbar{
+ background:linear-gradient(95deg,rgba(var(--wow-one),.12),rgba(var(--wow-three),.045)),var(--bg2)!important;
+ border-bottom:1px solid var(--wow-stroke)!important;
+}
+.w46-product-candidate .w46-r4-feature-card:hover,
+.w46-product-candidate .w46-r4-channel-grid>article:hover{
+ border-color:rgba(var(--wow-one),.48)!important;
+ box-shadow:0 12px 34px rgba(var(--wow-one),.07);
+}
+.w46-product-candidate .w46-r4-feature-tabs button.active{
+ background:linear-gradient(125deg,rgba(var(--wow-one),.23),rgba(var(--wow-two),.09))!important;
+ border:1px solid var(--wow-stroke);
+}
+
+/* Keep native UI keyboard and screen-reader behavior; only add visual feedback. */
+.w46-product-candidate :is(button,input,textarea,select):focus-visible{
+ outline:2px solid var(--accent)!important;outline-offset:2px;
+}
+.w46-product-candidate button:disabled{filter:none!important;box-shadow:none!important}
+.w46-product-candidate button:not(:disabled){
+ transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.w46-product-candidate .bc-settings-workspace,
+.w46-product-candidate .bc-media-workspace,
+.w46-product-candidate .w46-r4-feature-body{
+ scrollbar-color:rgba(var(--wow-one),.31) transparent;
+}
+.shell[data-mode="light"] .w46-product-candidate .bc-wow-aurora{opacity:.59}
+.shell[data-mode="light"] .w46-product-candidate .bc-real-timeline{
+ background-image:radial-gradient(circle,rgba(var(--wow-one),.16) .65px,transparent .8px);
+}
+@media(max-width:719px){
+ .bc-wow-aurora__rays{opacity:.15;filter:blur(20px)}
+ .bc-wow-aurora__orbit--one{width:240px;right:-150px;top:-145px}
+ .w46-product-candidate .bc-settings-detail{min-height:0}
+ .w46-product-candidate .bc-real-no-contact .bc-empty-glow{width:76px;height:76px;font-size:32px;border-radius:25px}
+ .w46-product-candidate .theme-card:hover{transform:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .bc-wow-aurora__wash,.bc-wow-aurora__rays,
+ .w46-product-candidate .bc-real-no-contact .bc-empty-glow{animation:none!important}
+ .w46-product-candidate button,.w46-product-candidate .bc-real-contact,
+ .w46-product-candidate .theme-card{transition:none!important;transform:none!important}
+}
+@media(prefers-contrast:more){
+ .bc-wow-aurora__wash,.bc-wow-aurora__rays,.bc-wow-aurora__grain{opacity:0!important}
+ .w46-product-candidate .bc-settings-detail,
+ .w46-product-candidate .bc-media-pane,
+ .w46-product-candidate .bc-native-composer{background:var(--bg2)!important;border-color:var(--ink)!important}
+}
+
+/* Original W43 PRIVATE model & expert floating controls inherit the exact theme.
+   Improve the pre-existing menu rather than creating another selector. */
+.w46-product-candidate .bc-private-settings,
+.w46-product-candidate .bc-brain-context-menu,
+.w46-product-candidate .bc-brain-trace{
+ border:1px solid rgba(var(--wow-one),.36)!important;
+ border-radius:17px!important;
+ background:linear-gradient(135deg,rgba(var(--wow-one),.07),rgba(var(--wow-three),.07)),var(--surface-raised)!important;
+ box-shadow:0 18px 54px rgba(0,0,0,.32),0 0 26px rgba(var(--wow-one),.07)!important;
+ backdrop-filter:blur(18px) saturate(125%);
+ scrollbar-color:rgba(var(--wow-one),.43) transparent;
+ scrollbar-width:thin;
+}
+.w46-product-candidate .bc-private-settings::-webkit-scrollbar,
+.w46-product-candidate .bc-brain-context-menu::-webkit-scrollbar{width:7px}
+.w46-product-candidate .bc-private-settings::-webkit-scrollbar-thumb,
+.w46-product-candidate .bc-brain-context-menu::-webkit-scrollbar-thumb{
+ background:rgba(var(--wow-one),.35);border-radius:999px;
+}
+.w46-product-candidate .bc-private-settings select,
+.w46-product-candidate .bc-private-settings input{
+ border-color:rgba(var(--wow-one),.30)!important;
+ background:var(--surface)!important;color:var(--ink);
+}
+.w46-product-candidate .bc-brain-context-menu button:not(:disabled):hover{
+ border-color:var(--accent);
+ box-shadow:0 4px 17px rgba(var(--wow-one),.13);
+}
+
+/* 44751 newest verified-only People UI; preserve K/consent and the existing filters. */
+.w46-product-candidate .w46-people{
+ background:radial-gradient(ellipse at 74% 12%,rgba(var(--wow-two),.09),transparent 60%),var(--bg)!important;
+}
+.w46-product-candidate .w46-people-toolbar{
+ background:linear-gradient(112deg,rgba(var(--wow-one),.12),rgba(var(--wow-three),.045)),var(--wow-glass)!important;
+ border-bottom:1px solid var(--wow-stroke)!important;
+ backdrop-filter:blur(16px);
+}
+.w46-product-candidate .w46-people-heading h2{
+ font-weight:760;letter-spacing:-.045em;
+ background:linear-gradient(103deg,var(--ink) 8%,rgb(var(--wow-one)) 112%);
+ background-clip:text;-webkit-background-clip:text;color:transparent;
+}
+.w46-product-candidate .w46-people-search-panel,
+.w46-product-candidate .w46-people-results,
+.w46-product-candidate .w46-people-empty{
+ background:linear-gradient(136deg,rgba(var(--wow-one),.085),rgba(var(--wow-three),.045)),var(--bg2)!important;
+ border:1px solid var(--wow-stroke)!important;
+ border-radius:18px!important;
+ box-shadow:var(--wow-drop);
+}
+.w46-product-candidate .w46-people-search:focus-within{
+ box-shadow:0 0 0 3px rgba(var(--wow-one),.16)!important;
+}
+.w46-product-candidate .w46-people-avatar{
+ background:linear-gradient(135deg,rgba(var(--wow-one),.23),rgba(var(--wow-three),.14))!important;
+ border:1px solid var(--wow-stroke);
+}
+.w46-product-candidate .w46-people-row:hover{
+ background:rgba(var(--wow-one),.07)!important;
+}
+.w46-product-candidate .w46-people-symbol{
+ box-shadow:0 0 0 6px rgba(var(--wow-one),.055),0 0 40px rgba(var(--wow-one),.14);
+ border:1px solid var(--wow-stroke);
+}
+
+/* W09-3 P0: readable native conversations + OSS UI visual upgrade.
+ * Visual primitives remain MIT Inspira UI Aurora, shadcn-vue / Reka UI
+ * Message, Bubble, Dialog, Button, ScrollArea and Popover. */
+.shell .w46-product-candidate {
+ --wow-chat-in:#1d2b2a;--wow-chat-out:#263e35;--wow-chat-ink:#f5fff8;
+ --wow-chat-sub:#dbffa0;--wow-chat-border:rgba(202,255,99,.27);
+ --wow-panel-glow:rgba(202,255,99,.14);
+}
+.shell[data-theme="1"] .w46-product-candidate {
+ --wow-chat-in:#30233c;--wow-chat-out:#503044;--wow-chat-ink:#fff8fa;
+ --wow-chat-sub:#ffca99;--wow-chat-border:rgba(255,160,113,.3);
+ --wow-panel-glow:rgba(250,72,174,.17);
+}
+.shell[data-theme="2"] .w46-product-candidate {
+ --wow-chat-in:#1a3042;--wow-chat-out:#16445a;--wow-chat-ink:#f0faff;
+ --wow-chat-sub:#91efff;--wow-chat-border:rgba(98,216,242,.31);
+ --wow-panel-glow:rgba(24,119,255,.18);
+}
+.shell[data-theme="3"] .w46-product-candidate {
+ --wow-chat-in:#35271f;--wow-chat-out:#543522;--wow-chat-ink:#fff9ee;
+ --wow-chat-sub:#ffe0a1;--wow-chat-border:rgba(255,192,101,.31);
+ --wow-panel-glow:rgba(245,117,56,.18);
+}
+.shell[data-theme="4"] .w46-product-candidate {
+ --wow-chat-in:#2d2a47;--wow-chat-out:#453660;--wow-chat-ink:#fcf9ff;
+ --wow-chat-sub:#e3d3ff;--wow-chat-border:rgba(206,185,255,.31);
+ --wow-panel-glow:rgba(247,125,205,.17);
+}
+.shell[data-mode="light"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#e2f0e6;--wow-chat-ink:#15332b;
+ --wow-chat-sub:#1b6250;--wow-chat-border:rgba(26,105,77,.22);
+ --wow-panel-glow:rgba(62,166,127,.11);
+}
+.shell[data-mode="light"][data-theme="1"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#ffe8f0;--wow-chat-ink:#38263c;
+ --wow-chat-sub:#8b3865;--wow-chat-border:rgba(158,58,104,.22);
+ --wow-panel-glow:rgba(250,72,174,.12);
+}
+.shell[data-mode="light"][data-theme="2"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#dff3fc;--wow-chat-ink:#193b51;
+ --wow-chat-sub:#126785;--wow-chat-border:rgba(18,103,133,.23);
+ --wow-panel-glow:rgba(24,119,255,.12);
+}
+.shell[data-mode="light"][data-theme="3"] .w46-product-candidate {
+ --wow-chat-in:#fffdfa;--wow-chat-out:#ffecd5;--wow-chat-ink:#462b1e;
+ --wow-chat-sub:#92551e;--wow-chat-border:rgba(146,85,30,.23);
+ --wow-panel-glow:rgba(245,117,56,.13);
+}
+.shell[data-mode="light"][data-theme="4"] .w46-product-candidate {
+ --wow-chat-in:#fff;--wow-chat-out:#ece8fd;--wow-chat-ink:#33294c;
+ --wow-chat-sub:#76519a;--wow-chat-border:rgba(118,81,154,.23);
+ --wow-panel-glow:rgba(247,125,205,.12);
+}
+/* Styling existing OSS Message/Bubble slots. Never mask or dim the content. */
+.w46-product-candidate .bc-real-timeline {
+ mask-image:none!important;-webkit-mask-image:none!important;
+ background-image:radial-gradient(circle,rgba(var(--wow-one),.09) .65px,transparent .8px);
+ background-size:29px 29px;
+}
+.w46-product-candidate .bc-real-timeline [data-slot="bubble"],
+.w46-product-candidate .bc-real-timeline [data-slot="bubble-content"]{
+ opacity:1!important;filter:none!important;color:var(--wow-chat-ink)!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+}
+.w46-product-candidate .bc-real-timeline [data-slot="bubble-content"]{overflow:visible}
+.w46-product-candidate .bc-real-message{opacity:1!important;filter:none!important}
+.w46-product-candidate .bc-message-text{
+ display:block;opacity:1!important;font-size:14.5px!important;line-height:1.65!important;
+ font-weight:500!important;letter-spacing:.004em;color:var(--wow-chat-ink)!important;
+ background:var(--wow-chat-in)!important;border:1px solid var(--wow-chat-border)!important;
+ border-radius:18px 18px 18px 6px!important;padding:11px 15px!important;
+ box-shadow:0 9px 28px rgba(0,0,0,.14),inset 0 1px rgba(255,255,255,.065)!important;
+ text-shadow:none!important;
+}
+.w46-product-candidate .bc-message-text.is-outgoing{
+ background:var(--wow-chat-out)!important;
+ border-radius:18px 18px 6px 18px!important;
+ box-shadow:0 9px 28px rgba(0,0,0,.13),0 0 28px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate .bc-message-text :is(p,span,div){opacity:1!important;color:inherit}
+.w46-product-candidate .bc-message-text .bc-translation{
+ color:var(--wow-chat-sub)!important;font-size:13.5px!important;line-height:1.6!important;
+ font-weight:650!important;padding-top:8px;margin-top:9px!important;
+ border-top:1px solid var(--wow-chat-border);text-shadow:none!important;
+}
+.w46-product-candidate .bc-native-composer textarea,
+.w46-product-candidate .bc-search-capsule input{color:var(--ink)!important;font-size:14px!important}
+.w46-product-candidate :is(.bc-native-composer textarea,.bc-search-capsule input)::placeholder{
+ color:var(--muted);opacity:.8;
+}
+/* Inspira aurora stays decorative; add immersive depth to existing OSS surfaces. */
+.w46-product-candidate :is(.bc-settings-detail,.bc-settings-nav,.bc-media-pane,
+ .w46-r4-feature-card,.w46-persona-panel,.w46-native-panel,
+ .w46-people-search-panel,.w46-people-results){
+ box-shadow:0 20px 56px rgba(0,0,0,.16),0 0 47px var(--wow-panel-glow),
+ inset 0 1px 0 rgba(255,255,255,.10)!important;
+ border-color:rgba(var(--wow-one),.31)!important;
+ backdrop-filter:blur(16px) saturate(125%);
+}
+.w46-product-candidate :is(.bc-settings-detail,.w46-r4-feature-card){
+ background:linear-gradient(145deg,rgba(var(--wow-one),.11),transparent 40%,
+ rgba(var(--wow-three),.085)),var(--bg2)!important;
+}
+.w46-product-candidate :is(.w46-workspace-menu,.bc-private-settings,
+ .bc-brain-context-menu,.bc-brain-trace){
+ background:linear-gradient(128deg,rgba(var(--wow-one),.11),
+ rgba(var(--wow-three),.08)),var(--surface-raised)!important;
+ color:var(--ink)!important;
+ border:1px solid rgba(var(--wow-one),.42)!important;
+ box-shadow:0 26px 73px rgba(0,0,0,.28),0 0 39px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate .theme-card{
+ border-radius:19px!important;
+ box-shadow:0 12px 34px rgba(0,0,0,.16),0 0 19px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate .theme-card .preview{min-height:154px}
+.w46-product-candidate .theme-card:is(:hover,:focus-visible){
+ transform:translateY(-6px) scale(1.018)!important;
+ box-shadow:0 23px 56px rgba(0,0,0,.20),0 0 37px rgba(var(--wow-one),.2)!important;
+}
+.w46-product-candidate .theme-card.selected{
+ border-color:rgb(var(--wow-one))!important;
+ box-shadow:0 0 0 2px rgba(var(--wow-one),.48),0 0 45px rgba(var(--wow-one),.24)!important;
+}
+.w46-product-candidate .theme-hero{
+ border-radius:24px!important;
+ background:radial-gradient(ellipse at 90% 5%,rgba(var(--wow-one),.25),transparent 60%),
+ linear-gradient(115deg,rgba(var(--wow-three),.12),rgba(var(--wow-two),.09)),var(--surface-soft)!important;
+ box-shadow:0 25px 64px rgba(0,0,0,.12),0 0 42px var(--wow-panel-glow)!important;
+}
+.w46-product-candidate :is(.w46-r4-feature-tabs button,.bc-settings-nav button):focus-visible{
+ outline:2px solid rgb(var(--wow-one))!important;outline-offset:3px;
+}
+/* Reka Dialog teleports to body; bind palette on the actual DialogContent root. */
+.w46-oss-dialog{
+ --oss-bg:#1c2529;--oss-ink:#f6fff9;--oss-sub:#c2d9d7;
+ --oss-accent:#caff63;--oss-glow:rgba(202,255,99,.22);
+ position:fixed!important;z-index:210!important;
+ width:min(500px,calc(100vw - 30px))!important;
+ max-height:min(85vh,700px)!important;overflow:auto!important;
+ border-radius:24px!important;padding:27px!important;
+ color:var(--oss-ink)!important;
+ background:radial-gradient(ellipse at 90% 0%,var(--oss-glow),transparent 60%),var(--oss-bg)!important;
+ border:1px solid var(--oss-glow)!important;
+ box-shadow:0 28px 95px rgba(0,0,0,.45),0 0 70px var(--oss-glow)!important;
+ backdrop-filter:blur(24px) saturate(140%);
+}
+.w46-oss-dialog.theme-1{--oss-bg:#30233b;--oss-ink:#fff7ff;--oss-sub:#e6cddd;--oss-accent:#ffa071;--oss-glow:rgba(250,72,174,.23)}
+.w46-oss-dialog.theme-2{--oss-bg:#162d40;--oss-ink:#f3fcff;--oss-sub:#cbe7f2;--oss-accent:#62d8f2;--oss-glow:rgba(24,119,255,.25)}
+.w46-oss-dialog.theme-3{--oss-bg:#35251c;--oss-ink:#fff8ed;--oss-sub:#e5d0b3;--oss-accent:#ffc065;--oss-glow:rgba(245,117,56,.23)}
+.w46-oss-dialog.theme-4{--oss-bg:#292941;--oss-ink:#fffaff;--oss-sub:#dcd3f0;--oss-accent:#ceb9ff;--oss-glow:rgba(247,125,205,.23)}
+.w46-oss-dialog.is-light{--oss-bg:#fff;--oss-ink:#18312f;--oss-sub:#42635f;--oss-glow:rgba(28,135,100,.18)}
+.w46-oss-dialog.is-light.theme-1{--oss-bg:#fff9fd;--oss-ink:#38263c;--oss-sub:#75546f;--oss-glow:rgba(250,72,174,.16)}
+.w46-oss-dialog.is-light.theme-2{--oss-bg:#f6fbff;--oss-ink:#193b51;--oss-sub:#426a7c;--oss-glow:rgba(24,119,255,.16)}
+.w46-oss-dialog.is-light.theme-3{--oss-bg:#fffaf4;--oss-ink:#462b1e;--oss-sub:#806249;--oss-glow:rgba(245,117,56,.16)}
+.w46-oss-dialog.is-light.theme-4{--oss-bg:#fdfaff;--oss-ink:#33294c;--oss-sub:#64547c;--oss-glow:rgba(206,185,255,.23)}
+.w46-oss-dialog :is(h1,h2,h3,strong,[data-slot="dialog-title"]){color:var(--oss-ink)!important}
+.w46-oss-dialog :is(p,small,[data-slot="dialog-description"]){color:var(--oss-sub)!important;line-height:1.65}
+.w46-oss-dialog .w46-add-platform{
+ display:flex;align-items:center;width:100%;margin-top:12px;
+ background:color-mix(in srgb,var(--oss-bg) 83%,var(--oss-accent) 17%)!important;
+ border:1px solid var(--oss-glow)!important;border-radius:16px!important;
+ color:var(--oss-ink)!important;padding:14px 16px!important;
+}
+.w46-oss-dialog .w46-add-platform:is(:hover,:focus-visible){
+ border-color:var(--oss-accent)!important;box-shadow:0 0 24px var(--oss-glow)!important;
+ transform:translateY(-2px);
+}
+.w46-oss-dialog .w46-add-platform small{color:var(--oss-sub)!important}
+.w46-oss-dialog :is(.w46-persona-modal-caution,.w46-persona-modal-body){color:var(--oss-sub)!important}
+.w46-oss-dialog :is(.w46-persona-modal button,.w46-add-account-panel button){cursor:pointer}
+.w46-oss-dialog :is(button,input,select):focus-visible{outline:2px solid var(--oss-accent)!important;outline-offset:3px}
+@media(max-width:719px){
+ .w46-product-candidate .bc-message-text{font-size:14px!important;padding:10px 12px!important}
+ .w46-product-candidate .bc-message-text .bc-translation{font-size:13px!important}
+ .w46-product-candidate .theme-card:is(:hover,:focus-visible){transform:none!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .w46-product-candidate .theme-card,.w46-oss-dialog *{transition:none!important;animation:none!important}
+}
+@media(prefers-contrast:more){
+ .w46-product-candidate .bc-message-text{border:2px solid currentColor!important;box-shadow:none!important}
+ .w46-product-candidate .bc-real-timeline{background-image:none!important}
+}

@@ -1,0 +1,83 @@
+{
+  "status": "PASS",
+  "site": "http://127.0.0.1:44769/?productDraft=1",
+  "results": [
+    {
+      "width": 496,
+      "mode": "REAL_UNAUTHORIZED",
+      "x": 313,
+      "y": 396.84375,
+      "height": 373.15625,
+      "bottom": 770,
+      "right": 809,
+      "scrollWidth": 494,
+      "clientWidth": 494,
+      "openText": true,
+      "search": true,
+      "dialog": "dialog",
+      "sendDisabled": true,
+      "viewWidth": 1360,
+      "viewHeight": 820
+    },
+    {
+      "width": 496,
+      "mode": "REAL_UNAUTHORIZED",
+      "x": 269,
+      "y": 396.84375,
+      "height": 373.15625,
+      "bottom": 770,
+      "right": 765,
+      "scrollWidth": 494,
+      "clientWidth": 494,
+      "openText": true,
+      "search": true,
+      "dialog": "dialog",
+      "sendDisabled": true,
+      "viewWidth": 950,
+      "viewHeight": 820
+    },
+    {
+      "width": 406,
+      "mode": "REAL_UNAUTHORIZED",
+      "x": 12,
+      "y": 352.65625,
+      "height": 377.34375,
+      "bottom": 730,
+      "right": 418,
+      "scrollWidth": 404,
+      "clientWidth": 404,
+      "openText": true,
+      "search": true,
+      "dialog": "dialog",
+      "sendDisabled": true,
+      "viewWidth": 430,
+      "viewHeight": 820
+    },
+    {
+      "width": 336,
+      "mode": "REAL_UNAUTHORIZED",
+      "x": 12,
+      "y": 352.65625,
+      "height": 377.34375,
+      "bottom": 730,
+      "right": 348,
+      "scrollWidth": 334,
+      "clientWidth": 334,
+      "openText": true,
+      "search": true,
+      "dialog": "dialog",
+      "sendDisabled": true,
+      "viewWidth": 360,
+      "viewHeight": 820
+    },
+    {
+      "mode": "QA_FIXTURE_ONLY",
+      "count": 10,
+      "ready": 1,
+      "buttons": 1,
+      "disabled": 9,
+      "searchFilter": true,
+      "navigateToOriginalBrain": true
+    }
+  ]
+}

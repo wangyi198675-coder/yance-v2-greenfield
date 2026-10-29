@@ -1,0 +1,126 @@
+/*
+ * W09-3 / P0 global visual QA: inherited real UI surfaces only.
+ * No custom interaction controls; Reka UI Dialog/Popover and the existing
+ * Inspira/OSS component tree remain authoritative.
+ */
+.shell .w46-product-candidate{
+ --w09-scroll-track:rgba(13,26,32,.65);
+ --w09-scroll-thumb:rgba(var(--wow-one),.34);
+ --w09-scroll-hover:rgba(var(--wow-one),.60);
+ color-scheme:dark;
+}
+.shell[data-mode="light"] .w46-product-candidate{
+ --w09-scroll-track:rgba(80,110,130,.065);
+ --w09-scroll-thumb:rgba(56,99,117,.32);
+ --w09-scroll-hover:rgba(var(--wow-one),.57);
+ color-scheme:light;
+}
+/* Browser-native scrollbars are shared by primary, secondary and nested screens.
+ * Without this, system light tracks leak as stark white vertical seams. */
+.w46-product-candidate,
+.w46-product-candidate *:not(svg):not(path),
+.w09-oss-palette,
+.w46-oss-dialog {
+ scrollbar-width:thin;
+ scrollbar-color:var(--w09-scroll-thumb,rgba(140,170,188,.38)) var(--w09-scroll-track,rgba(14,25,32,.30));
+}
+.w46-product-candidate *::-webkit-scrollbar,
+.w09-oss-palette::-webkit-scrollbar,
+.w46-oss-dialog::-webkit-scrollbar{
+ width:8px;height:8px;
+}
+.w46-product-candidate *::-webkit-scrollbar-track,
+.w09-oss-palette::-webkit-scrollbar-track,
+.w46-oss-dialog::-webkit-scrollbar-track{
+ background:var(--w09-scroll-track,rgba(14,25,32,.3));
+ border-radius:10px;
+}
+.w46-product-candidate *::-webkit-scrollbar-thumb,
+.w09-oss-palette::-webkit-scrollbar-thumb,
+.w46-oss-dialog::-webkit-scrollbar-thumb {
+ background:var(--w09-scroll-thumb,rgba(140,170,188,.38));
+ border:2px solid transparent;background-clip:padding-box;border-radius:12px;
+}
+.w46-product-candidate *::-webkit-scrollbar-thumb:hover,
+.w09-oss-palette::-webkit-scrollbar-thumb:hover,
+.w46-oss-dialog::-webkit-scrollbar-thumb:hover{
+ background:var(--w09-scroll-hover,rgba(140,170,188,.6));
+ border:2px solid transparent;background-clip:padding-box;
+}
+.w09-oss-palette.is-light,.w46-oss-dialog.is-light{
+ --w09-scroll-track:rgba(85,110,135,.065);
+ --w09-scroll-thumb:rgba(65,95,112,.36);
+ --w09-scroll-hover:rgba(53,95,130,.6);
+ color-scheme:light;
+}
+.w09-oss-palette.is-dark,.w46-oss-dialog.is-dark{
+ --w09-scroll-track:rgba(16,26,37,.38);
+ --w09-scroll-thumb:rgba(152,177,196,.4);
+ --w09-scroll-hover:rgba(192,211,228,.65);
+ color-scheme:dark;
+}
+/* Prevent the native scroll lane from appearing as a divider between inbox
+ * and conversation. All borders retain the original layout proportions. */
+.w46-product-candidate .bc-real-list{
+ border-right:1px solid rgba(var(--wow-one),.22)!important;
+}
+.w46-product-candidate .bc-inbox-list-scroll{
+ min-width:0;
+ background:transparent;
+}
+.w46-product-candidate .bc-real-timeline{
+ min-width:0;background-color:transparent;
+}
+.w46-product-candidate .bc-real-conversation {
+ min-width:0;
+}
+/* Real message records with a non-text body are kept in the timeline, but
+ * an empty 2x2 px bubble is no longer presented as a meaningful message. */
+.w46-product-candidate .bc-message-text.is-nontext{
+ display:inline-flex;
+ align-items:center;
+ gap:11px;
+ padding:12px 15px!important;
+ min-height:52px;
+ min-width:min(228px,calc(100vw - 96px));
+ max-width:min(320px,100%);
+}
+.w46-product-candidate .bc-nontext-placeholder{
+ display:flex;align-items:center;gap:11px;min-width:0;
+}
+.w46-product-candidate .bc-nontext-symbol{
+ display:grid;place-items:center;flex:none;width:34px;height:34px;
+ border-radius:10px;border:1px solid var(--wow-chat-border);
+ color:var(--wow-chat-sub);font-size:22px;
+ background:rgba(var(--wow-one),.09);
+}
+.w46-product-candidate .bc-nontext-copy{display:grid;gap:4px;min-width:0}
+.w46-product-candidate .bc-nontext-copy strong{
+ font-weight:650;font-size:12.5px;line-height:1.4;
+ color:var(--wow-chat-ink)!important;
+}
+.w46-product-candidate .bc-nontext-copy small{
+ font-size:11px;line-height:1.5;font-weight:500;
+ color:var(--wow-chat-sub)!important;white-space:normal;
+}
+/* In all workspaces native controls must inherit the selected theme rather
+ * than default system white menus. Scope avoids QR images and media surfaces. */
+.w46-product-candidate :is(select,option,textarea,input:not([type="checkbox"]):not([type="radio"])) {
+ color-scheme:inherit;
+}
+.w46-product-candidate :is(select,textarea,input):focus-visible,
+.w46-product-candidate :is(button,[role="button"]):focus-visible{
+ outline:2px solid rgb(var(--wow-one))!important;
+ outline-offset:2px;
+}
+@media(max-width:719px){
+ .w46-product-candidate .bc-message-text.is-nontext{min-width:min(190px,calc(100vw - 84px));padding:10px 12px!important}
+ .w46-product-candidate .bc-nontext-copy strong{font-size:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .w46-product-candidate .bc-nontext-placeholder{transition:none!important;animation:none!important}
+}
+@media(prefers-contrast:more){
+ .w46-product-candidate .bc-nontext-symbol{border:2px solid currentColor}
+ .w46-product-candidate .bc-message-text.is-nontext{border:2px solid currentColor!important}
+}

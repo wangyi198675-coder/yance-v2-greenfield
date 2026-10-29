@@ -26,10 +26,43 @@ export function parseChannelState(channel,payload){
  const owner=CHANNEL_OWNER[channel];
  if(!owner||payload?.ok!==true||payload.channel!==channel||
    payload.source!==owner.source||payload.canSend!==false||
-   !['WAITING_USER_AUTH','OFFLINE','ONLINE_VERIFIED'].includes(payload.status)||
-   (payload.status==='ONLINE_VERIFIED'&&payload.authorizedByNativeOwner!==true))
+   !['WAITING_USER_AUTH','OFFLINE','ONLINE_VERIFIED',
+     ...(channel==='FB_PERSONAL'?['UPSTREAM_CONNECTED_BINDING_PENDING']:[])].includes(payload.status)||
+   (payload.status==='ONLINE_VERIFIED'&&payload.authorizedByNativeOwner!==true)||
+   (payload.status==='UPSTREAM_CONNECTED_BINDING_PENDING'&&
+     (channel!=='FB_PERSONAL'||payload.nativeProviderSessionConnected!==true||
+      payload.authorizedByNativeOwner!==false||payload.accountIdentityVerified!==false)))
   deny('CHANNEL_OWNER_UNVERIFIED_STATE');
- return Object.freeze({state:payload.status,online:payload.status==='ONLINE_VERIFIED'});
+ // Only accept account identities from a positively attested native owner.
+ // Never infer a verified account from channel status, login button or mock data.
+ let accounts=null;
+ const officialUpstreamAccount=channel==='FB_PERSONAL'&&
+  payload.status==='UPSTREAM_CONNECTED_BINDING_PENDING'&&
+  payload.nativeProviderSessionConnected===true&&
+  payload.platformAccountIdentityVerified===true&&
+  payload.upstreamSource==='REAL_BRIDGE_V3_PROVISIONING_AUTHENTICATED';
+ if(((payload.status==='ONLINE_VERIFIED'&&payload.authorizedByNativeOwner===true)||
+     officialUpstreamAccount)&&
+    Array.isArray(payload.accounts)&&payload.accounts.length<=100){
+  const seen=new Set();
+  const accepted=[];
+  for(const item of payload.accounts){
+   const accountId=typeof item?.accountId==='string'?item.accountId.trim():'';
+   const displayName=typeof item?.displayName==='string'?item.displayName.trim():'';
+   if(!accountId||accountId.length>160||!displayName||displayName.length>130||
+      seen.has(accountId)||(officialUpstreamAccount?
+       item?.platformIdentityVerified!==true:item?.identityVerified!==true)){
+    accounts=null;break;
+   }
+   seen.add(accountId);
+   accepted.push(Object.freeze({accountId,displayName,
+     state:item?.state==='ONLINE_VERIFIED'?'ONLINE_VERIFIED':'OFFLINE'}));
+  }
+  if(accepted.length===payload.accounts.length)accounts=Object.freeze(accepted);
+ }
+ return Object.freeze({state:payload.status,online:payload.status==='ONLINE_VERIFIED',
+  nativeProviderSessionConnected:channel==='FB_PERSONAL'&&
+   payload.nativeProviderSessionConnected===true,accounts});
 }
 export function parseChannelSetup(channel,payload,now=Date.now()){
  const owner=CHANNEL_OWNER[channel];

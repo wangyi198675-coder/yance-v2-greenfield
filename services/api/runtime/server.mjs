@@ -25,6 +25,8 @@ import {createNativeMessageReadHttp} from './native-message-reads.mjs';
 import {resolvePinnedNativeWebAssets} from './native-pinned-web-assets.mjs';
 import {createW47WebMediaHttp} from './w47-w23-media-bridge.mjs';
 import {createW47NativeSettingsCatalog} from './w47-native-settings-capabilities.mjs';
+import {createW47NativeContextMenuCapabilitiesHttp} from './w47-native-context-menu-capabilities.mjs';
+import {createOfficialSiwcHttp} from './w47-official-siwc.mjs';
 
 const config=resolveRuntimeConfig();
 const sha=resolveRuntimeSource(config);
@@ -145,6 +147,7 @@ const contactNativeAuthorityHttp=createContactNativeAuthorityHoldHttp({
 const nativeMediaHttp=createW47WebMediaHttp({
  sessionAuthority:localSessionAuthority,webOrigin
 });
+const officialSiwcHttp=createOfficialSiwcHttp({sessionAuthority:localSessionAuthority,webOrigin});
 const nativeSettingsCatalog=createW47NativeSettingsCatalog({
  sessionAuthority:localSessionAuthority,webOrigin
 });
@@ -152,6 +155,10 @@ const nativeSettingsCatalog=createW47NativeSettingsCatalog({
 // authoritative response. W09 may inject ORIGINAL signed native owner ports
 // only after providers are actually running, never synthetic adapter objects.
 const nativeOwnerReads=createNativeOwnerReadHttp({sessionAuthority:localSessionAuthority,webOrigin});
+// W47-only readback of actual Owner gate readiness. Never executes a menu action.
+const nativeContextMenuCapabilities=createW47NativeContextMenuCapabilitiesHttp({
+ sessionAuthority:localSessionAuthority,webOrigin
+});
 // W26 real official bridge read is DIAGNOSTIC ONLY, never source of FB
 // user auth. Explicit W09/W54-injected native owner ports are still required
 // for actual W24 account ONLINE, SDK setup and authorized message access.
@@ -207,6 +214,14 @@ const handler=(req,res)=>{
       return deny(res,403,'CROSS_SITE_BLOCKED');
     if(req.method==='OPTIONS')return deny(res,403,'CORS_DISABLED');
     const url=new URL(req.url||'/', 'http://'+bind+':'+req.socket.localPort);
+    if(url.pathname.startsWith('/api/v2/chatgpt/')){
+      void officialSiwcHttp(req,res,url).then(handled=>{
+       if(!handled&&!res.writableEnded)deny(res,404,'OFFICIAL_SIWC_ROUTE_NOT_FOUND');
+      }).catch(()=>{
+       if(!res.headersSent)deny(res,503,'OFFICIAL_SIWC_ADAPTER_UNAVAILABLE');
+       else res.destroy();
+      });return;
+    }
     if(url.pathname.startsWith('/api/v2/local-session/')){
       void localSessionHttp(req,res,url).catch(()=>{
         if(!res.headersSent)deny(res,503,'LOCAL_SESSION_UNAVAILABLE');
@@ -283,6 +298,13 @@ const handler=(req,res)=>{
        if(!handled&&!res.writableEnded)deny(res,404,'ROUTE_NOT_FOUND');
       }).catch(()=>{
        if(!res.headersSent)deny(res,503,'ORIGINAL_NATIVE_PROVIDER_GATEWAY_UNAVAILABLE');
+       else res.destroy();
+      });
+      return;
+    }
+    if(url.pathname.startsWith('/api/v2/context-menu/')){
+      void nativeContextMenuCapabilities(req,res,url).catch(()=>{
+       if(!res.headersSent)deny(res,503,'ORIGINAL_CONTEXT_OWNER_UNAVAILABLE');
        else res.destroy();
       });
       return;
