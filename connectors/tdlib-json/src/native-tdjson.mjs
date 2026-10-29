@@ -312,7 +312,8 @@ export function nativeTDJsonController({
       'TDLIB_READ_QUERY_REQUIRED');
     const allowed=new Set(['getChats','loadChats','getContacts','getChat',
       'getUser','getUserFullInfo','getChatHistory','getMessage',
-      'getUserProfilePhotos','getFile','downloadFile']);
+      'getUserProfilePhotos','getFile','downloadFile',
+      'getMessageProperties','getMessageAvailableReactions']);
     ensure(allowed.has(query['@type']), 'TDLIB_READ_ONLY_METHOD_REQUIRED');
     ensure(Number.isInteger(timeoutMs) && timeoutMs>=1000 && timeoutMs<=30000,
       'TDLIB_READ_TIMEOUT_INVALID');
