@@ -68,7 +68,8 @@ internal sealed class Host
         "registerUser", "logOut", "close", "getMe", "getChats",
         "loadChats", "getChat", "getChatHistory", "getUser",
         "getContacts", "getUserFullInfo", "getMessage",
-        "getUserProfilePhotos", "getFile", "downloadFile"
+        "getUserProfilePhotos", "getFile", "downloadFile",
+        "getMessageProperties", "getMessageAvailableReactions"
     };
     private static readonly object StdoutLock = new object();
     private static readonly JavaScriptSerializer Json = new JavaScriptSerializer
@@ -130,7 +131,9 @@ internal sealed class Host
                         nativeType == "getChatHistory" || nativeType == "getUser" ||
                         nativeType == "getContacts" || nativeType == "getUserFullInfo" ||
                         nativeType == "getMessage" || nativeType == "getUserProfilePhotos" ||
-                        nativeType == "getFile" || nativeType == "downloadFile")
+                        nativeType == "getFile" || nativeType == "downloadFile" ||
+                        nativeType == "getMessageProperties" ||
+                        nativeType == "getMessageAvailableReactions")
                     {
                         if (!ready) { Emit(new {kind="error",code="WAITING_USER_AUTH"}); continue; }
                     }
