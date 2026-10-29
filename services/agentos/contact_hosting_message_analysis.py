@@ -68,9 +68,10 @@ def _eligible(value: Any, k: tuple, operation: str) -> dict:
     if not all(type(value.get(key)) is int and value[key] >= 0 for key in (
             "consentEpoch", "accountEpoch", "custodyEpoch", "grantGeneration")):
         raise NativeContactHold("AUTHORITY_EPOCH_UNATTESTED")
-    # PAUSE must remain possible even with exhausted budget or an expired
-    # hosting grant. PAUSE does not consume a new model Run.
-    if operation != "PAUSE":
+    # PAUSE needs no new model credit; ISSUE is the FIRST grant and may
+    # have no prior effective budget or expiry. W24 must sign ISSUE terms
+    # and W44 must verify/commit the actual budget and expiration itself.
+    if operation not in {"PAUSE", "ISSUE"}:
         if (type(value.get("expiresAtMs")) is not int
                 or value["expiresAtMs"] <= int(time.time() * 1000)):
             raise NativeContactHold("CONTACT_AUTHORITY_EXPIRED")
@@ -142,12 +143,19 @@ class OriginalAgnoContactPort:
             "realAccountVerified": grant.get("realAccountVerified") is True,
             "custody": task.get("custody"),
             "taskState": state,
+            "paused": grant.get("paused") is True,
+            "globalPaused": grant.get("globalPaused") is True,
+            "contactPaused": grant.get("contactPaused") is True,
             "lastRunId": task.get("lastRunId"),
             "lastSessionId": task.get("lastSessionId"),
             "isHosting": (
                 state == "RUNNING" and grant.get("status") == "COMMITTED"
                 and grant.get("realUserAuthorized") is True
                 and grant.get("realAccountVerified") is True
+                and task.get("custody") == "AUTO"
+                and grant.get("paused") is not True
+                and grant.get("globalPaused") is not True
+                and grant.get("contactPaused") is not True
             ),
             "canSend": False,  # W25 alone can authorize outbound
         }
@@ -299,7 +307,9 @@ class OriginalAgnoContactPort:
             if _authority_identity(before) != _authority_identity(after):
                 raise NativeContactHold("CONTACT_AUTHORITY_REVOKED_DURING_RUN")
             finish = self._p.request_complete(context, req, fingerprint, result.run_id)
-            if not isinstance(finish, dict) or finish.get("state") != "COMPLETED":
+            if (not isinstance(finish, dict) or finish.get("state") != "COMPLETED"
+                    or finish.get("runId") != result.run_id
+                    or finish.get("fingerprint") != fingerprint):
                 raise NativeContactHold("ANALYSIS_DURABLE_RECEIPT_UNVERIFIED")
             traces, total = runtime.db.get_traces(
                 run_id=result.run_id, user_id=uid,
