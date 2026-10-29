@@ -97,7 +97,8 @@ class Fixture:
 
     def complete(self, ctx, req, fingerprint, run_id):
         self.calls.append(("complete", run_id))
-        return {"state": "COMPLETED"}
+        return {"state": "COMPLETED", "runId": run_id,
+                "fingerprint": fingerprint}
 
     def unknown(self, ctx, req, fingerprint):
         self.calls.append(("unknown", req))
@@ -327,6 +328,52 @@ def test_native_run_without_persisted_provenance_is_not_success():
             content="fake answer",status=SimpleNamespace(value="COMPLETED"))
     f.model.agents["CONTACT"].run = unpersisted
     with pytest.raises(NativeContactHold, match="AGNO_NATIVE_ANALYSIS_PROVENANCE_UNVERIFIED"):
+        f.port().analyze_message(f, source_mid=f.mid,
+                                 request_id="fixture_abcdef123456")
+    assert any(x[0] == "unknown" for x in f.calls)
+
+
+def test_issue_first_grant_without_existing_budget_is_still_possible():
+    f = Fixture()
+    f.budget = "NOT_CONFIGURED"
+    f.expires = int(time.time() * 1000) - 30000
+    result = f.port().change_hosting(f, action="ISSUE", expected={
+        "expectedGeneration": 1, "expectedBindingRevision": 1,
+        "expectedAccountEpoch": 1, "expectedConsentEpoch": 3,
+        "expectedCustodyEpoch": 1,
+    })
+    assert result["grantStatus"] == "COMMITTED"
+    assert result["status"] == "GRANT_COMMITTED_AGNO_TASK_NOT_CONFIRMED"
+    assert not result["isHosting"]
+
+
+def test_running_task_while_human_or_paused_never_is_hosting():
+    f = Fixture()
+    f.auth = True
+    f.task = "RUNNING"
+    f.task_state = lambda ctx, identity: {
+        "canonicalK": dict(f.identity), "state": "RUNNING",
+        "custody": "HUMAN", "lastRunId": None, "lastSessionId": None}
+    assert not f.port().read_hosting(f)["isHosting"]
+    f.task_state = lambda ctx, identity: {
+        "canonicalK": dict(f.identity), "state": "RUNNING",
+        "custody": "AUTO", "lastRunId": None, "lastSessionId": None}
+    f.grant_state = lambda ctx, identity, operation: (
+        {"canonicalK": dict(f.identity), "status": "COMMITTED",
+         "grantGeneration": 1, "budgetStatus": "AVAILABLE",
+         "paused": True, "globalPaused": False, "contactPaused": True,
+         "realUserAuthorized": True, "realAccountVerified": True}
+        if operation == "READ_HOSTING" else f.qualify(ctx, identity, operation))
+    assert not f.port().read_hosting(f)["isHosting"]
+
+
+def test_durable_completion_wrong_run_id_is_rejected():
+    f = Fixture()
+    f.complete = lambda ctx, req, fingerprint, run_id: {
+        "state": "COMPLETED", "runId": "forged-other-Run",
+        "fingerprint": fingerprint}
+    with pytest.raises(NativeContactHold,
+                       match="ANALYSIS_DURABLE_RECEIPT_UNVERIFIED"):
         f.port().analyze_message(f, source_mid=f.mid,
                                  request_id="fixture_abcdef123456")
     assert any(x[0] == "unknown" for x in f.calls)
