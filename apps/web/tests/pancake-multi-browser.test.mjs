@@ -20,6 +20,15 @@ function network(){
     status:'OFFICIAL_ACCOUNT_DISCOVERED',
     pages:[{pageId:'111',name:'A'},{pageId:'222',name:'B'}]})};
   }
+  if(url.endsWith('/discover')){
+   assert.equal(init.method,'POST');
+   assert.deepEqual(Object.keys(JSON.parse(init.body)),['userAccessToken']);
+   assert.equal(JSON.parse(init.body).userAccessToken,'SECOND-USER-QA-12345678');
+   return {ok:true,json:async()=>({ok:true,canSend:false,userTokenStored:false,
+    source:'PANCAKE_OFFICIAL_ACCOUNT_DISCOVERY',
+    status:'SECOND_ACCOUNT_OFFICIAL_PAGES_DISCOVERED',
+    pages:[{pageId:'777',name:'Other account Page'}]})};
+  }
   if(url.endsWith('/pages'))return {ok:true,json:async()=>({ok:true,
    canSend:false,pages:[{pageId:'111',name:'A',tokenConfigured:false},
     {pageId:'222',name:'B',tokenConfigured:true}]})};
@@ -40,8 +49,12 @@ test('R4 Facebook Page frontend renders multi-page setup, never old single-Page 
  assert.match(ui,/type="password" v-model="independentPageToken"/);
  assert.match(ui,/data-test="pancake-verify-independent-page"/);
  assert.match(ui,/@click="connectIndependentPage"/);
- assert.match(ui,/data-test="pancake-independent-page-id-error"/);
- assert.match(ui,/onIndependentPageIdInput/);
+ assert.match(ui,/data-test="pancake-independent-user-token"/);
+ assert.match(ui,/type="password" v-model="independentUserToken"/);
+ assert.match(ui,/data-test="pancake-discover-independent-account"/);
+ assert.match(ui,/@click="discoverIndependentAccount"/);
+ assert.match(ui,/secondAccountPages\.some/);
+ assert.doesNotMatch(ui,/placeholder="例如：一串纯数字 Page ID/);
  assert.match(ui,/accountDiscoveryVerified/);
  assert.match(ui,/existing\.discoveryError==='PANCAKE_OFFICIAL_AUTH_102'/);
  assert.match(ui,/action==='page-token'/);
@@ -57,6 +70,17 @@ test('one account token initiates only original same-origin Web session, returns
  assert.equal(r.pages.length,2);assert.equal(r.canSend,false);
  assert.equal(calls.length,2);
  assert.equal(calls[1].init.headers['x-yance-csrf'],csrf);
+});
+test('second independent User token discovers owned Pages without persistent key storage or overwriting first account',async()=>{
+ const {fetchImpl,calls}=network();
+ const r=await pancakeMultiApi('discover',{fetchImpl,userAccessToken:'SECOND-USER-QA-12345678'});
+ assert.equal(r.status,'SECOND_ACCOUNT_OFFICIAL_PAGES_DISCOVERED');
+ assert.equal(r.userTokenStored,false);
+ assert.deepEqual(r.pages.map(x=>x.pageId),['777']);
+ assert.equal(calls.length,2);
+ assert.equal(calls[1].init.headers['x-yance-csrf'],csrf);
+ assert.equal(calls[1].init.credentials,'same-origin');
+ assert.equal(calls[1].url.includes('SECOND-USER-QA'),false);
 });
 test('multiple managed pages can refresh without other Page token input',async()=>{
  const {fetchImpl,calls}=network();

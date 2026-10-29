@@ -4,7 +4,7 @@ import {pancakeMultiApi} from './pancake-multi-browser.mjs';
 const props=defineProps({fetchImpl:{type:Function,default:null}});
 const fetcher=()=>props.fetchImpl||globalThis.fetch;
 const busy=ref(false),initialized=ref(false),notice=ref(''),accountToken=ref('');
-const pages=ref([]),selectedPage=ref(''),pageToken=ref(''),independentPageId=ref(''),independentPageToken=ref('');
+const pages=ref([]),selectedPage=ref(''),pageToken=ref(''),independentPageId=ref(''),independentPageToken=ref(''),independentUserToken=ref(''),secondAccountPages=ref([]);
 const accountConnected=ref(false),accountDiscoveryVerified=ref(false),apiReady=ref(false);
 const credentialRevoked=ref(false),revokedRevision=ref(0),ownerRelinkConfirmed=ref(false);
 let alive=true,retryTimer=null,retryCount=0,lastFailureCode='';
@@ -23,7 +23,7 @@ function humanError(e,action){
  if(code.includes('_TIMEOUT_30S'))return 'Pancake 官方验证超过30秒，结果尚未确认。请先点击重新查询账户，不要重复提交 Token。';
  if(code.includes('PANCAKE_OFFICIAL_AUTH_102')){
   if(action==='page-token')return '这个主页的 Page Token 经 Pancake 官方校验失败（102），尚未保存。请确认复制的是这个 Page 在 Pancake「设置 → 工具」中的 Page Access Token，而非「个人设置」中的 User Access Token，并核对 Page ID；这不代表其他账号或主页失效。';
-  if(action==='account')return '此 Pancake 账号的 User Access Token 验证失败（102），本次账号令牌未保存。已保存的其他主页凭据不会因此清除。';
+  if(action==='account'||action==='discover')return '当前正在连接的 Pancake 账号 User Access Token 验证失败（102）。另一个账号和已保存的 Page 不受影响，且此次 Token 未保存。';
   return '原 Pancake 账号的 User Access Token 校验失败（102），但不代表各主页自己的 Page Token 失效。已保存主页继续保留，其他账号的 Page 可单独验证。';
  }
  if(code.includes('PANCAKE_OFFICIAL_ERROR_'))return 'Pancake 官方返回业务错误码 '+(code.match(/PANCAKE_OFFICIAL_ERROR_([0-9]{1,5})/)?.[1]||'未知')+'，并非已确认 Token 错误；令牌未保存。';
@@ -140,10 +140,28 @@ function onIndependentPageIdInput(e){
   notice.value='识别到你粘贴的是 Page Token，已移到下方密码框并隐藏。请在上方填写该主页的纯数字 Page ID。';
  }
 }
+async function discoverIndependentAccount(){
+ if(busy.value||!apiReady.value||!accountConnected.value||
+   independentUserToken.value.trim().length<8)return;
+ const token=independentUserToken.value.trim();
+ secondAccountPages.value=[];independentPageId.value='';
+ // Existing official account-discovery API, read-only, no second user
+ // token persisted and no modification to the first account in W55.
+ const discovered=await execute('discover',{userAccessToken:token});
+ independentUserToken.value='';
+ if(!discovered||!alive)return;
+ secondAccountPages.value=discovered.pages;
+ independentPageId.value=discovered.pages.length===1?discovered.pages[0].pageId:'';
+ notice.value=discovered.pages.length?
+  '第二个 Pancake 账号已由官方接口验证，发现 '+discovered.pages.length+' 个 Facebook Page。请选中要添加的主页，再填入它自己的 Page Token。账户 User Token 未保存，也没有替换第一个账号。':
+  '该账号官方验证成功，但未发现可管理的 Facebook Page。没有修改第一个账号。';
+}
 async function connectIndependentPage(){
  const id=independentPageId.value.trim();
  if(busy.value||!apiReady.value||!accountConnected.value||
-   !/^[0-9]{1,40}$/.test(id)||independentPageToken.value.length<8)return;
+   !secondAccountPages.value.some(p=>p.pageId===id)||
+   pages.value.some(p=>p.pageId===id&&p.tokenConfigured===true)||
+   independentPageToken.value.length<8)return;
  const token=independentPageToken.value;
  const result=await execute('page-token',{pageId:id,pageAccessToken:token});
  independentPageToken.value='';
@@ -166,7 +184,7 @@ onBeforeUnmount(()=>{
  globalThis.removeEventListener('focus',retryWhenVisible);
  globalThis.removeEventListener('online',retryWhenVisible);
  document.removeEventListener('visibilitychange',retryWhenVisible);
- accountToken.value='';pageToken.value='';independentPageToken.value='';
+ accountToken.value='';pageToken.value='';independentPageToken.value='';independentUserToken.value='';secondAccountPages.value=[];
 });
 </script>
 <template>
@@ -204,7 +222,7 @@ onBeforeUnmount(()=>{
   <section v-else class="pancake-section" data-test="pancake-page-list">
    <div class="pancake-section-head"><strong>第二步 · 选择要使用的主页</strong>
     <button type="button" @click="refresh" :disabled="busy">刷新主页</button></div>
-   <p>当前账户下的主页自动列出；其他 Pancake／Facebook 账号的 Page 用该主页自己的 Page ID 和现有 Page Token 添加，不会替换已有账户。</p>
+   <p>第一个账号的主页在这里。连接不同 Facebook 账号时，在下方用新账号自己的 User Access Token 自动发现它的主页，再用 Page Token 保存，不会替换第一个账号。</p>
    <div v-if="!pages.length" class="pancake-note">当前账户未返回可管理的 Facebook 主页。</div>
    <div v-for="p in pages" :key="p.pageId" class="pancake-page" :data-page-id="p.pageId">
     <div class="pancake-page-info">
@@ -218,25 +236,39 @@ onBeforeUnmount(()=>{
     </button>
    </div>
    <div class="pancake-token-panel" data-test="pancake-independent-page-add">
-    <strong>添加其他账号管理的 Facebook Page</strong>
-    <p>两个不同 Facebook/Pancake 账号各有自己的主页。这里直接验证第二个主页的 Page ID＋Page Access Token，不使用第一个账号的 User Token，也不需要第二个账号的 User Token；个人设置中的 User Token 不能代替主页 Token。原账号保存内容不变。</p>
-    <label for="pancake-independent-page-id">第一项：Facebook 主页 ID（只能输入数字）</label>
-    <input id="pancake-independent-page-id" v-model.trim="independentPageId" inputmode="numeric"
-      autocomplete="off" spellcheck="false" placeholder="例如：一串纯数字 Page ID，不是 Token"
-      :disabled="busy" data-test="pancake-independent-page-id"
-      @input="onIndependentPageIdInput"/>
-    <small v-if="independentPageId&&!/^[0-9]{1,40}$/.test(independentPageId)"
-      data-test="pancake-independent-page-id-error" role="alert">
-      Page ID 必须是纯数字；你可能把 Page Access Token 贴到了这个位置。
-    </small>
-    <label for="pancake-independent-page-token">第二项：这个主页的 Page Access Token（会隐藏）</label>
+    <strong>连接第二个独立 Pancake／Facebook 账号</strong>
+    <p>和第一个账号相同：先用第二个账号自己的 User Access Token 发现主页，再填写该主页自己的 Page Access Token。两个账号互不覆盖，原有联系人和历史保留。</p>
+    <label for="pancake-independent-user-token">第一步：第二个账号的 User Access Token（会隐藏）</label>
+    <input id="pancake-independent-user-token" type="password" v-model="independentUserToken"
+      autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="从第二个 Pancake 账号的个人设置复制 User Token"
+      :disabled="busy||!apiReady" data-test="pancake-independent-user-token"/>
+    <button type="button" :disabled="busy||!apiReady||independentUserToken.trim().length<8"
+      data-test="pancake-discover-independent-account" @click="discoverIndependentAccount">
+      {{busy?'正在核对…':'验证第二个账户并自动发现主页'}}
+    </button>
+    <template v-if="secondAccountPages.length">
+     <label for="pancake-independent-page-id">第二步：从官方发现结果选择主页（不需要手填 ID）</label>
+     <select id="pancake-independent-page-id" v-model="independentPageId"
+       :disabled="busy" data-test="pancake-independent-page-id">
+      <option value="">选择第二个账号管理的主页</option>
+      <option v-for="p in secondAccountPages" :key="p.pageId" :value="p.pageId">
+       {{p.name}} · {{p.pageId}}
+      </option>
+     </select>
+     <small v-if="pages.some(p=>p.pageId===independentPageId&&p.tokenConfigured)" role="status"
+       data-test="pancake-independent-already-connected">
+       此主页已经连接到 W55。为防止覆盖原凭据，请使用上方「更新主页凭据」入口。
+     </small>
+    </template>
+    <label for="pancake-independent-page-token">第三步：这个主页的 Page Access Token（会隐藏）</label>
     <input id="pancake-independent-page-token" type="password" v-model="independentPageToken"
       autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="在这里粘贴 Pancake 此主页的现有 Token"
       :disabled="busy||!apiReady" data-test="pancake-independent-page-token"/>
-    <small data-test="pancake-independent-page-help">Page ID 在主页设置里查看；Token 在 Pancake 此主页「设置 → 工具 → Public API access token」查看。不要把 Token 发到聊天中。</small>
+    <small data-test="pancake-independent-page-help">主页 ID 由第二个账号的 Pancake 官方账户接口自动发现，不必自己复制。Page Token 在该主页「设置 → 工具 → Public API access token」查看。不要把任何 Token 发到聊天中。</small>
     <button type="button" class="primary"
-      :disabled="busy||!apiReady||!/^[0-9]{1,40}$/.test(independentPageId)||independentPageToken.length<8"
+      :disabled="busy||!apiReady||!secondAccountPages.some(p=>p.pageId===independentPageId)||pages.some(p=>p.pageId===independentPageId&&p.tokenConfigured)||independentPageToken.length<8"
       data-test="pancake-verify-independent-page" @click="connectIndependentPage">
       {{busy?'正在验证…':'验证并添加这个 Page'}}
     </button>
@@ -275,7 +307,7 @@ onBeforeUnmount(()=>{
 .pancake-section-head span,.pancake-multi small{font-size:11px;color:var(--muted)}
 .pancake-multi label{font-size:13px;font-weight:600}
 .pancake-multi a{font-size:12px;color:var(--accent);text-decoration:underline}
-.pancake-multi input{width:100%;box-sizing:border-box;min-width:0;min-height:44px;border:1px solid var(--border);background:var(--bg);color:var(--ink);border-radius:9px;padding:9px 11px}
+.pancake-multi input,.pancake-multi select{width:100%;box-sizing:border-box;min-width:0;min-height:44px;border:1px solid var(--border);background:var(--bg);color:var(--ink);border-radius:9px;padding:9px 11px}
 .pancake-multi button{min-height:41px;border:1px solid var(--border);border-radius:9px;padding:8px 12px;background:var(--bg);color:var(--ink);cursor:pointer}
 .pancake-multi button:disabled,.pancake-multi input:disabled{opacity:.48;cursor:not-allowed}
 .pancake-multi button.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:650}

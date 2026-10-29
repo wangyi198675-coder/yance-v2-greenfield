@@ -21,9 +21,9 @@ export async function pancakeMultiApi(action,{
   url=base+'/'+action+(action==='inbox'||action==='history'?'?pageId='+encodeURIComponent(pageId||'')+(action==='history'?'&conversationId='+encodeURIComponent(conversationId||''):''):'');
   init={method:'GET',credentials:'same-origin',cache:'no-store',
    redirect:'error',referrerPolicy:'no-referrer'};
- }else if(action==='account'||action==='page-token'){
+ }else if(action==='account'||action==='discover'||action==='page-token'){
   url=base+'/'+action;
-  const body=action==='account'?{
+  const body=action==='account'||action==='discover'?{
    userAccessToken,
    ...(ownerReviewedRelink===true?{ownerReviewedRelink:true,expectedRevokedRevision}:{})
   }:{pageId,pageAccessToken};
@@ -57,11 +57,14 @@ export async function pancakeMultiApi(action,{
  const reply=await res.json();
  if(reply?.ok!==true||reply.canSend!==false)
   error('PANCAKE_ACCOUNT_RESPONSE_UNVERIFIED');
- if(action==='pages'||action==='account'){
+ if(action==='pages'||action==='account'||action==='discover'){
   if(!Array.isArray(reply.pages)||reply.pages.length>500||
     reply.pages.some(p=>typeof p?.pageId!=='string'||!/^[0-9]{1,40}$/.test(p.pageId)))
    error('PANCAKE_ACCOUNT_PAGES_UNVERIFIED');
  }
+ if(action==='discover'&&(reply.status!=='SECOND_ACCOUNT_OFFICIAL_PAGES_DISCOVERED'||
+  reply.userTokenStored!==false||reply.source!=='PANCAKE_OFFICIAL_ACCOUNT_DISCOVERY'))
+  error('PANCAKE_SECOND_ACCOUNT_DISCOVERY_UNVERIFIED');
  if(action==='inbox'&&(reply.source!=='PANCAKE_OFFICIAL_INBOX_READ_ONLY'||reply.pageId!==pageId||!Array.isArray(reply.conversations)))error('PANCAKE_INBOX_SOURCE_UNVERIFIED');
  if(action==='history'&&(reply.source!=='PANCAKE_OFFICIAL_HISTORY_READ_ONLY'||reply.pageId!==pageId||reply.conversationId!==conversationId||!Array.isArray(reply.messages)))error('PANCAKE_HISTORY_SOURCE_UNVERIFIED');
  return reply;
